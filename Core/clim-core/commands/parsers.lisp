@@ -26,6 +26,15 @@
 
 (defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
 
+(defun unsupplied-argument-p (val)
+  (eq *unsupplied-argument-marker* val))
+
+(defun present-argument-value (value ptype stream)
+  (if (unsupplied-argument-p value)
+      (with-text-face (stream :italic)
+        (write-string "<unsupplied>" stream))
+      (present value ptype :stream stream)))
+
 (defun accept-form-for-argument (stream arg)
   (let ((accept-keys '(:default :default-type :display-default
                        :prompt :documentation :insert-default)))
@@ -218,11 +227,10 @@
           (key-case-clauses nil))
       (loop
         for (arg ptype-form) in required-args
-        collect `(,arg (progn
+        collect `(,arg (let ((value (pop ,command-args)))
                          (write-char ,seperator ,stream)
-                         (present (car ,command-args) ,ptype-form
-                                  :stream ,stream)
-                         (pop ,command-args)))
+                         (present-argument-value value ,ptype-form ,stream)
+                         value))
           into arg-bindings
         finally (setq required-arg-bindings arg-bindings))
       (loop
@@ -233,8 +241,7 @@
                           ,seperator
                           ,(keyword-arg-name-from-symbol arg)
                           ,seperator)
-                  (present ,key-arg-val ,ptype-form
-                           :stream ,stream))
+                  (present-argument-value ,key-arg-val ,ptype-form ,stream))
           into key-clauses
         finally (setq key-case-clauses key-clauses))
       `(defun ,name (,command ,stream)
