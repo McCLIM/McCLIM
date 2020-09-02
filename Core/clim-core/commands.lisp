@@ -1076,7 +1076,7 @@ examine the type of the command menu item to see if it is
                       :stream stream :view view
                       :default default :prompt prompt
                       :additional-delimiter-gestures '(#\space))))
-    (read-char stream)
+    (read-gesture :stream stream)
     (accept type :stream stream :view view :prompt nil)))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix

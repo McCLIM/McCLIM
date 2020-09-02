@@ -304,10 +304,10 @@ current message was set."))
 	    ;; XXX and delimiter gestures?
 	    ;;
 	    ;; deleted check for *RECURSIVE-ACCEPT-P*
-	    (let ((ag (read-char-no-hang stream nil stream t)))
+	    (let ((ag (read-gesture :stream stream :timeout 0)))
 	      (unless (or (null ag) (eq ag stream))
 		(unless (activation-gesture-p ag)
-		  (unread-char ag stream))))
+		  (unread-gesture ag :stream stream))))
 	    (values (car accept-results)
 		    (if (cdr accept-results) (cadr accept-results) type)))))
       ;; A presentation was clicked on, or something.

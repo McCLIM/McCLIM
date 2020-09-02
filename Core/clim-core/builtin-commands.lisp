@@ -351,11 +351,11 @@
     (if (or subform-read auto-activate)
         (values object ptype)
         (loop
-           for c = (read-char stream)
-           until (or (activation-gesture-p c) (delimiter-gesture-p c))
-           finally
-             (when (delimiter-gesture-p c)
-               (unread-char c stream))
+          for gesture = (read-gesture :stream stream)
+          until (or (activation-gesture-p gesture) (delimiter-gesture-p gesture))
+          finally
+             (when (delimiter-gesture-p gesture)
+               (unread-gesture gesture :stream stream))
              (return (values object ptype))))))
 
 (define-presentation-method accept ((type expression)
@@ -408,12 +408,12 @@
     (if (or subform-read auto-activate)
         (values object ptype)
         (loop
-           for c = (read-char stream)
-           until (or (activation-gesture-p c) (delimiter-gesture-p c))
-           finally
-           (when (delimiter-gesture-p c)
-             (unread-char c stream))
-           (return (values object ptype))))))
+          for gesture = (read-gesture :stream stream)
+          until (or (activation-gesture-p gesture) (delimiter-gesture-p gesture))
+          finally
+             (when (delimiter-gesture-p gesture)
+               (unread-gesture gesture :stream stream))
+             (return (values object ptype))))))
 
 
 (with-system-redefinition-allowed
