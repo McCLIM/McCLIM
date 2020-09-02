@@ -281,7 +281,7 @@
     (place com-set-place-to-false inspector-command-table
      :tester ((object)
               (and (supportsp object 'setf)
-                   (accepts-value-p object t)
+                   (accepts-value-p object nil)
                    (safe-valuep object)
                    (eq (value object) t)))
      :priority 2
