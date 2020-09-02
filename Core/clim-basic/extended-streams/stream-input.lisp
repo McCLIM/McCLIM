@@ -381,18 +381,6 @@ keys read."))
             (t
              (return-from stream-read-gesture gesture)))))))
 
-;;; FIXME STANDARD-EXTENDED-INPUT-STREAM isn't a character stream, however the
-;;; implementation of ACCEPT assumes that it is.
-
-(defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
-  (loop
-    for ch = (stream-read-gesture stream :timeout 0)
-    when (or (characterp ch) (null ch))
-      return ch))
-
-(defmethod stream-unread-char ((stream standard-extended-input-stream) char)
-  (stream-unread-gesture stream char))
-
 
 ;;; stream-read-gesture on string strings. Needed for accept-from-string.
 
