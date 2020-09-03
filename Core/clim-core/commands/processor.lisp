@@ -361,14 +361,31 @@
 
 (define-presentation-method accept
     ((type command) stream (view textual-view) &key)
-  (if-let ((command (funcall *command-parser* command-table stream)))
-    (values (if (partial-command-p command)
-                (funcall *partial-command-parser*
-                         command-table stream command
-                         (position *unsupplied-argument-marker* command))
-                command)
-            type)
-    (simple-parse-error "Empty command")))
+  (let ((command-table (find-command-table command-table))
+        (start-position (and (getf options :echo t)
+                             (input-editing-stream-p stream)
+                             (stream-scan-pointer stream))))
+    (flet ((maybe-replace-input (input)
+             (when start-position
+               ;; Rescan is nil in case the clicked on thing returned
+               ;; something unparseable. -- heshrobe 2020-05-15
+               (presentation-replace-input stream input type view
+                                           :buffer-start start-position
+                                           :rescan nil))
+             input)
+           (handle-command (command)
+             (if (partial-command-p command)
+                 (funcall *partial-command-parser*
+                          command-table stream command
+                          (position *unsupplied-argument-marker* command))
+                 command)))
+      (with-input-context (type)
+          (object type)
+          (if-let ((command (funcall *command-parser* command-table stream)))
+            (values (maybe-replace-input (handle-command command)) type)
+            (simple-parse-error "Empty command"))
+        (command
+         (values (maybe-replace-input (handle-command object)) type))))))
 
 (define-presentation-type command-or-form
     (&key (command-table (frame-command-table *application-frame*)))
