@@ -55,16 +55,12 @@
                  (funcall (misc-test-drawer item) output)))))
   (:layouts
    (default
-     (spacing (:thickness 3)
-       (horizontally ()
-         (spacing (:thickness 3) (clim-extensions:lowering () selector))
-         (vertically ()
-           (spacing (:thickness 3)
-             (clim-extensions:lowering ()
-               (scrolling (:width 600 :height 600) output)))
-           (spacing (:thickness 3)
-             (clim-extensions:lowering ()
-               (scrolling (:scroll-bar :vertical :height 200) description)))))))))
+     (spacing (:thickness 8)
+       (horizontally (:x-spacing 8)
+         selector
+         (vertically (:y-spacing 8)
+           (scrolling (:width 600 :height 600) output)
+           (scrolling (:scroll-bar :vertical :height 200) description)))))))
 
 (defun misc-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *misc-tests*) test))
