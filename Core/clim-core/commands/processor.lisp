@@ -361,14 +361,14 @@
 
 (define-presentation-method accept
     ((type command) stream (view textual-view) &key)
-  (let ((command (funcall *command-parser* command-table stream)))
-    (cond ((null command)
-           (simple-parse-error "Empty command"))
-          ((partial-command-p command)
-           (funcall *partial-command-parser*
-                    command-table stream command
-                    (position *unsupplied-argument-marker* command)))
-          (t (values command type)))))
+  (if-let ((command (funcall *command-parser* command-table stream)))
+    (values (if (partial-command-p command)
+                (funcall *partial-command-parser*
+                         command-table stream command
+                         (position *unsupplied-argument-marker* command))
+                command)
+            type)
+    (simple-parse-error "Empty command")))
 
 (define-presentation-type command-or-form
     (&key (command-table (frame-command-table *application-frame*)))
