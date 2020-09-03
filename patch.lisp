@@ -9,7 +9,9 @@
            #:interactive-stream-p))
 
 (defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
-  `(defvar ,symbol ,value ,@(and docu (list docu))))
+  (if (typep value '(or number character))
+      `(cl:defconstant ,symbol ,value ,@(and docu (list docu)))
+      `(defvar ,symbol ,value ,@(and docu (list docu)))))
 
 (defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
 
