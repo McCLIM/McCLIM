@@ -52,16 +52,14 @@
     (frame-input-context-track-pointer frame input-context sheet event)))
 
 (defmacro with-input-context ((type &key override)
-                              (&optional (object-var (gensym))
-                                 (type-var (gensym))
-                                 event-var
-                                 options-var)
+                              (&optional
+                                 object-var type-var event-var options-var)
                               form
                               &body pointer-cases)
-  (let ((vars `(,object-var
-                ,type-var
-                ,@(and event-var `(,event-var))
-                ,@(and options-var `(,options-var))))
+  (let ((vars `(,(or object-var (gensym "OBJECT"))
+                ,(or type-var (gensym "TYPE"))
+                ,(or event-var (gensym "EVENT"))
+                ,(or options-var (gensym "OPTIONS"))))
         (return-block (gensym "RETURN-BLOCK"))
         (context-block (gensym "CONTEXT-BLOCK")))
     `(block ,return-block
