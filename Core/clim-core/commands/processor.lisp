@@ -38,9 +38,15 @@
         (when (and delimiter (delimiter-gesture-p delimiter))
           (read-gesture :stream stream))))
     (with-delimiter-gestures (*command-argument-delimiters* :override t)
-      (setq command-args (funcall (parser (gethash command-name
-                                                   *command-parser-table*))
-                                  stream)))
+      ;; The NULL context is a barrier which prevents other commands from
+      ;; being selected during reading arguments and cancelling the current
+      ;; command composition. When the argument's type is COMMAND, then a new
+      ;; context will be estabilished by the parser and it will be possible to
+      ;; select commands. -- jd 2020-09-03
+      (with-input-context ('null :override t) ()
+          (setq command-args (funcall (parser (gethash command-name
+                                                       *command-parser-table*))
+                                      stream))))
     (cons command-name command-args)))
 
 (defun command-line-command-unparser (command-table stream command)
