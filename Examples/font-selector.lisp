@@ -48,28 +48,30 @@
                     :value-changed-callback 'size-changed)))
   (:layouts
    (default
-       (vertically (:height 400 :width 600)
-         (horizontally ()
-           (labelling (:label "Family") (scrolling () family))
-           (labelling (:label "Face") (scrolling () face))
-           (labelling (:label "Size") (scrolling () size)))
-         canvas
-         (horizontally ()
-           +fill+
-           (make-pane 'push-button
-                      :label "OK"
-                      :activate-callback
-                      (lambda (ignore)
-                        ignore
-                        (frame-exit *application-frame*)))
-           (make-pane 'push-button
-                      :label "Cancel"
-                      :activate-callback
-                      (lambda (ignore)
-                        ignore
-                        (setf (font-selector-text-style *application-frame*)
-                              nil)
-                        (frame-exit *application-frame*))))))))
+    (spacing (:thickness 8)
+      (vertically (:height 400 :width 600 :y-spacing 8)
+        (horizontally ()
+          (labelling (:label "Family") (scrolling () family))
+          (labelling (:label "Face") (scrolling () face))
+          (labelling (:label "Size") (scrolling () size)))
+        canvas
+        (horizontally (:x-spacing 8)
+          +fill+
+          (make-pane 'push-button
+                     :label "Cancel"
+                     :activate-callback
+                     (lambda (ignore)
+                       ignore
+                       (setf (font-selector-text-style *application-frame*)
+                             nil)
+                       (frame-exit *application-frame*)))
+          (make-pane 'push-button
+                     :label "OK"
+                     :activate-callback
+                     (lambda (ignore)
+                       ignore
+                       (frame-exit *application-frame*))
+                     :show-as-default-p t)))))))
 
 (defmethod generate-panes :after (fm (frame font-selector))
   (reset-list-pane (find-pane-named frame 'family)
