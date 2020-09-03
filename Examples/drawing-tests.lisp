@@ -71,23 +71,21 @@
    (category-test-pane
     (horizontally (:equalize-height t)
       (1/8 (labelling (:label "Category")
-             (clim-extensions:lowering ()
-               (scrolling (:scroll-bar :vertical)
-                 (make-pane 'list-pane
-                            :name 'category-selector
-                            :value nil
-                            :name-key #'identity
-                            :items (reverse *drawing-tests-categories*)
-                            :value-changed-callback #'%update-category-selection)))))
+             (scrolling (:scroll-bar :vertical)
+               (make-pane 'list-pane
+                          :name 'category-selector
+                          :value nil
+                          :name-key #'identity
+                          :items (reverse *drawing-tests-categories*)
+                          :value-changed-callback #'%update-category-selection))))
       (1/4 (labelling (:label "Tests")
-             (clim-extensions:lowering ()
-               (scrolling (:scroll-bar :vertical)
-                 (make-pane 'list-pane
-                            :name 'test-selector
-                            :mode :exclusive
-                            :name-key #'drawing-test-name
-                            :items nil
-                            :value-changed-callback #'%update-selection)))))))
+             (scrolling (:scroll-bar :vertical)
+               (make-pane 'list-pane
+                          :name 'test-selector
+                          :mode :exclusive
+                          :name-key #'drawing-test-name
+                          :items nil
+                          :value-changed-callback #'%update-selection))))))
    (options-pane
     (vertically ()
       (horizontally ()
@@ -103,52 +101,47 @@
             "break")))
       (labelling (:label "Run in backend")
         (vertically ()
-          (horizontally ()
-            (make-pane 'option-pane
-                       :name 'backend-selector
-                       :value 'ps
-                       :name-key #'symbol-name
-                       :items '(ps pdf png))
+          (horizontally (:equalize-height t)
+            (make-pane 'option-pane :name 'backend-selector
+                                    :value 'ps
+                                    :name-key #'symbol-name
+                                    :items '(ps pdf png))
             (spacing (:thickness 6)
-              (make-pane 'push-button
-                         :label "Run"
-                         :activate-callback #'%run-in-backend)))
+              (make-pane 'push-button :label "Run"
+                                      :activate-callback #'%run-in-backend)))
           (spacing (:thickness 6)
             (horizontally ()
-              (1/3 (make-pane 'label-pane
-                              :label "Filename"))
+              (1/3 (make-pane 'label-pane :label "Filename"))
               (2/3 (clim-extensions:lowering ()
-                     (make-pane 'text-field-pane
-                                :name 'backend-filename
-                                :value "")))))))
+                     (make-pane 'text-field-pane :name 'backend-filename
+                                                 :value "")))))))
       (labelling (:label "Benchmark")
-        (horizontally ()
+        (horizontally (:equalize-height t)
           (spacing (:thickness 6)
             (horizontally ()
-              (1/3 (make-pane 'label-pane
-                              :label "Times"))
+              (1/3 (make-pane 'label-pane :label "Times"))
               (2/3 (clim-extensions:lowering ()
-                     (make-pane 'text-field-pane
-                                :name 'benchmark-times
-                                :value "1000")))))
+                     (make-pane 'text-field-pane :name 'benchmark-times
+                                                 :value "1000")))))
           (spacing (:thickness 6)
-            (make-pane 'push-button
-                       :label "Start"
-                       :activate-callback #'%start-benchmark))))
+            (make-pane 'push-button :label "Start"
+                                    :activate-callback #'%start-benchmark))))
       (labelling (:label "Application frame")
         (vertically (:y-spacing 8)
           (make-pane 'push-button
                      :label "Use separate application frame"
                      :activate-callback #'%run-in-separate-application-frame)
-          (labelling (:label "Backend")
-            (vertically (:name 'server-port-vbox)
-              (make-pane 'option-pane
-                         :value :clx-ttf
-                         :name-key (lambda (name) (string-capitalize (symbol-name name)))
-                         :items '(:clx-ttf :clx-fb :custom)
-                         :value-changed-callback #'%update-application-frame-backend)))))
-      (spacing (:thickness 6)
-        (vertically ()
+          (horizontally (:x-spacing 8 :equalize-height t)
+            (make-pane 'label-pane :label "Backend")
+            (:fill (vertically (:name 'server-port-vbox)
+                     (make-pane 'option-pane
+                                :value :clx-ttf
+                                :name-key (lambda (name) (string-capitalize (symbol-name name)))
+                                :items '(:clx-ttf :clx-fb :custom)
+                                :value-changed-callback #'%update-application-frame-backend))))))
+
+      (labelling (:label "Print to file")
+        (vertically (:y-spacing 4)
           (make-pane 'push-button
                      :label "Print All (/tmp/*.ps)"
                      :activate-callback #'(lambda (x)
@@ -206,10 +199,7 @@
         (1/7 category-test-pane)
         (:fill (horizontally (:min-width (* 15/8 *width*))
                  (1/3 options-pane)
-                 (:fill (vertically ()
-                          (:fill (spacing (:thickness 3)
-                                   (clim-extensions:lowering ()
-                                     backend-pane)))))))
+                 (:fill backend-pane)))
         (1/7 description-pane))))
    (side-by-side
     (spacing (:thickness 3)
@@ -217,12 +207,9 @@
         (1/7 category-test-pane)
         (:fill (horizontally (:min-width (* 3 *width*))
                  (1/6 options-pane)
-                 (:fill (vertically ()
-                          (:fill (spacing (:thickness 3)
-                                   (clim-extensions:lowering ()
-                                     (horizontally ()
-                                       (1/2 backend-pane)
-                                       (1/2 render-pane)))))))))
+                 (:fill (horizontally ()
+                          (1/2 backend-pane)
+                          (1/2 render-pane)))))
         (1/7 description-pane))))))
 
 (define-application-frame drawing-app-frame ()
