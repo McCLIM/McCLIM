@@ -233,7 +233,7 @@
      (default-item nil default-item-p)
      text-style label cache unique-id id-test cache-value cache-test
      max-width max-height n-rows (n-columns 1) x-spacing y-spacing row-wise
-     cell-align-x cell-align-y (scroll-bars :vertical)
+     cell-align-x cell-align-y (scroll-bars (when (> (length items) 20) :vertical))
      ;; We provide pointer documentation by default.
      (pointer-documentation *pointer-documentation-output*))
   (flet ((drawer (stream type)
