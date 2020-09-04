@@ -382,7 +382,7 @@
     :accessor box-layout-orientation)
    (clients
     :accessor box-layout-mixin-clients
-    :initform nil) )
+    :initform nil))
   (:documentation
    "Mixin class for layout panes, which want to behave like a HBOX/VBOX."))
 
@@ -413,11 +413,7 @@
 
 
 (defclass rack-layout-mixin (box-layout-mixin)
-  ((box-layout-orientation
-    :initarg :box-layout-orientation
-    :initform :vertical
-    :type (member :vertical :horizontal)
-    :accessor box-layout-orientation))
+  ()
   (:documentation
    "Mixin class for layout panes, which want to behave like a HRACK/VRACK."))
 
@@ -446,157 +442,151 @@
   (defgeneric xically-content-sr** (pane client))
 
   (defmethod xically-content-sr** ((pane box-layout-mixin) client)
-    (let (p)
-      (let ((sr (if (box-client-pane client)
-                    (compose-space (box-client-pane client))
-                    (make-space-requirement :width 0 :min-width 0 :max-width 0
-                                            :height 0 :min-height 0 :max-height 0))))
-        (cond ((box-client-fillp client)
-               (make-space-requirement
-                :major     (space-requirement-major sr)
-                :min-major (space-requirement-min-major sr)
-                :max-major +fill+
-                :minor     (space-requirement-minor sr)
-                :min-minor (space-requirement-min-minor sr)
-                :max-minor (space-requirement-max-minor sr)))
-              ((setq p (box-client-fixed-size client))
-               (make-space-requirement
-                :major     p
-                :min-major p
-                :max-major p
-                :minor     (if sr (space-requirement-minor sr) 0)
-                :min-minor (if sr (space-requirement-min-minor sr) 0)
-                :max-minor (if sr (space-requirement-max-minor sr) 0)))
-              (t
-               sr) ))))
+    (let (p
+          (sr (if-let ((pane (box-client-pane client)))
+                (compose-space pane)
+                (make-space-requirement :width 0 :min-width 0 :max-width 0
+                                        :height 0 :min-height 0 :max-height 0))))
+      (cond ((box-client-fillp client)
+             (make-space-requirement
+              :major     (space-requirement-major sr)
+              :min-major (space-requirement-min-major sr)
+              :max-major +fill+
+              :minor     (space-requirement-minor sr)
+              :min-minor (space-requirement-min-minor sr)
+              :max-minor (space-requirement-max-minor sr)))
+            ((setq p (box-client-fixed-size client))
+             (make-space-requirement
+              :major     p
+              :min-major p
+              :max-major p
+              :minor     (space-requirement-minor sr)
+              :min-minor (space-requirement-min-minor sr)
+              :max-minor (space-requirement-max-minor sr)))
+            (t
+             sr))))
 
   (defgeneric xically-content-sr*** (pane client major))
 
   (defmethod xically-content-sr*** ((pane box-layout-mixin) client major)
-    (let (p)
-      (let ((sr (if (box-client-pane client)
-                    (compose-space (box-client-pane client))
-                    (make-space-requirement :width 0 :min-width 0 :max-width 0
-                                            :height 0 :min-height 0 :max-height 0))))
-        (cond ((box-client-fillp client)
-               (make-space-requirement
-                :major     (space-requirement-major sr)
-                :min-major (space-requirement-min-major sr)
-                :max-major +fill+
-                :minor     (space-requirement-minor sr)
-                :min-minor (space-requirement-min-minor sr)
-                :max-minor (space-requirement-max-minor sr)))
-              ((setq p (box-client-fixed-size client))
-               (make-space-requirement
-                :major     p
-                :min-major p
-                :max-major p
-                :minor     (if sr (space-requirement-minor sr) 0)
-                :min-minor (if sr (space-requirement-min-minor sr) 0)
-                :max-minor (if sr (space-requirement-max-minor sr) 0)))
-              ((setq p (box-client-proportion client))
-               (make-space-requirement
-                :major     (clamp (* p major)
-                                  (space-requirement-min-major sr)
-                                  (space-requirement-max-major sr))
-                :min-major (space-requirement-min-major sr)
-                :max-major (space-requirement-max-major sr)
-                :minor     (if sr (space-requirement-minor sr) 0)
-                :min-minor (if sr (space-requirement-min-minor sr) 0)
-                :max-minor (if sr (space-requirement-max-minor sr) 0)))
-              (t
-               sr) ))))
+    (let (p
+          (sr (if-let ((pane (box-client-pane client)))
+                (compose-space pane)
+                (make-space-requirement :width 0 :min-width 0 :max-width 0
+                                        :height 0 :min-height 0 :max-height 0))))
+      (cond ((box-client-fillp client)
+             (make-space-requirement
+              :major     (space-requirement-major sr)
+              :min-major (space-requirement-min-major sr)
+              :max-major +fill+
+              :minor     (space-requirement-minor sr)
+              :min-minor (space-requirement-min-minor sr)
+              :max-minor (space-requirement-max-minor sr)))
+            ((setq p (box-client-fixed-size client))
+             (make-space-requirement
+              :major     p
+              :min-major p
+              :max-major p
+              :minor     (space-requirement-minor sr)
+              :min-minor (space-requirement-min-minor sr)
+              :max-minor (space-requirement-max-minor sr)))
+            ((setq p (box-client-proportion client))
+             (make-space-requirement
+              :major     (clamp (* p major)
+                                (space-requirement-min-major sr)
+                                (space-requirement-max-major sr))
+              :min-major (space-requirement-min-major sr)
+              :max-major (space-requirement-max-major sr)
+              :minor     (space-requirement-minor sr)
+              :min-minor (space-requirement-min-minor sr)
+              :max-minor (space-requirement-max-minor sr)))
+            (t
+             sr))))
 
   (defgeneric box-layout-mixin/xically-compose-space (pane))
 
   (defmethod box-layout-mixin/xically-compose-space ((pane box-layout-mixin))
     (let ((n (length (sheet-enabled-children pane))))
       (with-slots (major-spacing) pane
-        (loop
-          for client in (box-layout-mixin-clients pane)
-          for sr = (xically-content-sr** pane client)
-          sum (space-requirement-major sr) into major
-          sum (space-requirement-min-major sr) into min-major
-          sum (space-requirement-max-major sr) into max-major
-          maximize (space-requirement-minor sr) into minor
-          maximize (space-requirement-min-minor sr) into min-minor
-          minimize (space-requirement-max-minor sr) into max-minor
-          finally
-             (return
-               (space-requirement+*
-                (make-space-requirement
-                 :major     major
-                 :min-major (min min-major major)
-                 :max-major (max max-major major)
-                 :minor     minor
-                 :min-minor (min min-minor minor)
-                 :max-minor (max max-minor minor))
-                :min-major (* (1- n) major-spacing)
-                :max-major (* (1- n) major-spacing)
-                :major     (* (1- n) major-spacing)
-                :min-minor 0
-                :max-minor 0
-                :minor     0))))))
+        (loop for client in (box-layout-mixin-clients pane)
+              for sr = (xically-content-sr** pane client)
+              sum (space-requirement-major sr) into major
+              sum (space-requirement-min-major sr) into min-major
+              sum (space-requirement-max-major sr) into max-major
+              maximize (space-requirement-minor sr) into minor
+              maximize (space-requirement-min-minor sr) into min-minor
+              minimize (space-requirement-max-minor sr) into max-minor
+              finally (return (space-requirement+*
+                               (make-space-requirement
+                                :major     major
+                                :min-major (min min-major major)
+                                :max-major (max max-major major)
+                                :minor     minor
+                                :min-minor (min min-minor minor)
+                                :max-minor (max max-minor minor))
+                               :min-major (* (1- n) major-spacing)
+                               :max-major (* (1- n) major-spacing)
+                               :major     (* (1- n) major-spacing)
+                               :min-minor 0
+                               :max-minor 0
+                               :minor     0))))))
 
   (defgeneric box-layout-mixin/xically-allocate-space-aux* (box width height))
 
   (defmethod box-layout-mixin/xically-allocate-space-aux* ((box box-layout-mixin) width height)
     (declare (ignorable width height))
-    (let ((children (reverse (sheet-enabled-children box))))
-      (with-slots (major-spacing) box
-        (let* ((content-srs (mapcar #'(lambda (c) (xically-content-sr*** box c major))
-                                    (box-layout-mixin-clients box)))
-               (allot       (mapcar #'space-requirement-major content-srs))
-               (wanted      (reduce #'+ allot))
-               (excess      (- major wanted
-                               (* (1- (length children)) major-spacing))))
-          (when *dump-allocate-space*
-            (format *trace-output* "~&;; ~S ~S~%"
-                    'box-layout-mixin/xically-allocate-space-aux* box)
-            (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
-                    major wanted excess allot))
+    (let* ((clients (box-layout-mixin-clients box))
+           (children (reverse (sheet-enabled-children box)))
+           (spacing (* (1- (length children)) (slot-value box 'major-spacing)))
+           (content-srs (mapcar (lambda (c) (xically-content-sr*** box c major))
+                                clients))
+           (allot       (mapcar #'space-requirement-major content-srs))
+           (wanted      (reduce #'+ allot))
+           (excess      (- major wanted spacing)))
+      (when *dump-allocate-space*
+        (format *trace-output* "~&;; ~S ~S ~D children~%"
+                'box-layout-mixin/xically-allocate-space-aux* box (length children))
+        (format *trace-output* "~&;;   major = ~D, wanted = ~D, excess = ~D, allot = ~D.~%"
+                major wanted excess allot))
 
-          (let ((qvector
-                  (mapcar
-                   (lambda (c)
-                     (cond
-                       ((box-client-fillp c)
-                        (vector 1 0 0))
-                       (t
-                        (vector 0 0
-                                (abs (- (if (> excess 0)
-                                            (space-requirement-max-major (xically-content-sr*** box c major))
-                                            (space-requirement-min-major (xically-content-sr*** box c major)))
-                                        (space-requirement-major (xically-content-sr*** box c major))))))))
-                   (box-layout-mixin-clients box))))
-            ;;
-            (when *dump-allocate-space*
-              (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
-              (format *trace-output* "~&;;   qvector = ~S.~%" qvector)
-              (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar #'(lambda (x) (elt x 0)) qvector))
-              (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar #'(lambda (x) (elt x 1)) qvector))
-              (format *trace-output* "~&;;   qvector 2 = ~S.~%" (mapcar #'(lambda (x) (elt x 2)) qvector)))
-            ;;
-            (dotimes (j 3)
-              (let ((sum (reduce #'+ (mapcar (lambda (x) (elt x j)) qvector))))
-                (unless (zerop sum)
-                  (setf allot
-                        (mapcar (lambda (allot q)
-                                  (let ((q (elt q j)))
-                                    (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
-                                      (decf excess delta)
-                                      (decf sum q)
-                                      (+ allot delta))))
-                                allot qvector))
-                  (when *dump-allocate-space*
-                    (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)) )))
-            ;;
-            (when *dump-allocate-space*
-              (format *trace-output* "~&;;   excess = ~F.~%" excess)
-              (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
+      (let ((qvector (mapcar (lambda (c)
+                               (cond
+                                 ((box-client-fillp c)
+                                  (vector 1 0 0))
+                                 (t
+                                  (let ((sr (xically-content-sr*** box c major)))
+                                    (vector 0 0 (abs (- (if (> excess 0)
+                                                            (space-requirement-max-major sr)
+                                                            (space-requirement-min-major sr))
+                                                        (space-requirement-major sr))))))))
+                             clients)))
+        ;;
+        (when *dump-allocate-space*
+          (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
+          (format *trace-output* "~&;;   qvector = ~S.~%" qvector)
+          (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar (lambda (x) (elt x 0)) qvector))
+          (format *trace-output* "~&;;   qvector 1 = ~S.~%" (mapcar (lambda (x) (elt x 1)) qvector))
+          (format *trace-output* "~&;;   qvector 2 = ~S.~%" (mapcar (lambda (x) (elt x 2)) qvector)))
+        ;;
+        (dotimes (j 3)
+          (let ((sum (reduce #'+ (mapcar (lambda (x) (elt x j)) qvector))))
+            (unless (zerop sum)
+              (setf allot
+                    (mapcar (lambda (allot q)
+                              (let ((q (elt q j)))
+                                (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
+                                  (decf excess delta)
+                                  (decf sum q)
+                                  (+ allot delta))))
+                            allot qvector))
+              (when *dump-allocate-space*
+                (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)))))
+        ;;
+        (when *dump-allocate-space*
+          (format *trace-output* "~&;;   excess = ~F.~%" excess)
+          (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
 
-            (values allot
-                    (mapcar #'space-requirement-minor content-srs))) ))))
+        (values allot (mapcar #'space-requirement-minor content-srs)))))
 
   (defmethod box-layout-mixin/xically-allocate-space-aux* :around ((box rack-layout-mixin) width height)
     (declare (ignorable width height))
@@ -614,46 +604,42 @@
   (defgeneric box-layout-mixin/xically-allocate-space (pane real-width real-height))
 
   (defmethod box-layout-mixin/xically-allocate-space ((pane box-layout-mixin) real-width real-height)
-    (with-slots (major-spacing) pane
-      (multiple-value-bind (majors minors)
-          (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
-        (let ((x 0))
-          (loop
+    (multiple-value-bind (majors minors)
+        (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
+      (loop with spacing = (slot-value pane 'major-spacing)
+            with x = 0
             for child in (box-layout-mixin-clients pane)
             for major in majors
             for minor in minors
-            do
-               (when (box-client-pane child)
-                 (layout-child (box-client-pane child)
+            do (when-let ((pane (box-client-pane child)))
+                 (layout-child pane
                                (pane-align-x (box-client-pane child))
                                (pane-align-y (box-client-pane child))
                                ((lambda (major minor) height width) x 0)
                                ((lambda (major minor) width height) x 0)
                                ((lambda (major minor) height width) width real-width)
-                               ((lambda (major minor) height width) real-height height) ))
+                               ((lambda (major minor) height width) real-height height)))
                (incf x major)
-               (incf x major-spacing))))))
+               (incf x spacing))))
 
   (defmethod box-layout-mixin/xically-allocate-space ((pane rack-layout-mixin) real-width real-height)
-    (with-slots (major-spacing) pane
-      (multiple-value-bind (majors minors)
-          (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
-        (let ((x 0))
-          (loop
+    (multiple-value-bind (majors minors)
+        (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
+      (loop with spacing = (slot-value pane 'major-spacing)
+            with x = 0
             for child in (box-layout-mixin-clients pane)
             for major in majors
             for minor in minors
-            do
-               (when (box-client-pane child)
-                 (layout-child (box-client-pane child)
+            do (when-let ((pane (box-client-pane child)))
+                 (layout-child pane
                                :expand
                                :expand
                                ((lambda (major minor) height width) x 0)
                                ((lambda (major minor) width height) x 0)
                                ((lambda (major minor) height width) width real-width)
-                               ((lambda (major minor) height width) real-height height) ))
+                               ((lambda (major minor) height width) real-height height)))
                (incf x major)
-               (incf x major-spacing)))))))
+               (incf x spacing)))))
 
 (defmethod reorder-sheets :after ((pane box-layout-mixin) new-order)
   ;; Bring the order of the clients in sync with the new order of the
@@ -673,13 +659,12 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-box-macro-contents (contents)
-    (loop
-      for content in contents
-      collect (if (and (consp content)
-                       (or (realp (car content))
-                           (member (car content) '(+fill+ :fill))))
-                  `(list ',(car content) ,(cadr content))
-                  content))))
+    (loop for content in contents
+          collect (if (and (consp content)
+                           (or (realp (car content))
+                               (member (car content) '(+fill+ :fill))))
+                      `(list ',(car content) ,(cadr content))
+                      content))))
 
 (macrolet ((frob (macro-name box rack equalize-arg)
              (let ((equalize-key (make-keyword equalize-arg)))
@@ -822,35 +807,31 @@
        (minor   height  width))
   ;;
   (defun stack-space-requirements-xically (srs)
-    (loop
-      for sr in srs
-      sum (space-requirement-major sr) into major
-      sum (space-requirement-min-major sr) into min-major
-      sum (space-requirement-max-major sr) into max-major
-      maximize (space-requirement-minor sr) into minor
-      maximize (space-requirement-min-minor sr) into min-minor
-      minimize (space-requirement-max-minor sr) into max-minor
-      finally
-         (return
-           (make-space-requirement
-            :major major
-            :min-major (min min-major major)
-            :max-major (max max-major major)
-            :minor minor
-            :min-minor (min min-minor minor)
-            :max-minor (max max-minor minor)))))
+    (loop for sr in srs
+          sum (space-requirement-major sr) into major
+          sum (space-requirement-min-major sr) into min-major
+          sum (space-requirement-max-major sr) into max-major
+          maximize (space-requirement-minor sr) into minor
+          maximize (space-requirement-min-minor sr) into min-minor
+          minimize (space-requirement-max-minor sr) into max-minor
+          finally (return (make-space-requirement
+                           :major major
+                           :min-major (min min-major major)
+                           :max-major (max max-major major)
+                           :minor minor
+                           :min-minor (min min-minor minor)
+                           :max-minor (max max-minor minor)))))
 
   (defun allot-space-xically (srs major)
     (let* ((allot  (mapcar #'space-requirement-major srs))
            (wanted (reduce #'+ allot))
            (excess (- major wanted))
-           (qs
-             (mapcar (lambda (sr)
-                       (abs (- (if (> excess 0)
-                                   (space-requirement-max-major sr)
-                                   (space-requirement-min-major sr))
-                               (space-requirement-major sr))))
-                     srs)))
+           (qs (mapcar (lambda (sr)
+                         (abs (- (if (> excess 0)
+                                     (space-requirement-max-major sr)
+                                     (space-requirement-min-major sr))
+                                 (space-requirement-major sr))))
+                       srs)))
       (let ((sum (reduce #'+ qs)))
         (cond ((zerop sum)
                (let ((n (length qs)))
@@ -870,7 +851,7 @@
                                  (decf sum q)
                                  (+ allot delta)))
                              allot qs)))))
-      allot)) )
+      allot)))
 
 (defgeneric table-pane-row-space-requirement (pane i))
 
@@ -901,45 +882,39 @@
           (ys (* y-spacing (1- (array-dimension array 0)))))
       (let ((r (stack-space-requirements-vertically rsrs))
             (c (stack-space-requirements-horizontally csrs)))
-        (let ((res
-                (make-space-requirement
-                 :width      (+ (space-requirement-width r) xs)
-                 :min-width  (+ (space-requirement-min-width r) xs)
-                 :max-width  (+ (space-requirement-max-width r) xs)
-                 :height     (+ (space-requirement-height c) ys)
-                 :min-height (+ (space-requirement-min-height c) ys)
-                 :max-height (+ (space-requirement-max-height c) ys))))
-          res)))))
+        (make-space-requirement
+         :width      (+ (space-requirement-width r) xs)
+         :min-width  (+ (space-requirement-min-width r) xs)
+         :max-width  (+ (space-requirement-max-width r) xs)
+         :height     (+ (space-requirement-height c) ys)
+         :min-height (+ (space-requirement-min-height c) ys)
+         :max-height (+ (space-requirement-max-height c) ys))))))
 
 (defmethod allocate-space ((pane table-pane) width height)
-  (let (rsrs csrs)
-    (declare (ignorable rsrs csrs))
-    (with-slots (array x-spacing y-spacing) pane
-      ;; allot rows
-      (let* ((xs (* x-spacing (1- (array-dimension array 1))))
-             (ys (* y-spacing (1- (array-dimension array 0))))
-             (rows (allot-space-vertically
-                    (setq rsrs (loop for i from 0 below (array-dimension array 0)
-                                     collect (table-pane-row-space-requirement pane i)))
-                    (- height ys)))
-             (cols (allot-space-horizontally
-                    (setq csrs (loop for j from 0 below (array-dimension array 1)
-                                     collect (table-pane-col-space-requirement pane j)))
-                    (- width xs))))
-        ;; now finally layout each child
-        (loop
-          for y = 0 then (+ y h y-spacing)
-          for h in rows
-          for i from 0
-          do (loop
-               for x = 0 then (+ x w x-spacing)
-               for w in cols
-               for j from 0
-               do (let ((child (aref array i j)))
-                    (layout-child child
-                                  (pane-align-x child)
-                                  (pane-align-y child)
-                                  x y w h))))))))
+  (with-slots (array x-spacing y-spacing) pane
+    ;; allot rows
+    (let* ((row-count (array-dimension array 0))
+           (col-count (array-dimension array 1))
+           (rows (allot-space-vertically
+                  (loop for i from 0 below row-count
+                        collect (table-pane-row-space-requirement pane i))
+                  (- height (* y-spacing (1- row-count)))))
+           (cols (allot-space-horizontally
+                  (loop for j from 0 below col-count
+                        collect (table-pane-col-space-requirement pane j))
+                  (- width (* x-spacing (1- col-count))))))
+      ;; now finally layout each child
+      (loop for y = 0 then (+ y h y-spacing)
+            for h in rows
+            for i from 0
+            do (loop for x = 0 then (+ x w x-spacing)
+                     for w in cols
+                     for j from 0
+                     for child = (aref array i j)
+                     do (layout-child child
+                                      (pane-align-x child)
+                                      (pane-align-y child)
+                                      x y w h))))))
 
 (defun table-pane-p (pane)
   (typep pane 'table-pane))
