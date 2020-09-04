@@ -618,9 +618,9 @@
                                ((lambda (major minor) height width) x 0)
                                ((lambda (major minor) width height) x 0)
                                ((lambda (major minor) height width) width real-width)
-                               ((lambda (major minor) height width) real-height height)))
-               (incf x major)
-               (incf x spacing))))
+                               ((lambda (major minor) height width) real-height height))
+                 (incf x spacing))
+               (incf x major))))
 
   (defmethod box-layout-mixin/xically-allocate-space ((pane rack-layout-mixin) real-width real-height)
     (multiple-value-bind (majors minors)
@@ -637,9 +637,9 @@
                                ((lambda (major minor) height width) x 0)
                                ((lambda (major minor) width height) x 0)
                                ((lambda (major minor) height width) width real-width)
-                               ((lambda (major minor) height width) real-height height)))
-               (incf x major)
-               (incf x spacing)))))
+                               ((lambda (major minor) height width) real-height height))
+                 (incf x spacing))
+               (incf x major)))))
 
 (defmethod reorder-sheets :after ((pane box-layout-mixin) new-order)
   ;; Bring the order of the clients in sync with the new order of the
