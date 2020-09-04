@@ -163,31 +163,45 @@
 
 ;;;; Graph Output Records
 
-(defclass standard-graph-output-record (graph-output-record
-                                        standard-sequence-output-record)
-     ((orientation
-       :initarg :orientation
-       :initform :horizontal)
-      (center-nodes
-       :initarg :center-nodes
-       :initform nil)
-      (cutoff-depth
-       :initarg :cutoff-depth
-       :initform nil)
-      (merge-duplicates
-       :initarg :merge-duplicates
-       :initform nil)
-      (generation-separation
-       :initarg :generation-separation
-       :initform '(4 :character))
-      (within-generation-separation
-       :initarg :within-generation-separation
-       :initform '(1/2 :line))
-      (maximize-generations
-       :initarg :maximize-generations
-       :initform nil)
-      (root-nodes
-       :accessor graph-root-nodes)))
+(defclass standard-graph-output-record
+    (graph-output-record standard-sequence-output-record)
+  ((orientation
+    :initarg :orientation)
+   (center-nodes
+    :initarg :center-nodes)
+   (cutoff-depth
+    :initarg :cutoff-depth)
+   (merge-duplicates
+    :initarg :merge-duplicates)
+   (generation-separation
+    :initarg :generation-separation)
+   (within-generation-separation
+    :initarg :within-generation-separation)
+   (maximize-generations
+    :initarg :maximize-generations)
+   (root-nodes
+    :accessor graph-root-nodes))
+  (:default-initargs :orientation :horizontal
+                     :center-nodes nil
+                     :cutoff-depth nil
+                     :merge-duplicates nil
+                     :maximize-generations nil))
+
+(defmethod initialize-instance :after ((record standard-graph-output-record)
+                                       &key
+                                         orientation
+                                         generation-separation
+                                         within-generation-separation)
+  (unless generation-separation
+    (setf (slot-value record 'generation-separation)
+          (ecase orientation
+            (:horizontal '(3 :character))
+            (:vertical '(2 :line)))))
+  (unless within-generation-separation
+    (setf (slot-value record 'within-generation-separation)
+          (ecase orientation
+            (:horizontal '(1 :line))
+            (:vertical '(2 :character))))))
 
 (defclass tree-graph-output-record (standard-graph-output-record)
   ())
