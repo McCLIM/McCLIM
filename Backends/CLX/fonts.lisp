@@ -11,7 +11,7 @@
 
 (in-package #:clim-clx)
 
-(defconstant *families/names*
+(defparameter *families/names*
   '(:fix         "adobe-courier"
     :serif       "adobe-times"
     :sans-serif  "adobe-helvetica"))

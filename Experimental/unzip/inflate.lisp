@@ -59,7 +59,7 @@
 
 ;;; Some parameters of the DEFLATE compression method
 
-(defconstant *length-encoding*
+(defconstant +length-encoding+
     ;; Maps length token to (<number of additional bits> <length-offset>)
   '#((0    3)     (0    4)     (0    5)     (0    6)
      (0    7)     (0    8)     (0    9)     (0   10)
@@ -70,7 +70,7 @@
      (5  131)     (5  163)     (5  195)     (5  227)
      (0  258) ))
 
-(defconstant *dist-encoding*
+(defconstant +dist-encoding+
     ;; Maps distance token to (<number of additional bits> <distance-offset>)
   '#( (0     1)      (0     2)      (0     3)      (0     4)
       (1     5)      (1     7)      (2     9)      (2    13)
@@ -81,7 +81,7 @@
      (11  4097)     (11  6145)     (12  8193)     (12 12289)
      (13 16385)     (13 24577) ))
 
-(defconstant *fixed-huffman-code-lengths*
+(defconstant +fixed-huffman-code-lengths+
     ;; Code length for the fixed huffman code
     (let ((res (make-array 288)))
       (loop for i from   0 to 143 do (setf (aref res i) 8))
@@ -90,16 +90,16 @@
       (loop for i from 280 to 287 do (setf (aref res i) 8))
       res))
 
-(defconstant *code-length-code-lengths-order*
+(defconstant +code-length-code-lengths-order+
     '(16 17 18 0 8 7 9 6 10 5 11 4 12 3 13 2 14 1 15)
   "Order in which code lengths for the code length alphabet are written.")
 
 ;; Layout for various kinds of huffman trees
 
-(eval-when (compile eval load)
-  (defconstant *code-len-ht-layout* '(4 2 2 2))
-  (defconstant *literal-ht-layout*  '(9 2 2 2))
-  (defconstant *dist-ht-layout*     '(9 2 2 2)) )
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defconstant +code-len-ht-layout+ '(4 2 2 2))
+  (defconstant +literal-ht-layout+  '(9 2 2 2))
+  (defconstant +dist-ht-layout+     '(9 2 2 2)) )
 
 ;;; fixnum arithmetric
 
@@ -256,7 +256,7 @@
                      (put-n-elements (n x)
                        `(let ((nn ,n) (xx ,x))
                           (%dotimes (kk nn) (put-element xx)))))
-            (let ((c (bs/read-symbol huffman-tree *code-len-ht-layout*)))
+            (let ((c (bs/read-symbol huffman-tree +code-len-ht-layout+)))
               (declare (type fixnum c))
               (case c
                 (16 (put-n-elements (+ 3 (bs/read-byte 2)) (aref res (- i 1))))
@@ -271,15 +271,15 @@
       (declare (type fixnum length-code))
       (values
        ;; length
-       (let ((meaning (svref *length-encoding* (- length-code 257))))
+       (let ((meaning (svref +length-encoding+ (- length-code 257))))
          (+ (the (integer 0 258) (second meaning))
             (bs/read-byte (the (integer 0 24)
                             (first meaning)))))
        ;; distance
        (let ((dist-sym (if dist-ht
-                           (bs/read-symbol dist-ht *dist-ht-layout*)
+                           (bs/read-symbol dist-ht +dist-ht-layout+)
                          (bs/read-reversed-byte 5))))
-         (let ((meaning (svref *dist-encoding* dist-sym)))
+         (let ((meaning (svref +dist-encoding+ dist-sym)))
            (+ (the (integer 0 24577) (second meaning))
               (bs/read-byte (the (integer 0 24);xxx? right?
                               (first meaning)))))) ))
@@ -290,7 +290,7 @@
 
 (defun fixed-huffman-tree ()
   (or *fixed-huffman-tree*
-      (build-huffman-tree *fixed-huffman-code-lengths* *literal-ht-layout*)))
+      (build-huffman-tree +fixed-huffman-code-lengths+ +literal-ht-layout+)))
 
 (defstruct inflator-state
   (len          0       :type fixnum)   ;length of stored data
@@ -460,7 +460,7 @@
                (go uncompress-loop))
              (%decf iii)
              
-             (setf c (bs/read-symbol literal-ht *literal-ht-layout*))
+             (setf c (bs/read-symbol literal-ht +literal-ht-layout+))
 
              (unless (<= c 255) (go L2))
              (putbyte c)
@@ -512,17 +512,17 @@
                             (type (unsigned-byte 5) n-hclen))
                  (loop
                      for i fixnum from 1 to n-hclen
-                     for j fixnum in *code-length-code-lengths-order*
+                     for j fixnum in +code-length-code-lengths-order+
                      do (setf (aref hclens j) (bs/read-byte 3)))
                  ;;
-                 (setf code-len-ht (build-huffman-tree hclens *code-len-ht-layout*))
+                 (setf code-len-ht (build-huffman-tree hclens +code-len-ht-layout+))
 
                  ;; slurp the huffman trees for literals and distances    
                  (setf hlit-lens (read-code-lengths code-len-ht n-hlit))
                  (setf hdist-lens (read-code-lengths code-len-ht n-hdist))
     
-                 (setf literal-ht (build-huffman-tree hlit-lens *literal-ht-layout*))
-                 (setf dist-ht (build-huffman-tree hdist-lens *dist-ht-layout*))))
+                 (setf literal-ht (build-huffman-tree hlit-lens +literal-ht-layout+))
+                 (setf dist-ht (build-huffman-tree hdist-lens +dist-ht-layout+))))
 
              (go uncompress-loop)
 

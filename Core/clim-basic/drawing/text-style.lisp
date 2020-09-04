@@ -155,15 +155,15 @@
   (defconstant *default-text-style* (make-text-style :sans-serif :roman :normal))
   (defconstant *undefined-text-style* *default-text-style*)
 
-  (defconstant *smaller-sizes* '(:huge :very-large :large :normal
+  (defconstant +smaller-sizes+ '(:huge :very-large :large :normal
                                  :small :very-small :tiny :tiny))
 
-  (defconstant *larger-sizes* '(:tiny :very-small :small :normal
+  (defconstant +larger-sizes+ '(:tiny :very-small :small :normal
                                 :large :very-large :huge :huge))
 
-  (defconstant *font-scaling-factor* 4/3)
-  (defconstant *font-min-size* 6)
-  (defconstant *font-max-size* 48)
+  (defconstant +font-scaling-factor+ 4/3)
+  (defconstant +font-min-size+ 6)
+  (defconstant +font-max-size+ 48)
 
   (defconstant +font-sizes+
     '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
@@ -183,13 +183,13 @@
 
 (defun find-smaller-size (size)
   (if (numberp size)
-      (max (round (/ size *font-scaling-factor*)) *font-min-size*)
-      (cadr (member size *smaller-sizes*))))
+      (max (round (/ size +font-scaling-factor+)) +font-min-size+)
+      (cadr (member size +smaller-sizes+))))
 
 (defun find-larger-size (size)
   (if (numberp size)
-      (min (round (* size *font-scaling-factor*)) *font-max-size*)
-      (cadr (member size *larger-sizes*))))
+      (min (round (* size +font-scaling-factor+)) +font-max-size+)
+      (cadr (member size +larger-sizes+))))
 
 (defmethod text-style-components ((text-style standard-text-style))
   (values (text-style-family   text-style)

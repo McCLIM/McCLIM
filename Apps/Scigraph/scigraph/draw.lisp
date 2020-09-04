@@ -234,9 +234,9 @@ without any way to override them.  So this is commented out.
     (draw-point u v :stream stream :alu alu)))
 
 
-(defconstant *DASH-PATTERN-SIZE* 64 "Length of dashed pattern in pixels.")
-(defconstant *DASH-STEP-SIZE* (/ *dash-pattern-size* 8))
-(defvar *DASH-PATTERNS*
+(defconstant +dash-pattern-size+ 64 "Length of dashed pattern in pixels.")
+(defconstant +dash-step-size+ (/ +dash-pattern-size+ 8))
+(defvar *dash-patterns*
 	     #2A((8  7  6  5  4  3  2  1)
 		 (7  6  5  4  3  2  1 -1)
 		 (5  4  3  2  1 -1  1 -1)
@@ -268,8 +268,8 @@ without any way to override them.  So this is commented out.
   ;;(declare (values ds))
   (assert (numberp ds))
   (let ((dash-patterns *dash-patterns*)
-	(dash-step-size *dash-step-size*)
-	(dash-pattern-size *dash-pattern-size*))
+	(dash-step-size +dash-step-size+)
+	(dash-pattern-size +dash-pattern-size+))
     (setq style (mod style 8))
     (flet ((draw-line-piece (a b c d)
 	     (draw-line a b c d
@@ -365,7 +365,7 @@ without any way to override them.  So this is commented out.
 		      keys)))))
 
 ;;; The value of this depends on the lisp implementation.
-(defconstant *return* #.(elt (format nil "~%") 0))
+(defconstant +return+ #.(elt (format nil "~%") 0))
 
 (defun draw-text-internal (stream u v text &rest keys &key (rotation 0) &allow-other-keys)
   "Draw text with (left,top) as given, but do the right thing with return characters."
@@ -380,7 +380,7 @@ without any way to override them.  So this is commented out.
 	 (SIN-FACTOR (values (truncate (* line-height (sin rotation))))))
     (when (plusp length)
       (loop
-	(setq END (or (position *return* text :test #'char= :start start) length))
+	(setq END (or (position +return+ text :test #'char= :start start) length))
 	(when (> (- end start) 1)
 	  (apply #'draw-string-image
 		 (if (or (plusp start) (< end length))
