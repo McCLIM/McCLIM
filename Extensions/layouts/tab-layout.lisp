@@ -337,35 +337,33 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 (defparameter +tab-bar-view+ (make-instance 'tab-bar-view))
 
-(declaim (inline button-polygon))
-(defun button-polygon (x y top-line-length)
-  (vector x                         (+ y 14)
-          (+ x 6)                   y
-          (+ x 6 top-line-length)   y
-          (+ x 6 top-line-length 6) (+ y 14)))
-
 (defun draw-tab-header (stream page state)
   (let* ((title (tab-page-title page))
          (drawing-options (tab-page-drawing-options page))
          (text-style (getf drawing-options :text-style)))
+
     ;; Draw polygon.
     (multiple-value-bind (x y) (stream-cursor-position stream)
-      (let* ((text-size (text-size stream title :text-style text-style))
-             (polygon (button-polygon x y (+ text-size 4))))
-        (flet ((draw-button (&rest options)
-                 (apply #'draw-polygon* stream polygon options)))
-          (ecase state
-            (:inactive
-             (draw-button :ink +grey+)
-             (draw-button :ink +black+ :filled nil))
-            (:highlighted
-             (draw-button :ink +grey95+)
-             (draw-button :ink +black+ :filled nil))
-            (:selected
-             (draw-button :ink +black+ :filled nil :closed nil))))
-        ;; Draw label.
-        (apply #'draw-text* stream title (+ x 8) y :align-y :top drawing-options)
-        (stream-increment-cursor-position stream (+ 8 text-size 8) 0)))))
+      (multiple-value-bind (text-width text-height)
+          (values (text-size stream title :text-style text-style) 18)
+        (let ((width (+ 8 text-width 8)))
+          ;; Enlarge output record
+          (draw-rectangle* stream x y (+ x width) (+ y text-height 8 3)
+                           :ink (case state
+                                  ((:highlighted :inactive) +transparent-ink+)
+                                  (:selected (compose-over (compose-in +white+ (make-opacity .6))
+                                                           (pane-background stream)))))
+          ;; Draw label.
+          (apply #'draw-text* stream title (+ x 8) (+ y text-height)
+                 drawing-options)
+
+          (draw-rectangle* stream x (+ y text-height 8) (+ x width) (+ y text-height 8 2)
+                           :ink (ecase state
+                                  (:inactive (pane-background stream))
+                                  (:highlighted +grey40+)
+                                  (:selected climi::*highlight-color*)))
+
+          (stream-increment-cursor-position stream width 0))))))
 
 (define-presentation-method present
     (object (type tab-page) stream (view tab-bar-view) &key)
@@ -383,7 +381,8 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
     ;; contrast to RECORD and its other children).
     (setf (stream-cursor-position stream)
           (output-record-position (first-elt (output-record-children record))))
-    (draw-tab-header stream page :highlighted)))
+    (let ((enabledp (sheet-enabled-p (tab-page-pane page))))
+      (draw-tab-header stream page (if enabledp :selected :highlighted)))))
 
 (define-presentation-method highlight-presentation
     ((type tab-page) record stream (state (eql :unhighlight)))
@@ -396,6 +395,7 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
     :accessor header-display-function
     :initarg :header-display-function
     :initform 'default-display-tab-header))
+  (:default-initargs :background climi::*3d-normal-color*)
   (:documentation "A pure-lisp implementation of the tab-layout, this is
 the generic implementation chosen by the CLX frame manager automatically.
 Users should create panes for type TAB-LAYOUT, not TAB-LAYOUT-PANE, so
@@ -412,12 +412,12 @@ that the frame manager can customize the implementation."))
   (call-next-method))
 
 (defun default-display-tab-header (tab-layout pane)
-  (stream-increment-cursor-position pane 0 3)
-  (flet ((draw-line-and-increment (stream length)
-           (multiple-value-bind (x y) (stream-cursor-position stream)
-             (draw-line* stream x (+ y 14) (+ x length) (+ y 14) :ink +black+)
-             (stream-increment-cursor-position stream length 0))))
-    (draw-line-and-increment pane 5)
+  (draw-line* pane 0 (1- (+ 8 18 8 3)) (bounding-rectangle-max-x pane) (1- (+ 8 18 8 3))
+              :ink +black+)
+  (stream-increment-cursor-position pane 0 8)
+  (flet ((increment (stream length)
+           (stream-increment-cursor-position stream length 0)))
+    (increment pane 5)
     (dolist (page (tab-layout-pages tab-layout))
       (let ((presentation-type (tab-page-presentation-type page))
             (page-pane (tab-page-pane page)))
@@ -425,17 +425,16 @@ that the frame manager can customize the implementation."))
             (present page 'tab-page :stream pane)
             (with-output-as-presentation (pane page-pane presentation-type)
               (present page 'tab-page :stream pane))))
-      (draw-line-and-increment pane 7))
-    (draw-line-and-increment pane (- (bounding-rectangle-width pane)
-                                     (stream-cursor-position pane)))))
+      (increment pane 7))))
 
 (defclass tab-bar-pane (application-pane)
   ()
-  (:default-initargs :default-view +tab-bar-view+))
+  (:default-initargs :default-view +tab-bar-view+ :background climi::*3d-normal-color*))
 
 (defmethod compose-space ((pane tab-bar-pane) &key width height)
   (declare (ignore width height))
-  (make-space-requirement :min-height 22 :height 22 :max-height 22))
+  (let ((height (+ 8 18 8 3)))
+    (make-space-requirement :min-height height :height height :max-height height)))
 
 (defmethod initialize-instance :after ((instance tab-layout-pane) &key pages)
   (let ((current (tab-layout-enabled-page instance)))
