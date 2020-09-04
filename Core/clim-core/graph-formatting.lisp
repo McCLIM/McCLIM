@@ -397,13 +397,12 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
                                        (> depth node-depth)
                                        (< depth node-depth)))
                            (setf (gethash node depth-hash) depth)
-                           (map nil #'(lambda (child)
-                                        (assign-depth child
-                                                      (1+ depth)
-                                                      (cons node trail)))
-                                (graph-node-children node)))))))
-            (map nil #'(lambda (x) (assign-depth x 0 nil))
-                 root-nodes))
+                           (do-sequence (child (graph-node-children node))
+                             (assign-depth child
+                                           (1+ depth)
+                                           (cons node trail))))))))
+            (do-sequence (x root-nodes)
+              (assign-depth x 0 nil)))
           ;;
           (labels ((compute-dimensions (node depth &optional parent)
                      ;; compute the major dimension of all the nodes at this
@@ -425,74 +424,72 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
                        (setf (graph-node-minor-size node) 0)
                        (max (node-minor-dimension node)
                             (setf (graph-node-minor-size node)
-                                  (let ((sum 0) (n 0))
-                                    (map nil #'(lambda (child)
-                                                 (let ((x (compute-dimensions child (+ depth 1) node)))
-                                                   (when x
-                                                     (incf sum x)
-                                                     (incf n))))
-                                         (graph-node-children node))
+                                  (let ((sum 0)
+                                        (n 0)
+                                        (depth-1 (+ depth 1)))
+                                    (do-sequence (child (graph-node-children node))
+                                      (when-let ((x (compute-dimensions child depth-1 node)))
+                                        (incf sum x)
+                                        (incf n)))
                                     (+ sum
                                        (* (max 0 (- n 1))
                                           within-generation-separation))))))))
-            (map nil #'(lambda (x) (compute-dimensions x 0))
-                 root-nodes))
+            (do-sequence (x root-nodes)
+              (compute-dimensions x 0)))
           ;;
           (let ((visited (make-hash-table :test #'eq)))
             (labels ((compute-position (node majors u0 v0)
-                       (cond ((gethash node visited)
-                              v0)
-                             (t
-                              (setf (gethash node visited) t)
-                              (let ((d (- (node-minor-dimension node)
-                                          (graph-node-minor-size node))))
-                                ;; center-nodes is meant to be "with respect
-                                ;; to the widest node in the same
-                                ;; generation". Interpret "wide" as being the
-                                ;; size in the major dimension --JAC 2017-09-04
-                                (let ((u (if center-nodes
-                                             (+ u0 (/ (- (car majors) (node-major-dimension node)
-                                                         generation-separation)
-                                                      2))
-                                             u0))
-                                      (v (+ v0 (/ (min 0 d) -2))))
-                                  (setf (output-record-position node)
-                                        (if (eq orientation :vertical)
-                                            (transform-position (medium-transformation stream) v u)
-                                            (transform-position (medium-transformation stream) u v)))
-                                  (add-output-record node graph-output-record))
-                                ;;
-                                (let ((u (+ u0 (car majors)))
-                                      (v (+ v0 (max 0 (/ d 2))))
-                                      (firstp t))
-                                  (map nil #'(lambda (q)
-                                               (unless (gethash q visited)
-                                                 (if firstp
-                                                     (setf firstp nil)
-                                                     (incf v within-generation-separation))
-                                                 (setf v (compute-position q (cdr majors) u v))))
-                                       ;; to make the tree style layout work
-                                       ;; for DAGs and digraphs, we must only
-                                       ;; recurse to those children whose
-                                       ;; dimensions were computed previously
-                                       ;; with this node as their principal
-                                       ;; parent --2017-09-04
-                                       (remove-if-not
-                                        #'(lambda (x) (eq (gethash x parent-hash) node))
-                                        (graph-node-children node))))
-                                ;;
-                                (+ v0 (max (node-minor-dimension node)
-                                           (graph-node-minor-size node))))))))
+                       (when (gethash node visited)
+                         (return-from compute-position v0))
+                       (setf (gethash node visited) t)
+                       (let ((d (- (node-minor-dimension node)
+                                   (graph-node-minor-size node))))
+                         ;; center-nodes is meant to be "with respect to the
+                         ;; widest node in the same generation". Interpret
+                         ;; "wide" as being the size in the major dimension
+                         ;; --JAC 2017-09-04
+                         (let ((u (if center-nodes
+                                      (+ u0 (/ (- (car majors) (node-major-dimension node)
+                                                  generation-separation)
+                                               2))
+                                      u0))
+                               (v (+ v0 (/ (min 0 d) -2)))
+                               (tr (medium-transformation stream)))
+                           (setf (output-record-position node)
+                                 (if (eq orientation :vertical)
+                                     (transform-position tr v u)
+                                     (transform-position tr u v)))
+                           (add-output-record node graph-output-record))
+                         ;;
+                         (let ((u (+ u0 (car majors)))
+                               (v (+ v0 (max 0 (/ d 2))))
+                               (firstp t)
+                               ;; to make the tree style layout work for DAGs
+                               ;; and digraphs, we must only recurse to those
+                               ;; children whose dimensions were computed
+                               ;; previously with this node as their principal
+                               ;; parent -- JAC 2017-09-04
+                               (nodes (remove-if-not
+                                       (lambda (x)
+                                         (eq (gethash x parent-hash) node))
+                                       (graph-node-children node))))
+                           (do-sequence (q nodes)
+                             (unless (gethash q visited)
+                               (if firstp
+                                   (setf firstp nil)
+                                   (incf v within-generation-separation))
+                               (setf v (compute-position q (cdr majors) u v)))))
+                         ;;
+                         (+ v0 (max (node-minor-dimension node)
+                                    (graph-node-minor-size node))))))
               ;;
-              (let ((majors (mapcar (lambda (x) (+ x generation-separation))
-                                    (coerce generation-sizes 'list))))
-                (let ((u (/ generation-separation 2))
-                      (v 0))
-                  (maplist (lambda (rest)
-                             (setf v (compute-position (car rest) majors u v))
-                             (unless (null rest)
-                               (incf v within-generation-separation)))
-                           (graph-root-nodes graph-output-record)))))))))))
+              (let ((majors (loop for x across generation-sizes
+                                  collect (+ x generation-separation)))
+                    (u (/ generation-separation 2))
+                    (v 0))
+                (do-sequence (elt (graph-root-nodes graph-output-record))
+                  (setf v (compute-position elt majors u v))
+                  (incf v within-generation-separation))))))))))
 
 ;;;; Edges
 
