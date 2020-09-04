@@ -441,9 +441,9 @@
                                             :version :unspecific
                                             :type :wild
                              :name :wild)))
-      (values search-pathname (pathname-type actual-pathname) original-pathname))))
+      (values search-pathname original-pathname))))
 
-(defun filename-completer-get-candidates (search-pathname pathname-type original-pathname)
+(defun filename-completer-get-candidates (search-pathname original-pathname)
   (let ((orginal-is-logical-pathname (typep original-pathname 'logical-pathname))
         (completions (directory search-pathname #+sbcl :resolve-symlinks #+sbcl nil)))
     ;; Now prune out all completions that don't start with the string
@@ -493,9 +493,9 @@
 
 
 (defun filename-completer (string action)
-  (multiple-value-bind (search-pathname pathname-type original-pathname)
+  (multiple-value-bind (search-pathname original-pathname)
       (filename-completer-get-directory string)
-    (let ((candidates (filename-completer-get-candidates search-pathname pathname-type original-pathname)))
+    (let ((candidates (filename-completer-get-candidates search-pathname original-pathname)))
         (complete-from-possibilities (namestring original-pathname) candidates '(#\Space)
                                      :action action
                                      :name-key #'namestring
