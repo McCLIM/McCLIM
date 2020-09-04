@@ -244,58 +244,52 @@
                                  stream root-objects
                                  object-printer inferior-producer
                                  &key duplicate-key duplicate-test)
-  (with-slots (cutoff-depth merge-duplicates) graph-output-record
-    (let* ((hash-table (when (and merge-duplicates (member duplicate-test (list #'eq #'eql #'equal #'equalp)))
-                         (make-hash-table :test duplicate-test)))
-           node-list
-           (hashed hash-table))
-      (labels
-          ((previous-node (obj)
-             ;; is there a previous node for obj?  if so, return it.
-             (when merge-duplicates
-               (if hashed
-                   (locally (declare (type hash-table hash-table))
-                     (gethash obj hash-table))
-                   (cdr (assoc obj node-list :test duplicate-test)))))
-           ((setf previous-node) (val obj)
+  (let* ((cutoff-depth (slot-value graph-output-record 'cutoff-depth))
+         (merge-duplicates (slot-value graph-output-record 'merge-duplicates))
+         (node-list '())
+         (hashed (and merge-duplicates
+                      (member duplicate-test '(#'eq #'eql #'equal #'equalp))))
+         (hash-table (and hashed (make-hash-table :test duplicate-test))))
+    (labels
+        ((previous-node (obj)
+           ;; is there a previous node for obj?  if so, return it.
+           (when merge-duplicates
+             (if hashed
+                 (locally (declare (type hash-table hash-table))
+                   (gethash obj hash-table))
+                 (cdr (assoc obj node-list :test duplicate-test)))))
+         ((setf previous-node) (val obj)
+           (when merge-duplicates
              (if hashed
                  (locally (declare (type hash-table hash-table))
                    (setf (gethash obj hash-table) val))
-                 (setf node-list (push (cons obj val) node-list))))
-           (traverse-objects (node objects depth)
-             (unless (and cutoff-depth (>= depth cutoff-depth))
-               (remove nil
-                       (map 'list
-                            (lambda (child)
-                              (let* ((key (funcall duplicate-key child))
-                                     (child-node (previous-node key)))
-                                (cond (child-node
-                                       (when node
-                                         (push node (graph-node-parents child-node)))
-                                       child-node)
-                                      (t
-                                       (let ((child-node
-                                               (with-output-to-output-record
-                                                   (stream 'standard-graph-node-output-record new-node
-                                                           :object child)
-                                                 (with-end-of-line-action (stream :allow)
-                                                   (funcall object-printer child stream)))))
-                                         (when merge-duplicates
-                                           (setf (previous-node key) child-node)
-                                           ;; (setf (gethash key hash-table) child-node)
-                                           )
-                                         (when node
-                                           (push node (graph-node-parents child-node)))
-                                         (setf (graph-node-children child-node)
-                                               (traverse-objects child-node
-                                                                 (funcall inferior-producer child)
-                                                                 (+ depth 1)))
-                                         child-node)))))
-                            objects)))))
-        ;;
-        (setf (graph-root-nodes graph-output-record)
-              (traverse-objects nil root-objects 0))
-        (values)))))
+                 (setf node-list (push (cons obj val) node-list)))))
+         (traverse-objects (node objects depth)
+           (unless (and cutoff-depth (>= depth cutoff-depth))
+             (loop for child in objects
+                   for key = (funcall duplicate-key child)
+                   for child-node = (previous-node key)
+                   if child-node
+                     do (when node
+                          (push node (graph-node-parents child-node)))
+                   else
+                     do (setf child-node
+                              (with-output-to-output-record
+                                  (stream 'standard-graph-node-output-record
+                                          new-node :object child)
+                                (with-end-of-line-action (stream :allow)
+                                  (funcall object-printer child stream))))
+                        (setf (previous-node key) child-node)
+                        (when node
+                          (push node (graph-node-parents child-node)))
+                        (setf (graph-node-children child-node)
+                              (traverse-objects child-node
+                                                (funcall inferior-producer child)
+                                                (+ depth 1)))
+                   collect child-node))))
+      (setf (graph-root-nodes graph-output-record)
+            (traverse-objects nil root-objects 0))
+      (values))))
 
 (defun traverse-graph-nodes (graph continuation)
   ;; continuation: node x children x cont -> some value
