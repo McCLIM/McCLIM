@@ -5,6 +5,7 @@
 ;;;  (c) copyright 2002 by Gilbert Baumann
 ;;;  (c) copyright 2005 by Robert P. Goldman
 ;;;  (c) copyright 2017 by John A. Carroll
+;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -251,42 +252,39 @@
                       (member duplicate-test '(#'eq #'eql #'equal #'equalp))))
          (hash-table (and hashed (make-hash-table :test duplicate-test))))
     (labels
-        ((previous-node (obj)
-           ;; is there a previous node for obj?  if so, return it.
-           (when merge-duplicates
-             (if hashed
-                 (locally (declare (type hash-table hash-table))
-                   (gethash obj hash-table))
-                 (cdr (assoc obj node-list :test duplicate-test)))))
-         ((setf previous-node) (val obj)
-           (when merge-duplicates
-             (if hashed
-                 (locally (declare (type hash-table hash-table))
-                   (setf (gethash obj hash-table) val))
-                 (setf node-list (push (cons obj val) node-list)))))
+        ((merge-node (parent child)
+           (let* ((key (funcall duplicate-key child))
+                  (child-node
+                    (or (when merge-duplicates
+                          (if hashed
+                              (locally (declare (type hash-table hash-table))
+                                (gethash key hash-table))
+                              (cdr (assoc key node-list :test duplicate-test))))
+                        (with-output-to-output-record
+                            (stream 'standard-graph-node-output-record
+                                    new-node :object child)
+                          (with-end-of-line-action (stream :allow)
+                            (funcall object-printer child stream))))))
+             (when parent
+               (push parent (graph-node-parents child-node)))
+             (when merge-duplicates
+               (if hashed
+                   (locally (declare (type hash-table hash-table))
+                     (setf (gethash key hash-table) child-node))
+                   (setf node-list (push (cons key child-node) node-list))))
+             child-node))
          (traverse-objects (node objects depth)
            (unless (and cutoff-depth (>= depth cutoff-depth))
-             (loop for child in objects
-                   for key = (funcall duplicate-key child)
-                   for child-node = (previous-node key)
-                   if child-node
-                     do (when node
-                          (push node (graph-node-parents child-node)))
-                   else
-                     do (setf child-node
-                              (with-output-to-output-record
-                                  (stream 'standard-graph-node-output-record
-                                          new-node :object child)
-                                (with-end-of-line-action (stream :allow)
-                                  (funcall object-printer child stream))))
-                        (setf (previous-node key) child-node)
-                        (when node
-                          (push node (graph-node-parents child-node)))
-                        (setf (graph-node-children child-node)
-                              (traverse-objects child-node
-                                                (funcall inferior-producer child)
-                                                (+ depth 1)))
-                   collect child-node))))
+             (collect (child-nodes)
+               (do-sequence (child objects)
+                 (let ((child-node (merge-node node child))
+                       (children (funcall inferior-producer child)))
+                   (setf (graph-node-children child-node)
+                         (traverse-objects child-node
+                                           children
+                                           (+ depth 1)))
+                   (child-nodes child-node)))
+               (child-nodes)))))
       (setf (graph-root-nodes graph-output-record)
             (traverse-objects nil root-objects 0))
       (values))))
