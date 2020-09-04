@@ -43,7 +43,7 @@
 ;;;   6       8,16        Each pixel is an R,G,B triple, followed by an alpha sample.
 ;;;
 
-(defconstant *png-magic* '#(137 80 78 71 13 10 26 10)
+(defconstant +png-magic+ '#(137 80 78 71 13 10 26 10)
   "The first eight bytes of a png file.")
 
 (defstruct png-image 
@@ -69,8 +69,8 @@
   "Checks for PNG signature."
   ;; Returns non-NIL if the first eight bytes read from 'source' is the valid PNG header, NIL otherwise.
   ;; If eof occurs while reading from source NIL is returned
-  (dotimes (i (length *png-magic*) t)
-    (when (not (eql (read-byte source nil 256) (aref *png-magic* i)))
+  (dotimes (i (length +png-magic+) t)
+    (when (not (eql (read-byte source nil 256) (aref +png-magic+ i)))
       (return nil))))
 
 (defun read-chunk (source)

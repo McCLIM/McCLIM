@@ -48,18 +48,18 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 
 ;;; Better numbers, see Ecuyer, 1988.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant *uniform-a* 40692)
-  (defconstant *uniform-m* 2147483399))
+  (defconstant +uniform-a+ 40692)
+  (defconstant +uniform-m+ 2147483399))
 
 (defun random-seed ()
   "Return a random seed."
   (make-random-state))		; structure
 
 (defun uniform-basic (previous-fixnum)
-  "Returns a random fixnum between 1 and (1- *uniform-m*)."
+  "Returns a random fixnum between 1 and (1- +uniform-m+)."
   #||
   Repeated calls will generate fixnums in the range
-  1 -> *uniform-m*
+  1 -> +uniform-m+
   
   The basic ideas is that a is a primitive root of m, a large prime,
   2 <= a <= m-1.
@@ -76,9 +76,9 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
   of the random number sequence.  When a is a primitive root of m, p = m-1,
   so p is as large as possible.  This is a good random number generator
   but is not be the fastest!  On most COMMON LISP's it will require bignums
-  since (* *uniform-a* previous-fixnum) can have 46 bits in it. 
+  since (* +uniform-a+ previous-fixnum) can have 46 bits in it. 
   ||#
-  (mod (* #.*uniform-a* previous-fixnum) #.*uniform-m*))
+  (mod (* #.+uniform-a+ previous-fixnum) #.+uniform-m+))
 
 (defmacro uniform-internal (seed m a)
   "This version does not cons, but fixnums must be >= m, and (< (expt a 2) m)."
@@ -110,7 +110,7 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 	  (combined-uniform seed-1 seed-2))
 	r)))
 
-(defvar *uniform-seed* 63400018)		; 0 < fixnum < (- *uniform-m* 1)
+(defvar *uniform-seed* 63400018)		; 0 < fixnum < (- +uniform-m+ 1)
 
 (defmacro with-seed (s-newseed &body body)
   "evaluates body with the seed of the random numbers set to S-NEWSEED.
@@ -123,17 +123,17 @@ CACM, June 1988, Vol 31, Number 6, p. 742-774.
 (defun uniform ()
   "Returns the next uniform random number in the sequence
    To have your own sequence, use the macro WITH-SEED."
-  (random *uniform-m* *random-state*))
+  (random +uniform-m+ *random-state*))
 
 (defun make-uniform-1-stream (seed)
   ;; Stream of uniform random numbers between 0 and 1
   #'(lambda ()
-      (setq seed (uniform-internal seed #.*uniform-m* #.*uniform-a*))
-      (* seed (/ (float *uniform-m*)))))
+      (setq seed (uniform-internal seed #.+uniform-m+ #.+uniform-a+))
+      (* seed (/ (float +uniform-m+)))))
 
 (defun uniform-0-1 ()
   "A uniform random number greater than 0 and less than 1."
-  (* (uniform) (/ (float *uniform-m*))))
+  (* (uniform) (/ (float +uniform-m+))))
 
 ;;; For speed, you probably want an inline version of uniform-between for your application.
 (defun uniform-between (low-num high-num)

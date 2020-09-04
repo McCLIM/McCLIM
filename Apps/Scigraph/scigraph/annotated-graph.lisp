@@ -44,7 +44,7 @@ advised of the possiblity of such damages.
   :printer ((object stream)
 	    (flet ((shorten-string
 		     (string &optional (longest 15))
-		     (let ((str (substitute #\space *return* string)))
+		     (let ((str (substitute #\space +return+ string)))
 		       (if (> (length str) longest)
 			   (format nil "~A..." (subseq str 0 (1- longest)))
 			   str))))
