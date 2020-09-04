@@ -485,7 +485,7 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
               ;;
               (let ((majors (loop for x across generation-sizes
                                   collect (+ x generation-separation)))
-                    (u (/ generation-separation 2))
+                    (u 0)
                     (v 0))
                 (do-sequence (elt (graph-root-nodes graph-output-record))
                   (setf v (compute-position elt majors u v))
