@@ -122,17 +122,19 @@
 (defmethod compose-space ((pane toggle-button-pane) &key width height)
   (declare (ignore width height))
   (let* ((type         (toggle-button-indicator-type pane))
-         (sr           (compose-label-space pane))
-         (extra-width  (+ (space-requirement-height sr)
-                          (if (eq type :some-of) 12 0)
-                          (* 3 (pane-x-spacing pane))))
+         (label-sr     (compose-label-space pane))
+         (diameter     (space-requirement-height label-sr))
+         (extra-width  (+ diameter
+                          (if (eq type :some-of) (* 3/2 diameter) 0)
+                          (* 1/2 diameter)
+                          (* 2 (pane-x-spacing pane))))
          (extra-height (* 2 (pane-y-spacing pane))))
-    (space-requirement+* sr :min-width  extra-width
-                            :width      extra-width
-                            :max-width  +fill+
-                            :min-height extra-height
-                            :height     extra-height
-                            :max-height +fill+)))
+    (space-requirement+* label-sr :min-width  extra-width
+                                  :width      extra-width
+                                  :max-width  +fill+
+                                  :min-height extra-height
+                                  :height     extra-height
+                                  :max-height +fill+)))
 
 (defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
 
@@ -141,11 +143,10 @@
   (let* ((cx           (/ (+ x1 x2) 2))
          (cy           (/ (+ y1 y2) 2))
          (radius       (/ (- y2 y1) 2))
-         (inner-radius (max 1 (- radius 4)))
-         (outer-radius (max 1 (- radius 2))))
+         (inner-radius (max 1 (- radius 2)))
+         (outer-radius (max 1 radius)))
     (draw-circle* gadget cx cy outer-radius
-                  :filled t :ink (effective-gadget-background gadget)
-                  )
+                  :filled t :ink (effective-gadget-background gadget))
     (draw-circle* gadget cx cy outer-radius :filled nil :ink +gray10+)
     (when value
       (draw-circle* gadget cx cy inner-radius :ink *highlight-color*))))
@@ -188,20 +189,19 @@
           (x-spacing (pane-x-spacing pane)))
       (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
         (draw-rectangle* pane x1 y1 x2 y2 :ink (pane-background pane))
-        (let* ((as          (text-style-ascent text-style pane))
-               (ds          (text-style-descent text-style pane))
-               (height      (+ as ds))
-               (extra-width (if (eq type :some-of) 12 0)))
+        (let* ((diameter    (text-style-height text-style pane))
+               (radius      (/ diameter 2))
+               (extra-width (if (eq type :some-of) (* 3/2 diameter) 0)))
           (multiple-value-bind (tx1 ty1 tx2 ty2)
               (values (+ x1 x-spacing)
-                      (- (/ (+ y1 y2) 2) (/ height 2))
-                      (+ x1 x-spacing height extra-width)
-                      (+ (/ (+ y1 y2) 2) (/ height 2)))
+                      (- (/ (+ y1 y2) 2) radius)
+                      (+ x1 diameter extra-width)
+                      (+ (/ (+ y1 y2) 2) radius))
             (draw-toggle-button-indicator pane type (gadget-value pane) tx1 ty1 tx2 ty2)
             (if (gadget-active-p pane)
-                (draw-label* pane (+ tx2 x-spacing) y1 (- x2 x-spacing) y2
+                (draw-label* pane (+ tx2 radius) y1 (- x2 x-spacing) y2
                              :ink (effective-gadget-foreground pane))
-                (draw-engraved-label* pane (+ tx2 x-spacing) y1 (- x2 x-spacing) y2))))))))
+                (draw-engraved-label* pane (+ tx2 radius) y1 (- x2 x-spacing) y2))))))))
 
 (defmethod handle-event ((pane toggle-button-pane) (event pointer-button-release-event))
   (when (slot-value pane 'armed)
