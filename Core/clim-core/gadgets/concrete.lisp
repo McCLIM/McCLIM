@@ -1772,8 +1772,7 @@ it in a layout between two panes that are to be resizeable.  E.g.:
     (make-pane 'clim-extensions:box-adjuster-gadget)
     bottom-pane)"))
 
-(defmethod compose-space ((gadget clim-extensions:box-adjuster-gadget)
-                          &key width height)
+(defmethod compose-space ((gadget box-adjuster-gadget) &key width height)
   (declare (ignore width height))
   (let ((major-size +box-adjuster-gadget-major-size+)
         (minor-size +box-adjuster-gadget-minor-size+))
