@@ -110,6 +110,13 @@
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
 
+(defmethod redisplay-frame-pane :around ((frame application-frame)
+                                         (pane clim-stream-pane)
+                                         &key force-p)
+  (declare (ignore frame force-p))
+  (changing-space-requirements ()
+    (call-next-method)))
+
 (defmethod redisplay-frame-pane :after ((frame application-frame)
                                         (pane clim-stream-pane)
                                         &key force-p)
