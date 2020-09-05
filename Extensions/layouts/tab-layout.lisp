@@ -289,8 +289,7 @@ DRAWING-OPTIONS ENABLED-CALLBACK).  DEFAULT-PRESENTATION-TYPE will be passed
 as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (let ((ptypevar (gensym)))
     `(let ((,ptypevar ,default-presentation-type))
-       (make-pane 'tab-layout
-                  :name ,(or name `',(gensym "tab-layout-"))
+       (make-pane 'tab-layout :name ,(or name `',(gensym "tab-layout-"))
                   :pages (list ,@(mapcar (lambda (spec)
                                            `(make-tab-page ,@spec
                                                            :presentation-type
@@ -300,12 +299,11 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 (defun make-tab-page
     (title pane &key presentation-type drawing-options enabled-callback)
-  (make-instance 'tab-page
-    :title title
-    :pane pane
-    :presentation-type presentation-type
-    :drawing-options drawing-options
-    :enabled-callback enabled-callback))
+  (make-instance 'tab-page :title title
+                           :pane pane
+                           :presentation-type presentation-type
+                           :drawing-options drawing-options
+                           :enabled-callback enabled-callback))
 
 
 ;;; presentation/command system integration
@@ -341,16 +339,15 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (let* ((title (tab-page-title page))
          (drawing-options (tab-page-drawing-options page))
          (text-style (getf drawing-options :text-style)))
-
     ;; Draw polygon.
     (multiple-value-bind (x y) (stream-cursor-position stream)
       (multiple-value-bind (text-width text-height)
-          (values (text-size stream title :text-style text-style) 18)
+          (text-size stream title :text-style text-style) ; TODO
         (let ((width (+ 8 text-width 8)))
           ;; Enlarge output record
-          (draw-rectangle* stream x y (+ x width) (+ y text-height 8 3)
+          (draw-rectangle* stream x y (+ x width) (+ y text-height 8 2)
                            :ink (case state
-                                  ((:highlighted :inactive) +transparent-ink+)
+                                  ((:highlighted :inactive) (pane-background stream))
                                   (:selected (compose-over (compose-in +white+ (make-opacity .6))
                                                            (pane-background stream)))))
           ;; Draw label.
@@ -372,7 +369,7 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 (define-presentation-method highlight-presentation
     ((type tab-page) record stream (state (eql :highlight)))
-  (let* ((page (presentation-object record)))
+  (let ((page (presentation-object record)))
     ;; This is slightly tricky: to position the stream cursor
     ;; correctly before drawing the highlighted header, we obtain the
     ;; position of the first child output record, corresponding to the
@@ -388,6 +385,41 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
     ((type tab-page) record stream (state (eql :unhighlight)))
   (repaint-sheet stream (bounding-rectangle record)))
 
+(defun default-display-tab-header (pane)
+  (let* ((height (tab-bar-label-height pane))
+         (y (+ height 8 2)))
+    ;(draw-line* pane 0 y (bounding-rectangle-max-x pane) y :ink +black+)
+    (flet ((increment (stream length)
+             (stream-increment-cursor-position stream length 0)))
+      (increment pane 8)
+      (dolist (page (tab-layout-pages (tab-layout pane)))
+        (let ((presentation-type (tab-page-presentation-type page))
+              (page-pane (tab-page-pane page)))
+          (if (eq presentation-type 'tab-page)
+              (present page 'tab-page :stream pane)
+              (with-output-as-presentation (pane page-pane presentation-type)
+                (present page 'tab-page :stream pane))))
+        (increment pane 8)))))
+
+(defclass tab-bar-pane (application-pane)
+  ((tab-layout :initarg :tab-layout
+               :reader tab-layout))
+  (:default-initargs :default-view +tab-bar-view+ :background climi::*3d-normal-color*))
+
+(defun tab-bar-label-height (tab-bar-pane)
+  (reduce #'max (tab-layout-pages (tab-layout tab-bar-pane))
+          :key (lambda (page)
+                 (let* ((title (tab-page-title page))
+                        (options (tab-page-drawing-options page))
+                        (text-style (getf options :tex-tstyle)))
+                   (nth-value 1 (text-size tab-bar-pane title
+                                           :text-style text-style))))))
+
+(defmethod compose-space ((pane tab-bar-pane) &key width height)
+  (declare (ignore width height))
+  (let ((height (+ (tab-bar-label-height pane) 8 2)))
+    (make-space-requirement :min-height height :height height :max-height height)))
+
 (defclass tab-layout-pane (tab-layout)
   ((header-pane :accessor tab-layout-header-pane
                 :initarg :header-pane)
@@ -401,8 +433,7 @@ the generic implementation chosen by the CLX frame manager automatically.
 Users should create panes for type TAB-LAYOUT, not TAB-LAYOUT-PANE, so
 that the frame manager can customize the implementation."))
 
-(defmethod (setf tab-layout-enabled-page)
-    (page (parent tab-layout-pane))
+(defmethod (setf tab-layout-enabled-page) (page (parent tab-layout-pane))
   (let ((old-page (tab-layout-enabled-page parent)))
     (unless (equal page old-page)
       (when old-page
@@ -411,56 +442,28 @@ that the frame manager can customize the implementation."))
       (setf (sheet-enabled-p (tab-page-pane page)) t)))
   (call-next-method))
 
-(defun default-display-tab-header (tab-layout pane)
-  (draw-line* pane 0 (1- (+ 8 18 8 3)) (bounding-rectangle-max-x pane) (1- (+ 8 18 8 3))
-              :ink +black+)
-  (stream-increment-cursor-position pane 0 8)
-  (flet ((increment (stream length)
-           (stream-increment-cursor-position stream length 0)))
-    (increment pane 5)
-    (dolist (page (tab-layout-pages tab-layout))
-      (let ((presentation-type (tab-page-presentation-type page))
-            (page-pane (tab-page-pane page)))
-        (if (eq presentation-type 'tab-page)
-            (present page 'tab-page :stream pane)
-            (with-output-as-presentation (pane page-pane presentation-type)
-              (present page 'tab-page :stream pane))))
-      (increment pane 7))))
-
-(defclass tab-bar-pane (application-pane)
-  ()
-  (:default-initargs :default-view +tab-bar-view+ :background climi::*3d-normal-color*))
-
-(defmethod compose-space ((pane tab-bar-pane) &key width height)
-  (declare (ignore width height))
-  (let ((height (+ 8 18 8 3)))
-    (make-space-requirement :min-height height :height height :max-height height)))
-
 (defmethod initialize-instance :after ((instance tab-layout-pane) &key pages)
   (let ((current (tab-layout-enabled-page instance)))
     (dolist (page pages)
       (setf (sheet-enabled-p (tab-page-pane page)) (eq page current))))
-  (let ((header
-         (make-pane 'tab-bar-pane
-          :display-time :command-loop
-          :display-function
-          (lambda (frame pane)
-            (declare (ignore frame))
-            (funcall (header-display-function instance) instance pane)))))
+  (let ((header (make-pane 'tab-bar-pane :tab-layout instance
+                                         :display-time :command-loop
+                                         :display-function
+                                         (lambda (frame pane)
+                                           (declare (ignore frame))
+                                           (funcall (header-display-function instance) pane)))))
     (setf (tab-layout-header-pane instance) header)
     (sheet-adopt-child instance header)
     (setf (sheet-enabled-p header) t)))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
-  (space-requirement+*
-   (reduce (lambda (x y)
-             (space-requirement-combine #'max x y))
-           (mapcar #'compose-space (sheet-children pane))
-           :initial-value
-           (make-space-requirement
-            :min-width  0 :width  1 :max-width  +fill+
-            :min-height 0 :height 1 :max-height +fill+))))
+  (reduce (lambda (x y)
+            (space-requirement-combine #'max x y))
+          (mapcar #'compose-space (sheet-children pane))
+          :initial-value (make-space-requirement
+                          :min-width  0 :width  1 :max-width  +fill+
+                          :min-height 0 :height 1 :max-height +fill+)))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
