@@ -140,7 +140,7 @@
                                          if (eql i arg-index)
                                            collect 'object
                                          else
-                                           collect (getf (cddr a) :default)
+                                           collect (getf (cddr a) :default '*unsupplied-argument-marker*)
                                          end))
                      (translator-name (intern (format nil
                                                       ".~A-ARG~D."
