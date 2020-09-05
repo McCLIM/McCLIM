@@ -134,42 +134,36 @@
   (let ((*command-parser* command-parser)
         (*command-unparser* command-unparser)
         (*partial-command-parser* partial-command-parser))
-    (cond (use-keystrokes
-           (let ((stroke-result
-                   (read-command-using-keystrokes
-                    command-table
-                    (compute-inherited-keystrokes command-table)
-                    :stream stream)))
-             (if (consp stroke-result)
-                 stroke-result
-                 nil)))
-          ((or (typep stream 'interactor-pane)
-               (typep stream 'input-editing-stream))
-           (handler-case
-               (multiple-value-bind (command ptype)
-                   (accept `(command :command-table ,command-table)
-                           :stream stream
-                           :prompt nil
-                           :default +null-command+
-                           :default-type 'null-command)
-                 (cond ((eq ptype 'null-command)
-                        nil)
-                       ((partial-command-p command)
-                        (beep)
-                        (format *query-io* "~&Argument ~D not supplied.~&"
-                                (position *unsupplied-argument-marker* command))
-                        nil)
-                       (t command)))
-             ((or simple-parse-error input-not-of-required-type)  (c)
-               (beep)
-               (fresh-line *query-io*)
-               (princ c *query-io*)
-               (terpri *query-io*)
-               nil)))
-          (t (with-input-context (`(command :command-table ,command-table))
-               (object)
-               (loop (read-gesture :stream stream))
-               (t object))))))
+    (when use-keystrokes
+      (let ((stroke-result
+              (read-command-using-keystrokes
+               command-table
+               (compute-inherited-keystrokes command-table)
+               :stream stream)))
+        (return-from read-command
+          (if (consp stroke-result)
+              stroke-result
+              nil))))
+    (handler-case (multiple-value-bind (command ptype)
+                      (accept `(command :command-table ,command-table)
+                              :stream stream
+                              :prompt nil
+                              :default +null-command+
+                              :default-type 'null-command)
+                    (cond ((eq ptype 'null-command)
+                           nil)
+                          ((partial-command-p command)
+                           (beep)
+                           (format *query-io* "~&Argument ~D not supplied.~&"
+                                   (position *unsupplied-argument-marker* command))
+                           nil)
+                          (t command)))
+      ((or simple-parse-error input-not-of-required-type)  (c)
+        (beep)
+        (fresh-line *query-io*)
+        (princ c *query-io*)
+        (terpri *query-io*)
+        nil))))
 
 (defun read-command-using-keystrokes
     (command-table keystrokes
