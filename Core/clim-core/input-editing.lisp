@@ -683,11 +683,11 @@ stream. Output will be done to its typeout."
                (replace so-far input)
                ;; XXX: Relies on non-specified behavior of :rescan.
                (replace-input stream input :rescan nil))
-             (read-possibility (stream possibilities)
+             (read-possibility (stream ; possibilities
+                                )
                (unwind-protect
                     (handler-case
-                        (with-input-context
-                            (`(completion ,possibilities) :override nil)
+                        (with-input-context ('possibility :override nil)
                             (object type event)
                             (prog1 nil (read-gesture :stream stream :peek-p t))
                           (t object))
@@ -726,7 +726,8 @@ stream. Output will be done to its typeout."
                   (when (and (> nmatches 0) (eq mode :possibilities))
                     (print-possibilities possibilities possibility-printer stream)
                     (redraw-input-buffer stream)
-                    (if-let ((possibility (read-possibility stream possibilities)))
+                    (if-let ((possibility (read-possibility stream ; possibilities
+                                                            )))
                       (setf input (first possibility)
                             object (second possibility)
                             success t
