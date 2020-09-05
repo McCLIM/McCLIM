@@ -23,6 +23,10 @@
   (destructuring-bind (pane &rest options) form
     (cond ((and (null options) (listp pane)) ; Single form which is a function call
            `(coerce-pane-name ,pane ',name))
+          ((not (symbolp pane))
+           (error "~S is not a valid pane type designator. It must ~
+                     be a symbol."
+                  pane))
           ((eq pane :application) ; Standard pane denoted by a keyword (i.e `:application')
            `(make-clim-application-pane :name ',name ,@options))
           ((eq pane :interactor)
@@ -31,7 +35,7 @@
            `(make-clim-pointer-documentation-pane :name ',name ,@options))
           ((eq pane :command-menu)
            `(make-clim-command-menu-pane :name ',name ,@options))
-          (t ; Non-standard pane designator fed to the `make-pane'
+          (t   ; Non-standard pane designator fed to the `make-pane'
            `(make-pane ',pane :name ',name ,@options)))))
 
 ;;; FIXME The menu-bar code in the following function is incorrect.  it
@@ -43,17 +47,18 @@
 (defun generate-generate-panes-form (class-name menu-bar panes layouts
                                      pointer-documentation)
   (when pointer-documentation
-    (setf panes (append panes
-                        '((%pointer-documentation%
-                           pointer-documentation-pane)))))
+    (setf panes (list* '(%pointer-documentation% pointer-documentation-pane)
+                       panes)))
   `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
                (list
-                ,@(loop for (name . form) in panes
-                        collect `(cons ',name ,(generate-pane-creation-form
-                                                name form))))))
+                ,@(loop for spec in panes
+                        for (name . form) = spec
+                        collect `(cons ',name ,(with-current-source-form (form spec)
+                                                 (generate-pane-creation-form
+                                                  name form)))))))
        (let ,(loop for (name . form) in panes
                    collect `(,name (alexandria:assoc-value
                                     (frame-panes-for-layout frame)
