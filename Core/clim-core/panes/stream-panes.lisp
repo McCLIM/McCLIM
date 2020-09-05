@@ -84,7 +84,7 @@
   (setf (port-keyboard-input-focus (port sheet)) sheet))
 
 (defmethod interactive-stream-p ((stream clim-stream-pane))
-  t)
+  nil)
 
 (defmethod redisplay-frame-pane :after ((frame application-frame)
                                         (pane clim-stream-pane)
@@ -266,6 +266,9 @@
 
 (defmethod initialize-instance :after ((pane interactor-pane) &rest args)
   (declare (ignore args)))
+
+(defmethod interactive-stream-p ((stream interactor-pane))
+  t)
 
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
