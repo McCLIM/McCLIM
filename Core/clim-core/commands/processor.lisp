@@ -86,12 +86,26 @@
           (funcall partial-parser
                    command-table stream  partial-command)))))
 
-#+nyi
-(defun menu-command-parser (command-table stream))
+(defun menu-command-parser (command-table stream)
+  (declare (ignore command-table))
+  (loop (read-gesture :stream stream)))
 
-#+nyi
 (defun menu-read-remaining-arguments-for-partial-command
-  (command-table stream partial-command start-position))
+    (command-table stream partial-command start-position)
+  (declare (ignore command-table start-position))
+  (let ((parsers (gethash (command-name partial-command)
+                          *command-parser-table*)))
+    (list* (first partial-command)
+           (loop for (nil ptype) in (required-args parsers)
+                 for argument in (rest partial-command)
+                 do (format *debug-io* "accepting ~a~%" ptype)
+                 if (unsupplied-argument-p argument)
+                   collect (with-input-context ((eval ptype) :override t)
+                               (object)
+                               (loop (read-gesture :stream stream))
+                             (t object))
+                 else
+                   collect argument))))
 
 (defvar *command-parser* #'command-line-command-parser)
 (defvar *command-unparser* #'command-line-command-unparser)
