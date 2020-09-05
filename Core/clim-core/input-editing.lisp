@@ -1162,6 +1162,12 @@ protocol retrieving gestures from a provided string."))
             :additional-activation-gestures may be passed to accept."))
   (unless (or activationsp additional-activations-p *activation-gestures*)
     (setq activation-gestures *standard-activation-gestures*))
+  (unless (interactive-stream-p stream)
+    (return-from accept-1
+      (with-input-context (type)
+          (object object-type event options)
+          (funcall-presentation-generic-function accept type stream view)
+        (t (values object object-type)))))
   (let ((sensitizer-object nil)
         (sensitizer-type 'null))
     (with-input-editing
