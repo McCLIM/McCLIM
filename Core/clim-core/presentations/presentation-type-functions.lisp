@@ -294,10 +294,7 @@ otherwise return false."
         ((and (not (eq maybe-subtype-name 'completion))
               (eq maybe-supertype-name 'completion))
          (return-from presentation-subtypep
-           (values nil
-                   (not (some-completion-item
-                         (alexandria:rcurry #'presentation-typep maybe-subtype)
-                         maybe-supertype-parameters)))))
+           (values nil t)))
         ((and (eq maybe-subtype-name 'subset-completion)
               (eq maybe-supertype-name 'sequence))
          (let ((element-type (first maybe-supertype-parameters)))

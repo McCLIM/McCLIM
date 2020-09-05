@@ -570,6 +570,9 @@ supertypes of TYPE that are presentation types"))
     (presentation-ptype-supers ptype)
     nil))
 
+(defmethod presentation-ptype-supers ((type presentation-type))
+  (presentation-ptype-supers (find-class (presentation-type-class))))
+
 (defmethod presentation-ptype-supers ((type presentation-type-class))
   (mapcan #'(lambda (class)
               (typecase class
