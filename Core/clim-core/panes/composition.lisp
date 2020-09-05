@@ -549,7 +549,11 @@
            (spacing (* (1- (length children)) (slot-value box 'major-spacing)))
            (content-srs (mapcar (lambda (c) (xically-content-sr*** box c major))
                                 clients))
-           (allot       (mapcar #'space-requirement-major content-srs))
+           (allot       (mapcar (lambda (sr c)
+                                  (if (box-client-fillp c)
+                                      (space-requirement-min-major sr)
+                                      (space-requirement-major sr)))
+                                content-srs clients))
            (wanted      (reduce #'+ allot))
            (excess      (- major wanted spacing)))
       (when *dump-allocate-space*
@@ -561,7 +565,9 @@
       (let ((qvector (mapcar (lambda (c)
                                (cond
                                  ((box-client-fillp c)
-                                  (vector 1 0 0))
+                                  (vector (if (plusp excess) 1 0)
+                                          0
+                                          0))
                                  (t
                                   (let ((sr (xically-content-sr*** box c major)))
                                     (vector 0 0 (abs (- (if (> excess 0)
@@ -570,7 +576,7 @@
                                                         (space-requirement-major sr))))))))
                              clients)))
         ;;
-        (when *dump-allocate-space*
+        (when (or (eq *dump-allocate-space* t) (eq *dump-allocate-space* box))
           (format *trace-output* "~&;;   old allotment = ~S.~%" allot)
           (format *trace-output* "~&;;   qvector = ~S.~%" qvector)
           (format *trace-output* "~&;;   qvector 0 = ~S.~%" (mapcar (lambda (x) (elt x 0)) qvector))
@@ -583,15 +589,16 @@
               (setf allot
                     (mapcar (lambda (allot q)
                               (let ((q (elt q j)))
-                                (let ((delta (if (zerop sum) 0 (/ (* excess q) sum))))
+                                (let ((delta (if (zerop sum) 0 (* excess (/ q sum)))))
                                   (decf excess delta)
                                   (decf sum q)
                                   (+ allot delta))))
                             allot qvector))
-              (when *dump-allocate-space*
-                (format *trace-output* "~&;;   new excess = ~F, allotment = ~S.~%" excess allot)))))
+              (when (or (eq *dump-allocate-space* t) (eq *dump-allocate-space* box))
+                (format *trace-output* "~&;;   iteration ~D, new excess = ~F, allotment = ~S.~%"
+                        j excess allot)))))
         ;;
-        (when *dump-allocate-space*
+        (when (or (eq *dump-allocate-space* t) (eq *dump-allocate-space* box))
           (format *trace-output* "~&;;   excess = ~F.~%" excess)
           (format *trace-output* "~&;;   new allotment = ~S.~%" allot))
 
