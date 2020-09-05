@@ -340,8 +340,9 @@
 
 ;;; Pointer Documentation Pane
 
-(defparameter *default-pointer-documentation-background* +black+)
-(defparameter *default-pointer-documentation-foreground* +white+)
+(defparameter *default-pointer-documentation-background* (compose-over (compose-in *highlight-color* (make-opacity .1))
+                                                                       +gray30+))
+(defparameter *default-pointer-documentation-foreground* +gray90+)
 
 (defclass pointer-documentation-pane (clim-stream-pane)
   ((background-message :initform nil
