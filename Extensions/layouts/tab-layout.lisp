@@ -386,25 +386,23 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
   (repaint-sheet stream (bounding-rectangle record)))
 
 (defun default-display-tab-header (pane)
-  (let* ((height (tab-bar-label-height pane))
-         (y (+ height 8 2)))
-    ;(draw-line* pane 0 y (bounding-rectangle-max-x pane) y :ink +black+)
-    (flet ((increment (stream length)
-             (stream-increment-cursor-position stream length 0)))
-      (increment pane 8)
-      (dolist (page (tab-layout-pages (tab-layout pane)))
-        (let ((presentation-type (tab-page-presentation-type page))
-              (page-pane (tab-page-pane page)))
-          (if (eq presentation-type 'tab-page)
-              (present page 'tab-page :stream pane)
-              (with-output-as-presentation (pane page-pane presentation-type)
-                (present page 'tab-page :stream pane))))
-        (increment pane 8)))))
+  (flet ((increment (stream length)
+           (stream-increment-cursor-position stream length 0)))
+    (increment pane 8)
+    (dolist (page (tab-layout-pages (tab-layout pane)))
+      (let ((presentation-type (tab-page-presentation-type page))
+            (page-pane (tab-page-pane page)))
+        (if (eq presentation-type 'tab-page)
+            (present page 'tab-page :stream pane)
+            (with-output-as-presentation (pane page-pane presentation-type)
+              (present page 'tab-page :stream pane))))
+      (increment pane 8))))
 
 (defclass tab-bar-pane (application-pane)
   ((tab-layout :initarg :tab-layout
                :reader tab-layout))
-  (:default-initargs :default-view +tab-bar-view+ :background climi::*3d-normal-color*))
+  (:default-initargs :background climi::*3d-inner-color*
+                     :default-view +tab-bar-view+))
 
 (defun tab-bar-label-height (tab-bar-pane)
   (reduce #'max (tab-layout-pages (tab-layout tab-bar-pane))
@@ -458,12 +456,15 @@ that the frame manager can customize the implementation."))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
-  (reduce (lambda (x y)
-            (space-requirement-combine #'max x y))
-          (mapcar #'compose-space (sheet-children pane))
-          :initial-value (make-space-requirement
-                          :min-width  0 :width  1 :max-width  +fill+
-                          :min-height 0 :height 1 :max-height +fill+)))
+  (space-requirement+
+   (compose-space (tab-layout-header-pane pane))
+   (reduce (lambda (x y)
+             (space-requirement-combine #'max x y))
+           (sheet-children pane)
+           :key #'compose-space
+           :initial-value (make-space-requirement
+                           :min-width  0 :width  1 :max-width  +fill+
+                           :min-height 0 :height 1 :max-height +fill+))))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
   (let* ((header (tab-layout-header-pane pane))
@@ -475,8 +476,6 @@ that the frame manager can customize the implementation."))
         (move-and-resize-sheet child 0 y width (- height y))
         (allocate-space child width (- height y))))))
 
-(defmethod note-tab-page-changed
-    ((layout tab-layout-pane) page)
-  (redisplay-frame-pane (pane-frame layout)
-                        (tab-layout-header-pane layout)
+(defmethod note-tab-page-changed ((layout tab-layout-pane) page)
+  (redisplay-frame-pane (pane-frame layout) (tab-layout-header-pane layout)
                         :force-p t))
