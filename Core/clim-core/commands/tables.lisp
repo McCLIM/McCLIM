@@ -247,16 +247,21 @@ designator) inherits menu items."
             (push gesture keystroke-accelerators)
             (push item keystroke-items))))))
 
-(defun partial-command-from-name (command-name command-table)
-  (let ((parser (gethash command-name *command-parser-table*)))
-    (if (null parser)
-        (error 'command-not-present :command-table-name
-               (command-table-designator-as-name command-table))
-        (cons command-name
-              (mapcar #'(lambda (foo)
-                          (declare (ignore foo))
-                          *unsupplied-argument-marker*)
-                      (required-args parser))))))
+(defun ensure-command (command command-table)
+  (let* ((command-name (alexandria:ensure-car command))
+         (parser (gethash command-name *command-parser-table*)))
+    (unless parser
+      (error 'command-not-present :command-table-name
+             (command-table-designator-as-name command-table)))
+    (let ((args (mapcar #'(lambda (foo)
+                            (declare (ignore foo))
+                            *unsupplied-argument-marker*)
+                        (required-args parser))))
+      (when (listp command)
+        ;; FIXME we may want to allow specifying COMMAND with keyword
+        ;; arguments. Here we fill only the required args.
+        (map-into args #'identity (rest command)))
+      (list* command-name args))))
 
 
 ;;; Command table item accessors.
@@ -512,7 +517,7 @@ examine the type of the command menu item to see if it is
     (return-from lookup-keystroke-command-item
       (substitute-numeric-argument-marker
        (if (symbolp command)
-           (partial-command-from-name command command-table)
+           (ensure-command command command-table)
            command)
        numeric-arg)))
   gesture)
