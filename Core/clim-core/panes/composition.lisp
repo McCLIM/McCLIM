@@ -565,9 +565,13 @@
       (let ((qvector (mapcar (lambda (c)
                                (cond
                                  ((box-client-fillp c)
-                                  (vector (if (plusp excess) 1 0)
-                                          0
-                                          0))
+                                  (let ((sr (xically-content-sr*** box c major)))
+                                    (vector (if (plusp excess) 1 0)
+                                            0
+                                            (abs (- (if (> excess 0)
+                                                        (space-requirement-max-major sr)
+                                                        (space-requirement-min-major sr))
+                                                    (space-requirement-major sr))))))
                                  (t
                                   (let ((sr (xically-content-sr*** box c major)))
                                     (vector 0 0 (abs (- (if (> excess 0)
