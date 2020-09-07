@@ -114,8 +114,7 @@
                                          (pane clim-stream-pane)
                                          &key force-p)
   (declare (ignore frame force-p))
-  (changing-space-requirements ()
-    (call-next-method)))
+  (call-next-method))
 
 (defmethod redisplay-frame-pane :after ((frame application-frame)
                                         (pane clim-stream-pane)
@@ -131,12 +130,14 @@
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
-    (cond ((consp display-function)
-           (apply (car display-function)
-                  frame pane (cdr display-function)))
-          (display-function
-           (funcall display-function frame pane))
-          (t nil))
+    (changing-space-requirements ()
+      (cond ((consp display-function)
+             (apply (car display-function)
+                    frame pane (cdr display-function)))
+            (display-function
+             (funcall display-function frame pane))
+            (t nil)))
+    (repaint-sheet pane +everywhere+) ; TODO this is a hack
     (finish-output pane)))
 
 (defun change-stream-space-requirements (pane &key width height)
@@ -192,17 +193,17 @@
 ;;; change in more places.
 (defmethod compose-space ((pane clim-stream-pane) &key width height)
   (declare (ignorable width height))
-  (let* ((w (bounding-rectangle-max-x (stream-output-history pane)))
-         (h (bounding-rectangle-max-y (stream-output-history pane)))
+  (let* ((output-history (stream-output-history pane))
+         (w (bounding-rectangle-max-x output-history))
+         (h (bounding-rectangle-max-y output-history))
          (width (max w (stream-width pane)))
          (height (max h (stream-height pane))))
-    (make-space-requirement
-     :min-width (clamp w 0 width)
-     :width width
-     :max-width +fill+
-     :min-height (clamp h 0 height)
-     :height height
-     :max-height +fill+)))
+    (make-space-requirement :min-width (clamp w 0 width)
+                            :width width
+                            :max-width +fill+
+                            :min-height (clamp h 0 height)
+                            :height height
+                            :max-height +fill+)))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
