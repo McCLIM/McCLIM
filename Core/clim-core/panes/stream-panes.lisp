@@ -137,7 +137,7 @@
             (display-function
              (funcall display-function frame pane))
             (t nil)))
-    (repaint-sheet pane +everywhere+) ; TODO this is a hack
+    ; (repaint-sheet pane +everywhere+) ; TODO this is a hack
     (finish-output pane)))
 
 (defun change-stream-space-requirements (pane &key width height)
