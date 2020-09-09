@@ -1652,7 +1652,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod handle-repaint ((pane label-pane) region)
   (declare (ignore region))
   (let* ((region (sheet-region pane))
+         (label-alignment (label-pane-label-alignment pane))
          (align-x (pane-align-x pane))
+         (align-y (pane-align-y pane))
          (label (clime:label-pane-label pane))
          (child (sheet-child pane)))
     (with-bounding-rectangle* (x1 y1 x2 y2) region
@@ -1665,13 +1667,20 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                       (:left (+ x1 ileft text-offset (- border-margin)))
                       (:right (- x2 iright text-offset (- border-margin) text-width))
                       (:center (- (/ (- x2 x1) 2) (/ text-width 2))))
-                    (ecase (label-pane-label-alignment pane)
-                      (:top y1)
-                      (:bottom (- y2  text-height))))
+                    (if child
+                        (ecase label-alignment
+                          (:top y1)
+                          (:bottom (- y2 text-height)))
+                        (case align-y
+                          (:top y1)
+                          (:center (/ (+ y1 y2) 2))
+                          (:bottom y2))))
           ;; Draw label.
           (draw-rectangle* pane x1 ty x2 (+ ty text-height)
                            :ink (pane-background pane))
-          (draw-text* pane label tx ty :align-y :top
+          (draw-text* pane label tx ty :align-y (if child
+                                                    :top
+                                                    align-y)
                                        :text-face (if child :bold nil))
           ;; Draw border around child without drawing over the label text.
           #+no (when child
