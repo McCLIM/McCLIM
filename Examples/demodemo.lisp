@@ -334,7 +334,7 @@ name."))
   (:layouts
    (:default
     (labelling (:label "Option panes example")
-      (vertically ()
+      (vertically (:y-spacing 8)
         (1/2 option-pane-1)
         (1/2 option-pane-2))))))
 

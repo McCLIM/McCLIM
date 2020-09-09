@@ -100,29 +100,25 @@
             (radio-box-current-selection "message")
             "break")))
       (labelling (:label "Run in backend")
-        (vertically ()
-          (horizontally (:equalize-height t)
+        (vertically (:y-spacing 8)
+          (horizontally (:x-spacing 8 :equalize-height t)
             (make-pane 'option-pane :name 'backend-selector
                                     :value 'ps
                                     :name-key #'symbol-name
                                     :items '(ps pdf png))
-            (spacing (:thickness 6)
-              (make-pane 'push-button :label "Run"
-                                      :activate-callback #'%run-in-backend)))
-          (spacing (:thickness 6)
-            (horizontally ()
-              (1/3 (make-pane 'label-pane :label "Filename"))
-              (2/3 (clim-extensions:lowering ()
-                     (make-pane 'text-field-pane :name 'backend-filename
-                                                 :value "")))))))
+            (make-pane 'push-button :label "Run"
+                                    :activate-callback #'%run-in-backend))
+          (horizontally (:x-spacing 8)
+            (make-pane 'label-pane :label "Filename")
+            (+fill+ (make-pane 'text-field-pane :name 'backend-filename
+                                                :value "")))))
       (labelling (:label "Benchmark")
         (horizontally (:equalize-height t)
           (spacing (:thickness 6)
             (horizontally ()
               (1/3 (make-pane 'label-pane :label "Times"))
-              (2/3 (clim-extensions:lowering ()
-                     (make-pane 'text-field-pane :name 'benchmark-times
-                                                 :value "1000")))))
+              (2/3 (make-pane 'text-field-pane :name 'benchmark-times
+                                               :value "1000"))))
           (spacing (:thickness 6)
             (make-pane 'push-button :label "Start"
                                     :activate-callback #'%start-benchmark))))
