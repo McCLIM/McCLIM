@@ -30,7 +30,7 @@
 (defparameter *3d-normal-color* (make-gray-color .84))
 (defparameter *3d-light-color*  (make-gray-color 1.0))
 (defparameter *3d-inner-color*  (make-gray-color .75))
-(defparameter *highlight-color* (make-rgb-color .2 .3 .8)) ; Gtk-ish blue
+(defparameter *highlight-color* (make-rgb-color .3 .4 .8)) ; Gtk-ish blue
 
 ;;;
 ;;; gadget's colors
