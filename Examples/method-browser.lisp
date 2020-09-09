@@ -1,33 +1,20 @@
-(in-package :clim-demo)
-
-;;;; Method-Browser Example
-
+;;; ---------------------------------------------------------------------------
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; (C) Copyright 2005 by Andy Hefner (ahefner@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-;;; --------------------------------------------------------------------
-
+;;; Method-Browser Example
+;;;
 ;;; This is an example of how to write a CLIM application with a
 ;;; "normal" GUI, where "normal" is a completely event driven app
 ;;; built using gadgets and not using the command-oriented framework.
-
+;;;
 ;;; Running the method-browser:
 ;;;   (clim-demo::run-test 'clim-demo::method-browser)
-
+;;;
 ;;; How to use this app: Position the mouse over the text field labelled
 ;;; "Enter Name of Generic Function." Type the name of a generic
 ;;; function (the text field currently behaves in a focus-follows-mouse
@@ -37,14 +24,14 @@
 ;;; function is specialized on. As you adjust the argument types,
 ;;; the bottom pane of the application will display which methods
 ;;; would be applicable for the given arguments.
-
+;;;
 ;;; This example demonstrates:
 ;;;   * Conventional gadget-oriented interface
 ;;;   * Dynamic creation of interface objects
 ;;;   * Use of CLIM extended-output-streams (fonts, text-styles, etc)
 ;;;   * CLIM table formatting
 ;;;   * Portable MOP provided by CLIM-MOP package
-
+;;;
 ;;; TODO:
 ;;;   * Nicer, more clever display of methods than simply listing them
 ;;;     in a row.  To do this right really involes some nonportable
@@ -54,6 +41,8 @@
 ;;;   * Change focus behavior of McCLIM text entry gadget
 ;;;   * Implement focus-aware cursor shapes in McCLIM
 ;;;   * Make sure the MOP usage works outside CMUCL/SBCL
+
+(in-package #:clim-demo)
 
 ;;;; CLOS / MOP Utilities
 
@@ -200,14 +189,14 @@ specialized on, removing duplicates"
    (arg-types :accessor arg-types :initarg :arg-types :initform nil))
   (:menu-bar nil)
   (:panes
-   ;; Text box for the user to enter a function name
+    ;; Text box for the user to enter a function name
     (gf-name-input :text-field
-                   :activate-callback 'gf-name-input-callback
+                   :value-changed-callback 'gf-name-input-callback
                    :background +white+
                    :text-style (make-text-style :sans-serif :roman :large))
-   ;; Empty vertical layout pane where option-panes for arguments are added
+    ;; Empty vertical layout pane where option-panes for arguments are added
     (arg-pane :vrack-pane)
-   ;; Blank pane where the program can render output
+    ;; Blank pane where the program can render output
     (output-pane :application-pane
                  :text-style (make-text-style :sans-serif :roman :normal)
                  :display-time t
@@ -218,7 +207,8 @@ specialized on, removing duplicates"
          (labelling (:label "Enter Name of Generic Function")
            gf-name-input)
          (labelling (:label "Specializers")
-           (spacing (:thickness 6)  arg-pane))
+           (spacing (:thickness 6)
+             arg-pane))
          (scrolling (:width 800 :height 600)
            output-pane)))))
 
@@ -228,11 +218,10 @@ specialized on, removing duplicates"
 ;;; build a set of controls for selecting argument types, and finally
 ;;; printing a table listing the methods.
 
-(defun gf-name-input-callback (gadget)
+(defun gf-name-input-callback (gadget value)
   "Callback invoked by the text input gadget when the user hits enter"
-  (let ((gf (maybe-find-gf (gadget-value gadget))))
-    (when gf
-      (setup-new-gf *application-frame* gf))))
+  (alexandria:when-let ((gf (maybe-find-gf value)))
+    (setup-new-gf *application-frame* gf)))
 
 (defun setup-new-gf (frame gf)
   "Update the application frame to display the supplied generic function"
