@@ -362,13 +362,14 @@
                  (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
                    (draw-rectangle* scroll-bar bx1 by1 bx2 y1 :ink *3d-inner-color*)
                    (draw-rectangle* scroll-bar bx1 y2 bx2 by2 :ink *3d-inner-color*)
-                   (draw-rectangle* scroll-bar x1 y1 (1+ x1) y2 :ink *3d-inner-color*)
-                   (draw-rectangle* scroll-bar (1- x2) y1 x2 y2 :ink *3d-inner-color*)
-                   (draw-rectangle* scroll-bar (+ x1 1) y1 (- x2 1) y2
-                                    :ink (cond ((eq tb-state :dragging) *highlight-color*)
-                                               ((eq tb-state :dragging/fixed) +red4+)
-                                               (armed (effective-gadget-background scroll-bar))
-                                               (t +gray60+)))))))))
+                   (draw-rectangle* scroll-bar x1 y1 (+ x1 4) y2 :ink *3d-inner-color*)
+                   (draw-rectangle* scroll-bar (- x2 4) y1 x2 y2 :ink *3d-inner-color*)
+                   (draw-rounded-rectangle* scroll-bar (+ x1 1) y1 (- x2 1) y2
+                                            :radius 4 :filled t
+                                            :ink (cond ((eq tb-state :dragging) *highlight-color*)
+                                                       ((eq tb-state :dragging/fixed) +red4+)
+                                                       (armed (effective-gadget-background scroll-bar))
+                                                       (t +gray60+)))))))))
     (setf old-up-state up-state
           old-dn-state dn-state
           old-tb-state tb-state
@@ -1305,7 +1306,6 @@ if INVOKE-CALLBACK is given."))
                                activate/deactivate-repaint-mixin
                                arm/disarm-repaint-mixin
                                enter/exit-arms/disarms-mixin
-                               3d-border-mixin
                                option-pane)
   ((current-label :initform "" :accessor generic-option-pane-label)))
 
@@ -1406,29 +1406,6 @@ if INVOKE-CALLBACK is given."))
                             :min-height total-height
                             :height total-height
                             :max-height +fill+)))
-
-(defgeneric generic-option-pane-draw-widget (pane))
-
-(defmethod generic-option-pane-draw-widget (pane)
-  (with-bounding-rectangle* (x0 y0 x1 y1) pane
-    (declare (ignore x0))
-    (multiple-value-bind (widget-width widget-height)
-        (generic-option-pane-widget-size pane)
-      (let ((center (floor (/ (- y1 y0) 2)))
-            (height/2 (/ widget-height 2))
-            (highlight-color (compose-over (compose-in +white+ (make-opacity 0.85))
-                                           (pane-background pane)))
-            (shadow-color (compose-over (compose-in +black+ (make-opacity 0.3))
-                                        (pane-background pane))))
-        (draw-engraved-vertical-separator pane
-                                          (- x1 widget-width -1)
-                                          (- center height/2)
-                                          (+ center height/2)
-                                          highlight-color shadow-color)
-        (let* ((x (+ (- x1 widget-width) (/ widget-width 2)))
-               (frob-x (+ (floor x) 0)))
-          (draw-vertical-arrow pane frob-x (- center 6) :up)
-          (draw-vertical-arrow pane frob-x (+ center 6) :down))))))
 
 (defun rewrite-event-for-grab (grabber event)
   (multiple-value-bind (nx ny)
@@ -1613,8 +1590,10 @@ if INVOKE-CALLBACK is given."))
   (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
     (multiple-value-bind (widget-width widget-height)
         (generic-option-pane-widget-size pane)
-      (declare (ignore widget-height))
-      (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
+      ; (draw-rectangle* pane x0 y0 x1 y1 :ink (effective-gadget-background pane))
+      (draw-rounded-rectangle* pane x0 y0 (1- x1) (1- y1)
+                               :filled t :ink (effective-gadget-background pane))
+      (draw-rounded-rectangle* pane x0 y0 (1- x1) (1- y1))
       (let* ((tx1 (- x1 widget-width))
              (x (/ (- tx1 x0) 2))
              (y (/ (+ (- y1 y0)
@@ -1637,7 +1616,31 @@ if INVOKE-CALLBACK is given."))
                           :align-x :center
                           :align-y :baseline
                           :ink *3d-dark-color*))))
-      (generic-option-pane-draw-widget pane))))
+
+
+      (let ((center (floor (/ (- y1 y0) 2)))
+            (height/2 (/ widget-height 2))
+            (highlight-color (compose-over (compose-in +white+ (make-opacity 0.85))
+                                           (pane-background pane)))
+            (shadow-color (compose-over (compose-in +black+ (make-opacity 0.3))
+                                        (pane-background pane))))
+        #+no (draw-engraved-vertical-separator pane
+                                               (- x1 widget-width -1)
+                                               (- center height/2)
+                                               (+ center height/2)
+                                               highlight-color shadow-color)
+        (let* ((xr (- x1 widget-width))
+               (x  (+ xr (/ widget-width 2)))
+               (y  (/ (+ y0 y1) 2))
+               (dx (/ widget-width 4))
+               (dy (/ widget-height 4))
+               (polygon (vector (- x dx) (- y dy)
+                                (+ x dx) (- y dy)
+                                x (+ y dy))))
+          (draw-line* pane xr (- center height/2) xr (+ center height/2)
+                      :ink +gray30+)
+          (draw-polygon* pane polygon :filled t :ink *3d-inner-color*)
+          (draw-polygon* pane polygon :filled nil :ink +gray30+))))))
 
 
 ;;; --------------------------------------------------------------------------
