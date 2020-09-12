@@ -15,13 +15,14 @@
 (in-package #:clim-demo)
 
 (defclass canvas-pane (application-pane)
-  ((first-point-x :initform nil)
-   (first-point-y :initform nil)))
+  ())
 
 (defclass clim-fig-move-event ()
-  ((record :initarg :record :reader record :initform (error "clim-fig-move-event needs a record"))
+  ((record :initarg :record :reader record)
    (delta-x :initarg :delta-x :reader delta-x :initform 0)
-   (delta-y :initarg :delta-y :reader delta-y :initform 0)))
+   (delta-y :initarg :delta-y :reader delta-y :initform 0))
+  (:default-initargs
+   :record (error "clim-fig-move-event needs a record")))
 
 (defmethod print-object ((object clim-fig-move-event) stream)
   (print-unreadable-object (object stream :type T)
@@ -45,14 +46,14 @@
                (setf x1 x)))
           ((:rectangle :ellipse)
            (let ((radius-max (max (abs radius-x) (abs radius-y))))
-             (setf radius-x (* (signum-1 radius-x) radius-max)
-                   radius-y (* (signum-1 radius-y) radius-max)
+             (setf radius-x (* (if (minusp radius-x) -1 1) radius-max)
+                   radius-y (* (if (minusp radius-y) -1 1) radius-max)
                    x1 (+ x radius-x)
                    y1 (+ y radius-y))))))
       (case mode
         (:point
          (draw-point* pane x y :ink current-color
-                      :line-style line-style))
+                               :line-style line-style))
         (:line
          (draw-line* pane x y x1 y1
                      :ink current-color
@@ -64,8 +65,8 @@
                       :to-head t :head-width 20 :head-length 20))
         (:rectangle
          (draw-rectangle* pane x y x1 y1 :filled fill-mode
-                          :ink current-color
-                          :line-style line-style))
+                                         :ink current-color
+                                         :line-style line-style))
         (:ellipse
          (draw-ellipse* pane x y radius-x 0 0 radius-y
                         :filled fill-mode
@@ -85,11 +86,6 @@
                (draw-design pane design :ink current-color :line-style line-style))
              (draw-line* pane x y cp-x1 cp-y1 :ink +red+)
              (draw-line* pane x1 y1 cp-x2 cp-y2 :ink +blue+))))))))
-
-(defun signum-1 (value)
-  (if (zerop value)
-      1
-      (signum value)))
 
 (define-presentation-type figure ())
 
@@ -158,24 +154,25 @@
       (output-record-position figure)
     (let ((offset-x (- figure-x first-point-x))
           (offset-y (- figure-y first-point-y)))
-     (tracking-pointer (pane)
-       (:pointer-motion (&key window x y)
-         (declare (ignore window))
-         (setf (output-record-position figure)
-               (values (+ x offset-x)
-                       (+ y offset-y)))
-         (window-refresh pane))
-       (:pointer-button-release (&key event x y)
-         (when (= (pointer-event-button event) +pointer-right-button+)
-           (push (make-instance 'clim-fig-move-event
-                                :record figure
-                                :delta-x (- x first-point-x)
-                                :delta-y (- y first-point-y))
-                 (clim-fig-undo-list *application-frame*))
-           (setf (clim-fig-redo-list *application-frame*) (list))
-           (disable-commands *application-frame* 'com-redo)
-           (window-refresh pane)
-           (return-from handle-move-object)))))))
+      (tracking-pointer (pane)
+        (:pointer-motion (&key window x y)
+          (declare (ignore window))
+          (setf (output-record-position figure)
+                (values (+ x offset-x)
+                        (+ y offset-y)))
+          (window-refresh pane))
+        (:pointer-button-release (&key event x y)
+          (when (= (pointer-event-button event) +pointer-right-button+)
+            (let ((frame *application-frame*))
+              (push (make-instance 'clim-fig-move-event
+                                   :record figure
+                                   :delta-x (- x first-point-x)
+                                   :delta-y (- y first-point-y))
+                    (clim-fig-undo-list frame))
+              (setf (clim-fig-redo-list frame) (list))
+              (disable-commands frame 'com-redo)
+              (window-refresh pane)
+              (return-from handle-move-object))))))))
 
 (defun clim-fig ()
   (run-frame-top-level (make-application-frame 'clim-fig)))
@@ -184,22 +181,21 @@
   (make-pane 'push-button
              :label " "
              :activate-callback
-             #'(lambda (gadget)
-                 (setf (clim-fig-current-color (gadget-client gadget))
-                       color))
+             (lambda (gadget)
+               (setf (clim-fig-current-color (gadget-client gadget))
+                     color))
              :width width :height height
              :background color :foreground color
              :normal color :pushed-and-highlighted color
              :highlighted color))
 
-(defun make-drawing-mode-button (label mode &key width height)
+(defun make-drawing-mode-button (label mode)
   (make-pane 'push-button
              :label label
              :activate-callback
-             #'(lambda (gadget)
-                 (setf (clim-fig-drawing-mode (gadget-client gadget))
-                       mode))
-             :width width :height height))
+             (lambda (gadget)
+               (setf (clim-fig-drawing-mode (gadget-client gadget))
+                     mode))))
 
 (defun make-dashes-string (dashes)
   (if dashes
@@ -242,24 +238,23 @@
    (status :initform nil :accessor clim-fig-status))
   (:menu-bar menubar-command-table)
   (:panes
-   (canvas (make-pane 'canvas-pane
-                      :name 'canvas
-                      :display-time nil))
+   (canvas canvas-pane
+           :name 'canvas
+           :display-time nil)
    (line-width-slider :slider
                       :label "Line Width"
                       :value 1
                       :min-value 1
                       :max-value 100
                       :value-changed-callback
-                      #'(lambda (gadget value)
-                          (declare (ignore gadget))
-                          (with-slots (line-style) *application-frame*
-                            (setf line-style
-                                  (make-merged-line-style line-style
-                                                          :thickness (round value)))))
+                      (lambda (gadget value)
+                        (declare (ignore gadget))
+                        (with-slots (line-style) *application-frame*
+                          (setf line-style
+                                (make-merged-line-style line-style
+                                                        :thickness (round value)))))
                       :show-value-p t
                       :decimal-places 0
-                      :height 50
                       :orientation :horizontal)
    (dashes :option-pane
            :value nil
@@ -267,8 +262,7 @@
            :name-key 'make-dashes-string
            :value-changed-callback
            (lambda (gadget value)
-             (declare (ignore gadget))
-             (with-slots (line-style) *application-frame*
+             (with-slots (line-style) (gadget-client gadget)
                (setf line-style
                      (make-merged-line-style line-style :dashes value))))
            :text-style (make-text-style :fix nil nil))
@@ -276,33 +270,30 @@
                        :label "Round Cap/Joint"
                        :value nil
                        :value-changed-callback
-                       #'(lambda (gadget value)
-                           (declare (ignore gadget))
-                           (with-slots (line-style) *application-frame*
-                             (let ((cap-shape (if value
+                       (lambda (gadget value)
+                         (with-slots (line-style) (gadget-client gadget)
+                           (let ((cap-shape (if value
+                                                :round
+                                                :butt))
+                                 (joint-shape (if value
                                                   :round
-                                                  :butt))
-                                   (joint-shape (if value
-                                                    :round
-                                                    :miter)))
-                               (setf line-style
-                                     (make-merged-line-style line-style
-                                                             :cap-shape cap-shape
-                                                             :joint-shape joint-shape))))))
+                                                  :miter)))
+                             (setf line-style
+                                   (make-merged-line-style line-style
+                                                           :cap-shape cap-shape
+                                                           :joint-shape joint-shape))))))
    (fill-mode-toggle :toggle-button
                      :label "Fill"
                      :value nil
                      :value-changed-callback
-                     #'(lambda (gadget value)
-                         (declare (ignore gadget))
-                         (setf (clim-fig-fill-mode *application-frame*) value)))
+                     (lambda (gadget value)
+                       (setf (clim-fig-fill-mode (gadget-client gadget)) value)))
    (constrict-toggle :toggle-button
                      :label "Constrict"
                      :value nil
                      :value-changed-callback
-                     #'(lambda (gadget value)
-                         (declare (ignore gadget))
-                         (setf (clim-fig-constrict-mode *application-frame*) value)))
+                     (lambda (gadget value)
+                       (setf (clim-fig-constrict-mode (gadget-client gadget)) value)))
 
    ;; Drawing modes
    (point-button     (make-drawing-mode-button "Point" :point))
@@ -310,7 +301,7 @@
    (arrow-button     (make-drawing-mode-button "Arrow" :arrow))
    (rectangle-button (make-drawing-mode-button "Rectangle" :rectangle))
    (ellipse-button   (make-drawing-mode-button "Ellipse" :ellipse))
-   (bezier-button   (make-drawing-mode-button "Bezier" :bezier))
+   (bezier-button    (make-drawing-mode-button "Bezier" :bezier))
 
    ;; Colors
    (black-button     (make-colored-button +black+))
@@ -329,21 +320,21 @@
    (undo :push-button
          :label "Undo"
          :active nil
-         :activate-callback #'(lambda (x)
-                                (declare (ignore x))
-                                (com-undo)))
+         :activate-callback (lambda (x)
+                              (declare (ignore x))
+                              (com-undo)))
    (redo :push-button
          :label "Redo"
          :active nil
-         :activate-callback #'(lambda (x)
-                                (declare (ignore x))
-                                (com-redo)))
+         :activate-callback (lambda (x)
+                              (declare (ignore x))
+                              (com-redo)))
    (clear :push-button
           :label "Clear"
           :active nil
-          :activate-callback #'(lambda (x)
-                                 (declare (ignore x))
-                                 (com-clear)))
+          :activate-callback (lambda (x)
+                               (declare (ignore x))
+                               (com-clear)))
    (status :label-pane :label "CLIM Fig"))
   (:layouts
    (default
@@ -362,7 +353,8 @@
                   (horizontally () fill-mode-toggle constrict-toggle)
                   point-button line-button arrow-button
                   ellipse-button rectangle-button
-                  bezier-button)
+                  bezier-button
+                  :fill)
                 (:fill (scrolling (:width 600 :height 400) canvas))))
        (horizontally (:height 30) clear undo redo)
        status)))
