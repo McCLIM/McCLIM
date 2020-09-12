@@ -12,19 +12,23 @@
 ;;; A simple vector drawing application.
 ;;;
 
-(in-package #:clim-demo)
+(defpackage #:clim-demo.clim-fig
+  (:use #:clim-lisp #:clim)
+  (:import-from #:alexandria #:when-let #:curry)
+  (:export #:clim-fig)) ; Function and application frame class
+(in-package #:clim-demo.clim-fig)
 
 (defclass canvas-pane (application-pane)
   ())
 
-(defclass clim-fig-move-event ()
+(defclass move-event ()
   ((record :initarg :record :reader record)
    (delta-x :initarg :delta-x :reader delta-x :initform 0)
    (delta-y :initarg :delta-y :reader delta-y :initform 0))
   (:default-initargs
-   :record (error "clim-fig-move-event needs a record")))
+   :record (error "move-event needs a record")))
 
-(defmethod print-object ((object clim-fig-move-event) stream)
+(defmethod print-object ((object move-event) stream)
   (print-unreadable-object (object stream :type T)
    (format stream "moving ~a by (~D,~D)>"
            (record object) (delta-x object) (delta-y object))))
@@ -143,9 +147,9 @@
                         (setf cp-x2 x cp-y2 y)))))))))
       (set-status-line " ")
       (when output-record
-        (push output-record (clim-fig-undo-list frame))
+        (push output-record (undo-list frame))
         (stream-add-output-record pane output-record)
-        (setf (clim-fig-redo-list *application-frame*) nil)
+        (setf (redo-list *application-frame*) nil)
         (disable-commands frame 'com-redo)
         (enable-commands frame 'com-undo 'com-clear)))))
 
@@ -164,12 +168,11 @@
         (:pointer-button-release (&key event x y)
           (when (= (pointer-event-button event) +pointer-right-button+)
             (let ((frame *application-frame*))
-              (push (make-instance 'clim-fig-move-event
-                                   :record figure
-                                   :delta-x (- x first-point-x)
-                                   :delta-y (- y first-point-y))
-                    (clim-fig-undo-list frame))
-              (setf (clim-fig-redo-list frame) (list))
+              (push (make-instance 'move-event :record figure
+                                               :delta-x (- x first-point-x)
+                                               :delta-y (- y first-point-y))
+                    (undo-list frame))
+              (setf (redo-list frame) (list))
               (disable-commands frame 'com-redo)
               (window-refresh pane)
               (return-from handle-move-object))))))))
@@ -182,8 +185,7 @@
              :label " "
              :activate-callback
              (lambda (gadget)
-               (setf (clim-fig-current-color (gadget-client gadget))
-                     color))
+               (setf (current-color (gadget-client gadget)) color))
              :width width :height height
              :background color :foreground color
              :normal color :pushed-and-highlighted color
@@ -194,8 +196,7 @@
              :label label
              :activate-callback
              (lambda (gadget)
-               (setf (clim-fig-drawing-mode (gadget-client gadget))
-                     mode))))
+               (setf (drawing-mode (gadget-client gadget)) mode))))
 
 (defun make-dashes-string (dashes)
   (if dashes
@@ -210,7 +211,7 @@
 (defun make-merged-line-style (line-style &key unit thickness joint-shape cap-shape
                                                (dashes nil dashes-p))
   (flet ((scale-dashes (dashes factor)
-           (map (class-of dashes) (alexandria:curry #'* factor) dashes)))
+           (map (class-of dashes) (curry #'* factor) dashes)))
     (let* ((old-thickness (line-style-thickness line-style))
            (thickness (or thickness old-thickness))
            (old-dashes (line-style-dashes line-style))
@@ -227,15 +228,15 @@
                        :dashes (scale-dashes dashes thickness)))))
 
 (define-application-frame clim-fig ()
-  ((drawing-mode :initform :line :accessor clim-fig-drawing-mode)
-   (output-record :accessor clim-fig-output-record)
-   (undo-list :initform nil :accessor clim-fig-undo-list)
-   (redo-list :initform nil :accessor clim-fig-redo-list)
-   (current-color :initform +black+ :accessor clim-fig-current-color)
-   (line-style :initform (make-line-style) :accessor clim-fig-line-style)
-   (fill-mode :initform nil :accessor clim-fig-fill-mode)
-   (constrict-mode :initform nil :accessor clim-fig-constrict-mode)
-   (status :initform nil :accessor clim-fig-status))
+  ((drawing-mode :initform :line :accessor drawing-mode)
+   (output-record :accessor root-output-record)
+   (undo-list :initform nil :accessor undo-list)
+   (redo-list :initform nil :accessor redo-list)
+   (current-color :initform +black+ :accessor current-color)
+   (line-style :initform (make-line-style) :accessor line-style)
+   (fill-mode :initform nil :accessor fill-mode)
+   (constrict-mode :initform nil :accessor constrict-mode)
+   (status :initform nil :accessor status))
   (:menu-bar menubar-command-table)
   (:panes
    (canvas canvas-pane
@@ -287,13 +288,13 @@
                      :value nil
                      :value-changed-callback
                      (lambda (gadget value)
-                       (setf (clim-fig-fill-mode (gadget-client gadget)) value)))
+                       (setf (fill-mode (gadget-client gadget)) value)))
    (constrict-toggle :toggle-button
                      :label "Constrict"
                      :value nil
                      :value-changed-callback
                      (lambda (gadget value)
-                       (setf (clim-fig-constrict-mode (gadget-client gadget)) value)))
+                       (setf (constrict-mode (gadget-client gadget)) value)))
 
    ;; Drawing modes
    (point-button     (make-drawing-mode-button "Point" :point))
@@ -358,7 +359,7 @@
                 (:fill (scrolling (:width 600 :height 400) canvas))))
        (horizontally (:height 30) clear undo redo)
        status)))
-  (:top-level (default-frame-top-level :prompt 'clim-fig-prompt)))
+  (:top-level (default-frame-top-level :prompt 'prompt)))
 
 (defmethod frame-standard-output ((frame clim-fig))
   (find-pane-named frame 'canvas))
@@ -384,13 +385,12 @@
 
 (defmethod generate-panes :after (frame-manager (frame clim-fig))
   (declare (ignore frame-manager))
-  (setf (clim-fig-output-record frame)
+  (setf (root-output-record frame)
         ;; *standard-output* not bound to the canvas pane yet.
         (stream-current-output-record (frame-standard-output frame))
-        (clim-fig-status frame)
-        (find-pane-named frame 'status)))
+        (status frame) (find-pane-named frame 'status)))
 
-(defun clim-fig-prompt (stream frame)
+(defun prompt (stream frame)
   (declare (ignore stream frame)))
 
 (defmethod note-command-enabled :after (frame-manager (frame clim-fig) command-name)
@@ -423,16 +423,16 @@
    In the first case, remove the record and add it to the redo list;
    in the second case, move the object back to its previous position;
    to undo a CLEAR, replay the output-history."
-  (alexandria:when-let ((latest-undo-entry (pop (clim-fig-undo-list *application-frame*))))
+  (when-let ((latest-undo-entry (pop (undo-list *application-frame*))))
     (cond
-      ((typep latest-undo-entry 'clim-fig-move-event)
+      ((typep latest-undo-entry 'move-event)
        (multiple-value-bind (x y)
            (output-record-position (record latest-undo-entry))
          (setf (output-record-position (record latest-undo-entry))
                (values (- x (delta-x latest-undo-entry))
                        (- y (delta-y latest-undo-entry))))
          (window-refresh *standard-output*))
-       (push latest-undo-entry (clim-fig-redo-list *application-frame*))
+       (push latest-undo-entry (redo-list *application-frame*))
        (enable-commands *application-frame* 'com-redo))
       ((listp latest-undo-entry)
        (loop for record in latest-undo-entry do
@@ -442,18 +442,17 @@
        (disable-commands *application-frame* 'com-redo))
       (T
        (erase-output-record latest-undo-entry *standard-output*)
-       (push latest-undo-entry (clim-fig-redo-list *application-frame*))
+       (push latest-undo-entry (redo-list *application-frame*))
        (enable-commands *application-frame* 'com-clear 'com-redo)))
-    (unless (clim-fig-undo-list *application-frame*)
+    (unless (undo-list *application-frame*)
       (disable-commands *application-frame* 'com-undo 'com-clear))))
 
 (define-clim-fig-command com-redo ()
-  (alexandria:when-let ((current-redo-entry (pop (clim-fig-redo-list
-                                                *application-frame*))))
-    (push current-redo-entry (clim-fig-undo-list *application-frame*))
+  (when-let ((current-redo-entry (pop (redo-list *application-frame*))))
+    (push current-redo-entry (undo-list *application-frame*))
     (enable-commands *application-frame* 'com-undo 'com-clear)
     (cond
-      ((typep current-redo-entry 'clim-fig-move-event)
+      ((typep current-redo-entry 'move-event)
        (multiple-value-bind (x y)
            (output-record-position (record current-redo-entry))
          (setf (output-record-position (record current-redo-entry))
@@ -463,15 +462,15 @@
       (T (stream-add-output-record *standard-output* current-redo-entry)
          (replay current-redo-entry *standard-output*
                  (bounding-rectangle current-redo-entry))))
-    (unless (clim-fig-redo-list *application-frame*)
+    (unless (redo-list *application-frame*)
       (disable-commands *application-frame* 'com-redo))))
 
 (define-clim-fig-command com-clear ()
-  (push (coerce (output-record-children (clim-fig-output-record
+  (push (coerce (output-record-children (root-output-record
                                          *application-frame*))
                 'list)
-        (clim-fig-undo-list *application-frame*))
-  (setf (clim-fig-redo-list *application-frame*) (list))
+        (undo-list *application-frame*))
+  (setf (redo-list *application-frame*) (list))
   (disable-commands *application-frame* 'com-redo 'com-clear)
   (window-clear *standard-output*))
 

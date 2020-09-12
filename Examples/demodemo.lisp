@@ -73,7 +73,7 @@ name."))
                ;; '+fill+
                (labelling (:label "Demos")
                  (vertically (:equalize-width t)
-                   (make-demo-button "CLIM-Fig"  'clim-fig)
+                   (make-demo-button "CLIM-Fig"  'clim-demo.clim-fig:clim-fig)
                    (make-demo-button "Calculator"  'clim-demo.calculator:calculator-app)
                    (make-demo-button "Method Browser" 'method-browser)
                    (make-demo-button "Address Book"  'clim-demo.address-book:address-book)
