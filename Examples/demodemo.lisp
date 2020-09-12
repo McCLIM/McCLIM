@@ -1,28 +1,17 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-DEMO; -*-
-;;; --------------------------------------------------------------------------------------
-;;;     Title: The demo demo
-;;;   Created: 2002-02-11
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
-;;; --------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
 ;;;  (c) copyright 2002 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;;  (c) copyright 2017-2020 by Daniel Kochmański
+;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; Launcher application for various demos and graphical tests.
+;;;
 
-(in-package :clim-demo)
+(in-package #:clim-demo)
 
 (defun make-demo-button (title demo-frame-class)
   (make-pane 'push-button
@@ -34,9 +23,9 @@
                  (cond ((null frame)    ;; I broke this logic, sorry.. -Hefner
                         (setq frame
                           (run-frame-top-level
-			   (make-application-frame
-			    demo-frame-class
-			    :calling-frame *application-frame*))))
+                           (make-application-frame
+                            demo-frame-class
+                            :calling-frame *application-frame*))))
                        (t
                         #+nil
                         (destroy-frame frame)))))))
@@ -48,7 +37,7 @@ denoted by this symbol."
                 (find-symbol (string-upcase (string name))
                              (find-package "CLIM-DEMO")))))
     (if background
-        (bt:make-thread #'(lambda () (run-frame-top-level frame))
+        (bt:make-thread (lambda () (run-frame-top-level frame))
                         :initial-bindings `((*default-server-path* . ',*default-server-path*)))
         (run-frame-top-level frame))
     frame))
@@ -58,116 +47,110 @@ denoted by this symbol."
 the first argument to avoid creating too many functions with similar
 name."))
 
-(define-application-frame demodemo
-    () ()
-    (:menu-bar nil)
-    (:layouts
-     (default
-         (vertically (:equalize-width t)
-           (progn ;;spacing (:thickness 10)
-             (labelling (:label "McCLIM Demos"
-                                :text-style (make-text-style :sans-serif :roman :huge)
-                                :align-x :center)))
-           (progn ;; spacing (:thickness 10)
-             (horizontally ()
-               ;; '+fill+
-               (labelling (:label "Demos")
-                 (vertically (:equalize-width t)
-                   (make-demo-button "CLIM-Fig"  'clim-demo.clim-fig:clim-fig)
-                   (make-demo-button "Calculator"  'clim-demo.calculator:calculator-app)
-                   (make-demo-button "Method Browser" 'method-browser)
-                   (make-demo-button "Address Book"  'clim-demo.address-book:address-book)
-                   (make-demo-button "Puzzle"  'puzzle)
-                   (make-demo-button "Colorslider" 'colorslider)
-                   (make-demo-button "Logic Cube" 'logic-cube)
-                   (make-demo-button "Gadget Test"  'gadget-test)
-                   (make-demo-button "D&D Translator" 'drag-test)
-                   (make-demo-button "Draggable Graph" 'draggable-graph-demo)
-		   (make-pane 'push-button
-			      :label "Font Selector"
-			      :activate-callback
-			      (lambda (&rest ignore)
-				(declare (ignore ignore))
-				(format *trace-output* "~&You chose: ~A~%"
-					(select-font))))
-                   (make-demo-button "Tab Layout" 'clim-demo.tabdemo:tabdemo)
-                   (make-demo-button "Summation" 'summation)
-                   (make-demo-button "Slider demo" 'clim-demo.slider:sliderdemo)
-                   (make-demo-button "German Towns" 'clim-demo.town-example:town-example)
-                   (make-demo-button "Data Graph Toy" 'graph-toy)
-                   (make-demo-button "Traffic lights" 'traffic-lights)
-                   (make-demo-button "Image Transform" 'clim-demo.image-transform-demo:image-transform-demo)
-                   (make-demo-button "Selection (clipboard)" 'selection-demo)
-                   (make-demo-button "DND various" 'clim-demo.drag-and-drop-example:dnd-commented)
-                   (make-demo-button "File manager" 'clim-demo.file-manager:file-manager)
-                   (make-demo-button "Stopwatch" 'clim-demo.stopwatch:stopwatch)))
-               (labelling (:label "Tests")
-                 (vertically (:equalize-width t)
-                   (make-demo-button "Stream test" 'stream-test)
-                   (make-demo-button "Label Test" 'label-test)
-                   (make-demo-button "Table Test" 'table-test)
-                   (make-demo-button "Scroll Test" 'Scroll-test)
-                   (make-demo-button "List Test" 'list-test)
-                   (make-demo-button "Option Test" 'option-test)
-                   (make-demo-button "HBOX Test"  'hbox-test)
-                   (make-demo-button "Text Size Test"  'text-size-test)
-                   (make-demo-button "Drawing Benchmark" 'drawing-benchmark)
-                   (make-demo-button "Border Styles Test" 'bordered-output)
-                   (make-demo-button "Misc. Tests" 'clim-demo.misc:misc-tests)
-                   (make-demo-button "Render Image Tests" 'render-image-tests)
-                   (make-demo-button "Drawing Tests" 'drawing-tests)
-                   (make-demo-button "Accepting Values Test"  'av-test)
-                   (make-demo-button "Frame and Sheet Names Test" 'frame-sheet-name-test)
-                   (make-demo-button "Tracking Pointer test" 'tracking-pointer-test)))
-               (labelling (:label "Regression Tests")
-                 (vertically (:equalize-width t)
-                   (make-demo-button "Image viewer" 'image-viewer)
-                   (make-demo-button "Coordinate swizzling"
-                                     'clim-demo.coord-swizzling:coordinate-swizzling)
-                   (make-demo-button "Scroll Test 2" 'Scroll-test-2)
-                   (make-demo-button "Tables with borders" 'table-demo)
-                   (make-demo-button "Menu Test"  'clim-demo.menu-test:menu-test)
-                   (make-demo-button "Drag and Drop" 'dragndrop)
-                   (make-demo-button "Pane hierarchy viewer" 'clim-demo.hierarchy:hierarchy)
-                   (make-demo-button "Patterns, designs and inks" 'clim-demo.patterns:pattern-design-test)
-                   (make-demo-button "Flipping ink" 'flipping-ink)
-                   (make-demo-button "Overlapping patterns" 'patterns-overlap)
-                   (make-demo-button "Text transformations" 'text-transformations-test)
-                   (make-demo-button "Text multiline positioning" 'text-multiline-positioning)
-                   (make-demo-button "SEOS baseline and wrapping" 'seos-baseline)
-                   (make-demo-button "Indentation" 'indentation)
-                   (make-demo-button "Presentation translators" 'clim-demo.presentation-translators-test:presentation-translators-test)))))))))
+(define-application-frame demodemo ()
+  ()
+  (:menu-bar nil)
+  (:layouts
+   (default
+    (vertically (:equalize-width t)
+      (labelling (:label "McCLIM Demos"
+                  :text-style (make-text-style :sans-serif :roman :huge)
+                  :align-x :center))
+      (horizontally ()
+        (labelling (:label "Demos")
+          (vertically (:equalize-width t)
+            (make-demo-button "CLIM-Fig"  'clim-demo.clim-fig:clim-fig)
+            (make-demo-button "Calculator"  'clim-demo.calculator:calculator-app)
+            (make-demo-button "Method Browser" 'method-browser)
+            (make-demo-button "Address Book"  'clim-demo.address-book:address-book)
+            (make-demo-button "Puzzle"  'puzzle)
+            (make-demo-button "Colorslider" 'colorslider)
+            (make-demo-button "Logic Cube" 'logic-cube)
+            (make-demo-button "Gadget Test"  'gadget-test)
+            (make-demo-button "D&D Translator" 'drag-test)
+            (make-demo-button "Draggable Graph" 'draggable-graph-demo)
+            (make-pane 'push-button :label "Font Selector"
+                                    :activate-callback
+                                    (lambda (&rest ignore)
+                                      (declare (ignore ignore))
+                                      (format *trace-output* "~&You chose: ~A~%"
+                                              (select-font))))
+            (make-demo-button "Tab Layout" 'clim-demo.tabdemo:tabdemo)
+            (make-demo-button "Summation" 'summation)
+            (make-demo-button "Slider demo" 'clim-demo.slider:sliderdemo)
+            (make-demo-button "German Towns" 'clim-demo.town-example:town-example)
+            (make-demo-button "Data Graph Toy" 'graph-toy)
+            (make-demo-button "Traffic lights" 'traffic-lights)
+            (make-demo-button "Image Transform" 'clim-demo.image-transform-demo:image-transform-demo)
+            (make-demo-button "Selection (clipboard)" 'selection-demo)
+            (make-demo-button "DND various" 'clim-demo.drag-and-drop-example:dnd-commented)
+            (make-demo-button "File manager" 'clim-demo.file-manager:file-manager)
+            (make-demo-button "Stopwatch" 'clim-demo.stopwatch:stopwatch)))
+        (labelling (:label "Tests")
+          (vertically (:equalize-width t)
+            (make-demo-button "Stream test" 'stream-test)
+            (make-demo-button "Label Test" 'label-test)
+            (make-demo-button "Table Test" 'table-test)
+            (make-demo-button "Scroll Test" 'Scroll-test)
+            (make-demo-button "List Test" 'list-test)
+            (make-demo-button "Option Test" 'option-test)
+            (make-demo-button "HBOX Test"  'hbox-test)
+            (make-demo-button "Text Size Test"  'text-size-test)
+            (make-demo-button "Drawing Benchmark" 'drawing-benchmark)
+            (make-demo-button "Border Styles Test" 'bordered-output)
+            (make-demo-button "Misc. Tests" 'clim-demo.misc:misc-tests)
+            (make-demo-button "Render Image Tests" 'render-image-tests)
+            (make-demo-button "Drawing Tests" 'drawing-tests)
+            (make-demo-button "Accepting Values Test"  'av-test)
+            (make-demo-button "Frame and Sheet Names Test" 'frame-sheet-name-test)
+            (make-demo-button "Tracking Pointer test" 'tracking-pointer-test)))
+        (labelling (:label "Regression Tests")
+          (vertically (:equalize-width t)
+            (make-demo-button "Image viewer" 'image-viewer)
+            (make-demo-button "Coordinate swizzling"
+                              'clim-demo.coord-swizzling:coordinate-swizzling)
+            (make-demo-button "Scroll Test 2" 'Scroll-test-2)
+            (make-demo-button "Tables with borders" 'table-demo)
+            (make-demo-button "Menu Test"  'clim-demo.menu-test:menu-test)
+            (make-demo-button "Drag and Drop" 'dragndrop)
+            (make-demo-button "Pane hierarchy viewer" 'clim-demo.hierarchy:hierarchy)
+            (make-demo-button "Patterns, designs and inks" 'clim-demo.patterns:pattern-design-test)
+            (make-demo-button "Flipping ink" 'flipping-ink)
+            (make-demo-button "Overlapping patterns" 'patterns-overlap)
+            (make-demo-button "Text transformations" 'text-transformations-test)
+            (make-demo-button "Text multiline positioning" 'text-multiline-positioning)
+            (make-demo-button "SEOS baseline and wrapping" 'seos-baseline)
+            (make-demo-button "Indentation" 'indentation)
+            (make-demo-button "Presentation translators" 'clim-demo.presentation-translators-test:presentation-translators-test))))))))
 
 (defun demodemo ()
   (run-frame-top-level (make-application-frame 'demodemo)))
 
-(define-application-frame hbox-test
-    () ()
-    (:menu-bar nil)
-    (:layouts
-     (default
-         (horizontally ()
-           30
-           (make-pane 'push-button :label "Okay"
-                      :width '(50 :mm))
-           '+fill+
-           (make-pane 'push-button :label "Cancel")
-           '+fill+
-           (make-pane 'push-button :label "Help")
-           5
-           ) )))
+(define-application-frame hbox-test ()
+  ()
+  (:menu-bar nil)
+  (:layouts
+   (default
+    (horizontally ()
+      30
+      (make-pane 'push-button :label "Okay"
+                              :width '(50 :mm))
+      '+fill+
+      (make-pane 'push-button :label "Cancel")
+      '+fill+
+      (make-pane 'push-button :label "Help")
+      5))))
 
-(define-application-frame table-test
-    () ()
-    (:menu-bar nil)
-    (:layouts
-     (default
-         (tabling (:background +red+)
-           (list (make-pane 'push-button :label "Last Name" :max-height +fill+)
-                 (make-pane 'push-button :label "First Name" #||:max-height +fill+||#))
-           (list (make-pane 'push-button :label "C 1 0")
-                 (make-pane 'push-button :label "C 1 1"))
-           ) )))
+(define-application-frame table-test ()
+  ()
+  (:menu-bar nil)
+  (:layouts
+   (default
+    (tabling (:background +red+)
+      (list (make-pane 'push-button :label "Last Name" :max-height +fill+)
+            (make-pane 'push-button :label "First Name" #||:max-height +fill+||#))
+      (list (make-pane 'push-button :label "C 1 0")
+            (make-pane 'push-button :label "C 1 1"))))))
 
 (defun make-label-test-column (title label content)
   (flet ((make-label (align-x align-y)
@@ -280,36 +263,36 @@ name."))
 \"foo\" is similar, but rectangle is drawn in bottom-right corner. This draw should extend scroll-bars, so user may see whole rectangle.
 \"qux\" combines both previous panes. Part of the rectangle in the upper-left corner and (after scrolling) full rectangle on the bottom-right corner.")))
 
-(define-application-frame list-test
-    () ()
-    (:menu-bar nil)
-    (:panes
-     (substring :text-field :value "INTER"
-                :value-changed-callback
-                (lambda (pane value)
-                  (declare (ignore value))
-                  (when (find-pane-named *application-frame* 'result-list)
-                    (update-list-test pane))))
-     (result-list
-      (make-pane 'list-pane
-		 :value 'clim:region-intersection
-		 :items (apropos-list "INTER" :clim)
-		 :presentation-type-key (constantly 'list-test-symbol)
-		 :name-key (lambda (x) (format nil "~(~S~)" x))))
-     (interactor :interactor :height 200))
-    (:layouts
-     (defaults
-         (labelling (:label "Matching symbols"
-                            :text-style (make-text-style :sans-serif :roman :normal))
-           (vertically ()
-	     (scrolling (:height 200)
-	       result-list)
-	     (horizontally ()
-	       substring
-	       (make-pane 'push-button
-			  :label "Update"
-			  :activate-callback 'update-list-test))
-	     interactor)))))
+(define-application-frame list-test ()
+  ()
+  (:menu-bar nil)
+  (:panes
+   (substring :text-field :value "INTER"
+                          :value-changed-callback
+              (lambda (pane value)
+                (declare (ignore value))
+                (when (find-pane-named *application-frame* 'result-list)
+                  (update-list-test pane))))
+   (result-list
+    (make-pane 'list-pane
+               :value 'clim:region-intersection
+               :items (apropos-list "INTER" :clim)
+               :presentation-type-key (constantly 'list-test-symbol)
+               :name-key (lambda (x) (format nil "~(~S~)" x))))
+   (interactor :interactor :height 200))
+  (:layouts
+   (defaults
+    (labelling (:label "Matching symbols"
+                :text-style (make-text-style :sans-serif :roman :normal))
+      (vertically ()
+        (scrolling (:height 200)
+          result-list)
+        (horizontally ()
+          substring
+          (make-pane 'push-button
+                     :label "Update"
+                     :activate-callback 'update-list-test))
+        interactor)))))
 
 (define-presentation-type list-test-symbol ())
 
@@ -323,13 +306,13 @@ name."))
 (defun update-list-test (pane)
   (declare (ignore pane))
   (setf (list-pane-items (find-pane-named *application-frame* 'result-list))
-	(apropos-list (gadget-value
-		       (find-pane-named *application-frame* 'substring))
-		      :clim #+sbcl t)))
+        (apropos-list (gadget-value
+                       (find-pane-named *application-frame* 'substring))
+                      :clim #+sbcl t)))
 
-(define-application-frame option-test
-    () ()
-    (:menu-bar nil)
+(define-application-frame option-test ()
+  ()
+  (:menu-bar nil)
   (:panes (option-pane-1 :option-pane
                          :value 1
                          :items '(1 2 3 4 6 7)
