@@ -1,26 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-DEMO; -*-
-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;; (c) copyright 2006 by Andy Hefner (ahefner@gmail.com)
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Random McCLIM tests.
-
+;;;
 ;;; Have some subtle stream/graphics/recording behavior which you'd
 ;;; like to ensure continues to work? Add a test for it here!
-
-;;; (C) Copyright 2006 by Andy Hefner (ahefner@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
 
 (defpackage #:clim-demo.misc
   (:use #:clim-lisp #:clim)
@@ -69,12 +59,12 @@
        (horizontally ()
          (spacing (:thickness 3) (clim-extensions:lowering () selector))
          (vertically ()
-	   (spacing (:thickness 3)
-	     (clim-extensions:lowering ()
-	       (scrolling (:width 600 :height 600) output)))
-	   (spacing (:thickness 3)
-	     (clim-extensions:lowering ()
-	       (scrolling (:scroll-bar :vertical :height 200) description)))))))))
+           (spacing (:thickness 3)
+             (clim-extensions:lowering ()
+               (scrolling (:width 600 :height 600) output)))
+           (spacing (:thickness 3)
+             (clim-extensions:lowering ()
+               (scrolling (:scroll-bar :vertical :height 200) description)))))))))
 
 (defun misc-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *misc-tests*) test))
@@ -94,7 +84,7 @@
          (:skip ()
            :report (lambda (stream) (format stream "Skip ~A" (misc-test-name test)))))))
 
-(define-misc-test "Empty Records 1" (stream)                                          
+(define-misc-test "Empty Records 1" (stream)
     "Tests the effect of empty output records on their parent's bounding rectangle. If successful, you will see a circle enclosed in a square. The square should tightly fit the circle. If the rectangle extends all the way to the top/left edges of the pane, McCLIM is not handling this correctly. This specifically exercises addition of empty children in recompute-extent-for-new-child."
   (surrounding-output-with-border (stream :shape :rectangle)
     (draw-circle* stream 200 200 40)
@@ -115,7 +105,7 @@
     (let ((record (with-new-output-record (stream)
                     (draw-circle* stream 50 50 10))))
       (clear-output-record record))))
-                                           
+
 (define-misc-test "Empty Borders" (stream)
     "Tests handling of empty output records by surrounding-output-with-border. If successful, you will see twelve small circles arranged themselves in a larger circle. A likely failure mode will exhibit the circles piled on each other in the upper-left corner of the pane."
   (with-room-for-graphics (stream :first-quadrant nil)
@@ -133,7 +123,7 @@
                                                     :shadow +gray88+
                                                     :shadow-offset 7
                                                     :filled t
-						    :line-thickness 1
+                                                    :line-thickness 1
                                                     :background +gray50+
                                                     :outline-ink +gray40+))))))
 
@@ -201,15 +191,15 @@
     (format stream "~&We all live in a yellow subroutine.~%")
     (format stream "~&We ")
     (surrounding-output-with-border (stream :shape :underline
-					    :line-thickness 2
-					    :move-cursor nil)
+                                            :line-thickness 2
+                                            :move-cursor nil)
       (format stream "all live"))
     (format stream " in a yellow subroutine.~%")
     (format stream "~&We ")
     (surrounding-output-with-border (stream :shape :underline
-					    :ink +red+
-					    :line-dashes t
-					    :move-cursor nil)
+                                            :ink +red+
+                                            :line-dashes t
+                                            :move-cursor nil)
       (format stream "all live"))
     (format stream " in a yellow subroutine.~%")
     (format stream "~&We all live in a yellow subroutine.~%")
