@@ -1,15 +1,19 @@
 ;;; ---------------------------------------------------------------------------
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018 by Daniel Kochmański
+;;;  (c) copyright 2018 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Pattern and design-related demos.
 ;;;
 
-(in-package :clim-demo)
+(defpackage #:clim-demo.patterns
+  (:use #:clim-lisp #:clim)
+  (:import-from #:alexandria #:if-let #:curry #:emptyp #:with-gensyms)
+  (:export #:pattern-design-test))
+(in-package #:clim-demo.patterns)
 
 ;;; uniform designs arranged in a pattern
 (eval-when (:load-toplevel :compile-toplevel :execute)
@@ -90,7 +94,7 @@ Space: redisplay application")
 
 (defvar *draw* :pattern)
 
-(defclass my-basic-pane (clim:basic-pane clime:always-repaint-background-mixin) ())
+(defclass my-basic-pane (basic-pane clime:always-repaint-background-mixin) ())
 
 (define-application-frame pattern-design-test ()
   ()
@@ -110,14 +114,14 @@ Space: redisplay application")
                                           (draw-string pane
                                                        (format nil "Current draw is ~a." *draw*)
                                                        20 220)))))
-          (pane1 :application :display-function #'display :scroll-bars :vertical)
-          (pane2 :application :display-function #'display :scroll-bars nil)
+          (pane1 :application :display-function 'display :scroll-bars :vertical)
+          (pane2 :application :display-function 'display :scroll-bars nil)
           ;; Bug #7: clx-fb backend doesn't work with panes like this one.
           (pane4 (make-pane 'my-basic-pane :height *total-height*)))
-  (:layouts (default (clim:vertically ()
+  (:layouts (default (vertically ()
                        (235
-                        (clim:horizontally () info1 info2))
-                       (clim:horizontally ()
+                        (horizontally () info1 info2))
+                       (horizontally ()
                          (1/4 (labelling (:label "Application :SCROLL-BARS :BOTH")
                                 pane1))
                          (1/4 (labelling (:label "Application")
@@ -174,18 +178,17 @@ Space: redisplay application")
 
 (defun %split-line (character string &key (count 1) from-end)
   (check-type count (integer 1))
-  (alexandria:if-let ((pos (position-if #'(lambda (c)
-                                            (and (char= character c)
-                                                 (zerop (decf count))))
-                                        string
-                                        :from-end from-end)))
+  (if-let ((pos (position-if #'(lambda (c)
+                                 (and (char= character c)
+                                      (zerop (decf count))))
+                             string
+                             :from-end from-end)))
     (values (string-right-trim '(#\space) (subseq string 0 pos))
             (string-right-trim '(#\space) (subseq string (1+ pos))))
     string))
 
 (defun %split-sequence-to-list (character string)
-  (alexandria:if-let ((pos (position-if (alexandria:curry #'char= character)
-                                        string)))
+  (if-let ((pos (position-if (curry #'char= character) string)))
     (cons (subseq (string-right-trim (list character #\space) string) 0 pos)
           (%split-sequence-to-list character (subseq string (1+ pos))))
     (list (string-right-trim (list character #\space) string))))
@@ -206,8 +209,8 @@ right-trimmed for spaces."
         (string (first results))
         (remainder (second results)))
        ((or (<= (funcall text-size-fn string) margin)
-            (alexandria:emptyp remainder))
-        (if (alexandria:emptyp remainder)
+            (emptyp remainder))
+        (if (emptyp remainder)
             (%split-line #\space text)
             (values string remainder)))
     (multiple-value-setq (string remainder)
@@ -239,7 +242,7 @@ right-trimmed for spaces."
                       (final-lines nil))
                      ((null current) (nreverse final-lines))
                   (multiple-value-bind (current rem)
-                      (split-line-by-word current text-margin (alexandria:curry #'text-size medium))
+                      (split-line-by-word current text-margin (curry #'text-size medium))
                     (when rem (push rem strings))
                     (push current final-lines)
                     (incf dy text-ascent))))
@@ -273,7 +276,7 @@ right-trimmed for spaces."
       (if (extended-output-stream-p pane)
           (stream-cursor-position pane)
           (transform-position (medium-transformation (sheet-medium pane)) 0 0))
-    (clim:with-identity-transformation (pane)
+    (with-identity-transformation (pane)
       (draw-string pane (format nil description)
                    (+ x 5)
                    (+ y *block-height* -10)
@@ -293,7 +296,7 @@ right-trimmed for spaces."
                   (if y-p y oy)))))
 
 (defmacro layout-examples ((pane) &body examples)
-  (alexandria:with-gensyms (eosp)
+  (with-gensyms (eosp)
     `(let ((,eosp (extended-output-stream-p ,pane)))
        ,@(mapcar (let ((y 0))
                    #'(lambda (ex)
@@ -322,7 +325,8 @@ right-trimmed for spaces."
   (with-translation (pane 5 5)
     (test-example pane)))
 
-(defmethod display ((frame pattern-design-test) pane &aux (draw *draw*))
+(defun display (frame pane &aux (draw *draw*))
+  (declare (ignore frame))
   (do ((i 5 (+ i 16))
        (j 5 (+ j 16))
        (max-i *text-right-margin*)
@@ -397,10 +401,13 @@ right-trimmed for spaces."
          #1#))
 
 (define-pattern-design-test-command (exit :keystroke #\q) ()
-  (clim:frame-exit *application-frame*))
+  (frame-exit *application-frame*))
 
 (define-pattern-design-test-command (com-restart :keystroke #\r) ()
-  (run-demo 'pattern-design-test :background t)
+  (bt:make-thread (lambda ()
+                    (run-frame-top-level
+                     (make-application-frame 'pattern-design-test)))
+                  :initial-bindings `((*default-server-path* . ',*default-server-path*)))
   ;; frame-exit throws! we need to start a new demo before it, because rest of
   ;; the body is never executed.
-  (clim:frame-exit *application-frame*))
+  (frame-exit *application-frame*))
