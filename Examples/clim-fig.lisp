@@ -1,26 +1,18 @@
-;;; -*- Mode: Lisp; Package: CLIM-DEMO -*-
-;;;  (c) copyright 2001 by
-;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) copyright 2002 by Alexey Dejneka <adejneka@comail.ru>
+;;;  (c) copyright 2019-2020 by Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A simple vector drawing application.
+;;;
 
-(in-package :clim-demo)
+(in-package #:clim-demo)
 
 (defclass canvas-pane (application-pane)
   ((first-point-x :initform nil)
@@ -38,7 +30,7 @@
 
 (defun set-status-line (string)
   (setf (clime:label-pane-label (find-pane-named *application-frame* 'status))
-	string))
+        string))
 
 (defun draw-figure (pane mode x y x1 y1 &key cp-x1 cp-y1 cp-x2 cp-y2)
   (with-slots (line-style current-color fill-mode constrict-mode)
@@ -190,24 +182,24 @@
 
 (defun make-colored-button (color &key width height)
   (make-pane 'push-button
-	     :label " "
-	     :activate-callback
+             :label " "
+             :activate-callback
              #'(lambda (gadget)
                  (setf (clim-fig-current-color (gadget-client gadget))
                        color))
-	     :width width :height height
+             :width width :height height
              :background color :foreground color
-	     :normal color :pushed-and-highlighted color
-	     :highlighted color))
+             :normal color :pushed-and-highlighted color
+             :highlighted color))
 
 (defun make-drawing-mode-button (label mode &key width height)
   (make-pane 'push-button
-	     :label label
-	     :activate-callback
+             :label label
+             :activate-callback
              #'(lambda (gadget)
                  (setf (clim-fig-drawing-mode (gadget-client gadget))
                        mode))
-	     :width width :height height))
+             :width width :height height))
 
 (defun make-dashes-string (dashes)
   (if dashes
@@ -251,24 +243,24 @@
   (:menu-bar menubar-command-table)
   (:panes
    (canvas (make-pane 'canvas-pane
-		      :name 'canvas
+                      :name 'canvas
                       :display-time nil))
    (line-width-slider :slider
-		      :label "Line Width"
-		      :value 1
-		      :min-value 1
-		      :max-value 100
-		      :value-changed-callback
+                      :label "Line Width"
+                      :value 1
+                      :min-value 1
+                      :max-value 100
+                      :value-changed-callback
                       #'(lambda (gadget value)
                           (declare (ignore gadget))
                           (with-slots (line-style) *application-frame*
                             (setf line-style
                                   (make-merged-line-style line-style
                                                           :thickness (round value)))))
-		      :show-value-p t
+                      :show-value-p t
                       :decimal-places 0
-		      :height 50
-		      :orientation :horizontal)
+                      :height 50
+                      :orientation :horizontal)
    (dashes :option-pane
            :value nil
            :items '(nil (2 2) (4 4) (2 4) (4 2))
@@ -402,9 +394,9 @@
   (declare (ignore frame-manager))
   (setf (clim-fig-output-record frame)
         ;; *standard-output* not bound to the canvas pane yet.
-	(stream-current-output-record (frame-standard-output frame))
-	(clim-fig-status frame)
-	(find-pane-named frame 'status)))
+        (stream-current-output-record (frame-standard-output frame))
+        (clim-fig-status frame)
+        (find-pane-named frame 'status)))
 
 (defun clim-fig-prompt (stream frame)
   (declare (ignore stream frame)))
@@ -484,8 +476,8 @@
 
 (define-clim-fig-command com-clear ()
   (push (coerce (output-record-children (clim-fig-output-record
-					 *application-frame*))
-		'list)
+                                         *application-frame*))
+                'list)
         (clim-fig-undo-list *application-frame*))
   (setf (clim-fig-redo-list *application-frame*) (list))
   (disable-commands *application-frame* 'com-redo 'com-clear)
@@ -500,16 +492,16 @@
                       figure x y))
 
 (make-command-table 'file-command-table
-		    :errorp nil
-		    :menu '(("Exit" :command com-exit)))
+                    :errorp nil
+                    :menu '(("Exit" :command com-exit)))
 
 (make-command-table 'edit-command-table
-		    :errorp nil
-		    :menu '(("Undo" :command com-undo)
-			    ("Redo" :command com-redo)
+                    :errorp nil
+                    :menu '(("Undo" :command com-undo)
+                            ("Redo" :command com-redo)
                             ("Clear" :command com-clear)))
 
 (make-command-table 'menubar-command-table
-		    :errorp nil
-		    :menu '(("File" :menu file-command-table)
+                    :errorp nil
+                    :menu '(("File" :menu file-command-table)
                             ("Edit" :menu edit-command-table)))
