@@ -24,7 +24,7 @@
    (%text-size   :initarg  :text-size
                  :accessor text-size*)
    (%rectangle   :initarg  :rectangle
-                 :type     (member :text-size :text-bounding-rectangle)
+                 :type     (member nil :text-size :text-bounding-rectangle)
                  :accessor rectangle)
    (%hook        :initarg  :hook
                  :accessor hook
@@ -114,28 +114,30 @@
                                 (error (c)
                                   c)))
                       2 pane-height :text-style legend-text-style)
-          (component "Ascent"
-                     (lambda (stream)
-                       (let ((ascent (text-style-ascent style medium)))
-                         (draw-vdist stream (- x1 20) ybase (- ybase ascent)))))
-          (component "Descend"
-                     (lambda (stream)
-                       (let ((descent (text-style-descent style medium)))
-                         (draw-vdist stream (- x1 20) ybase (+ ybase descent)))))
-          (component "Height"
-                     (lambda (stream)
-                       (let ((height (text-style-height style medium)))
-                         (draw-vdist stream (- x1 40) y1 (+ y1 height))))
-                     :line-style (make-line-style :thickness 2))
-          (component "Average character width"
-                     (lambda (stream)
-                       (let ((width (text-style-width style medium)))
-                         (draw-hdist stream (- y1 20) x1 (+ x1 width)))))
-          (component "Baseline"
-                     (lambda (stream)
-                       (draw-line* stream 0 ybase pane-width ybase)))
+          (case rectangle
+            ((:text-size :text-bounding-rectangle)
+             (component "Ascent"
+                        (lambda (stream)
+                          (let ((ascent (text-style-ascent style medium)))
+                            (draw-vdist stream (- x1 20) ybase (- ybase ascent)))))
+             (component "Descend"
+                        (lambda (stream)
+                          (let ((descent (text-style-descent style medium)))
+                            (draw-vdist stream (- x1 20) ybase (+ ybase descent)))))
+             (component "Height"
+                        (lambda (stream)
+                          (let ((height (text-style-height style medium)))
+                            (draw-vdist stream (- x1 40) y1 (+ y1 height))))
+                        :line-style (make-line-style :thickness 2))
+             (component "Average character width"
+                        (lambda (stream)
+                          (let ((width (text-style-width style medium)))
+                            (draw-hdist stream (- y1 20) x1 (+ x1 width)))))
+             (component "Baseline"
+                        (lambda (stream)
+                          (draw-line* stream 0 ybase pane-width ybase)))))
           (draw-text* stream text x1 ybase :text-style style)
-          (ecase rectangle
+          (case rectangle
             ((:text-size)
              (component "Text size (width/height)"
                         (lambda (stream)

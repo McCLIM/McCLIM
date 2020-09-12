@@ -66,7 +66,9 @@
        (toggle-button :label "Text-Size"
                       :id    :text-size))
       (toggle-button  :label "Text-Bounding-Rectangle"
-                      :id    :text-bounding-rectangle)))
+                      :id    :text-bounding-rectangle)
+      (toggle-button  :label "None"
+                      :id    nil)))
    (size
     (let ((callback (make-callback #'(setf text-size*))))
       (make-pane 'slider :orientation            :horizontal
