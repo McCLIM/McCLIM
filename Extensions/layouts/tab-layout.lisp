@@ -318,6 +318,7 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
               :gesture :select
               :tester ((object)
                        (not (sheet-enabled-p (tab-page-pane object))))
+              :echo nil
               :documentation "Switch to this page"
               :pointer-documentation "Switch to this page")
     (object)

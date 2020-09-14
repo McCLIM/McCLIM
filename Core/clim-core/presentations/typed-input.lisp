@@ -68,6 +68,7 @@
              (let ((*input-context*
                      (cons (cons (expand-presentation-type-abbreviation ,type)
                                  #'(lambda (object type event options)
+                                     (print (list object type event options) *trace-output*)
                                      (return-from ,context-block
                                        (values object type event options))))
                            ,(if override nil '*input-context*)))
