@@ -93,7 +93,7 @@
            (handle-event (event-sheet event) event))
          (when timeout
            (setf timeout (compute-decay timeout-time nil)))
-         (when (funcall input-wait-test stream)
+         (when (maybe-funcall input-wait-test stream)
            (return-from stream-input-wait
              (values nil :input-wait-test))))))
 
