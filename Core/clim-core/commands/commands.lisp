@@ -159,7 +159,8 @@
                              `(:documentation ,(make-default-documentation)))
                          ,@translator-options)
                         (object)
-                      (list ,@command-args))))))
+                      (let ((,(first (nth arg-index args)) object))
+                        (list ,@command-args)))))))
       (loop for (name ptype . options) in args
             for gesture = (getf options :gesture)
             for arg-index from 0
