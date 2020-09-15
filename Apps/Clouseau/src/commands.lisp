@@ -289,7 +289,7 @@
                           (and (supportsp object 'setf)
                                (accepts-value-p object ,value)
                                (safe-valuep object)
-                               (not (eq (value object) ,value))))
+                               (eq (value object) ,(not value))))
                  :priority 2
                  :documentation ,(format nil "Set to ~A" value-name)
                  :pointer-documentation
