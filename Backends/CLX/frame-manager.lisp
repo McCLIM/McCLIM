@@ -62,36 +62,53 @@
                                      pane-type &optional errorp)
   ;; This backend doesn't have any specialized pane implementations
   ;; but depending on circumstances it may add optional mirroring to
-  ;; the class. Such automatically defined concrete class has the same
-  ;; name but with a gensym prefix and symbol in the backend package.
+  ;; the class by defining an ad-hoc subclass. Such automatically
+  ;; defined concrete classes use a name that is interned in the
+  ;; backend package and derived from the original class name by
+  ;; including a gensym prefix, the original symbol package and the
+  ;; original symbol name.
   (declare (ignore errorp))
   (maybe-mirroring fm (call-next-method)))
 
-;;; This is an example of how make-pane-1 might create specialized
+;;; This is an example of how MAKE-PANE-1 might create specialized
 ;;; instances of the generic pane types based upon the type of the
-;;; frame-manager. However, in the CLX case, we don't expect there to
+;;; frame manager. However, in the CLX case, we don't expect there to
 ;;; be any CLX specific panes. CLX uses the default generic panes
 ;;; instead.
 (defun maybe-mirroring (fm concrete-pane-class)
-  (when (funcall (mirroring-p fm) concrete-pane-class)
-    (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
-                                          (class-name concrete-pane-class)
-                                          concrete-pane-class)))
-      (multiple-value-bind (class-symbol foundp)
-          (alexandria:ensure-symbol
-           (alexandria:symbolicate (class-gensym fm) "-"
-                                   (symbol-name concrete-pane-class-symbol))
-           :clim-clx)
-        (unless foundp
-          (eval
-           `(defclass ,class-symbol
-                (mirrored-sheet-mixin
-                 ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-                     '(permanent-medium-sheet-output-mixin))
-                 ,concrete-pane-class-symbol)
-              ()
-              (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
-        (setf concrete-pane-class (find-class class-symbol)))))
+  (flet ((make-class-name (concrete-class-name)
+           (let ((name (concatenate
+                        'string
+                        (string (class-gensym fm)) "-"
+                        (if-let ((package (symbol-package concrete-class-name)))
+                          (package-name package)
+                          "UNINTERNED")
+                        ":" (symbol-name concrete-class-name))))
+             (intern name (find-package '#:clim-clx))))
+         (define-class (metaclass name permanent-medium-p concrete-class)
+           (let* ((superclasses `(,(find-class 'mirrored-sheet-mixin)
+                                  ,@(when permanent-medium-p
+                                      `(,(find-class 'permanent-medium-sheet-output-mixin)))
+                                  ,concrete-class))
+                  (class (make-instance metaclass
+                                        :name name
+                                        :direct-superclasses superclasses)))
+             (setf (find-class name) class))))
+    (when (funcall (mirroring-p fm) concrete-pane-class)
+      (multiple-value-bind (concrete-class concrete-class-name)
+          (if (typep concrete-pane-class 'class)
+              (values concrete-pane-class (class-name concrete-pane-class))
+              (values (find-class concrete-pane-class) concrete-pane-class))
+        (multiple-value-bind (class-symbol foundp)
+            (make-class-name concrete-class-name)
+          (setf concrete-pane-class
+                (if foundp
+                    (find-class class-symbol)
+                    (define-class (class-of concrete-class)
+                                  class-symbol
+                                  (not (subtypep concrete-pane-class
+                                                 'sheet-with-medium-mixin))
+                                  concrete-class)))))))
   concrete-pane-class)
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
