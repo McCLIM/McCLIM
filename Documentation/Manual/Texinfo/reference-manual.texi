@@ -634,13 +634,9 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 @defun {@symbol{make-command-table,clim}} {name &key inherit-from inherit-menu (errorp t)}
 @end defun
 
-By default command tables inherit from
-@cl{global-command-table}. According to the @clim{} 2.0 specification, a
-command table inherits from no command table if @t{nil} is passed as an
-explicit argument to @var{inherit-from}. In revision 2.2 all command
-tables must inherit from @cl{global-command-table}. @mcclim{} treats a
-@t{nil} value of @var{inherit-from} as specifying
-@cl{'(global-command-table)}.
+By default command tables inherit from @cl{global-command-table}. A
+command table inherits from no command table if @t{nil} is passed as
+an explicit argument to @var{inherit-from}.
 
 @node Incremental redisplay
 @section Incremental redisplay

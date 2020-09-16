@@ -92,8 +92,6 @@
 
 ;;; adjusted to allow anonymous command-tables for menu-bars
 (defun make-command-table (name &key inherit-from menu inherit-menu (errorp t))
-  (unless inherit-from
-    (setq inherit-from '(global-command-table)))
   (if (and name errorp (gethash name *command-tables*))
       (error 'command-table-already-exists :command-table-name name)
       (let ((result (make-instance 'standard-command-table
