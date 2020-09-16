@@ -384,7 +384,7 @@ appear in the spec but is used by the command processing code for
 layout and to implement a general with-input-editor-typeout."))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
-  (unless (and (typep stream '#.*string-input-stream-class*)
+  (unless (and (typep stream 'string-stream)
                (input-stream-p stream))
     (apply #'format stream format-string format-args)))
 
@@ -1300,16 +1300,16 @@ protocol retrieving gestures from a provided string."))
                             input
                             type))))
 
-(defmethod stream-accept ((stream #.*string-input-stream-class*) type
+(defmethod stream-accept ((stream string-stream) type
                           &key (view (stream-default-view stream))
-                            (default nil defaultp)
-                            (default-type nil default-type-p)
-                            (activation-gestures nil activationsp)
-                            (additional-activation-gestures
-                             nil additional-activations-p)
-                            (delimiter-gestures nil delimitersp)
-                            (additional-delimiter-gestures
-                             nil additional-delimiters-p)
+                               (default nil defaultp)
+                               (default-type nil default-type-p)
+                               (activation-gestures nil activationsp)
+                               (additional-activation-gestures
+                                nil additional-activations-p)
+                               (delimiter-gestures nil delimitersp)
+                               (additional-delimiter-gestures
+                                nil additional-delimiters-p)
                           &allow-other-keys)
   (with-activation-gestures ((if additional-activations-p
                                  additional-activation-gestures
@@ -1381,11 +1381,9 @@ protocol retrieving gestures from a provided string."))
             (t
              (display-using-mode stream prompt-string default-string))))))
 
-(defmethod prompt-for-accept ((stream #.*string-input-stream-class*)
-                              type view
+(defmethod prompt-for-accept ((stream string-stream) type view
                               &rest other-args
                               &key &allow-other-keys)
-
   (declare (ignore type view other-args))
   nil)
 
