@@ -28,10 +28,6 @@ returned.
 \Defun {make-command-table} {\\name \key inherit-from menu
   inherit-menu (errorp t)}
 
-By default command tables inherit from
-\texttt{global-command-table}. According to the CLIM~2.0
-specification, a command table inherits from no command table if
-\texttt{nil} is passed as an explicit argument to
-\textit{inherit-from}. In revision~2.2 all command tables must inherit
-from \texttt{global-command-table}. McCLIM treats a \texttt{nil} value
-of \textit{inherit-from} as specifying \texttt{'(global-command-table)}.
+By default command tables inherit from \texttt{global-command-table}. A
+command table inherits from no command table if \texttt{nil} is passed as an
+explicit argument to \textit{inherit-from}.
