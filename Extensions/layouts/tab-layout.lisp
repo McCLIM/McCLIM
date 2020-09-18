@@ -412,7 +412,7 @@ that the frame manager can customize the implementation."))
             (with-output-as-presentation (pane page-pane presentation-type)
               (present page 'tab-page :stream pane))))
       (draw-line-and-increment pane 7))
-    (draw-line-and-increment pane (- (climi::pane-current-width pane)
+    (draw-line-and-increment pane (- (bounding-rectangle-width pane)
                                      (stream-cursor-position pane)))))
 
 (defclass tab-bar-pane (application-pane)

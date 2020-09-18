@@ -105,7 +105,9 @@
    (panes-for-layout :initform nil :accessor frame-panes-for-layout
                      :documentation "alist of names and panes
                                      (as returned by make-pane)")
-
+   (resize-frame :initarg :resize-frame
+                 :initform nil
+                 :accessor frame-resize-frame)
    (output-pane :initform nil
                 :accessor frame-standard-output
                 :accessor frame-error-output)
@@ -263,18 +265,24 @@ documentation produced by presentations.")
 (defmethod (setf frame-current-layout) :around (name (frame application-frame))
   (unless (eql name (frame-current-layout frame))
     (call-next-method)
-    (alexandria:when-let ((fm (frame-manager frame)))
-      (generate-panes fm frame)
-      (layout-frame frame)
+    (when-let ((fm (frame-manager frame)))
+      (if-let ((tls (and (frame-resize-frame frame)
+                         (frame-top-level-sheet frame))))
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size tls)
+          (generate-panes fm frame)
+          (layout-frame frame width height))
+        (progn
+          (generate-panes fm frame)
+          (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
 (defmethod (setf frame-command-table) :around (new-command-table frame)
   (flet ((get-menu (x) (slot-value x 'menu)))
     (if (and (get-menu (frame-command-table frame))
              (get-menu new-command-table))
-        (prog1
-            (call-next-method)
-          (alexandria:when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
+        (prog1 (call-next-method)
+          (when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
             (update-menu-bar menu-bar-pane new-command-table)))
         (call-next-method))))
 
@@ -447,10 +455,11 @@ documentation produced by presentations.")
             (setq redisplayp (or redisplayp t)
                   clearp t))
           (when redisplayp
-            (let ((highlited (frame-highlited-presentation frame)))
-              (when highlited
-                (highlight-presentation-1 (car highlited) (cdr highlited) :unhighlight)
-                (setf (frame-highlited-presentation frame) nil)))
+            (when-let ((highlited (frame-highlited-presentation frame)))
+              (highlight-presentation-1 (car highlited)
+                                        (cdr highlited)
+                                        :unhighlight)
+              (setf (frame-highlited-presentation frame) nil))
             (with-possible-double-buffering (frame pane-object)
               (when clearp
                 (window-clear pane-object))
