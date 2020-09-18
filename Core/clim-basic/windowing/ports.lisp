@@ -256,8 +256,8 @@ is a McCLIM extension.")
              (new-event (shallow-copy-object event event-class)))
         (when (typep new-event 'pointer-event)
           (get-pointer-position (target-sheet new-event)
-            (setf (slot-value new-event 'x) x
-                  (slot-value new-event 'y) y)))
+            (setf (slot-value new-event 'sheet-x) x
+                  (slot-value new-event 'sheet-y) y)))
         (setf (slot-value new-event 'sheet) target-sheet)
         (dispatch-event target-sheet new-event))))
 

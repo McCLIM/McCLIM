@@ -992,11 +992,13 @@ used.")
   nil)
 
 (defun ensure-subtable (table gesture)
+  ;; Not having a sheet here is not conforming.
   (let* ((event (make-instance
-		'key-press-event
-		:key-name nil
-		:key-character (car gesture)
-		:modifier-state (apply #'make-modifier-state (cdr gesture))))
+                 'key-press-event
+                 :sheet nil
+                 :key-name nil
+                 :key-character (car gesture)
+                 :modifier-state (apply #'make-modifier-state (cdr gesture))))
 	 (item (find-keystroke-item event table :errorp nil)))
     (when (or (null item) (not (eq (command-menu-item-type item) :menu)))
       (let ((name (gensym)))
