@@ -98,7 +98,7 @@
                  (:top-level             1 :type (cons (or symbol cons) list))
                  ;; :icon is the CLIM specification but we don't support it
                  (:geometry              *)
-                 ;; :resize-frame is mentioned in a spec annotation but we don't support it
+                 (:resize-frame          1)
                  ;; McCLIM extensions
                  (:pointer-documentation 1)
                  ;; Default initargs
@@ -176,6 +176,7 @@
                             disabled-commands
                             (top-level '(default-frame-top-level))
                             geometry
+                            resize-frame
                             ;; McCLIM extensions
                             pointer-documentation
                             ;; Default initargs
@@ -201,6 +202,7 @@
           :menu-bar          ',menu-bar
           :current-layout    ',current-layout
           :layouts           ',layouts
+          :resize-frame      ',resize-frame
           :top-level         (list ',(car top-level) ,@(cdr top-level))
           :top-level-lambda  (lambda (,frame-arg)
                                (,(car top-level) ,frame-arg
