@@ -74,10 +74,6 @@
   (declare (ignore frame-manager frame command-name))
   nil)
 
-;;; Application-Frame class
-;;; XXX All these slots should move to a mixin or to standard-application-frame.
-;;; -- moore
-
 (defclass standard-application-frame (application-frame
                                       presentation-history-mixin)
   ((port :initform nil
@@ -174,20 +170,20 @@ documentation produced by presentations.")
                   :initarg :left
                   :initform nil)
    (geometry-right :accessor geometry-right
-                  :initarg :right
-                  :initform nil)
+                   :initarg :right
+                   :initform nil)
    (geometry-top :accessor geometry-top
-                  :initarg :top
-                  :initform nil)
+                 :initarg :top
+                 :initform nil)
    (geometry-bottom :accessor geometry-bottom
-                  :initarg :bottom
-                  :initform nil)
+                    :initarg :bottom
+                    :initform nil)
    (geometry-width :accessor geometry-width
-                  :initarg :width
-                  :initform nil)
+                   :initarg :width
+                   :initform nil)
    (geometry-height :accessor geometry-height
-                  :initarg :height
-                  :initform nil)))
+                    :initarg :height
+                    :initform nil)))
 
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
