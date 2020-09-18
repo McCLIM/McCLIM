@@ -454,6 +454,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod change-space-requirements ((pane layout-protocol-mixin)
                                       &key resize-frame &allow-other-keys)
+  (declare (ignore resize-frame))
   ;; do nothing here
   nil)
 
