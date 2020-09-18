@@ -154,12 +154,12 @@
          (modifier-state))
     (flet ((track-pointer-event (event)
              (multiple-value-call #'track-event state event
-               (let ((sheet (event-sheet event)))
-                 (get-pointer-position (sheet event)
-                   (if (not transformp)
-                       (values x y)
-                       (with-sheet-medium (medium sheet)
-                         (transform-position (medium-transformation medium) x y))))))))
+               (let ((x (pointer-event-x event))
+                     (y (pointer-event-y event)))
+                 (if (not transformp)
+                     (values x y)
+                     (with-sheet-medium (medium (event-sheet event))
+                       (transform-position (medium-transformation medium) x y)))))))
       ;; Synthesize a pointer motion event for the current pointer
       ;; position so that appropriate handlers are called even if no
       ;; event immediately follows the INVOKE-TRACKING-POINTER call.

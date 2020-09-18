@@ -102,17 +102,45 @@
          (defmethod event-type ((event ,name))
            ',type)))))
 
+;;; We have three pairs of the pointer event coordinates in different
+;;; coordinate systems:
+;;;
+;;; * (X Y) - native coordinates (the mirror)
+;;; * (SHEET-X SHEET-Y) - sheet coordinates
+;;; * (GRAFT-X GRAFT-Y) - graft coordinates (the screen)
 (define-event-class device-event (standard-event)
-  ((modifier-state :initarg :modifier-state
-                   :reader event-modifier-state)
-   (x :initarg :x
-      :reader device-event-native-x)
-   (y :initarg :y
-      :reader device-event-native-y)
-   (graft-x :initarg :graft-x
-            :reader device-event-native-graft-x)
-   (graft-y :initarg :graft-y
-            :reader device-event-native-graft-y)))
+  ((modifier-state :initarg :modifier-state :reader event-modifier-state)
+   (x :initarg :x :reader device-event-native-x)
+   (y :initarg :y :reader device-event-native-y)
+   (sheet-x :reader device-event-x)
+   (sheet-y :reader device-event-y)
+   (graft-x :initarg :graft-x :reader device-event-native-graft-x)
+   (graft-y :initarg :graft-y :reader device-event-native-graft-y)))
+
+;;; This macro is responsible for translating the pointer coordinates into
+;;; sheet coordinates. That make sense i.e when we try to synthesize event for
+;;; a different sheet (i.e when it doesn't have a mirror), or to "detect" the
+;;; innermost sheet under the pointer (ditto).
+(defmacro get-pointer-position ((sheet event) &body body)
+  (alexandria:once-only (sheet event)
+    `(multiple-value-bind (x y)
+         (if ,sheet
+             (untransform-position (sheet-delta-transformation ,sheet (graft ,sheet))
+                                   (device-event-native-graft-x ,event)
+                                   (device-event-native-graft-y ,event))
+             (values (device-event-native-x ,event)
+                     (device-event-native-y ,event)))
+       (declare (ignorable x y))
+       ,@body)))
+
+(defmethod initialize-instance :after ((event device-event) &key x y)
+  (if-let ((sheet (event-sheet event)))
+    (multiple-value-bind (sheet-x sheet-y)
+        (untransform-position (sheet-native-transformation sheet) x y)
+      (setf (slot-value event 'sheet-x) sheet-x
+            (slot-value event 'sheet-y) sheet-y))
+    (setf (slot-value event 'sheet-x) x
+          (slot-value event 'sheet-y) y)))
 
 (define-event-class keyboard-event (device-event)
   ((key-name :initarg :key-name
@@ -135,6 +163,8 @@
 (define-event-class pointer-event (device-event)
   ((pointer :initarg :pointer
             :reader pointer-event-pointer)
+   (sheet-x :reader pointer-event-x)
+   (sheet-y :reader pointer-event-y)
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
@@ -145,40 +175,6 @@
     (format stream "~S ~S"
             (pointer-event-x event)
             (pointer-event-y event))))
-
-(defmacro get-pointer-position ((sheet event) &body body)
-  (alexandria:once-only (sheet event)
-    `(multiple-value-bind (x y)
-         (if ,sheet
-             (untransform-position (sheet-delta-transformation ,sheet (graft ,sheet))
-                                   (device-event-native-graft-x ,event)
-                                   (device-event-native-graft-y ,event))
-             (values (device-event-native-x ,event)
-                     (device-event-native-y ,event)))
-       (declare (ignorable x y))
-       ,@body)))
-
-(defmethod pointer-event-x ((event pointer-event))
-  (get-pointer-position ((event-sheet event) event) x))
-
-(defmethod pointer-event-y ((event pointer-event))
-  (get-pointer-position ((event-sheet event) event) y))
-
-(defgeneric pointer-event-position* (pointer-event))
-
-(defmethod pointer-event-position* ((event pointer-event))
-  (get-pointer-position ((event-sheet event) event)
-    (values x y)))
-
-(defgeneric device-event-x (device-event))
-
-(defmethod device-event-x ((event device-event))
-  (get-pointer-position ((event-sheet event) event) x))
-
-(defgeneric device-event-y (device-event))
-
-(defmethod device-event-y ((event device-event))
-  (get-pointer-position ((event-sheet event) event) y))
 
 (define-event-class pointer-button-event (pointer-event)
   ((button :initarg :button
