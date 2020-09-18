@@ -1231,12 +1231,11 @@ if INVOKE-CALLBACK is given."))
   (declare (ignore invoke-callback))
   (setf (slot-value pane 'items) newval))
 
-(defmethod (setf list-pane-items)
-    :after
+(defmethod (setf list-pane-items) :after
     (newval (pane meta-list-pane) &key invoke-callback)
   (when (slot-boundp pane 'value)
     (let ((new-values
-            (coerce (climi::generic-list-pane-item-values pane) 'list))
+            (coerce (generic-list-pane-item-values pane) 'list))
           (test (list-pane-test pane)))
       (setf (gadget-value pane :invoke-callback invoke-callback)
             (if (list-pane-exclusive-p pane)
@@ -1800,8 +1799,8 @@ it in a layout between two panes that are to be resizeable.  E.g.:
                (untransform-position
                 (sheet-delta-transformation
                  (sheet-mirrored-ancestor (box-client-pane left)) nil)
-                (climi::pointer-event-native-graft-x event)
-                (climi::pointer-event-native-graft-y event))))
+                (pointer-event-native-graft-x event)
+                (pointer-event-native-graft-y event))))
         (let ((position (- (ecase orientation
                              (:vertical (left-pointer-position))
                              (:horizontal (nth-value 1 (left-pointer-position))))
