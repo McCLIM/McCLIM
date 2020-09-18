@@ -21,7 +21,6 @@
                (:file "transformations-test")
                (:file "town-example")
                (:file "tabdemo")
-               (:file "sliderdemo")
                (:file "tabledemo")
                (:file "image-transform-demo")
                (:file "stream-test")
