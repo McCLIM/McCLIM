@@ -120,6 +120,12 @@
    (key-character :initarg :key-character :reader keyboard-event-character
                   :initform nil)))
 
+(defmethod print-object ((event keyboard-event) stream)
+  (print-unreadable-object (event stream :type t :identity nil)
+    (format stream "NAME ~s CHARACTER ~s"
+            (keyboard-event-key-name event)
+            (keyboard-event-character event))))
+
 (define-event-class key-press-event (keyboard-event)
   ())
 
@@ -133,6 +139,12 @@
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
    (graft-y :reader pointer-event-native-graft-y) ))
+
+(defmethod print-object ((event pointer-event) stream)
+  (print-unreadable-object (event stream :type t :identity nil)
+    (format stream "~S ~S"
+            (pointer-event-x event)
+            (pointer-event-y event))))
 
 (defmacro get-pointer-position ((sheet event) &body body)
   (alexandria:once-only (sheet event)
