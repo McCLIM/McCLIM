@@ -394,7 +394,8 @@ documentation produced by presentations.")
 
 (defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
   (map-over-sheets (lambda (sheet)
-                     (redisplay-frame-pane frame sheet :force-p force-p))
+                     (when (sheet-viewable-p sheet)
+                       (redisplay-frame-pane frame sheet :force-p force-p)))
                    (frame-top-level-sheet frame)))
 
 (defmethod frame-replay (frame stream &optional region)
