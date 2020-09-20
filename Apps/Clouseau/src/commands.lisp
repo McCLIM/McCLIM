@@ -330,7 +330,7 @@
                                (safe-valuep object)
                                (let ((value (value object)))
                                  (and (typep value 'real)
-                                      (accepts-value-p object (1+ value))))))
+                                      (accepts-value-p object (,operator value))))))
                  :documentation ,(format nil "~@(~A~) by 1" operator-name)
                  :pointer-documentation ((object stream)
                                          (with-print-error-handling (stream)
