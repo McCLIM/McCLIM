@@ -264,7 +264,8 @@ and used to ensure that presentation-translators-caches are up to date.")
                      :command-name ',command-name)
          ,arglist
        (let ((,command-args (let () ,@body)))
-         (values (cons ',command-name ,command-args)
+         (values (ensure-command (list* ',command-name ,command-args)
+                                 ',command-table)
                  '(command :command-table ,command-table)
                  '(:echo ,echo))))))
 

@@ -33,6 +33,10 @@
 
 (defclass test-stream (clim:standard-extended-input-stream) ())
 
+(defmethod interactive-stream-p ((stream test-stream))
+  (declare (ignore stream))
+  t)
+
 ;;; Discard any output written by the input editor.
 (defmethod climi::input-editor-format
     ((stream test-stream) format-string &rest format-args))
