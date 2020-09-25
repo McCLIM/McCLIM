@@ -522,7 +522,7 @@ documentation produced by presentations.")
          (when-let ((fm (frame-manager frame)))
            (disown-frame fm frame)))))))
 
-(defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
+(defparameter +default-prompt-style+ (make-text-style :sans-serif :bold nil))
 
 (defgeneric execute-frame-command (frame command))
 
