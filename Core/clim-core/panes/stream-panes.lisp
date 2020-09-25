@@ -264,9 +264,6 @@
                      :scroll-bars :vertical
                      :incremental-redisplay t))
 
-(defmethod initialize-instance :after ((pane interactor-pane) &rest args)
-  (declare (ignore args)))
-
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
 ;;; roughly working for interactor panes.  It's a hack somewhat
 ;;; analogous to the mouse-wheel / select-and-paste handling in
