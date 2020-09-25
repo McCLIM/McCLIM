@@ -1093,7 +1093,7 @@ y2."
 2, and the angle (CCW in cartesian coordinates) between the two
 vectors."
 
-  (let ((ell (climi::make-ellipse* 0 0 radius1-dx radius1-dy radius2-dx radius2-dy)))
+  (let ((ell (make-ellipse* 0 0 radius1-dx radius1-dy radius2-dx radius2-dy)))
     (multiple-value-bind (cx cy a b theta)
         (climi::ellipse-simplified-representation ell)
       (declare (ignore cx cy))
