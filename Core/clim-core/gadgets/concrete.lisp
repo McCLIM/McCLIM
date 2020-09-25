@@ -143,7 +143,7 @@
   (let* ((cx           (/ (+ x1 x2) 2))
          (cy           (/ (+ y1 y2) 2))
          (radius       (/ (- y2 y1) 2))
-         (inner-radius (max 1 (- radius 2)))
+         (inner-radius (max 1 (* .7 radius)))
          (outer-radius (max 1 radius)))
     (draw-circle* gadget cx cy outer-radius
                   :filled t :ink (effective-gadget-background gadget))
