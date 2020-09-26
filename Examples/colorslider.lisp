@@ -1,25 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
-
-;;;  (c) copyright 2000 by 
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2000 Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000 Julien Boninfante <boninfan@emi.u-bordeaux.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A simple RGB color chooser example.
+;;;
 
-(in-package :clim-demo)
+(in-package #:clim-demo)
 
 ;;; Example gadget definition.
 
@@ -67,30 +58,30 @@
     (:panes
      (text :text-field :value "Pick a color")
      (slider-r :slider
-	       :drag-callback callback-red
-	       :value-changed-callback callback-red
-	       :min-value 0
-	       :max-value 9999
-	       :value 0
-	       :show-value-p t
-	       :orientation :horizontal
-	       :width 120)
+               :drag-callback callback-red
+               :value-changed-callback callback-red
+               :min-value 0
+               :max-value 9999
+               :value 0
+               :show-value-p t
+               :orientation :horizontal
+               :width 120)
      (slider-g :slider
-	       :drag-callback callback-green
-	       :value-changed-callback callback-green
-	       :min-value 0
-	       :max-value 9999
-	       :orientation :horizontal
-	       :value 0
-	       :width 120)
+               :drag-callback callback-green
+               :value-changed-callback callback-green
+               :min-value 0
+               :max-value 9999
+               :orientation :horizontal
+               :value 0
+               :width 120)
      (slider-b :slider
-	       :drag-callback callback-blue
-	       :value-changed-callback callback-blue
-	       :min-value 0
-	       :max-value 9999
-	       :orientation :horizontal
-	       :value 0
-	       :width 120)
+               :drag-callback callback-blue
+               :value-changed-callback callback-blue
+               :min-value 0
+               :max-value 9999
+               :orientation :horizontal
+               :value 0
+               :width 120)
      (colored (make-pane 'generic-colored-gadget
                          :width 200 :height 90)))
     (:layouts
