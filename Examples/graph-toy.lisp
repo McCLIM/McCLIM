@@ -43,7 +43,8 @@
                  (+ (- height (truncate (* h-step (+ y (- minimum))))) 50))))
 
     ;; Draw the title
-    (draw-text* pane (title frame) (/ width 2) 10)
+    (draw-text* pane (title frame)
+                (/ width 2) 2 :align-x :center :align-y :top)
 
     ;; Draw the Y labels
     (loop with line-ink = (make-rgb-color 0.8 0.8 0.8)
@@ -60,7 +61,16 @@
               (let ((xpos (funcall step-fn-x))
                     (ypos (funcall fn-y yval)))
                 (when (draw-values frame)
-                  (draw-text* pane (format nil "~a" yval) (- xpos 20) ypos))
+                  (let ((label (format nil "~a" yval)))
+                    ;; Use :align-x :right for the rightmost labels so
+                    ;; the label text cannot extend beyond the line
+                    ;; for the data point (otherwise the pane and thus
+                    ;; frame could grow).
+                    (draw-text* pane label xpos ypos
+                                :align-x (if (> xpos (* width 3/4))
+                                             :right
+                                             :center)
+                                :align-y :bottom)))
                 (unless (null acc)
                   (draw-line* pane (car acc) (cdr acc) xpos ypos))
                 (cons xpos ypos)))
