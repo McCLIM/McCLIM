@@ -4,7 +4,7 @@
   :in :mcclim)
 
 (test input-streams.smoke-test
-  (let ((lame-event (make-instance 'pointer-event))
+  (let ((lame-event (make-instance 'pointer-event :sheet nil))
         (sis (make-instance 'standard-input-stream))
         (seis (make-instance 'standard-extended-input-stream)))
     (is (null (climi::stream-gesture-available-p sis)))
