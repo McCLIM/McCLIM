@@ -63,23 +63,20 @@
 (defvar *last-timestamp-lock* (make-lock))
 
 (defclass standard-event (event)
-  ((timestamp :initarg :timestamp
-              :initform nil
-              :reader event-timestamp)
+  ((timestamp :initarg :timestamp :reader event-timestamp)
    ;; This slot is pretty much required in order to call handle-event. Some
    ;; events have something other than a sheet in this slot, which is gross.
-   (sheet :initarg :sheet
-          :reader event-sheet))
-  (:default-initargs :sheet (alexandria:required-argument :sheet)))
+   (sheet :initarg :sheet :reader event-sheet))
+  (:default-initargs :timestamp nil
+                     :sheet (alexandria:required-argument :sheet)))
 
 (defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))
-  (let ((timestamp (event-timestamp event)))
-    (with-lock-held (*last-timestamp-lock*)
-      (if timestamp
-          (maxf *last-timestamp* timestamp)
-          (setf (slot-value event 'timestamp)
-                (incf *last-timestamp*))))))
+  (with-lock-held (*last-timestamp-lock*)
+    (if-let ((timestamp (event-timestamp event)))
+      (maxf *last-timestamp* timestamp)
+      (setf (slot-value event 'timestamp)
+            (incf *last-timestamp*)))))
 
 ;;; This macro automates the definition of a method on the EVENT-TYPE
 ;;; generic function.  Methods on that function should return a
