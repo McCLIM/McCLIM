@@ -58,6 +58,7 @@
                (:file "tracking-pointer")
                (:file "file-manager")
                (:file "presentation-translators-test")
+               (:file "graph-formatting-test")
                (:file "demodemo")))
 
 (defsystem "clim-examples/superapp"
