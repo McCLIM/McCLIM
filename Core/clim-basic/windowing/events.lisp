@@ -69,7 +69,8 @@
    ;; This slot is pretty much required in order to call handle-event. Some
    ;; events have something other than a sheet in this slot, which is gross.
    (sheet :initarg :sheet
-          :reader event-sheet)))
+          :reader event-sheet))
+  (:default-initargs :sheet (alexandria:required-argument :sheet)))
 
 (defmethod initialize-instance :after ((event standard-event) &rest initargs)
   (declare (ignore initargs))
