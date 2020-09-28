@@ -252,39 +252,49 @@
                       (member duplicate-test '(#'eq #'eql #'equal #'equalp))))
          (hash-table (and hashed (make-hash-table :test duplicate-test))))
     (labels
-        ((merge-node (parent child)
-           (let* ((key (funcall duplicate-key child))
-                  (child-node
-                    (or (when merge-duplicates
-                          (if hashed
-                              (locally (declare (type hash-table hash-table))
-                                (gethash key hash-table))
-                              (cdr (assoc key node-list :test duplicate-test))))
-                        (with-output-to-output-record
-                            (stream 'standard-graph-node-output-record
-                                    new-node :object child)
-                          (with-end-of-line-action (stream :allow)
-                            (funcall object-printer child stream))))))
+        ((lookup (key)
+           (when merge-duplicates
+             (if hashed
+                 (locally (declare (type hash-table hash-table))
+                   (gethash key hash-table))
+                 (cdr (assoc key node-list :test duplicate-test)))))
+         ((setf lookup) (node key)
+           (if hashed
+               (locally (declare (type hash-table hash-table))
+                 (setf (gethash key hash-table) node))
+               (push (cons key node) node-list))
+           node)
+         (make-node (object)
+           (with-output-to-output-record
+               (stream 'standard-graph-node-output-record new-node
+                       :object object)
+             (with-end-of-line-action (stream :allow)
+               (funcall object-printer object stream))))
+         (merge-node (parent object)
+           (multiple-value-bind (child oldp)
+               (if merge-duplicates
+                   (let* ((key (funcall duplicate-key object))
+                          (existing (lookup key)))
+                     (if existing
+                         (values existing t)
+                         (setf (lookup key) (make-node object))))
+                   (make-node object))
              (when parent
-               (push parent (graph-node-parents child-node)))
-             (when merge-duplicates
-               (if hashed
-                   (locally (declare (type hash-table hash-table))
-                     (setf (gethash key hash-table) child-node))
-                   (setf node-list (push (cons key child-node) node-list))))
-             child-node))
-         (traverse-objects (node objects depth)
+               (push parent (graph-node-parents child)))
+             (values child oldp)))
+         (traverse-objects (parent objects depth)
            (unless (and cutoff-depth (>= depth cutoff-depth))
-             (collect (child-nodes)
-               (do-sequence (child objects)
-                 (let ((child-node (merge-node node child))
-                       (children (funcall inferior-producer child)))
-                   (setf (graph-node-children child-node)
-                         (traverse-objects child-node
-                                           children
-                                           (+ depth 1)))
-                   (child-nodes child-node)))
-               (child-nodes)))))
+             (collect (children)
+               (do-sequence (object objects)
+                 (multiple-value-bind (node oldp) (merge-node parent object)
+                   (unless oldp
+                     (setf (graph-node-children node)
+                           (traverse-objects
+                            node
+                            (funcall inferior-producer object)
+                            (+ depth 1))))
+                   (children node)))
+               (children)))))
       (setf (graph-root-nodes graph-output-record)
             (traverse-objects nil root-objects 0))
       (values))))
@@ -551,13 +561,15 @@ Assumes that GENERATE-GRAPH-NODES has generated only nodes up to the cutoff-dept
 
 (defmethod layout-graph-edges ((graph standard-graph-output-record)
                                stream arc-drawer arc-drawing-options)
-  ;; If arc-drawer is unsupplied, the default behavior is to draw a thin line...
+  ;; If arc-drawer is unsupplied, the default behavior is to draw a
+  ;; thin line...
   (setf arc-drawer (or arc-drawer #'standard-arc-drawer))
   (with-slots (orientation) graph
-    ;; We tranformed the position of the nodes when we inserted them into
-    ;; output history, so the bounding rectangles queried below will be
-    ;; transformed. Therefore, disable the transformation now, otherwise
-    ;; the transformation is effectively applied twice to the edges.
+    ;; We transformed the position of the nodes when we inserted them
+    ;; into output history, so the bounding rectangles queried below
+    ;; will be transformed. Therefore, disable the transformation now,
+    ;; otherwise the transformation is effectively applied twice to
+    ;; the edges.
     (with-identity-transformation (stream)
       (traverse-graph-nodes graph
                             (lambda (node children continuation)
