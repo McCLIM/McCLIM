@@ -43,15 +43,13 @@
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
   ((redisplay-needed :initarg :display-time)
-   (scroll-bars :type scroll-bar-spec ; (member t :vertical :horizontal nil)
-                :initform nil
+   (scroll-bars :initform :obsolete
                 :initarg :scroll-bar
                 :initarg :scroll-bars
                 :accessor pane-scroll-bars)
 
                                         ; Should inherit from label-pane for this one ??
-   (label :type string
-          :initform ""
+   (label :initform :obsolete
           :initarg :label
           :reader pane-label)
    (text-margin :initarg :text-margin
@@ -78,6 +76,18 @@
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
+
+(defmethod initialize-instance :after ((instance clim-stream-pane) &rest initargs)
+  (declare (ignore initargs))
+  (with-slots (scroll-bars label) instance
+    (when (not (eql :obsolete scroll-bars))
+      (warn "~@<The SCROLL-BARS slot in CLIM-STREAM-PANE is obsolete, ~
+             don't use it but use the keyword :SCROLL-BARS in function ~
+             MAKE-CLIM-STREAM-PANE.~@:>"))
+    (when (not (eql :obsolete label))
+      (warn "~@<The LABEL slot in CLIM-STREAM-PANE is obsolete, don't use ~
+             it but use the keyword :LABEL in function ~
+             MAKE-CLIM-STREAM-PANE.~@:>"))))
 
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))
