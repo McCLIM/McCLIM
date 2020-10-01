@@ -49,8 +49,7 @@
    (clock clock-pane
           :width 300 :height 200
           :display-function 'draw-clock
-          :incremental-redisplay t
-          :scroll-bars nil)
+          :incremental-redisplay t)
    (commands :interactor :height 100))
   (:layouts
    (default

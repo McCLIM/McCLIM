@@ -135,7 +135,7 @@
 ;;; we say that explicitly.
 (clim:define-application-frame output-record-example-1 ()
   ()
-  (:panes (application (clim:make-pane 'pane :scroll-bars nil))
+  (:panes (application (clim:make-pane 'pane))
           (interactor :interactor))
   (:layouts (default (clim:vertically ()
                        (7/10 application)
