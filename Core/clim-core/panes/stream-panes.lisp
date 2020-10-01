@@ -271,7 +271,6 @@
   ()
   (:default-initargs :display-time nil
                      :end-of-line-action :scroll
-                     :scroll-bars :vertical
                      :incremental-redisplay t))
 
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
@@ -292,8 +291,7 @@
 
 (defclass application-pane (clim-stream-pane)
   ()
-  (:default-initargs :display-time :command-loop
-                     :scroll-bars t))
+  (:default-initargs :display-time :command-loop))
 
 ;;; COMMAND-MENU PANE
 
@@ -301,7 +299,6 @@
   ()
   (:default-initargs :display-time :command-loop
                      :incremental-redisplay t
-                     :scroll-bars t
                      :display-function 'display-command-menu))
 
 ;;; TITLE PANE
@@ -312,7 +309,6 @@
           :accessor title-string))
   (:default-initargs :display-time t
                      :title-string "Default Title"
-                     :scroll-bars nil
                      :text-style (make-text-style :serif :bold :very-large)
                      :display-function 'display-title))
 
@@ -344,7 +340,6 @@ be shown when there is no pointer documentation to show.")
 current background message was set."))
   (:default-initargs
    :display-time nil
-   :scroll-bars nil
    :default-view +pointer-documentation-view+
    :height     '(2 :line)
    :min-height '(2 :line)
