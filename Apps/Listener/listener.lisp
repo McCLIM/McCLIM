@@ -86,7 +86,7 @@
               :default-view +listener-view+))
             (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
             (wholine (make-pane 'wholine-pane
-                                :display-function 'display-wholine :scroll-bars nil
+                                :display-function 'display-wholine
                                 :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
   (:command-table (listener
