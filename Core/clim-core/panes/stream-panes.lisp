@@ -301,6 +301,7 @@
 
 (defclass title-pane (clim-stream-pane)
   ((title :initarg :title-string
+          :initarg :display-string
           :accessor title-string))
   (:default-initargs :display-time t
                      :title-string "Default Title"
