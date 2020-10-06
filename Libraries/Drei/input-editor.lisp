@@ -616,6 +616,10 @@ if stuff is inserted after the insertion pointer."
 
 (defmethod stream-process-gesture ((stream drei-input-editing-mixin)
 				   gesture type)
+  ;; Drei is not interested in the pointer gestures.
+  (when (typep gesture 'pointer-event)
+    (return-from stream-process-gesture
+      (values nil 'null)))
   ;; If some other command processor has taken control, we do not want
   ;; to assume that an activation gesture really is an activation
   ;; gesture. For example, #\Newline should not cause input activation
