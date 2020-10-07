@@ -918,6 +918,9 @@
                                align-x align-y
                                toward-x toward-y transform-glyphs))
 
+(defmethod medium-clear-area ((sheet sheet) left top right bottom)
+  (with-sheet-medium (medium sheet)
+    (medium-clear-area medium left top right bottom)))
 
 ;;;;
 ;;;; DRAW-DESIGN
