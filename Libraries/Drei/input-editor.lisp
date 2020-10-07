@@ -749,10 +749,11 @@ streams. `Function' will be called with four arguments: the
 input-editing stream, the input buffer, the gesture used to
 invoke the command, and the accumulated numeric argument."
   (set-key `(,(lambda (numeric-argument)
-                      (funcall function *drei-input-editing-stream*
-                               (stream-input-buffer *drei-input-editing-stream*)
-                               gestures
-                               numeric-argument)) ,*numeric-argument-marker*)
+                (funcall function *drei-input-editing-stream*
+                         (stream-input-buffer *drei-input-editing-stream*)
+                         gestures
+                         numeric-argument))
+             ,*numeric-argument-marker*)
            'exclusive-input-editor-table
            gestures))
 

@@ -100,8 +100,12 @@
   ;; Defensive programming. For instance SPACE-REQUIREMENT-+ may cause
   ;; max-{width,height} to be (+ +fill+ +fill+), what exceeds our biggest
   ;; allowed values. We fix that here.
-  (clampf min-width  0 +fill+) (clampf max-width  0 +fill+) (clampf width  min-width  max-width)
-  (clampf min-height 0 +fill+) (clampf max-height 0 +fill+) (clampf height min-height max-height)
+  (clampf min-width 0 +fill+)
+  (clampf max-width 0 +fill+)
+  (clampf width min-width  max-width)
+  (clampf min-height 0 +fill+)
+  (clampf max-height 0 +fill+)
+  (clampf height min-height max-height)
   (assert (<= min-width  max-width)  (min-width  max-width))
   (assert (<= min-height max-height) (min-height max-height))
   (make-instance 'standard-space-requirement

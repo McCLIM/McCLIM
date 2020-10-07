@@ -3,11 +3,11 @@
 (defparameter *double-click-delay* 0.25
   "Maximum time in seconds between clicks in order to produce a double-click")
 
-;;;;
-;;;;  30.4a Concrete Gadget Classes
-;;;;
-
+
 ;;; ---------------------------------------------------------------------------
+;;;  30.4a Concrete Gadget Classes
+;;;
+
 ;;; 30.4.1 The concrete push-button Gadget
 
 (defclass push-button-pane (sheet-leaf-mixin
@@ -76,10 +76,10 @@
             (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
             (draw-engraved-label* pane x1 y1 x2 y2))))))
 
-
-
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.2 The concrete toggle-button Gadget
+;;;
 
 (defclass toggle-button-pane (sheet-leaf-mixin
                               ;; repaint behavior:
@@ -171,9 +171,10 @@
     (when armed
       (setf (gadget-value pane :invoke-callback t) (not (gadget-value pane))))))
 
-
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.3 The concrete menu-button Gadget
+;;;
 
 (defclass menu-button-pane (sheet-leaf-mixin
                             activate/deactivate-repaint-mixin
@@ -217,15 +218,17 @@
                        :min-height (* 2 *3d-border-thickness*)
                        :height (* 2 *3d-border-thickness*)))
 
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.4 The concrete scroll-bar Gadget
+;;;
 
 (defclass scroll-bar-pane (sheet-leaf-mixin
                            3D-border-mixin
                            scroll-bar)
   ((event-state :initform nil)
    (drag-dy :initform nil)
-   ;;; poor man's incremental redisplay
+;;; poor man's incremental redisplay
    ;; drawn state
    (up-state :initform nil)
    (dn-state :initform nil)
@@ -562,17 +565,18 @@
     (setf all-new-p t)
     (scroll-bar/update-display pane)))
 
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.5 The concrete slider Gadget
+;;;
 
-;; ----------------------------------------------------------
-;; What should be done for having a better look for sliders
-;;
-;; We should find a way to draw the value, when show-value-p
-;; is true, in a good position, or to dedicate a particular
-;; sheet for this drawing (this sheet would be inside the
-;; slider's sheet, probably his child).
-;; ----------------------------------------------------------
+;;; ---------------------------------------------------------------------------
+;;; What should be done for having a better look for sliders
+;;;
+;;; We should find a way to draw the value, when show-value-p is true, in a
+;;; good position, or to dedicate a particular sheet for this drawing (this
+;;; sheet would be inside the slider's sheet, probably his child).
+;;; ---------------------------------------------------------------------------
 
 (defgeneric convert-position-to-value (slider-pane position)
   (:documentation
@@ -761,10 +765,12 @@
                                       (pointer-event-y position)
                                       (pointer-event-x position))))
 
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.6 The concrete radio-box and check-box Gadgets
+;;;
 
-;; radio-box
+;;; radio-box
 
 (defclass radio-box-pane (sheet-multiple-child-mixin
                           rack-layout-mixin
@@ -825,43 +831,44 @@
   (unless active
     (deactivate-gadget pane)))
 
-;;; ------------------------------------------------------------------------------------------
+
+;;; ---------------------------------------------------------------------------
 ;;;  30.4.7 The concrete list-pane and option-pane Gadgets
-
+;;;
 
 ;;; LIST-PANE
 
-;; Note: According to the LispWorks CLIM User's Guide, they do some peculiar
-;; things in their list pane. Instead of :exclusive and :nonexclusive modes,
-;; they call them :one-of and :some-of. I've supported these aliases for
-;; compatibility. They also state the default mode is :some-of, which
-;; contradicts the CLIM 2.0 Spec and doesn't make a lot of sense.
-;; McCLIM defaults to :one-of.
+;;; Note: According to the LispWorks CLIM User's Guide, they do some peculiar
+;;; things in their list pane. Instead of :exclusive and :nonexclusive modes,
+;;; they call them :one-of and :some-of. I've supported these aliases for
+;;; compatibility. They also state the default mode is :some-of, which
+;;; contradicts the CLIM 2.0 Spec and doesn't make a lot of sense.
+;;; McCLIM defaults to :one-of.
 
-;; TODO: Improve performance in order to scale to extremely large lists.
-;;        * Computing text-size for a 100k list items is expensive
-;;        * Need to share text size and cache of computed name-key/value-key
-;;          results with LIST-PANE when instantiated in the popup for
-;;          the OPTION-PANE.
-;;        * Improve repaint logic when items are selected to reduce flicker.
-;;       Currently the list and option panes are usable up to several thousand
-;;       items on a reasonably fast P4.
+;;; TODO: Improve performance in order to scale to extremely large lists.
+;;;        * Computing text-size for a 100k list items is expensive
+;;;        * Need to share text size and cache of computed name-key/value-key
+;;;          results with LIST-PANE when instantiated in the popup for
+;;;          the OPTION-PANE.
+;;;        * Improve repaint logic when items are selected to reduce flicker.
+;;;       Currently the list and option panes are usable up to several thousand
+;;;       items on a reasonably fast P4.
 
-;; TODO: Consider appearance of nonexclusive option-pane when multiple items are
-;;       selected.
+;;; TODO: Consider appearance of nonexclusive option-pane when multiple items are
+;;;       selected.
 
-;; TODO: I think the list/option gadgets currently ignore enabled/disabled status.
+;;; TODO: I think the list/option gadgets currently ignore enabled/disabled status.
 
-;; Notes
-;;   A some-of/nonexclusive list pane (or option-pane popup window) supports
-;;   the following behaviors:
-;;       single-click: toggle selected item
-;;        shift-click: select/deselect multiple items. Selection or deselection
-;;                     is chosen according to the result of your previous click.
-;;  McCLIM adds an initarg :prefer-single-selection. If true, a nonexclusive pane
-;;  will deselect other items selected when a new selection is made. Multiple
-;;  items can be selected using control-click, or shift-click as before. This
-;;  imitates the behvior of certain GUIs and may be useful in applications.
+;;; Notes
+;;;   A some-of/nonexclusive list pane (or option-pane popup window) supports
+;;;   the following behaviors:
+;;;       single-click: toggle selected item
+;;;        shift-click: select/deselect multiple items. Selection or deselection
+;;;                     is chosen according to the result of your previous click.
+;;;  McCLIM adds an initarg :prefer-single-selection. If true, a nonexclusive pane
+;;;  will deselect other items selected when a new selection is made. Multiple
+;;;  items can be selected using control-click, or shift-click as before. This
+;;;  imitates the behvior of certain GUIs and may be useful in applications.
 
 (define-abstract-pane-mapping 'list-pane 'generic-list-pane)
 
@@ -1606,15 +1613,14 @@ if INVOKE-CALLBACK is given."))
                           :ink *3d-dark-color*))))
       (generic-option-pane-draw-widget pane))))
 
+
+;;; --------------------------------------------------------------------------
+;;;  30.5 Integrating Gadgets and Output Records
+;;;
 
-;;;; ------------------------------------------------------------------------------------------
-;;;;
-;;;;  30.5 Integrating Gadgets and Output Records
-;;;;
-
-;;
-;; GADGET-OUTPUT-RECORD
-;;
+;;;
+;;; GADGET-OUTPUT-RECORD
+;;;
 
 (defclass gadget-output-record (basic-output-record displayed-output-record)
   ((gadget :initarg :gadget :accessor gadget)))
