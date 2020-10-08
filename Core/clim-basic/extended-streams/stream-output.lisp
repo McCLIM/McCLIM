@@ -150,6 +150,9 @@
 (defmethod cursor-height ((cursor standard-text-cursor))
   (%stream-char-height (cursor-sheet cursor)))
 
+(defmethod %stream-char-height ((sheet sheet))
+  (text-style-height (medium-text-style sheet) sheet))
+
 
 ;;; Standard-Extended-Output-Stream class
 
