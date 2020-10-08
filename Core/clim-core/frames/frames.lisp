@@ -629,6 +629,11 @@ documentation produced by presentations.")
                                                   :sheet frame
                                                   :command command))))))
 
+(defmethod execute-frame-command :around ((frame application-frame) command)
+  (call-next-method)
+  (when (eq frame *application-frame*)
+    (redisplay-frame-panes frame)))
+
 (defmethod handle-event ((frame application-frame) (event execute-command-event))
   (execute-frame-command frame (execute-command-event-command event)))
 
