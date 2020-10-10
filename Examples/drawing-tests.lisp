@@ -1,4 +1,30 @@
-(in-package :clim-demo)
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2016-2017 Alessandro Serra <gas2serra@gmail.com>
+;;;  (c) copyright 2017-2018 Cyrus Harmon <cyrus@bobobeach.com>
+;;;  (c) copyright 2017-2020 Daniel Kochmanski <daniel@turtleware.eu>
+;;;  (c) copyright 2019 José Ronquillo Rivera <josrr@ymail.com>
+;;;  (c) copyright 2019-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A collection of tests for various drawing functions with timing
+;;; and across multiple backends.
+
+(defpackage #:clim-demo.drawing-tests
+  (:use #:clim-lisp #:clim)
+  (:import-from #:alexandria
+                #:symbolicate
+                #:with-gensyms
+                #:when-let
+                #:when-let*)
+
+  (:export
+   #:drawing-tests))
+
+(in-package #:clim-demo.drawing-tests)
 
 (defparameter *drawing-tests-categories* nil)
 (defparameter *drawing-tests* (make-hash-table))
@@ -10,15 +36,15 @@
 (defstruct drawing-test category name description display-function)
 
 (defun drawing-test-keyname (category name)
-  (alexandria:symbolicate category "-" name))
+  (symbolicate category "-" name))
 
 (defmacro define-drawing-test (category name (frame stream &rest arglist) description &body body)
   (check-type category string)
   (check-type name string)
   (check-type description string)
-  (alexandria:with-gensyms (g-category g-name)
+  (with-gensyms (g-category g-name)
     `(let ((,g-name ,name)
-           (,g-category ',(alexandria:symbolicate category)))
+           (,g-category ',(symbolicate category)))
        (setf (gethash (drawing-test-keyname ,g-category ,g-name) *drawing-tests*)
              (make-drawing-test :category ,g-category
                                 :name ,g-name
@@ -27,8 +53,8 @@
        (pushnew ,g-category *drawing-tests-categories*))))
 
 (defun get-display (category name)
-  (alexandria:when-let ((drawing-test (gethash (drawing-test-keyname category name)
-                                               *drawing-tests*)))
+  (when-let ((drawing-test (gethash (drawing-test-keyname category name)
+                                    *drawing-tests*)))
     (drawing-test-display-function drawing-test)))
 
 (defclass drawing-app-pane (application-pane clime:never-repaint-background-mixin)
@@ -66,14 +92,14 @@
     (vertically ()
       (horizontally ()
         (labelling (:label "Recording")
-          (clim:with-radio-box (:orientation :vertical
-                                :value-changed-callback #'%update-recording-option)
-            (clim:radio-box-current-selection "yes")
+          (with-radio-box (:orientation :vertical
+                           :value-changed-callback #'%update-recording-option)
+            (radio-box-current-selection "yes")
             "no"))
         (labelling (:label "Condition")
-          (clim:with-radio-box (:orientation :vertical
-                                :value-changed-callback #'%update-condition-option)
-            (clim:radio-box-current-selection "message")
+          (with-radio-box (:orientation :vertical
+                           :value-changed-callback #'%update-condition-option)
+            (radio-box-current-selection "message")
             "break")))
       (labelling (:label "Run in backend")
         (vertically ()
@@ -139,8 +165,8 @@
                                             (declare (ignore x))
                                             (print-all-raster-image-tests :png)))))
       (labelling (:label "Layout")
-        (clim:with-radio-box (:value-changed-callback #'%update-layout-option
-                              :type :some-of)
+        (with-radio-box (:value-changed-callback #'%update-layout-option
+                         :type :some-of)
           "side-by-side view with the renderer output"))))
    (backend-pane
     (labelling (:label "Backend")
@@ -264,27 +290,27 @@
     ((:|r| :r) (let ((frame (pane-frame pane)))
                  (window-clear (find-pane-named frame 'description))
                  (redisplay-frame-pane (pane-frame pane) pane :force-p t)))
-    (:| | (repaint-sheet pane clim:+everywhere+))))
+    (:| | (repaint-sheet pane +everywhere+))))
 
 (defun %start-benchmark (this-gadget)
   (declare (ignore this-gadget))
-  (let ((test (slot-value clim:*application-frame* 'current-selection))
-        (times (parse-integer (gadget-value (find-pane-named clim:*application-frame*
+  (let ((test (slot-value *application-frame* 'current-selection))
+        (times (parse-integer (gadget-value (find-pane-named *application-frame*
                                                              'benchmark-times))
                               :junk-allowed t)))
     (when (and test (> times 0))
-      (loop with stream = (find-pane-named clim:*application-frame* 'description)
+      (loop with stream = (find-pane-named *application-frame* 'description)
             and itups = internal-time-units-per-second
             and start = (get-internal-real-time)
-            and backend-pane = (find-pane-named clim:*application-frame* 'backend-output)
-            repeat times do
-              (display-backend-output clim:*application-frame* backend-pane t)
+            and backend-pane = (find-pane-named *application-frame* 'backend-output)
+            repeat times
+            do (display-backend-output *application-frame* backend-pane t)
             finally
-               (let* ((score (float (/ times (/ (- (get-internal-real-time) start) itups)))))
-                 (with-slots (recording-p) clim:*application-frame*
+               (let ((score (float (/ times (/ (- (get-internal-real-time) start) itups)))))
+                 (with-slots (recording-p) *application-frame*
                    (when recording-p
                      (clear-output-record (stream-output-history backend-pane))
-                     (display-backend-output clim:*application-frame* backend-pane t))
+                     (display-backend-output *application-frame* backend-pane t))
                    (with-slots (category name) test
                      (format stream "~&~a-~a score: ~a operations/s; recording: ~:[no~;yes~]~%"
                              category name score recording-p)
@@ -293,20 +319,19 @@
 
 (defun %run-in-backend (this-gadget)
   (declare (ignore this-gadget))
-  (let ((test (slot-value clim:*application-frame* 'current-selection)))
-    (when test
-      (let* ((backend (gadget-value (find-pane-named clim:*application-frame*
-                                                     'backend-selector)))
-             (filename (gadget-value (find-pane-named clim:*application-frame*
-                                                      'backend-filename)))
-             (filename (when (> (length filename) 0) filename)))
-        (if (eq backend 'png)
-            (drawing-test-raster-image test :png filename)
-            (funcall (case backend
-                       (ps #'drawing-test-postscript)
-                       (pdf #'drawing-test-pdf))
-                     test
-                     filename))))))
+  (when-let ((test (slot-value *application-frame* 'current-selection)))
+    (let* ((backend (gadget-value (find-pane-named *application-frame*
+                                                   'backend-selector)))
+           (filename (gadget-value (find-pane-named *application-frame*
+                                                    'backend-filename)))
+           (filename (when (> (length filename) 0) filename)))
+      (if (eq backend 'png)
+          (drawing-test-raster-image test :png filename)
+          (funcall (ecase backend
+                     (ps #'drawing-test-postscript)
+                     (pdf #'drawing-test-pdf))
+                   test
+                   filename)))))
 
 (defun change-layout (frame layout-name)
   (when (member layout-name (frame-all-layouts frame))
@@ -314,9 +339,9 @@
 
 (defun %update-layout-option (this-gadget value)
   (declare (ignore this-gadget))
-  (change-layout clim:*application-frame* (if value
-                                              'side-by-side
-                                              'default)))
+  (change-layout *application-frame* (if value
+                                         'side-by-side
+                                         'default)))
 
 (defun %run-in-separate-application-frame (this-gadget)
   (declare (ignore this-gadget))
@@ -328,20 +353,20 @@
     (with-slots (current-selection application-frame-backend frames)
         *application-frame*
       (when (and current-selection (null (gethash current-selection frames)))
-        (alexandria:when-let* ((server-path (if (eq :custom application-frame-backend)
-                                                (string-to-server-path (gadget-value
-                                                                        (find-pane-named *application-frame*
-                                                                                         'server-path)))
-                                                (list application-frame-backend)))
-                               (port (handler-case (find-port :server-path server-path)
-                                       (error () nil)))
-                               (frame-manager (find-frame-manager :port port))
-                               (app-frame (make-application-frame 'drawing-app-frame
-                                                                  :calling-frame *application-frame*
-                                                                  :frame-manager frame-manager
-                                                                  :current-selection current-selection
-                                                                  :backend application-frame-backend
-                                                                  :drawing-tests-frame *application-frame*)))
+        (when-let* ((server-path (if (eq :custom application-frame-backend)
+                                     (string-to-server-path (gadget-value
+                                                             (find-pane-named *application-frame*
+                                                                              'server-path)))
+                                     (list application-frame-backend)))
+                    (port (handler-case (find-port :server-path server-path)
+                            (error () nil)))
+                    (frame-manager (find-frame-manager :port port))
+                    (app-frame (make-application-frame 'drawing-app-frame
+                                                       :calling-frame *application-frame*
+                                                       :frame-manager frame-manager
+                                                       :current-selection current-selection
+                                                       :backend application-frame-backend
+                                                       :drawing-tests-frame *application-frame*)))
           (setf (gethash current-selection frames) app-frame)
           (run-frame-top-level app-frame)
           (remhash current-selection frames))))))
@@ -363,44 +388,43 @@
                                                    :name 'server-path
                                                    :value ""
                                                    :activate-callback #'%run-in-separate-application-frame))))))
-          (alexandria:when-let ((pane (find-pane-named *application-frame* 'server-port-pane)))
+          (when-let ((pane (find-pane-named *application-frame* 'server-port-pane)))
             (sheet-disown-child vbox pane))))))
 
 (defun %update-recording-option (this-gadget selected-gadget)
   (declare (ignore this-gadget))
-  (with-slots (recording-p) clim:*application-frame*
+  (with-slots (recording-p) *application-frame*
     (setf recording-p
-          (string= (clim:gadget-label selected-gadget) "yes"))))
+          (string= (gadget-label selected-gadget) "yes"))))
 
 (defun %update-condition-option (this-gadget selected-gadget)
   (declare (ignore this-gadget))
-  (with-slots (signal-condition-p) clim:*application-frame*
+  (with-slots (signal-condition-p) *application-frame*
     (setf signal-condition-p
-          (string= (clim:gadget-label selected-gadget) "break"))))
+          (string= (gadget-label selected-gadget) "break"))))
 
 (defun %update-selection (pane item)
   (declare (ignore pane))
-  (with-slots (current-selection) clim:*application-frame*
+  (with-slots (current-selection) *application-frame*
     (setf current-selection item))
   (redisplay-frame-pane *application-frame*
                         (get-frame-pane *application-frame* 'backend-output) :force-p t)
-  (let ((render-pane (get-frame-pane *application-frame* 'render-output)))
-    (when render-pane
-      (redisplay-frame-pane *application-frame* render-pane :force-p t))))
+  (when-let ((render-pane (get-frame-pane *application-frame* 'render-output)))
+    (redisplay-frame-pane *application-frame* render-pane :force-p t)))
 
 (defun %update-category-selection (gadget value)
   (declare (ignore gadget))
   (let ((test-selector (find-pane-named *application-frame* 'test-selector))
         (new-items (sort (loop for x being the hash-values of *drawing-tests*
-                               if (string= value (drawing-test-category x))
-                                 collect x)
+                               when (string= value (drawing-test-category x))
+                               collect x)
                          #'string< :key #'drawing-test-name)))
-    (setf (list-pane-items (find-pane-named *application-frame* 'test-selector)) new-items
+    (setf (clime:list-pane-items test-selector) new-items
           (gadget-value test-selector :invoke-callback t) (first new-items))))
 
 (defun display-backend-output (frame pane &optional benchmark)
   (declare (ignore pane))
-  (alexandria:when-let ((item (slot-value frame 'current-selection)))
+  (when-let ((item (slot-value frame 'current-selection)))
     (let ((description (get-frame-pane frame 'description))
           (output (get-frame-pane frame 'backend-output))
           (drawing-tests-frame (when (eq (type-of frame) 'drawing-app-frame)
@@ -415,32 +439,32 @@
       (labels ((draw ()
                  (with-slots (recording-p) (or drawing-tests-frame frame)
                    (with-output-recording-options (output :record recording-p)
-                     (clim:with-drawing-options (output :clipping-region
-                                                        (clim:make-rectangle* 0 0 *width* *height*))
-                       (clim:draw-rectangle* output 0 0 *width* *height*
-                                             :filled t :ink clim:+grey90+)
+                     (with-drawing-options (output :clipping-region
+                                                   (make-rectangle* 0 0 *width* *height*))
+                       (draw-rectangle* output 0 0 *width* *height*
+                                        :filled t :ink +grey90+)
                        (funcall (drawing-test-display-function item) frame output))))))
         (if (slot-value (or drawing-tests-frame frame) 'signal-condition-p)
             (draw)
             (handler-case (draw)
               (simple-error (condition)
-                (clim:with-drawing-options (description :ink +red+)
+                (with-drawing-options (description :ink +red+)
                   (format description "Backend:~a~%" condition)))))))))
 
 (defun display-render-output (frame pane)
   (declare (ignore pane))
-  (alexandria:when-let ((item (slot-value frame 'current-selection)))
+  (when-let ((item (slot-value frame 'current-selection)))
     (let ((output (get-frame-pane frame 'render-output)))
       (labels ((draw ()
-                 (with-slots (recording-p) clim:*application-frame*
+                 (with-slots (recording-p) *application-frame*
                    (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
                                       (stream :width *width*
                                               :height *height*
                                               :border-width *border-width*
                                               :recording-p recording-p)
-                                    (clim:draw-rectangle* stream 0 0 *width* *height*
-                                                          :filled t
-                                                          :ink clim:+grey90+)
+                                    (draw-rectangle* stream 0 0 *width* *height*
+                                                     :filled t
+                                                     :ink +grey90+)
                                     (funcall (drawing-test-display-function item) frame stream))))
                      (draw-pattern* output pattern 0 0)
                      (medium-finish-output (sheet-medium output))))))
@@ -449,12 +473,11 @@
             (handler-case (draw)
               (simple-error (condition)
                 (let ((description (get-frame-pane *application-frame* 'description)))
-                  (clim:with-drawing-options (description :ink +red+)
+                  (with-drawing-options (description :ink +red+)
                     (format description "Render:~a~%" condition))))))))))
 
 (defun run-drawing-tests ()
-  (run-frame-top-level (make-application-frame
-                        'drawing-tests)))
+  (run-frame-top-level (make-application-frame 'drawing-tests)))
 
 (defun drawing-test-print-log (fmt &rest args)
   (when *application-frame*
@@ -466,7 +489,7 @@
     (with-text-style (stream (make-text-style :sans-serif :roman :small))
       (format stream "~&~a:~%~a~%" (drawing-test-keyname category name) description))
     (with-drawing-options (stream :transformation (make-translation-transformation 0 72))
-      (funcall (drawing-test-display-function test) clim:*application-frame*
+      (funcall (drawing-test-display-function test) *application-frame*
                stream))
     (drawing-test-print-log "~&Writing ~A~%" filename)))
 
@@ -480,13 +503,13 @@
         (drawing-test-print stream test filename)))))
 
 (defun print-all-postscript-tests ()
-  (loop for test being the hash-values of *drawing-tests* do
-       (restart-case (drawing-test-postscript test)
-         (:skip ()
-          :report (lambda (stream)
-                    (format stream "skip ~a-~a"
-                            (drawing-test-category test)
-                            (drawing-test-name test)))))))
+  (loop for test being the hash-values of *drawing-tests*
+        do (restart-case (drawing-test-postscript test)
+             (:skip ()
+              :report (lambda (stream)
+                        (format stream "skip ~a-~a"
+                                (drawing-test-category test)
+                                (drawing-test-name test)))))))
 
 (defun drawing-test-pdf (test &optional filename)
   (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
@@ -499,7 +522,16 @@
         (drawing-test-print stream test filename)))))
 
 (defun print-all-pdf-tests ()
-  (loop for test being the hash-values of *drawing-tests* do
+  (loop for test being the hash-values of *drawing-tests*
+        do (restart-case (drawing-test-pdf test)
+             (:skip ()
+              :report (lambda (stream)
+                        (format stream "skip ~a-~a"
+                                (drawing-test-category test)
+                                (drawing-test-name test)))))))
+
+(defun print-pdf-test (test-name)
+  (when-let ((test (gethash test-name *drawing-tests*)))
     (restart-case (drawing-test-pdf test)
       (:skip ()
        :report (lambda (stream)
@@ -507,59 +539,46 @@
                          (drawing-test-category test)
                          (drawing-test-name test)))))))
 
-(defun print-pdf-test (test-name)
-  (let ((test (gethash test-name *drawing-tests*)))
-    (when test
-      (restart-case (drawing-test-pdf test)
-        (:skip ()
-         :report (lambda (stream)
-                   (format stream "skip ~a-~a"
-                           (drawing-test-category test)
-                           (drawing-test-name test))))))))
-
 (defun drawing-test-raster-image (test format &optional filename)
   (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
          (filename (or filename (format nil "/tmp/~a-~a.~(~a~)"
                                         (drawing-test-category test)
                                         (drawing-test-name test) format)))
          (height (+ 72 *height*)))
-    (with-open-file (out filename :element-type '(unsigned-byte 8)
-                                  :direction :output :if-exists :supersede)
-      (mcclim-raster-image:with-output-to-raster-image-stream
-          (stream out format :width *width* :height height)
-        (clim:draw-rectangle* stream 0 0 *width* height :filled t
-                                                        :ink clim:+grey90+)
-        (drawing-test-print stream test filename)))))
+    (mcclim-raster-image:with-output-to-raster-image-file
+        (stream filename :width *width* :height height)
+      (draw-rectangle* stream 0 0 *width* height :filled t :ink +grey90+)
+      (drawing-test-print stream test filename))))
 
 (defun print-all-raster-image-tests (format)
   (time
-   (loop for test being the hash-values of *drawing-tests* do
-     (restart-case (drawing-test-raster-image test format)
-       (:skip ()
-        :report (lambda (stream)
-                  (format stream "skip ~a-~a"
-                          (drawing-test-category test)
-                          (drawing-test-name test))))))))
+   (loop for test being the hash-values of *drawing-tests*
+         do (restart-case (drawing-test-raster-image test format)
+              (:skip ()
+               :report (lambda (stream)
+                         (format stream "skip ~a-~a"
+                                 (drawing-test-category test)
+                                 (drawing-test-name test))))))))
 
 ;;;
 ;;; utility functions
 ;;;
 
 (defun make-random-col ()
-  (clim:make-rgb-color (/ (random 255) 255)
-                       (/ (random 255) 255)
-                       (/ (random 255) 255)))
+  (make-rgb-color (/ (random 255) 255)
+                  (/ (random 255) 255)
+                  (/ (random 255) 255)))
 
 (defun make-random-alpha ()
-  (clim:make-rgb-color (/ (random 255) 255)
-                       (/ (random 255) 255)
-                       (/ (random 255) 255)))
+  (make-rgb-color (/ (random 255) 255)
+                  (/ (random 255) 255)
+                  (/ (random 255) 255)))
 
 (defun draw-rosette2 (stream x y radius n &rest drawing-options)
   (loop with alpha = (/ (* 2 pi) n)
         and radius = (/ radius 2)
         for i below n
-        do (apply #'clim:draw-circle* stream
+        do (apply #'draw-circle* stream
                   (+ (* radius (cos (* alpha i))) x)
                   (+ (* radius (sin (* alpha i))) y)
                   radius
@@ -575,8 +594,7 @@
       (draw-rectangle* stream min-x min-y max-x max-y :line-thickness 1 :filled nil)
       (with-drawing-options (stream :clipping-region cr)
         (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey60+)
-        (loop repeat 30
-           do (funcall draw-fn stream))))))
+        (loop repeat 30 do (funcall draw-fn stream))))))
 
 (defun test-simple-scale-region (stream draw-fn)
   (let ((y 100))
@@ -673,13 +691,13 @@
 (define-drawing-test "Point" "Clipping" (frame stream)
     #.(format nil "Points should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
-  (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (clim:draw-point* stream
-                                                     (random *width*) (random *height*)
-                                                     :ink (make-random-col)
-                                                     :line-thickness (random 100)))))
+    (declare (ignore frame))
+    (test-simple-clipping-region
+     stream (lambda (stream)
+              (draw-point* stream
+                           (random *width*) (random *height*)
+                           :ink (make-random-col)
+                           :line-thickness (random 100)))))
 
 ;;;
 ;;;
@@ -695,13 +713,13 @@ outside the clipping area should be grey.")
           (draw-text* stream (format nil "~A ~A" lc lt) 20 y)
           (let ((x-positions '(150 300)))
             (let ((position-seq
-                   (mapcan #'(lambda (x) (list x y (+ x 100) y))
-                           x-positions)))
+                    (mapcan (lambda (x) (list x y (+ x 100) y))
+                            x-positions)))
               (draw-lines* stream position-seq))
             (dolist (x-pos x-positions)
               (draw-line* stream x-pos (+ 10 y) (+ x-pos 100) (+ 10 y)))
-            (let ((point-seq (mapcan #'(lambda (x) (list (make-point x (+ 20 y))
-                                                         (make-point (+ x 100) (+ 20 y))))
+            (let ((point-seq (mapcan (lambda (x) (list (make-point x (+ 20 y))
+                                                       (make-point (+ x 100) (+ 20 y))))
                                      x-positions)))
               (draw-lines stream point-seq)
               (dolist (x-pos x-positions)
@@ -742,41 +760,39 @@ outside the clipping area should be grey.")
           (setf y (+ 50 y)))))))
 
 (define-drawing-test "Line" "Clipping" (frame stream)
-    #.(format nil "Lines should be drawn only inside the green frame. Anything ~
+  #.(format nil "Lines should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (let ((x (random *width*))
-                                         (y (random *height*)))
-                                     (clim:draw-line* stream
-                                                      x y
-                                                      (+ (random 100)  x) (+ (random 100) y)
-                                                      :ink (make-random-col)
-                                                      :line-thickness (random 10))))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (let ((x (random *width*))
+                  (y (random *height*)))
+              (draw-line* stream
+                          x y
+                          (+ (random 100)  x) (+ (random 100) y)
+                          :ink (make-random-col)
+                          :line-thickness (random 10))))))
 
 (define-drawing-test "Line" "Unit" (frame stream)
     "Lines drawn with different line-unit values without (left column) and with (right column) the scaling transformation applied (1/2 1/2).
 
 line-thickness and line-dashes with line-unit :COORDINATE should depend on a transformation, otherwise they should be independent. Line coordinates are always subject of the transformation. line-thickness is 8, line-dashes are T and (8 12 8 4) for first and third line accordingly."
   (declare (ignore frame))
-  (loop
-     with dashes = '(8 12 8 4)
-     for lu in '(:normal :point :coordinate)
-     for dy in '(20 170 320)
-     do
-       (draw-text* stream (format nil "~s" lu) 20 dy)
-       (with-translation (stream 150 dy)
-         (with-drawing-options (stream :line-thickness 8 :line-unit lu)
-           (draw-line* stream 0 0 100 0 :line-dashes t)
-           (draw-line* stream 0 30 100 30)
-           (draw-line* stream 0 60 100 120 :line-dashes dashes)))
-       (with-translation (stream 300 dy)
-         (with-drawing-options (stream :line-thickness 8 :line-unit lu
-                                       :transformation (make-scaling-transformation 1/2 1/2))
-           (draw-line* stream 0 0 100 0 :line-dashes t)
-           (draw-line* stream 0 30 100 30)
-           (draw-line* stream 0 60 100 100 :line-dashes dashes)))))
+  (loop with dashes = '(8 12 8 4)
+        for lu in '(:normal :point :coordinate)
+        for dy in '(20 170 320)
+        do (draw-text* stream (format nil "~s" lu) 20 dy)
+           (with-translation (stream 150 dy)
+             (with-drawing-options (stream :line-thickness 8 :line-unit lu)
+               (draw-line* stream 0 0 100 0 :line-dashes t)
+               (draw-line* stream 0 30 100 30)
+               (draw-line* stream 0 60 100 120 :line-dashes dashes)))
+           (with-translation (stream 300 dy)
+             (with-drawing-options (stream :line-thickness 8 :line-unit lu
+                                           :transformation (make-scaling-transformation 1/2 1/2))
+               (draw-line* stream 0 0 100 0 :line-dashes t)
+               (draw-line* stream 0 30 100 30)
+               (draw-line* stream 0 60 100 100 :line-dashes dashes)))))
 ;;;
 ;;; Polygon
 ;;;
@@ -813,77 +829,75 @@ line-thickness and line-dashes with line-unit :COORDINATE should depend on a tra
   (declare (ignore frame))
   (flet ((draw (angle line-joint-shape)
            (let ((v (* 50 (tan angle))))
-             (clim:draw-polygon* stream (list 20 0 100 0 50 v)
-                                 :closed nil
-                                 :filled nil
-                                 :line-thickness 20
-                                 :line-joint-shape line-joint-shape
-                                 :line-cap-shape :round)
-             (clim:draw-polygon* stream (list 20 0 100 0 50 v)
-                                 :closed nil
-                                 :filled nil
-                                 :line-thickness 0.01
-                                 :ink clim:+green+))))
-  (loop with dag = 2
-     with da = (* pi (/ dag 180))
-     for i from -10 to 10
-     for a = (* i da)
-     unless (= i 0)
-     do
-       (with-translation (stream 10 (+ 30 (* 32 (+ 10 i))))
-         (draw a :miter)
-         (with-translation (stream 170 0)
-           (draw a :bevel))
-         (with-translation (stream 320 0)
-           (draw a :round))))))
+             (draw-polygon* stream (list 20 0 100 0 50 v)
+                            :closed nil
+                            :filled nil
+                            :line-thickness 20
+                            :line-joint-shape line-joint-shape
+                            :line-cap-shape :round)
+             (draw-polygon* stream (list 20 0 100 0 50 v)
+                            :closed nil
+                            :filled nil
+                            :line-thickness 0.01
+                            :ink +green+))))
+    (loop with dag = 2
+          with da = (* pi (/ dag 180))
+          for i from -10 to 10
+          for a = (* i da)
+          unless (= i 0)
+          do (with-translation (stream 10 (+ 30 (* 32 (+ 10 i))))
+               (draw a :miter)
+               (with-translation (stream 170 0)
+                 (draw a :bevel))
+               (with-translation (stream 320 0)
+                 (draw a :round))))))
 
 
 (define-drawing-test "Polygon" "Clipping" (frame stream)
     #.(format nil "Polygons should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (let ((v (mapcan #'(lambda (x)
-                                                        (declare (ignore x))
-                                                        (list (random *width*)
-                                                              (random *height*)))
-                                                    '(1 2 3))))
-                                     (clim:draw-polygon* stream v
-                                                         :closed t
-                                                         :filled t
-                                                         :line-thickness (random 10)
-                                                         :ink (make-random-col))))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (let ((v (mapcan (lambda (x)
+                               (declare (ignore x))
+                               (list (random *width*)
+                                     (random *height*)))
+                             '(1 2 3))))
+              (draw-polygon* stream v :closed t
+                                      :filled t
+                                      :line-thickness (random 10)
+                                      :ink (make-random-col))))))
 (define-drawing-test "Polygon" "Scale" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-scale-region stream
-                            #'(lambda (stream cx cy)
-                                (clim:draw-polygon* stream (list (- cx 50) (- cy 50)
-                                                                 (- cx 30) (- cy 40)
-                                                                 (- cx 20) (- cy 20)
-                                                                 cx cy
-                                                                 (+ cx 10) (+ cy 40)
-                                                                 (+ cx 50) (+ cy 50))
-                                                    :closed nil
-                                                    :filled nil
-                                                    :line-thickness 4))))
+  (test-simple-scale-region
+   stream (lambda (stream cx cy)
+            (draw-polygon* stream (list (- cx 50) (- cy 50)
+                                        (- cx 30) (- cy 40)
+                                        (- cx 20) (- cy 20)
+                                        cx cy
+                                        (+ cx 10) (+ cy 40)
+                                        (+ cx 50) (+ cy 50))
+                           :closed nil
+                           :filled nil
+                           :line-thickness 4))))
 
 
 (define-drawing-test "Polygon" "Rotation" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-rotation-region stream
-                               #'(lambda (stream cx cy)
-                                   (clim:draw-polygon* stream (list (- cx 50) (- cy 50)
-                                                                    (- cx 30) (- cy 40)
-                                                                    (- cx 20) (- cy 20)
-                                                                    cx cy
-                                                                    (+ cx 10) (+ cy 40)
-                                                                    (+ cx 50) (+ cy 50))
-                                                       :closed nil
-                                                       :filled nil
-                                                       :line-thickness 4))))
+  (test-simple-rotation-region
+   stream (lambda (stream cx cy)
+            (draw-polygon* stream (list (- cx 50) (- cy 50)
+                                        (- cx 30) (- cy 40)
+                                        (- cx 20) (- cy 20)
+                                        cx cy
+                                        (+ cx 10) (+ cy 40)
+                                        (+ cx 50) (+ cy 50))
+                           :closed nil
+                           :filled nil
+                           :line-thickness 4))))
 
 
 ;;;
@@ -900,15 +914,15 @@ outside the clipping area should be grey.")
           (draw-text* stream (format nil "~A ~A" lc lt) 20 y)
           (let ((x-positions '(150 300)))
             (let ((position-seq
-                   (mapcan #'(lambda (x) (list x y (+ x 100) (+ 15 y)))
-                           x-positions)))
+                    (mapcan (lambda (x) (list x y (+ x 100) (+ 15 y)))
+                            x-positions)))
               (draw-rectangles* stream position-seq :ink +yellow+))
             (dolist (x-pos x-positions)
               (draw-rectangle* stream x-pos (+ 25 y) (+ x-pos 100) (+ 40 y)
                                :ink +green+
                                :filled nil))
-            (let ((point-seq (mapcan #'(lambda (x) (list (make-point x (+ 50 y))
-                                                         (make-point (+ x 100) (+ 65 y))))
+            (let ((point-seq (mapcan (lambda (x) (list (make-point x (+ 50 y))
+                                                       (make-point (+ x 100) (+ 65 y))))
                                      x-positions)))
               (draw-rectangles stream point-seq :ink +blue+))
             (dolist (x-pos x-positions)
@@ -936,38 +950,38 @@ outside the clipping area should be grey.")
     #.(format nil "Rectangles should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (let ((x (random *width*))
-                                         (y (random *height*)))
-                                     (clim:draw-rectangle* stream
-                                                           x y
-                                                           (+ (random 100) x) (+ (random 100) y)
-                                                           :ink (make-random-col)
-                                                           :line-thickness (random 10)
-                                                           :filled t)))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (let ((x (random *width*))
+                  (y (random *height*)))
+              (draw-rectangle* stream
+                               x y
+                               (+ (random 100) x) (+ (random 100) y)
+                               :ink (make-random-col)
+                               :line-thickness (random 10)
+                               :filled t)))))
 
 (define-drawing-test "Rectangle" "Scale" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-scale-region stream
-                            #'(lambda (stream cx cy)
-                                (clim:draw-rectangle* stream
-                                                      (- cx 50) (- cy 50)
-                                                      (+ cx 50) (+ cy 50)
-                                                      :line-thickness 4
-                                                      :filled nil))))
+  (test-simple-scale-region
+   stream (lambda (stream cx cy)
+            (draw-rectangle* stream
+                             (- cx 50) (- cy 50)
+                             (+ cx 50) (+ cy 50)
+                             :line-thickness 4
+                             :filled nil))))
 
 (define-drawing-test "Rectangle" "Rotation" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-rotation-region stream
-                               #'(lambda (stream cx cy)
-                                   (clim:draw-rectangle* stream
-                                                         (- cx 50) (- cy 50)
-                                                         (+ cx 50) (+ cy 50)
-                                                         :line-thickness 4
-                                                         :filled nil))))
+  (test-simple-rotation-region
+   stream (lambda (stream cx cy)
+            (draw-rectangle* stream
+                             (- cx 50) (- cy 50)
+                             (+ cx 50) (+ cy 50)
+                             :line-thickness 4
+                             :filled nil))))
 
 
 ;;;
@@ -1012,35 +1026,29 @@ outside the clipping area should be grey.")
     #.(format nil "Ellipses should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (draw-ellipse* stream (random *width*) (random *height*)
-                                                  (+ 1 (random 50)) 0 0 (+ 1 (random 50))
-                                                  :line-thickness (random 5)
-                                                  :ink (make-random-col)
-                                                  :filled t))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (draw-ellipse* stream (random *width*) (random *height*)
+                           (+ 1 (random 50)) 0 0 (+ 1 (random 50))
+                           :line-thickness (random 5)
+                           :ink (make-random-col)
+                           :filled t))))
 
 (define-drawing-test "Ellipse" "Scale" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-scale-region stream
-                            #'(lambda (stream cx cy)
-                                (clim:draw-ellipse* stream
-                                                    cx cy
-                                                    50 0 0 30
-                                                    :line-thickness 4
-                                                    :filled nil))))
+  (test-simple-scale-region
+   stream (lambda (stream cx cy)
+            (draw-ellipse* stream cx cy 50 0 0 30
+                           :line-thickness 4 :filled nil))))
 
 (define-drawing-test "Ellipse" "Rotation" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-rotation-region stream
-                               #'(lambda (stream cx cy)
-                                   (clim:draw-ellipse* stream
-                                                       cx cy
-                                                       50 0 0 30
-                                                       :line-thickness 4
-                                                       :filled nil))))
+  (test-simple-rotation-region
+   stream (lambda (stream cx cy)
+            (draw-ellipse* stream cx cy 50 0 0 30
+                           :line-thickness 4 :filled nil))))
 
 (define-drawing-test "Ellipse" "Slope line intersection" (frame stream)
     "Ellipse with rotation and limited angle is surrounded by its bounding rectangle. Slope lines go through the sheet and the intersections of lines with the ellipse are drawn in different color and thickness."
@@ -1049,11 +1057,11 @@ outside the clipping area should be grey.")
          (cy (/ *height* 2))
          (start-angle (/ pi 8))
          (end-angle (+ (* 3 (/ pi 2)) (/ pi 4)))
-         (ellipse (clim:make-ellipse* cx cy
-                                      100 -200
-                                      -100 -50
-                                      :start-angle start-angle
-                                      :end-angle end-angle))
+         (ellipse (make-ellipse* cx cy
+                                 100 -200
+                                 -100 -50
+                                 :start-angle start-angle
+                                 :end-angle end-angle))
          (clip-rect (make-rectangle* 0 0 *width* *height*))
          (line-distance 50))
     (with-bounding-rectangle* (min-x min-y max-x max-y) ellipse
@@ -1086,11 +1094,11 @@ outside the clipping area should be grey.")
          (cy (/ *height* 2))
          (start-angle (/ pi 8))
          (end-angle (+ (* 3 (/ pi 2)) (/ pi 4)))
-         (ellipse (clim:make-ellipse* cx cy
-                                      100 -200
-                                      -100 -50
-                                      :start-angle start-angle
-                                      :end-angle end-angle))
+         (ellipse (make-ellipse* cx cy
+                                 100 -200
+                                 -100 -50
+                                 :start-angle start-angle
+                                 :end-angle end-angle))
          (clip-rect (make-rectangle* 0 0 *width* *height*))
          (line-distance 50))
     (with-bounding-rectangle* (min-x min-y max-x max-y) ellipse
@@ -1119,10 +1127,10 @@ outside the clipping area should be grey.")
   (declare (ignore frame))
   (let* ((sa (/ pi 2))
          (ea (+ pi (* 3 (/ pi 4))))
-         (ellipse-1 (clim:make-ellipse* 0 0 +40 -80 -40 -20 :start-angle sa :end-angle ea))
-         (ellipse-2 (clim:make-ellipse* 0 0 +40 -80 +40 +20 :start-angle sa :end-angle ea))
-         (ellipse-3 (clim:make-ellipse* 0 0 -40 -20 +40 +80 :start-angle sa :end-angle ea))
-         (ellipse-4 (clim:make-ellipse* 0 0 +40 +20 -40 +80 :start-angle sa :end-angle ea)))
+         (ellipse-1 (make-ellipse* 0 0 +40 -80 -40 -20 :start-angle sa :end-angle ea))
+         (ellipse-2 (make-ellipse* 0 0 +40 -80 +40 +20 :start-angle sa :end-angle ea))
+         (ellipse-3 (make-ellipse* 0 0 -40 -20 +40 +80 :start-angle sa :end-angle ea))
+         (ellipse-4 (make-ellipse* 0 0 +40 +20 -40 +80 :start-angle sa :end-angle ea)))
     (flet ((draw-el (el x y rays-p &rest options)
              (with-translation (stream x y)
                (multiple-value-bind (x-min y-min x-max y-max)
@@ -1156,9 +1164,9 @@ outside the clipping area should be grey.")
 (defparameter *center-y* (/ *height* 2))
 
 (defun test-draw-ellipse* (sheet
-		           center-x center-y
-		           radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-		           &rest args
+                           center-x center-y
+                           radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                           &rest args
                            &key start-angle
                                 end-angle
                                 (draw-ellipse-parameters t)
@@ -1167,7 +1175,7 @@ outside the clipping area should be grey.")
                                 &allow-other-keys)
   (declare (ignore start-angle end-angle))
   (apply #'draw-ellipse* sheet center-x  center-y
-	 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+         radius-1-dx radius-1-dy radius-2-dx radius-2-dy
          args)
   (when draw-ellipse-parameters
     (multiple-value-bind (a b theta)
@@ -1333,24 +1341,20 @@ outside the clipping area should be grey.")
     #.(format nil "Circles should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (draw-circle* stream (random *width*) (random *height*)
-                                                 (+ 1 (random 50))
-                                                 :line-thickness (random 5)
-                                                 :ink (make-random-col)
-                                                 :filled t))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (draw-circle* stream (random *width*) (random *height*)
+                          (+ 1 (random 50))
+                          :line-thickness (random 5)
+                          :ink (make-random-col)
+                          :filled t))))
 
 (define-drawing-test "Circle" "Scale" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-scale-region stream
-                            #'(lambda (stream cx cy)
-                                (clim:draw-circle* stream
-                                                   cx cy
-                                                   50
-                                                   :line-thickness 4
-                                                   :filled nil))))
+  (test-simple-scale-region
+   stream (lambda (stream cx cy)
+            (draw-circle* stream cx cy 50 :line-thickness 4 :filled nil))))
 
 (define-drawing-test "Circle" "Simple Circle (Filled)" (frame stream)
     "Draws a single filled circle."
@@ -1388,12 +1392,12 @@ outside the clipping area should be grey.")
      for start-angle from 0 by (/ pi 2)
      do
        (loop for i from 1 to 8
-           for y from 50 by 75
-          do
-             (draw-circle* stream x y
-                           40 :ink +blue+ :filled nil
-                           :start-angle start-angle :end-angle (+ start-angle (* i (/ pi 4)))
-                           :line-thickness 2))))
+             for y from 50 by 75
+             do (draw-circle* stream x y
+                              40 :ink +blue+ :filled nil
+                                 :start-angle start-angle
+                                 :end-angle (+ start-angle (* i (/ pi 4)))
+                                 :line-thickness 2))))
 
 ;;;
 ;;; Text
@@ -1402,35 +1406,29 @@ outside the clipping area should be grey.")
 (define-drawing-test "Text" "Align" (frame stream)
     ""
   (declare (ignore frame))
-  (clim:with-text-style (stream '(:serif nil :huge))
-    (clim:draw-text* stream "Text Align" 170 20
+  (with-text-style (stream '(:serif nil :huge))
+    (draw-text* stream "Text Align" 170 20
                      :text-family :sans-serif
                      :text-face :bold)
     (loop for align-y in '(:bottom :center :top)
-       and y from 1
-       do (loop for align-x in '(:right :center :left)
-             and x from 1
-             do
-               (clim:draw-text* stream (format nil "~A~A"
-                                               (elt (symbol-name align-x) 0)
-                                               (elt (symbol-name align-y) 0))
-                                (* 50 x) (* 50 y)
-                                :align-x align-x
-                                :align-y align-y)
-               (clim:draw-point* stream (* 50 x) (* 50 y)
-                                 :ink clim:+red+
-                                 :line-thickness 5
-                                 :line-unit :point)))
-    (clim:draw-text* stream "Top" 20 220
-                     :align-y :top)
-    (clim:draw-text* stream "Bottom" 120 220
-                     :align-y :bottom)
-    (clim:draw-text* stream "Center" 250 220
-                     :align-y :center)
-    (clim:draw-text* stream "Baseline" 370 220
-                     :align-y :baseline)
-    (clim:draw-line* stream 20 220 500 220
-                     :ink clim:+red+)))
+          and y from 1
+          do (loop for align-x in '(:right :center :left)
+                   and x from 1
+                   do (draw-text* stream (format nil "~A~A"
+                                                 (elt (symbol-name align-x) 0)
+                                                 (elt (symbol-name align-y) 0))
+                                  (* 50 x) (* 50 y)
+                                  :align-x align-x
+                                  :align-y align-y)
+                      (draw-point* stream (* 50 x) (* 50 y)
+                                   :ink +red+
+                                   :line-thickness 5
+                                   :line-unit :point)))
+    (draw-text* stream "Top" 20 220 :align-y :top)
+    (draw-text* stream "Bottom" 120 220 :align-y :bottom)
+    (draw-text* stream "Center" 250 220 :align-y :center)
+    (draw-text* stream "Baseline" 370 220 :align-y :baseline)
+    (draw-line* stream 20 220 500 220 :ink +red+)))
 
 (define-drawing-test "Text" "Underlining" (frame stream)
     ""
@@ -1481,64 +1479,58 @@ outside the clipping area should be grey.")
     (dolist (fam '(:fix :serif :sans-serif))
       (dolist (face '(:roman :italic :bold))
         (dolist (size '(:normal :huge))
-          (clim:draw-text* stream (format nil "~A ~A ~A" fam face size)
-                           20 y
-                           :text-style (clim:make-text-style fam face size))
+          (draw-text* stream (format nil "~A ~A ~A" fam face size)
+                      20 y
+                      :text-style (make-text-style fam face size))
           (setf y (+ 30 y)))))))
 
 
 (define-drawing-test "Text" "Tranformation" (frame stream)
     ""
   (declare (ignore frame))
-  (with-drawing-options (stream :text-style (clim:make-text-style  :sans-serif :italic :huge))
-    (clim:draw-text* stream "normal" 20 30 :transform-glyphs t)
-    (clim:draw-text* stream "no scale" 20 60  :transform-glyphs t)
+  (with-drawing-options (stream :text-style (make-text-style  :sans-serif :italic :huge))
+    (draw-text* stream "normal" 20 30 :transform-glyphs t)
+    (draw-text* stream "no scale" 20 60  :transform-glyphs t)
     (with-scaling (stream 2 2 (make-point 200 60))
-      (clim:draw-text* stream "scale 2" 200 60  :transform-glyphs t))
-    (clim:draw-text* stream "no rotation" 20 90  :transform-glyphs t)
+      (draw-text* stream "scale 2" 200 60  :transform-glyphs t))
+    (draw-text* stream "no rotation" 20 90  :transform-glyphs t)
     (with-rotation (stream (/ pi 4) (make-point 200 90))
-      (clim:draw-text* stream "rotation 90" 200 90  :transform-glyphs t))
+      (draw-text* stream "rotation 90" 200 90  :transform-glyphs t))
     (with-translation (stream 20 30)
-      (clim:draw-text* stream "translation 20 20" 200 90  :transform-glyphs t))
+      (draw-text* stream "translation 20 20" 200 90  :transform-glyphs t))
 
-    (clim:draw-text* stream "toward y" 20 200 :toward-y 30 :transform-glyphs t)
-    (clim:draw-text* stream "toward x" 200 200 :toward-x 30 :transform-glyphs t)))
+    (draw-text* stream "toward y" 20 200 :toward-y 30 :transform-glyphs t)
+    (draw-text* stream "toward x" 200 200 :toward-x 30 :transform-glyphs t)))
 
 (define-drawing-test "Text" "Clipping" (frame stream)
     #.(format nil "Text should be drawn only inside the green frame. Anything ~
 outside the clipping area should be grey.")
   (declare (ignore frame))
-  (test-simple-clipping-region stream
-                               #'(lambda (stream)
-                                   (draw-text* stream (format nil "~A" (random 10))
-                                               (random *width*) (random *height*)
-                                               :text-size (random 100)
-                                               :ink (make-random-col)))))
+  (test-simple-clipping-region
+   stream (lambda (stream)
+            (draw-text* stream (format nil "~A" (random 10))
+                        (random *width*) (random *height*)
+                        :text-size (random 100)
+                        :ink (make-random-col)))))
 
 (define-drawing-test "Text" "Scale" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-scale-region stream
-                            #'(lambda (stream cx cy)
-                                (clim:draw-text* stream
-                                                 "Ciao"
-                                                 cx cy
-                                                 :align-x :center :align-y :center
-                                                 :text-size 50
-                                                 :transform-glyphs t))))
+  (test-simple-scale-region
+   stream (lambda (stream cx cy)
+            (draw-text* stream "Ciao" cx cy
+                        :align-x :center :align-y :center
+                        :text-size 50 :transform-glyphs t))))
 
 
 (define-drawing-test "Text" "Rotation" (frame stream)
     ""
   (declare (ignore frame))
-  (test-simple-rotation-region stream
-                               #'(lambda (stream cx cy)
-                                   (clim:draw-text* stream
-                                                    "Ciao"
-                                                    cx cy
-                                                    :align-x :center :align-y :center
-                                                    :text-size 50
-                                                    :transform-glyphs t))))
+  (test-simple-rotation-region
+   stream (lambda (stream cx cy)
+            (draw-text* stream "Ciao" cx cy
+                        :align-x :center :align-y :center
+                        :text-size 50 :transform-glyphs t))))
 
 (define-drawing-test "Text" "Text - 1" (frame stream)
     ""
@@ -1555,12 +1547,12 @@ outside the clipping area should be grey.")
 (define-drawing-test "Text" "Size" (frame stream)
     ""
   (declare (ignore frame))
-  (let ((state (make-instance 'state :text        "Ciao"
-                                     :text-family :sans-serif
-                                     :text-face   :roman
-                                     :text-size   100
-                                     :rectangle   :text-size)))
-    (draw-text-size-info stream state)))
+  (let ((state (make-instance 'clim-demo::state :text        "Ciao"
+                                                :text-family :sans-serif
+                                                :text-face   :roman
+                                                :text-size   100
+                                                :rectangle   :text-size)))
+    (clim-demo::draw-text-size-info stream state)))
 
 (define-drawing-test "Text" "Transformation + Alignment" (frame stream)
     "This regression test checks if aligned text is transformed correctly (only last two cases have custom transformation and alignment, rest have default alignment for comparison). Notation: TG is transform-glyphs, XA is align-x, YA is align-y, wrfg is with-room-for-graphics. Lack of values means they take default values (TG=nil, XA=left, YA=baseline). Red dot shows the coordinate at which we draw the text and the beginning of the rectangle made for scale. Each test case is wrapped in surrounding-output-with-border."
@@ -1611,20 +1603,19 @@ outside the clipping area should be grey.")
         (to-head t))
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
-        (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 17) do
-             (progn (let* ((x2 (* 250 (sin theta)))
-                           (y2 (* 250 (cos theta)))
-                           (x1 (* 0.2 x2))
-                           (y1 (* 0.2 y2)))
-                      (draw-arrow* stream x1 y1 x2 y2
-                                   :line-thickness (1+ (* 8 theta))
-                                   :head-width (* 5 (1+ theta))
-                                   :to-head to-head
-                                   :from-head from-head
-                                   :head-length (* 10 (1+ theta)) )
-                      (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
-                      (draw-point* stream x2 y2 :ink +green+ :line-thickness 5))))))))
-
+        (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 17)
+              do (let* ((x2 (* 250 (sin theta)))
+                        (y2 (* 250 (cos theta)))
+                        (x1 (* 0.2 x2))
+                        (y1 (* 0.2 y2)))
+                   (draw-arrow* stream x1 y1 x2 y2
+                                :line-thickness (1+ (* 8 theta))
+                                :head-width (* 5 (1+ theta))
+                                :to-head to-head
+                                :from-head from-head
+                                :head-length (* 10 (1+ theta)) )
+                   (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                   (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))
 
 ;;;
 ;;; Oval
@@ -1637,22 +1628,22 @@ outside the clipping area should be grey.")
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
         (with-translation (stream  0 100)
-          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11) do
-               (progn (let* ((x2 (* 250 (sin theta)))
-                             (y2 (* 250 (cos theta)))
-                             (x1 (* 0.2 x2))
-                             (y1 (* 0.2 y2)))
-                        (draw-oval* stream
-                                    (/ (+ x1 x2) 2)
-                                    (/ (+ y1 y2) 2)
-                                    (abs (/ (- x2 x1) 2))
-                                    (abs (/ (- y2 y1) 2))
-                                    :line-thickness 3
-                                    :filled nil)
-                        (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
-                                     :ink +blue+ :line-thickness 5)
-                        (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
-                        (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11)
+                do (let* ((x2 (* 250 (sin theta)))
+                          (y2 (* 250 (cos theta)))
+                          (x1 (* 0.2 x2))
+                          (y1 (* 0.2 y2)))
+                     (draw-oval* stream
+                                 (/ (+ x1 x2) 2)
+                                 (/ (+ y1 y2) 2)
+                                 (abs (/ (- x2 x1) 2))
+                                 (abs (/ (- y2 y1) 2))
+                                 :line-thickness 3
+                                 :filled nil)
+                     (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                                  :ink +blue+ :line-thickness 5)
+                     (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                     (draw-point* stream x2 y2 :ink +green+ :line-thickness 5))))))))
 
 
 (define-drawing-test "Ovals" "Filled" (frame stream)
@@ -1662,23 +1653,23 @@ outside the clipping area should be grey.")
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
         (with-translation (stream  0 100)
-          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11) do
-               (progn (let* ((x2 (* 250 (sin theta)))
-                             (y2 (* 250 (cos theta)))
-                             (x1 (* 0.2 x2))
-                             (y1 (* 0.2 y2)))
-                        (draw-oval* stream
-                                    (/ (+ x1 x2) 2)
-                                    (/ (+ y1 y2) 2)
-                                    (abs (/ (- x2 x1) 2))
-                                    (abs (/ (- y2 y1) 2))
-                                    :line-thickness 3
-                                    :filled t
-                                    :ink +pink+)
-                        (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
-                                     :ink +blue+ :line-thickness 5)
-                        (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
-                        (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))))
+          (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 11)
+                do (let* ((x2 (* 250 (sin theta)))
+                          (y2 (* 250 (cos theta)))
+                          (x1 (* 0.2 x2))
+                          (y1 (* 0.2 y2)))
+                     (draw-oval* stream
+                                 (/ (+ x1 x2) 2)
+                                 (/ (+ y1 y2) 2)
+                                 (abs (/ (- x2 x1) 2))
+                                 (abs (/ (- y2 y1) 2))
+                                 :line-thickness 3
+                                 :filled t
+                                 :ink +pink+)
+                     (draw-point* stream (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                                  :ink +blue+ :line-thickness 5)
+                     (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
+                     (draw-point* stream x2 y2 :ink +green+ :line-thickness 5))))))))
 
 (define-drawing-test "Ovals" "Simple Oval 1" (frame stream)
     "Draws a single blue, unfilled oval, wider than it is tall."
@@ -1697,11 +1688,11 @@ outside the clipping area should be grey.")
 (define-drawing-test "Clipping Region" "ellipse" (frame stream)
     "Non-rectangular clipping region. We should see grey rotated ellipse with limited angle drawn inside green border. This ellipse is a clipping region. Then we randomly drawn points on the screen which should be clipped to the grey area."
   (declare (ignore frame))
-  (let ((cr (clim:make-ellipse* (/ *width* 2) (/ *height* 2)
-                                (- (/ *width* 2) 50) 100
-                                0 (- (/ *height* 2) 50)
-                                :start-angle (/ pi 8)
-                                :end-angle (* 3 (/ pi 2)))))
+  (let ((cr (make-ellipse* (/ *width* 2) (/ *height* 2)
+                           (- (/ *width* 2) 50) 100
+                           0 (- (/ *height* 2) 50)
+                           :start-angle (/ pi 8)
+                           :end-angle (* 3 (/ pi 2)))))
     (with-bounding-rectangle* (min-x min-y max-x max-y)        cr
       (draw-rectangle* stream (- min-x 10) (- min-y 10) (+ max-x 10) (+ max-y 10)
                        :line-thickness 2 :filled t :ink +green+)
@@ -1710,27 +1701,27 @@ outside the clipping area should be grey.")
       (with-drawing-options (stream :clipping-region cr)
         (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey50+)
         (loop repeat 100
-           do (clim:draw-point* stream (random *width*) (random *height*)
-                                :ink (make-random-col)
-                                :line-thickness (random 100)))))))
+              do (draw-point* stream (random *width*) (random *height*)
+                              :ink (make-random-col)
+                              :line-thickness (random 100)))))))
 
 (define-drawing-test "Clipping Region" "Clipping Region" (frame stream)
     "Various clipping regions. We should see seven blue bounding rectangles. Each of them host a clipping area: square, rotated rectangle, circle, polygon, region intersection, region union and region difference (last three are based on rectangles). Randomly drawn points should be clipped to these clipping areas. No point should be drawn outside the blue rectangles."
   (declare (ignore frame))
   (dolist (cr (list
                (make-rectangle* 20 20 120 120)
-               (clim:transform-region (clim:make-rotation-transformation
-                                       0.5 (make-point 250 70))
-                                      (make-rectangle* 200 20 300 120))
-               (clim:make-ellipse* 70 230 0 50 50 0)
-               (clim:make-polygon* (list 200 170 250 180 300 200 300 250 280 280 200 270 210 250))
-               (clim:region-intersection
+               (transform-region (make-rotation-transformation
+                                  0.5 (make-point 250 70))
+                                 (make-rectangle* 200 20 300 120))
+               (make-ellipse* 70 230 0 50 50 0)
+               (make-polygon* (list 200 170 250 180 300 200 300 250 280 280 200 270 210 250))
+               (region-intersection
                 (make-rectangle* 20 300 90 370)
                 (make-rectangle* 50 330 120 400))
-               (clim:region-union
+               (region-union
                 (make-rectangle* 170 300 240 370)
                 (make-rectangle* 200 330 270 400))
-               (clim:region-difference
+               (region-difference
                 (make-rectangle* 320 300 390 370)
                 (make-rectangle* 350 330 420 400))))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
@@ -1741,9 +1732,9 @@ outside the clipping area should be grey.")
       (with-drawing-options (stream :clipping-region cr)
         (draw-rectangle* stream min-x min-y max-x max-y :filled t :ink +grey50+)
         (loop repeat 100
-           do (clim:draw-point* stream (random 500) (random 500)
-                                :ink (make-random-col)
-                                :line-thickness (random 100)))))))
+              do (draw-point* stream (random 500) (random 500)
+                              :ink (make-random-col)
+                              :line-thickness (random 100)))))))
 
 
 ;;;
@@ -1797,74 +1788,73 @@ outside the clipping area should be grey.")
 (define-drawing-test "Table" "Polygon" (frame stream)
     ""
   (declare (ignore frame))
-  (clim:draw-text* stream "Text test" 170 20
-                   :text-family :sans-serif
-                   :text-face :bold)
-  (clim:formatting-table (stream)
+  (draw-text* stream "Text test" 170 20
+              :text-family :sans-serif
+              :text-face :bold)
+  (formatting-table (stream)
     (flet ((draw (stream angle line-joint-shape)
              (let ((record
-                    (clim:with-output-to-output-record (stream)
+                    (with-output-to-output-record (stream)
                       (let ((v (* 50 (tan angle))))
                         ;;(when (< v 0)
                         ;;  (setf v 0))
-                        (clim:draw-polygon* stream (list 20 0 100 0 50 v)
-                                            :closed nil
-                                            :filled nil
-                                            :line-thickness 40
-                                            :line-joint-shape line-joint-shape
-                                            :line-cap-shape :round)
-                        (clim:draw-polygon* stream (list 20 0 100 0 50 v)
-                                            :closed nil
-                                            :filled nil
-                                            :line-thickness 0.01
-                                            :ink clim:+green+)))))
-               (multiple-value-call #'clim:draw-rectangle*
-                 stream (clim:bounding-rectangle* record)
+                        (draw-polygon* stream (list 20 0 100 0 50 v)
+                                       :closed nil
+                                       :filled nil
+                                       :line-thickness 40
+                                       :line-joint-shape line-joint-shape
+                                       :line-cap-shape :round)
+                        (draw-polygon* stream (list 20 0 100 0 50 v)
+                                       :closed nil
+                                       :filled nil
+                                       :line-thickness 0.01
+                                       :ink +green+)))))
+               (multiple-value-call #'draw-rectangle*
+                 stream (bounding-rectangle* record)
                  :filled nil
-                 :ink clim:+red+ :line-thickness 0.01)
-               (clim:stream-add-output-record stream record)
-               (clim:replay record stream))))
+                 :ink +red+ :line-thickness 0.01)
+               (stream-add-output-record stream record)
+               (replay record stream))))
       (loop with dag = 2
-         with da = (* pi (/ dag 180))
-         for i from -10 to 10
-         for a = (* i da)
-         unless (= i 0)
-         do (clim:formatting-row (stream)
-              (clim:formatting-cell (stream) (print (* i dag) stream))
-              (clim:formatting-cell (stream) (draw stream a :miter))
-              (clim:formatting-cell (stream) (draw stream a :bevel))
-              (clim:formatting-cell (stream) (draw stream a :round)))))))
+            with da = (* pi (/ dag 180))
+            for i from -10 to 10
+            for a = (* i da)
+            unless (= i 0)
+            do (formatting-row (stream)
+                 (formatting-cell (stream) (print (* i dag) stream))
+                 (formatting-cell (stream) (draw stream a :miter))
+                 (formatting-cell (stream) (draw stream a :bevel))
+                 (formatting-cell (stream) (draw stream a :round)))))))
 
 (define-drawing-test "Table" "dashes" (frame stream)
     ""
   (declare (ignore frame))
-  (clim:formatting-table (stream :x-spacing 50
-                                 :y-spacing 20)
-    (clim:formatting-row (stream)
-      (clim:formatting-cell (stream)
+  (formatting-table (stream :x-spacing 50
+                            :y-spacing 20)
+    (formatting-row (stream)
+      (formatting-cell (stream)
         (declare (ignore stream)))
-      (clim:formatting-cell (stream :align-x :center
-                                    :align-y :bottom
-                                    :min-height 100)
-        (clim:draw-text* stream "(Test Page)" 170 30
-                         :text-style (clim:make-text-style :fix :bold :huge))))
+      (formatting-cell (stream :align-x :center
+                               :align-y :bottom
+                               :min-height 100)
+        (draw-text* stream "(Test Page)" 170 30
+                    :text-style (make-text-style :fix :bold :huge))))
     (loop for i from 1 to 15
-       do (clim:formatting-row (stream)
-            (clim:formatting-cell (stream :align-x :right
-                                          :align-y :center
-                                          :min-width 100)
-              (clim:draw-point* stream 0 0 :line-thickness i))
-            (clim:formatting-cell (stream :align-x :center
-                                          :align-y :center)
-              (clim:draw-line* stream 0 0 200 0
-                               :line-thickness i
-                               :line-dashes (list (* i 2) (round i 2))))
-            (clim:formatting-cell (stream :align-x :right
-                                          :align-y :center)
-              (clim:draw-text* stream (format nil "~D" i) 0 0
-                               :text-style (clim:make-text-style
-                                            :sans-serif :bold :huge)))))))
-
+          do (formatting-row (stream)
+               (formatting-cell (stream :align-x :right
+                                        :align-y :center
+                                        :min-width 100)
+                 (draw-point* stream 0 0 :line-thickness i))
+               (formatting-cell (stream :align-x :center
+                                        :align-y :center)
+                 (draw-line* stream 0 0 200 0
+                             :line-thickness i
+                             :line-dashes (list (* i 2) (round i 2))))
+               (formatting-cell (stream :align-x :right
+                                        :align-y :center)
+                 (draw-text* stream (format nil "~D" i) 0 0
+                             :text-style (make-text-style
+                                          :sans-serif :bold :huge)))))))
 
 ;;;
 ;;; Ink
@@ -1914,7 +1904,6 @@ outside the clipping area should be grey.")
                     b))
              records)
       (format stream "~&The bounding rectangles don't look right..~%"))))
-
 
 (define-drawing-test "Ink" "Opaque" (frame stream)
     ""
@@ -1968,11 +1957,9 @@ outside the clipping area should be grey.")
   (let ((y 20))
     (with-drawing-options (stream :line-thickness 5)
       (dolist (ink (list +foreground-ink+ +transparent-ink+
-                         (clim:compose-in +red+
-                                          (clim:make-opacity 0.25))
-                         (clim:compose-in clim:+red+
-                                          (clim:make-opacity 0.50))
-                         clim:+green+))
+                         (compose-in +red+ (make-opacity 0.25))
+                         (compose-in +red+ (make-opacity 0.50))
+                         +green+))
         (draw-text* stream (format nil "~A" ink) 20 (- y 10) :text-size 8)
         (draw-text* stream "Text" 20 (+ 20 y) :ink ink)
         (draw-rectangle* stream 70 y 170 (+ y 20) :ink ink)
@@ -1985,11 +1972,9 @@ outside the clipping area should be grey.")
   (let ((y 20))
     (with-drawing-options (stream :line-thickness 5)
       (dolist (ink (list +foreground-ink+ +transparent-ink+
-                         (clim:compose-out +red+
-                                           (clim:make-opacity 0.25))
-                         (clim:compose-out clim:+red+
-                                           (clim:make-opacity 0.50))
-                         clim:+green+))
+                         (compose-out +red+ (make-opacity 0.25))
+                         (compose-out +red+ (make-opacity 0.50))
+                         +green+))
         (draw-text* stream (format nil "~A" ink) 20 (- y 10) :text-size 8)
         (draw-text* stream "Text" 20 (+ 20 y) :ink ink)
         (draw-rectangle* stream 70 y 170 (+ y 20) :ink ink)
@@ -2002,14 +1987,11 @@ outside the clipping area should be grey.")
   (let ((y 20))
     (with-drawing-options (stream :line-thickness 5)
       (dolist (ink (list +foreground-ink+ +transparent-ink+
-                         (compose-over (clim:compose-in +red+
-                                                        (clim:make-opacity 0.25))
+                         (compose-over (compose-in +red+ (make-opacity 0.25))
                                        +green+)
-                         (compose-over (clim:compose-out clim:+red+
-                                                         (clim:make-opacity 0.50))
-                                       (clim:make-opacity 0.50))
-                         (compose-over +red+
-                                       clim:+green+)))
+                         (compose-over (compose-out +red+ (make-opacity 0.50))
+                                       (make-opacity 0.50))
+                         (compose-over +red+ +green+)))
         (draw-text* stream (format nil "~A" ink) 20 (- y 10) :text-size 8)
         (draw-text* stream "Text" 20 (+ 20 y) :ink ink)
         (draw-rectangle* stream 70 y 170 (+ y 20) :ink ink)
@@ -2030,13 +2012,11 @@ outside the clipping area should be grey.")
         (draw-circle* stream 220 (+ 10 y) 20 :ink ink :filled nil)
         (setf y (+ 30 y))))))
 
-
-
 (define-drawing-test "Ink" "Flipping 2" (frame stream)
     ""
   (declare (ignore frame))
   (let ((y 20)
-        (flipping (clim:make-flipping-ink +red+ +green+)))
+        (flipping (make-flipping-ink +red+ +green+)))
     (draw-rectangle* stream 0 0 400 400 :filled t :ink +red+)
     (with-drawing-options (stream :line-thickness 5)
       (dolist (ink (list flipping flipping))
@@ -2058,19 +2038,16 @@ outside the clipping area should be grey.")
                     (0 1 1 1 1 1 1 0)
                     (0 0 1 1 1 1 0 0)
                     (0 0 0 1 1 0 0 0)))
-         (pattern1 (clim:make-pattern array
-                                      (list clim:+red+ clim:+green+)))
-         (pattern2 (clim:make-pattern array
-                                      (list clim:+green+ clim:+red+)))
-         (pattern3 (clim:make-pattern array
-                                      (list clim:+blue+ clim:+yellow+))))
+         (pattern1 (make-pattern array (list +red+ +green+)))
+         (pattern2 (make-pattern array (list +green+ +red+)))
+         (pattern3 (make-pattern array (list +blue+ +yellow+))))
     (with-drawing-options (stream :line-thickness 5)
-      (dolist (ink (list (clim:make-rectangular-tile pattern1 8 8)
-                         (clim:make-rectangular-tile pattern1 6 6)
-                         (clim:make-rectangular-tile pattern2 8 8)
-                         (clim:make-rectangular-tile pattern2 6 6)
-                         (clim:make-rectangular-tile pattern3 8 8)
-                         (clim:make-rectangular-tile pattern3 6 6)))
+      (dolist (ink (list (make-rectangular-tile pattern1 8 8)
+                         (make-rectangular-tile pattern1 6 6)
+                         (make-rectangular-tile pattern2 8 8)
+                         (make-rectangular-tile pattern2 6 6)
+                         (make-rectangular-tile pattern3 8 8)
+                         (make-rectangular-tile pattern3 6 6)))
         (draw-text* stream "Text" 20 (+ 20 y) :ink ink :text-size 30)
         (draw-rectangle* stream 100 y 170 (+ y 20) :ink ink)
         (draw-circle* stream 220 (+ 10 y) 20 :ink ink :filled nil)
@@ -2081,48 +2058,48 @@ outside the clipping area should be grey.")
 ;;;
 
 (defun picture01 (stream)
-  (clim:draw-rectangle* stream 10 10 200 150 :filled nil
+  (draw-rectangle* stream 10 10 200 150 :filled nil
                         :line-thickness 6
                         ;;:line-joint-shape :none)
                         )
-  (clim:draw-rectangle* stream 20 20 210 160 :filled nil
+  (draw-rectangle* stream 20 20 210 160 :filled nil
                         :line-joint-shape :round
                         :line-thickness 6)
-  (clim:draw-rectangle* stream 30 30 220 170 :filled nil
+  (draw-rectangle* stream 30 30 220 170 :filled nil
                         :line-joint-shape :bevel
                         :line-thickness 6)
-  (clim:draw-rectangle* stream 40 40 230 180 :filled nil
+  (draw-rectangle* stream 40 40 230 180 :filled nil
                         :line-joint-shape :miter
                         :line-thickness 6)
 
-  (clim:draw-line* stream 200 10 10 150 :line-thickness 5 :line-cap-shape :round)
-  (clim:draw-line* stream 220 10 30 150 :line-thickness 5 :line-cap-shape :butt)
-  (clim:draw-line* stream 240 10 50 150 :line-thickness 5 :line-cap-shape :square)
-  (clim:draw-line* stream 260 10 70 150 :line-thickness 5 :line-cap-shape :no-end-point)
+  (draw-line* stream 200 10 10 150 :line-thickness 5 :line-cap-shape :round)
+  (draw-line* stream 220 10 30 150 :line-thickness 5 :line-cap-shape :butt)
+  (draw-line* stream 240 10 50 150 :line-thickness 5 :line-cap-shape :square)
+  (draw-line* stream 260 10 70 150 :line-thickness 5 :line-cap-shape :no-end-point)
 
-  (clim:draw-point* stream 180 25)
-  (clim:draw-circle* stream 100 75 40 :filled nil :ink +green+)
-  (clim:draw-ellipse* stream 160 110 30 0 0 10 :filled nil :ink +green+)
-  (clim:draw-ellipse* stream 160 110 10 0 0 30
+  (draw-point* stream 180 25)
+  (draw-circle* stream 100 75 40 :filled nil :ink +green+)
+  (draw-ellipse* stream 160 110 30 0 0 10 :filled nil :ink +green+)
+  (draw-ellipse* stream 160 110 10 0 0 30
                       :filled t
                       :ink +red+)
-  (clim:draw-polygon* stream '(20 20 50 80 40 20) :filled nil :ink +blue+)
-  (clim:draw-polygon* stream '(30 90 40 110 20 110) :ink +blue+))
+  (draw-polygon* stream '(20 20 50 80 40 20) :filled nil :ink +blue+)
+  (draw-polygon* stream '(30 90 40 110 20 110) :ink +blue+))
 
 (define-drawing-test "Picture" "Picture - 1" (frame stream)
     ""
   (declare (ignore frame))
   (picture01 stream)
-  (clim:with-translation (stream 400 200)
-    (clim:with-scaling (stream 1.6)
-      (clim:with-rotation (stream (/ pi 2))
+  (with-translation (stream 400 200)
+    (with-scaling (stream 1.6)
+      (with-rotation (stream (/ pi 2))
         (picture01 stream)))))
 
 (define-drawing-test "Picture" "Rosette" (frame stream)
   ""
   (declare (ignore frame))
   (draw-rosette2 stream 250 300 180 18
-                :ink clim:+steel-blue+ :line-thickness 2))
+                :ink +steel-blue+ :line-thickness 2))
 
 
 ;;;
@@ -2135,7 +2112,7 @@ outside the clipping area should be grey.")
   (let ((pixmap (with-output-to-pixmap (m stream :width 200 :height 200)
                   (draw-rectangle* m 0 0 200 200 :ink +green+)
                   (draw-rosette2 m 100 100 80 18
-                                :ink clim:+steel-blue+ :line-thickness 2))))
+                                :ink +steel-blue+ :line-thickness 2))))
     (copy-from-pixmap pixmap 0 0 200 200 stream 0 0)
     (copy-from-pixmap pixmap 50 50 100 100 stream 250 50)
     (with-drawing-options (stream :clipping-region (make-rectangle* 70 270 130 330))
@@ -2176,16 +2153,15 @@ outside the clipping area should be grey.")
 ;;;
 
 (define-drawing-test "RGB Design" "RGB Design" (frame stream)
-  ""
+    ""
   (declare (ignore frame))
   (let ((pattern (mcclim-raster-image::with-output-to-rgba-pattern
-		     (stream :width 200 :height 200)
-		   (clim:draw-rectangle* stream 0 0 200 200 :filled t
-					 :ink clim:+grey90+)
-		   (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
-		   (picture01 stream))))
+                     (stream :width 200 :height 200)
+                   (draw-rectangle* stream 0 0 200 200 :filled t :ink +grey90+)
+                   (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
+                   (picture01 stream))))
     (draw-pattern* stream pattern 0 0)
-    (clim:draw-rectangle* stream 50 50 150 150 :filled nil :line-thickness 5 :ink clim:+blue+)
+    (draw-rectangle* stream 50 50 150 150 :filled nil :line-thickness 5 :ink +blue+)
     (with-drawing-options (stream :clipping-region (make-rectangle* 250 50 350 150))
       (draw-pattern* stream pattern 200 0))
     (with-drawing-options (stream :clipping-region (make-rectangle* 250 200 350 300))
@@ -2312,9 +2288,8 @@ outside the clipping area should be grey.")
       (formatting-cell (stream :align-x :left
                                :align-y :top)
         (loop for i from 0 to 300 by 10
-           do
-             (draw-line* stream i 0 i 300 :line-thickness 2 :ink +black+)
-             (draw-line* stream 0 i 300 i :line-thickness 2 :ink +black+))
+           do (draw-line* stream i 0 i 300 :line-thickness 2 :ink +black+)
+              (draw-line* stream 0 i 300 i :line-thickness 2 :ink +black+))
         (draw-rectangle* stream 100 100 200 200 :ink +blue+)
         (draw-text* stream "Bogus" 200 200
                     :text-style (make-text-style :sans-serif :roman :normal))
