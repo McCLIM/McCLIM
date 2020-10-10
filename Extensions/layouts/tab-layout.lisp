@@ -61,6 +61,64 @@
 
 (in-package #:clim-tab-layout)
 
+;;; Tab layout protocol
+
+(defgeneric tab-layout-pages (tab-layout)
+  (:documentation
+   "Return all TAB-PAGEs in TAB-LAYOUT, in order from left to right.
+
+Do not modify the resulting list destructively.  Use the SETF function
+of the same name to assign a new list of pages.  The SETF function
+will automatically add tabs for new page objects, remove old pages,
+and reorder the pages to conform to the new list."))
+
+(defgeneric tab-layout-enabled-page (tab-layout)
+  (:documentation
+   "Return the currently visible tab page of TAB-LAYOUT.
+
+Return NIL if the tab layout does not have any pages currently.  Use
+the SETF function of the name to change focus to another tab page."))
+
+(defgeneric tab-page-tab-layout (tab-page)
+  (:documentation
+   "Return the TAB-LAYOUT to which TAB-PAGE belongs."))
+
+(defgeneric tab-page-pane (tab-page)
+  (:documentation
+   "Return the pane that TAB-PAGE displays.
+
+See also SHEET-TO-PAGE, the reverse operation."))
+
+(defgeneric tab-page-title (tab-page)
+  (:documentation
+   "Return the title displayed in the tab for TAB-PAGE.
+
+Use the SETF function of the same name to set the title
+dynamically."))
+
+(defgeneric tab-page-presentation-type (tab-page)
+  (:documentation
+   "Return the presentation type used when the header of TAB-PAGE gets clicked.
+
+Use the SETF function of the same name to set the presentation type
+dynamically.  The default is TAB-PAGE."))
+
+(defgeneric tab-page-drawing-options (tab-page)
+  (:documentation
+   "Return the drawing options of the header of TAB-PAGE.
+
+Use the SETF function of the same name to set the drawing options
+dynamically.  Note: Not all implementations of the tab layout will
+understand all drawing options."))
+
+(defgeneric (setf tab-layout-enabled-page) (newval tab-layout))
+
+(defgeneric note-tab-page-changed (layout page)
+  (:documentation
+   "This internal function is called by the SETF methods for
+TAB-PAGE-TITLE and -DRAWING-OPTIONS to inform the TAB-LAYOUT of PAGE
+about the changes, allowing it to update its display.  Only called by
+the TAB-LAYOUT implementation and specialized by its subclasses."))
 
 ;;; abstract TAB-LAYOUT superclass
 
@@ -108,50 +166,6 @@ are :TITLE, :PANE (required) and :PRESENTATION-TYPE,:DRAWING-OPTIONS
 (defmethod print-object ((object tab-page) stream)
   (print-unreadable-object (object stream :identity t :type t)
     (princ (tab-page-title object) stream)))
-
-(defgeneric tab-layout-pages (tab-layout)
-  (:documentation "Return all TAB-PAGEs in this tab layout, in order
-from left to right.  Do not modify the resulting list destructively.
-Use the SETF function of the same name to assign a new list of pages.
-The SETF function will automatically add tabs for new page objects, remove
-old pages, and reorder the pages to conform to the new list."))
-
-(defgeneric tab-layout-enabled-page (tab-layout)
-  (:documentation
-   "The currently visible tab page of this tab-layout, or NIL if the tab
-layout does not have any pages currently. Use the SETF function of the name
-to change focus to another tab page."))
-
-(defgeneric tab-page-tab-layout (tab-page)
-  (:documentation "Return the TAB-LAYOUT this page belongs to."))
-
-(defgeneric tab-page-pane (tab-page)
-  (:documentation "Return the CLIM pane this page displays.  See also
-SHEET-TO-PAGE, the reverse operation."))
-
-(defgeneric tab-page-title (tab-page)
-  (:documentation "Return the title displayed in the tab for this PAGE.
-Use the SETF function of the same name to set the title dynamically."))
-
-(defgeneric tab-page-presentation-type (tab-page)
-  (:documentation "Return the type of the presentation used when this
-page's header gets clicked.  Use the SETF function of the same name to
-set the presentation type dynamically.  The default is TAB-PAGE."))
-
-(defgeneric tab-page-drawing-options (tab-page)
-  (:documentation "Return the drawing options of this page's header.  Use
-the SETF function of the same name to set the drawing options dynamically.
-Note: Not all implementations of the tab layout will understand all drawing
-options.  In particular, the Gtkairo backends understands only the :INK
-option at this time."))
-
-(defgeneric (setf tab-layout-enabled-page) (newval tab-layout))
-
-(defgeneric note-tab-page-changed (layout page)
-  (:documentation "This internal function is called by the SETF methods
-for TAB-PAGE-TITLE and -DRAWING-OPTIONS to inform the page's tab-layout
-about the changes, allowing it to update its display.  Only called by
-the TAB-LAYOUT implementation and specialized by its subclasses."))
 
 (defmethod (setf tab-layout-enabled-page) :around (page (parent tab-layout))
   ;; As a rule, we always want exactly one enabled page -- unless we
