@@ -312,6 +312,10 @@ modifier key."))
       (display-drei drei :redisplay-minibuffer t)
       (propagate-changed-value drei))))
 
+;;; We don't want drei gadgets to append gestures to the input-buffer.
+(defmethod climi::stream-append-gesture ((stream drei-gadget-pane) gesture)
+  (declare (ignore stream gesture)))
+
 ;;; This is the method that functions as the entry point for all Drei
 ;;; gadget logic.
 (defmethod handle-event ((gadget drei-gadget-pane) (event key-press-event))
