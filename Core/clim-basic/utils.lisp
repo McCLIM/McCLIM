@@ -916,6 +916,8 @@ offset. The sub-sequence may contain newline characters and it is up
 to the BREAK-STRATEGY whenever it assigns any meaning to to them.
 
 COUNT specifies how many breaks we want to collect."
+  (when (= start end)
+    (return-from line-breaks nil))
   (assert (and (array-in-bounds-p string start)
                (array-in-bounds-p string (1- end))
                (< start end)))
