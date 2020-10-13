@@ -387,7 +387,14 @@ current background message was set."))
     :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
   (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders
                                    :label :label-alignment :display-after-commands))
-    ;; The user space requirement options belong to the scroller ..
+    ;; If :scroll-bars isn't a cons the user space requirement options
+    ;; belong to the most external container of the stream
+    ;; (scroller-pane, label-pane or outline-pane). If :scroll-bars is
+    ;; a cons the user space requirement options belong to the clim
+    ;; stream and it is possible to set the space requirement of the
+    ;; scroller using the cdr of :scroll-bars as:
+    ;; :SCROLL-BARS '(:VERTICAL :WIDTH 300)
+    ;; -- admich 2020-10-13
     (let* ((space-keys '(:width :height :max-width :max-height
                          :min-width :min-height))
            (user-sr nil)
@@ -408,18 +415,27 @@ current background message was set."))
                                                            (if (eq display-after-commands t)
                                                                :command-loop
                                                                display-after-commands)))
-                                                   (unless (or scroll-bars
-                                                               label
-                                                               borders)
+                                                   (when (or (consp scroll-bars)
+                                                             (not (or scroll-bars
+                                                                      label
+                                                                      borders)))
                                                      user-sr))))
              (stream pane))
         (when scroll-bars
           (setq pane (apply #'make-pane 'scroller-pane
-                            :scroll-bar scroll-bars
                             :contents (list (make-pane 'viewport-pane
                                                        :contents (list pane)))
-                            (unless (or label borders)
-                              user-sr))))
+                            (append
+                             ;; From the Franz manual if :scroll-bars is a
+                             ;; cons the car is treated as the non-cons
+                             ;; argument and the cdr is a list of keyword
+                             ;; argument pairs to be used as options of
+                             ;; the scroller-pane
+                             (if (consp scroll-bars)
+                                 `(:scroll-bar ,@scroll-bars)
+                                 `(:scroll-bar ,scroll-bars))
+                             (unless (or (consp scroll-bars) label borders)
+                               user-sr)))))
         (when label
           (setq pane (apply #'make-pane 'label-pane
                         :label label
@@ -427,7 +443,7 @@ current background message was set."))
                         (append
                          (when label-alignment-p
                            (list :label-alignment label-alignment))
-                         (unless borders
+                         (unless (or (consp scroll-bars) borders)
                            user-sr)))))
         (when borders
           (setq pane (apply #'make-pane 'outlined-pane
@@ -435,7 +451,8 @@ current background message was set."))
                                        1
                                        borders)
                         :contents (list pane)
-                        user-sr)))
+                        (unless (consp scroll-bars)
+                          user-sr))))
         (values pane stream)))))
 
 (defun make-clim-interactor-pane (&rest options
