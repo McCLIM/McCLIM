@@ -82,7 +82,7 @@
        (lambda (class stream)
          (surrounding-output-with-border (stream :shape :oval)
            (print-class class stream)))
-       #'sb-mop:class-direct-subclasses
+       #'closer-mop:class-direct-subclasses
        :generation-separation '(4 :line)
        :within-generation-separation '(2 :character)
        :stream stream
@@ -98,7 +98,7 @@
          (list (find-class class))
          #'print-class
          (lambda (class)
-           (reverse (sb-mop:class-direct-superclasses class)))
+           (reverse (closer-mop:class-direct-superclasses class)))
          :merge-duplicates t
          :graph-type :tree
          :arc-drawer #'climi::arrow-arc-drawer
@@ -199,7 +199,7 @@
      (find-class 'clim:gadget)
      (lambda (object stream)
        (write-string (string (class-name object)) stream))
-     #'sb-mop:class-direct-subclasses
+     #'closer-mop:class-direct-subclasses
      :graph-type :dag :merge-duplicates t
      :maximize-generations t
      :center-nodes t
