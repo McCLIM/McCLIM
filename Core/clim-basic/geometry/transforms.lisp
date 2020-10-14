@@ -705,8 +705,13 @@ real numbers, and default to 0."
   ;;
   ;; We coerce y to the same float type as pi to have a better
   ;; accuracy thanks with elliptical objects. -- jd 2019-11-19
-  (let ((r (atan (float y pi) x)))
-    (if (< r 0) (+ r (* 2 pi)) r)))
+  (if (and (zerop x) (zerop y))
+      ;; ATAN when called with both arguments being zero has undefined
+      ;; consequences, therefore we signal an error here. We don't distinguish
+      ;; signed zero for consistency between implementations.
+      (error 'arithmetic-error :operation 'atan* :operands (list x y))
+      (let ((r (atan (float y pi) x)))
+        (if (< r 0) (+ r (* 2 pi)) r))))
 
 (defun correct-angle (a phi)
   (if (< a phi)
