@@ -399,16 +399,16 @@ current background message was set."))
                          :min-width :min-height))
            (user-sr nil)
            (pane-options nil))
-      (loop  for (key value) on options by #'cddr
-             if (and (member key space-keys :test #'eq)
-                     (not (eq value :compute)))
-               nconc (list key value) into space-options
-             else
-               nconc (list key value) into other-options
-             end
-             finally (progn
-                       (setq user-sr space-options)
-                       (setq pane-options other-options)))
+      (loop for (key value) on options by #'cddr
+            if (and (member key space-keys :test #'eq)
+                    (not (eq value :compute)))
+              nconc (list key value) into space-options
+            else
+              nconc (list key value) into other-options
+            end
+              finally (progn
+                        (setq user-sr space-options)
+                        (setq pane-options other-options)))
       (let* ((pane (apply #'make-pane type (append pane-options
                                                    (when display-after-commands-p
                                                      (list :display-time
@@ -438,63 +438,37 @@ current background message was set."))
                                user-sr)))))
         (when label
           (setq pane (apply #'make-pane 'label-pane
-                        :label label
-                        :contents (list pane)
-                        (append
-                         (when label-alignment-p
-                           (list :label-alignment label-alignment))
-                         (unless (or (consp scroll-bars) borders)
-                           user-sr)))))
+                            :label label
+                            :contents (list pane)
+                            (append
+                             (when label-alignment-p
+                               (list :label-alignment label-alignment))
+                             (unless (or (consp scroll-bars) borders)
+                               user-sr)))))
         (when borders
           (setq pane (apply #'make-pane 'outlined-pane
-                        :thickness (if (not (numberp borders))
-                                       1
-                                       borders)
-                        :contents (list pane)
-                        (unless (consp scroll-bars)
-                          user-sr))))
+                            :thickness (if (not (numberp borders))
+                                           1
+                                           borders)
+                            :contents (list pane)
+                            (unless (consp scroll-bars)
+                              user-sr))))
         (values pane stream)))))
 
-(defun make-clim-interactor-pane (&rest options
-                                  &key (scroll-bar t scroll-bar-p)
-                                       (scroll-bars scroll-bar scroll-bars-p)
-                                  &allow-other-keys)
-  (declare (ignore scroll-bars))
-  (apply #'make-clim-stream-pane :type 'interactor-pane
-         (if (or scroll-bar-p scroll-bars-p)
-             options
-             (list* :scroll-bars :vertical options))))
-
-(defun make-clim-application-pane (&rest options
-                                   &key (scroll-bar t scroll-bar-p)
-                                        (scroll-bars scroll-bar scroll-bars-p)
-                                   &allow-other-keys)
-  (declare (ignore scroll-bars))
-  (apply #'make-clim-stream-pane :type 'application-pane
-         (if (or scroll-bar-p scroll-bars-p)
-             options
-             (list* :scroll-bars t options))))
-
-(defun make-clim-pointer-documentation-pane (&rest options
-                                             &key (scroll-bar nil scroll-bar-p)
-                                                  (scroll-bars scroll-bar scroll-bars-p)
-                                             &allow-other-keys)
-  (declare (ignore scroll-bars))
-  (apply #'make-clim-stream-pane :type 'pointer-documentation-pane
-         (if (or scroll-bar-p scroll-bars-p)
-             options
-             (list* :scroll-bars nil options))))
-
-(defun make-clim-command-menu-pane (&rest options
-                                    &key (scroll-bar t scroll-bar-p)
-                                         (scroll-bars scroll-bar scroll-bars-p)
-                                    &allow-other-keys)
-  (declare (ignore scroll-bars))
-  (apply #'make-clim-stream-pane :type 'command-menu-pane
-         (if (or scroll-bar-p scroll-bars-p)
-             options
-             (list* :scroll-bars t options))))
-
+(macrolet
+    ((define (name type default-scroll-bar)
+       `(defun ,name (&rest options &key (scroll-bar  nil scroll-bar-p)
+                                         (scroll-bars nil scroll-bars-p)
+                      &allow-other-keys)
+          (declare (ignore scroll-bar scroll-bars))
+          (apply #'make-clim-stream-pane :type ',type
+                 (if (or scroll-bar-p scroll-bars-p)
+                     options
+                     (list* :scroll-bars ,default-scroll-bar options))))))
+  (define make-clim-interactor-pane            interactor-pane            :vertical)
+  (define make-clim-application-pane           application-pane           t)
+  (define make-clim-pointer-documentation-pane pointer-documentation-pane nil)
+  (define make-clim-command-menu-pane          command-menu-pane          t))
 
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
