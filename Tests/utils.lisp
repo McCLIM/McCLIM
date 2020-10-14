@@ -33,8 +33,6 @@
                      (alexandria:remove-from-plist args :start :offset))))
 
 (test line-breaks.smoke
-  ;; Does not work on empty strings.
-  (signals error (lines ""))
   ;; Some cases.
   (let* ((string "ala ma kota a kot ma alę")
          (prefix "XXX XXX ")
