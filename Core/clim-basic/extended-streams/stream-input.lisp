@@ -354,7 +354,8 @@ keys read."))
   (declare (ignore type))
   (typecase gesture
     (key-press-event
-     (if-let ((character (event-char gesture)))
+     (if-let ((character (and (zerop (event-modifier-state gesture))
+                              (event-char gesture))))
        (values character 'character)
        (values gesture (type-of gesture))))
     (pointer-event
