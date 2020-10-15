@@ -58,18 +58,29 @@
   ((command-table-name :reader error-command-table-name
                        :initform nil
                        :initarg :command-table-name))
+  (:report (lambda (object stream)
+             (format stream
+                     "Command table name: ~s~%"
+                     (error-command-table-name object))
+             (apply #'format stream
+                    (simple-condition-format-control object)
+                    (simple-condition-format-arguments object))))
   (:default-initargs :format-control "" :format-arguments nil))
 
-(defmethod print-object ((object command-table-error) stream)
-  (print-unreadable-object (object stream :type t :identity t)
-    (when (error-command-table-name object)
-      (princ (error-command-table-name object) stream))))
+(define-condition command-table-not-found (command-table-error) ()
+  (:default-initargs :format-control "Command table not found."))
 
-(define-condition command-table-not-found (command-table-error) ())
-(define-condition command-table-already-exists (command-table-error) ())
-(define-condition command-not-present (command-table-error) ())
-(define-condition command-not-accessible (command-table-error) ())
-(define-condition command-already-present (command-table-error) ())
+(define-condition command-table-already-exists (command-table-error) ()
+  (:default-initargs :format-control "Command table already exists."))
+
+(define-condition command-not-present (command-table-error) ()
+  (:default-initargs :format-control "Command not present."))
+
+(define-condition command-not-accessible (command-table-error) ()
+  (:default-initargs :format-control "Command not accessible."))
+
+(define-condition command-already-present (command-table-error) ()
+  (:default-initargs :format-control "Command already accessible."))
 
 (defun command-table-designator-as-name (designator)
   "Return the name of `designator' if it is a command table,
