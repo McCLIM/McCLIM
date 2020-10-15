@@ -133,10 +133,11 @@
 
 (defun apply-with-command-table-inheritance (fun command-table)
   (funcall fun command-table)
-  (mapc #'(lambda (inherited-command-table)
-            (apply-with-command-table-inheritance
-             fun (find-command-table inherited-command-table)))
-        (command-table-inherit-from command-table)))
+  (map nil
+       (lambda (inherited-command-table)
+         (apply-with-command-table-inheritance
+          fun (find-command-table inherited-command-table)))
+       (command-table-inherit-from command-table)))
 
 ;;; do-command-table-inheritance has been shipped off to utils.lisp.
 
@@ -346,7 +347,8 @@ designator) inherits menu items."
             (remhash (command-item-name item) (command-line-names table)))
           (remhash command-name commands)))))
 
-(defun map-over-command-table-menu-items (function command-table)
+(defun map-over-command-table-menu-items
+    (function command-table &key (inherited t))
   "Applies function to all of the items in `command-table's
 menu. `Command-table' must be a command table or the name of a
 command table. `Function' must be a function of three arguments,
@@ -371,7 +373,7 @@ examine the type of the command menu item to see if it is
                                   item)))
                    (slot-value table 'menu))))
       (map-table-entries table-object)
-      (when (inherit-menu-items table-object)
+      (when (and inherited (inherit-menu-items table-object))
         (dolist (table (command-table-inherit-from table-object))
           (map-over-command-table-menu-items function table))))
     (values)))
@@ -420,7 +422,9 @@ examine the type of the command menu item to see if it is
                              :key #'command-menu-item-name
                              :test #'string-equal))))))
 
-(defun map-over-command-table-keystrokes (function command-table)
+(defun map-over-command-table-keystrokes
+    (function command-table &key (inherited t))
+  (declare (ignore inherited))
   (let ((command-table (find-command-table command-table)))
     (with-slots (keystroke-accelerators keystroke-items)
         command-table
