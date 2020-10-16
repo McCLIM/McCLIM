@@ -22,7 +22,9 @@
                                          &body body)
   (with-gensyms (table)
     `(let* ((,table (find-command-table ,command-table))
-            (,keystroke-var (slot-value ,table 'keystroke-accelerators)))
+            (,keystroke-var (loop for item in (slot-value ,table 'menu)
+                                  for acc = (command-menu-item-keystroke item)
+                                  when acc collect acc)))
        ,@body)))
 
 (defun command-line-command-parser (command-table stream)

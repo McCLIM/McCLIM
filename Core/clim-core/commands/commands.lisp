@@ -35,7 +35,7 @@
 (defclass %menu-item (command-item)
   ((menu-name
     :initarg :menu-name
-    :reader command-menu-item-name)
+    :accessor command-menu-item-name)
    (type
     :initarg :type
     :reader command-menu-item-type)
@@ -46,7 +46,8 @@
     :initarg :text-style
     :reader command-menu-item-text-style)
    (keystroke
-    :initarg :keystroke)
+    :initarg :keystroke
+    :accessor command-menu-item-keystroke)
    (documentation
     :initarg :documentation))
   (:default-initargs :menu-name nil
@@ -107,7 +108,12 @@
   (make-instance '%menu-item
                  :menu-name name :type type :value value
                  :documentation documentation
-                 :keystroke keystroke
+                 :keystroke (if (or (null keystroke)
+                                    (and (symbolp keystroke)
+                                         (gethash keystroke *gesture-names*)))
+                                keystroke
+                                (multiple-value-list
+                                 (realize-gesture-spec :keyboard keystroke)))
                  :text-style text-style
                  :command-name command-name
                  :command-line-name command-line-name))
@@ -210,7 +216,7 @@
                 ',func ',command-table
                 :name ,name :menu ',menu
                 :keystroke ',keystroke :errorp nil
-                ,@(and menu
+                ,@(and (or menu keystroke)
                        `(:menu-command
                          (list ',func
                                ,@(make-list (length required-args)
