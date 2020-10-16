@@ -62,6 +62,61 @@
       (remove-command-from-command-table 'com-test-command ct))))
 
 
+;;; command table menu items and keystrokes definition
+
+;;; The :MENU option should behave the same as if we had added menu items
+;;; manually.
+(test commands.command-table.menu-is-menu
+  (let ((menu-item `(("Foo" :command (com-foo) :keystroke :abort))))
+    (with-command-tables ((ct1 nil :inherit-from nil :menu menu-item)
+                          (ct2 nil :inherit-from nil))
+      (apply #'add-menu-item-to-command-table ct2 (car menu-item))
+      (is (not (null (lookup-keystroke-item :abort ct1 :test #'eql))))
+      (is (not (null (lookup-keystroke-item :abort ct2 :test #'eql)))))))
+
+;;; When adding menu items with keystrokes, the keystroke items should be
+;;; present as if they were added with add-keystrokes-to-command-table.
+(test commands.command-table.menu-is-keystrokes
+  (with-command-tables ((ct1 nil :inherit-from nil)
+                        (ct2 nil :inherit-from nil))
+    (add-menu-item-to-command-table ct1 "Foo" :command '(com-foo)
+                                              :keystroke :abort)
+    (add-keystroke-to-command-table ct2 :abort :command '(com-foo))
+    (is (not (null (lookup-keystroke-item :abort ct1 :test #'eql))))
+    (is (not (null (lookup-keystroke-item :abort ct2 :test #'eql)))))
+  ;; vvv is a variant of COMMANDS.COMMAND-TABLE.MENU-IS-MENU.
+  (let ((menu-item `(("Foo" :command (com-foo) :keystroke :abort))))
+    (with-command-tables ((ct1 nil :inherit-from nil :menu menu-item)
+                          (ct2 nil :inherit-from nil))
+      (add-keystroke-to-command-table ct2 :abort :command '(com-foo))
+      (is (not (null (lookup-keystroke-item :abort ct1 :test #'eql))))
+      (is (not (null (lookup-keystroke-item :abort ct2 :test #'eql)))))))
+
+;;; When adding menu items with keystrokes and when the name is NIL, the
+;;; operator should behave exactly as if we had added only keystrokes.
+(test commands.command-table.menu-is-keystrokes*
+  (flet ((check-keystroke-not-menu (ct)
+           (map-over-command-table-menu-items
+            (lambda (&rest args)
+              (declare (ignore args))
+              (fail "Menu item found (it shouldn't be)."))
+            ct)
+           (block nil
+             (map-over-command-table-keystrokes
+              (lambda (&rest args)
+                (declare (ignore args))
+                (return (pass)))
+              ct)
+             (fail "Keystroke not found (it should be)."))))
+    (with-command-table (ct nil :inherit-from nil)
+      (add-menu-item-to-command-table ct nil :command '(com-foo)
+                                             :keystroke :abort)
+      (check-keystroke-not-menu ct))
+    (with-command-table (ct nil :inherit-from nil)
+      (add-keystroke-to-command-table ct :abort :command '(com-foo))
+      (check-keystroke-not-menu ct))))
+
+
 ;;; command table inheritance
 
 (test commands.command-table-inheritance.smoke
