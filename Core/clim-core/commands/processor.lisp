@@ -359,11 +359,34 @@
       (with-presentation-type-parameters (command type)
         (command-table-inherits-from-p super-table command-table)))))
 
-(define-presentation-method present
-    (object (type command) stream (view textual-view)
-     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (funcall *command-unparser* command-table stream object))
+(define-presentation-method accept
+    ((type command) stream (view textual-view) &key)
+  (let ((command-table (find-command-table command-table))
+        (start-position (and (getf options :echo t)
+                             (input-editing-stream-p stream)
+                             (stream-scan-pointer stream))))
+    (flet ((maybe-replace-input (input options)
+             (when start-position
+               ;; Rescan is nil in case the clicked on thing returned
+               ;; something unparseable. -- heshrobe 2020-05-15
+               (when (getf options :echo t)
+                 (presentation-replace-input stream input type view
+                                             :buffer-start start-position
+                                             :rescan nil)))
+             input)
+           (handle-command (command)
+             (if (partial-command-p command)
+                 (funcall *partial-command-parser*
+                          command-table stream command
+                          (position *unsupplied-argument-marker* command))
+                 command)))
+      (with-input-context (type)
+          (object type event options)
+          (if-let ((command (funcall *command-parser* command-table stream)))
+            (values (maybe-replace-input (handle-command command) nil) type)
+            (simple-parse-error "Empty command"))
+        (command
+         (values (maybe-replace-input (handle-command object) options) type))))))
 
 (define-presentation-method accept
     ((type command) stream (view textual-view) &key)
