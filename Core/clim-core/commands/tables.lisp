@@ -2,9 +2,10 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by Robert Strandh (strandh@labri.u-bordeaux.fr)
-;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
+;;;  (c) copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com)
+;;;  (c) copyright 2000 by Robert Strandh <strandh@labri.u-bordeaux.fr>
+;;;  (c) copyright 2002 by Tim Moore <moore@bricoworks.com)
+;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -28,14 +29,12 @@
                              :initform (make-instance 'translator-table))
    (inherit-menu :reader inherit-menu
                  :initform nil
-                 ;; We interpret :menu to mean "inherit menu items
-                 ;; without keystrokes" and :keystrokes to mean
-                 ;; "inherit menu items with keystrokes".
+                 ;; We interpret :menu to mean "inherit menu items without
+                 ;; keystrokes" and :keystrokes to mean "inherit menu items
+                 ;; with keystrokes".
                  :type (member nil t :menu :keystrokes)
                  :initarg :inherit-menu)
-   (menu :initarg :menu :initform '())
-   (keystroke-accelerators :initform nil)
-   (keystroke-items :initform nil)))
+   (menu :initarg :menu :initform '())))
 
 (defmethod print-object ((table standard-command-table) stream)
   (print-unreadable-object (table stream :identity t :type t)
@@ -221,41 +220,27 @@ designator) inherits menu items."
         (eq inherit-menu :menu))))
 
 (defun %add-menu-item (command-table item after)
-  (with-slots (menu)
-      command-table
+  (with-slots (menu) command-table
     (when (null menu)
       (setf after :start))
     (case after
-      (:start (push item menu))
-      ((:end nil) (setf menu (nconc menu (list item))))
-      (:sort (setf menu (sort (cons item menu)
-                              #'string-lessp
-                              :key #'command-menu-item-name)))
-      (t (push item
-               (cdr (member after menu
-                            :key #'command-menu-item-name
-                            :test #'string-equal))))))
-  (when-let ((keystroke (slot-value item 'keystroke)))
-    (%add-keystroke-item command-table keystroke item nil)))
-
-;; At this point we should still see the gesture name as supplied by the
-;; programmer in 'gesture'
-(defun %add-keystroke-item (command-table gesture item errorp)
-  (with-slots (keystroke-accelerators keystroke-items)
-      command-table
-    (let* ((gesture (if (and (symbolp gesture) ; symbolic gesture name?
-                             (gethash gesture *gesture-names*))
-                        gesture
-                        (multiple-value-list (realize-gesture-spec :keyboard gesture))))
-           (in-table (position gesture keystroke-accelerators :test #'equal)))
-      (when (and in-table errorp)
-        (error 'command-already-present :command-table-name
-               (command-table-designator-as-name command-table)))
-      (if in-table
-          (setf (nth in-table keystroke-items) item)
-          (progn
-            (push gesture keystroke-accelerators)
-            (push item keystroke-items))))))
+      (:start
+       (push item menu))
+      ((:end nil)
+       (setf menu (nconc menu (list item))))
+      (:sort
+       (flet ((menu-name-lessp (x y)
+                (cond ((null x) t)
+                      ((null y) nil)
+                      (t (string-lessp x y)))))
+         (setf menu (sort (cons item menu) #'menu-name-lessp
+                          :key #'command-menu-item-name))))
+      (t
+       (check-type after string)
+       (push item
+             (cdr (member after menu
+                          :key #'command-menu-item-name
+                          :test #'equal)))))))
 
 (defun partial-command-from-name (command-name command-table)
   (let ((parser (gethash command-name *command-parser-table*)))
@@ -283,10 +268,9 @@ designator) inherits menu items."
           (apply-with-command-table-inheritance #'map-func command-table)
           (map-func command-table)))))
 
-(defun add-command-to-command-table (command-name
-                                     command-table
-                                     &key name menu keystroke (errorp t)
-                                     (menu-command (and menu `(,command-name))))
+(defun add-command-to-command-table
+    (command-name command-table
+     &key name menu keystroke (errorp t) (menu-command command-name))
   (let ((table (find-command-table command-table))
         (name (cond ((stringp name)
                      name)
@@ -304,16 +288,13 @@ designator) inherits menu items."
                    (command-name-from-symbol command-name)))
               ((consp menu)
                (values (car menu) (cdr menu))))
-      (when keystroke
-        (add-keystroke-to-command-table table keystroke
-                                        :command command-name :errorp nil))
-      (let* ((item (if menu
+      (let* ((item (if (or menu keystroke)
                        (apply #'make-menu-item
-                              menu-name :command menu-command
-                              :command-name command-name
-                              :command-line-name name
-                              `(,@(and keystroke `(:keystroke ,keystroke))
-                                ,@menu-options))
+                              menu-name :command (alexandria:ensure-list menu-command)
+                                        :command-name command-name
+                                        :command-line-name name
+                                        `(,@(and keystroke `(:keystroke ,keystroke))
+                                          ,@menu-options))
                        (make-instance 'command-item
                                       :command-name command-name
                                       :command-line-name name)))
@@ -324,7 +305,7 @@ designator) inherits menu items."
         (setf (gethash command-name (commands table)) item)
         (when name
           (setf (gethash name (command-line-names table)) command-name))
-        (when menu
+        (when (or menu keystroke)
           (%add-menu-item table item after))))))
 
 (defun remove-command-from-command-table (command-name
@@ -367,10 +348,11 @@ examine the type of the command menu item to see if it is
     (flet ((map-table-entries (table)
              (mapc #'(lambda (item)
                        (with-slots (menu-name keystroke) item
-                         (funcall function
-                                  menu-name
-                                  keystroke
-                                  item)))
+                         (when menu-name
+                           (funcall function
+                                    menu-name
+                                    keystroke
+                                    item))))
                    (slot-value table 'menu))))
       (map-table-entries table-object)
       (when (and inherited (inherit-menu-items table-object))
@@ -379,17 +361,21 @@ examine the type of the command menu item to see if it is
     (values)))
 
 (defun find-menu-item (menu-name command-table &key (errorp t))
-  (let* ((table (find-command-table command-table))
-         (mem (member menu-name (slot-value table 'menu)
-               :key #'command-menu-item-name :test #'string-equal)))
-    (if mem
-        (values (car mem) command-table)
-        (or (find-if #'(lambda (table)
-                         (find-menu-item menu-name table :errorp nil))
-                     (command-table-inherit-from table))
-            (when errorp
-              (error 'command-not-accessible :command-table-name
-                     (command-table-designator-as-name table)))))))
+  (loop with table = (find-command-table command-table)
+        for item in (slot-value table 'menu)
+        when (string-equal menu-name (command-menu-item-name item))
+          do (return-from find-menu-item
+               (values item command-table)))
+  (when (inherit-menu-items command-table)
+    (loop for table in (command-table-inherit-from command-table)
+          do (multiple-value-bind (found-item source-table)
+                 (find-menu-item menu-name table :errorp nil)
+               (when found-item
+                 (return-from find-menu-item
+                   (values found-item source-table))))))
+  (when errorp
+    (error 'command-not-present :command-table-name
+           (command-table-designator-as-name command-table))))
 
 (defun add-menu-item-to-command-table (command-table
                                        string type value
@@ -399,7 +385,7 @@ examine the type of the command menu item to see if it is
   "Adds menu item to the command table."
   (declare (ignore documentation keystroke text-style))
   (let* ((table (find-command-table command-table))
-         (old-item (find-menu-item string table :errorp nil)))
+         (old-item (and string (find-menu-item string table :errorp nil))))
     (cond ((and errorp old-item)
            (error 'command-already-present :command-table-name
                   (command-table-designator-as-name table)))
@@ -409,77 +395,76 @@ examine the type of the command menu item to see if it is
     (let ((item (apply #'make-menu-item string type value args)))
       (%add-menu-item table item after))))
 
-(defun remove-menu-item-from-command-table (command-table string
+(defun remove-menu-item-from-command-table (table string
                                             &key (errorp t))
   "Removes item from the `command-table'."
-  (let ((table (find-command-table command-table))
-        (item (find-menu-item string command-table :errorp nil)))
-    (with-slots (menu) table
-      (if (and errorp (not item))
-          (error 'command-not-present :command-table-name
-                 (command-table-designator-as-name table))
+  (setf table (find-command-table table))
+  (with-slots (menu) table
+    (if-let ((item (find-menu-item string table :errorp nil)))
+      ;; When a keystroke is still present leave the item be.
+      (if (null (command-menu-item-keystroke item))
           (setf menu (delete string menu
                              :key #'command-menu-item-name
-                             :test #'string-equal))))))
+                             :test #'equal))
+          (setf (command-menu-item-name item) nil))
+      (when errorp
+        (error 'command-not-present :command-table-name
+               (command-table-designator-as-name table))))))
 
 (defun map-over-command-table-keystrokes
     (function command-table &key (inherited t))
-  (declare (ignore inherited))
-  (let ((command-table (find-command-table command-table)))
-    (with-slots (keystroke-accelerators keystroke-items)
-        command-table
-      (loop for gesture in keystroke-accelerators
-            for item in keystroke-items
-            do (funcall function
-                        (command-menu-item-name item)
-                        gesture
-                        item)))))
+  (let ((table-object (find-command-table command-table)))
+    (flet ((map-table-entries (table)
+             (mapc #'(lambda (item)
+                       (with-slots (menu-name keystroke) item
+                         (when keystroke
+                           (funcall function menu-name keystroke item))))
+                   (slot-value table 'menu))))
+      (map-table-entries table-object)
+      (when (and inherited (inherit-keystrokes table-object))
+        (dolist (table (command-table-inherit-from table-object))
+          (map-over-command-table-keystrokes function table))))
+    (values)))
 
-(defun find-keystroke-item (gesture command-table
+(defun find-keystroke-item (gesture table
                             &key (test #'event-matches-gesture-name-p)
-                            (errorp t))
-  (let ((command-table (find-command-table command-table)))
-    (loop for keystroke in (slot-value command-table 'keystroke-accelerators)
-          for item in (slot-value command-table 'keystroke-items)
-          if (funcall test gesture keystroke)
-          do (return-from find-keystroke-item (values item command-table)))
-    (if errorp
-        (error 'command-not-present :command-table-name
-               (command-table-designator-as-name command-table))
-        nil)))
+                              (errorp t))
+  (setf table (find-command-table table))
+  (loop for item in (slot-value table 'menu)
+        when (funcall test gesture (command-menu-item-keystroke item))
+          do (return-from find-keystroke-item
+               (values item table)))
+  (when (inherit-keystrokes table)
+    (loop for table in (command-table-inherit-from table)
+          do (multiple-value-bind (found-item source-table)
+                 (find-keystroke-item gesture table
+                                      :errorp nil :test test)
+               (when found-item
+                 (return-from find-keystroke-item
+                   (values found-item source-table))))))
+  (when errorp
+    (error 'command-not-present :command-table-name
+           (command-table-designator-as-name table))))
 
-;; FIXME: According to the spec, we need to remove the menu item if already
-;; present. Also, you could argue we don't signal 'command-already-present
-;; in quite the right circumstance (see above).
 (defun add-keystroke-to-command-table (command-table gesture type value
                                        &key documentation (errorp t))
-  (let ((command-table (find-command-table command-table)))
-    (%add-keystroke-item command-table
-                         gesture
-                         (make-menu-item nil type value
-                                         :keystroke gesture
-                                         :documentation documentation)
-                         errorp)))
+  (add-menu-item-to-command-table command-table nil type value
+                                  :documentation documentation
+                                  :errorp errorp
+                                  :keystroke gesture))
 
 (defun remove-keystroke-from-command-table (command-table gesture
                                             &key (errorp t))
   (let ((command-table (find-command-table command-table)))
-    (with-slots (keystroke-accelerators keystroke-items)
-        command-table
-      (let ((in-table (position gesture keystroke-accelerators :test #'equal)))
-        (if in-table
-            (if (zerop in-table)
-                (setq keystroke-accelerators (cdr keystroke-accelerators)
-                      keystroke-items (cdr keystroke-items))
-                (let ((accel-tail (nthcdr (1- in-table)
-                                          keystroke-accelerators))
-                      (items-tail (nthcdr (1- in-table) keystroke-items)))
-                  (setf (cdr accel-tail) (cddr accel-tail))
-                  (setf (cdr items-tail) (cddr items-tail))))
-            (when errorp
-              (error 'command-not-present :command-table-name
-                     (command-table-designator-as-name command-table)))))))
-  nil)
+    (with-slots (menu) command-table
+      (if-let ((item (find gesture menu :key #'command-menu-item-keystroke
+                                        :test #'equal)))
+        (if (null (command-menu-item-name item))
+            (setf menu (delete item menu))
+            (setf (command-menu-item-keystroke item) nil))
+        (when errorp
+          (error 'command-not-present :command-table-name
+                 (command-table-designator-as-name command-table)))))))
 
 (defun lookup-keystroke-item (gesture command-table
                               &key (test #'event-matches-gesture-name-p))
@@ -491,7 +476,8 @@ examine the type of the command menu item to see if it is
       (map-over-command-table-menu-items
        #'(lambda (name keystroke item)
            (declare (ignore name keystroke))
-           (when (eq (command-menu-item-type item) :menu)
+           (when (and (null (command-menu-item-keystroke item))
+                      (eq (command-menu-item-type item) :menu))
              (multiple-value-bind (sub-item sub-command-table)
                  (lookup-keystroke-item gesture
                                         (command-menu-item-value item)
@@ -499,7 +485,9 @@ examine the type of the command menu item to see if it is
                (when sub-command-table
                  (return-from lookup-keystroke-item
                    (values sub-item sub-command-table))))))
-       command-table))))
+       command-table
+       ;; Tricky!
+       :inherited (inherit-keystrokes command-table)))))
 
 ;;; XXX The spec says that GESTURE may be a gesture name, but also that the
 ;;; default test is event-matches-gesture-name-p.  Uh...
