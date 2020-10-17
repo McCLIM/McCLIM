@@ -22,6 +22,15 @@
         `(with-command-table ,first-table
            ,@body))))
 
+(defmacro with-gestures ((&rest gestures) &body body)
+  (loop for (name . spec) in gestures
+        collect `(define-gesture-name ,name :keyboard ,spec) into defines
+        collect `(delete-gesture-name ,name) into deletes
+        finally (return `(progn
+                           ,@defines
+                           (unwind-protect (progn ,@body)
+                             ,@deletes)))))
+
 
 ;;; command tables
 
@@ -137,6 +146,125 @@
         ;; tree with different :inherit-menu values.
         (pushnew ct acc))
       (is (alexandria:set-equal (list ct ct.2 ct.2.1 ct.2.2 ct.2.*) acc)))))
+
+(defmacro with-keystroke-item-testers (nil &body body)
+  `(labels ((test-find (gesture table expected-item expected-table)
+              (multiple-value-bind (item found-table)
+                  (find-keystroke-item gesture table :test #'eql :errorp nil)
+                (is (equal (list expected-item expected-table)
+                           (list (and item (command-menu-item-value item)) found-table)))
+                ;; When find-keystroke finds the item, lookup-keystroke
+                ;; shoudl always return the same result.
+                (when (and item found-table)
+                  (test-look gesture table expected-item expected-table))))
+            (test-look (gesture table expected-item expected-table)
+              (multiple-value-bind (item found-table)
+                  (lookup-keystroke-item gesture table :test #'eql)
+                (is (equal (list expected-item expected-table)
+                           (list (and item (command-menu-item-value item)) found-table))))))
+     ,@body))
+
+(test commands.command-table.keystroke.1
+  (dolist (inherit-menu '(t :keystrokes))
+    (with-gestures ((:w #\w) (:x #\x) (:y #\y) (:z #\z))
+      (with-command-tables ((root-menu nil :menu `(("X" :command (com-x) :keystroke :x)))
+                            (sub1-menu nil :menu `(("Y" :command (com-y) :keystroke :y)
+                                                   ("W" :command (com-w) :keystroke :w)))
+                            (root nil :menu `(("Menu" :menu ,root-menu)
+                                              ("CMD1" :command (cmd-1) :keystroke :y)
+                                              ("CMD2" :command (cmd-2) :keystroke :z)))
+                            (sub1 nil :menu `(("Menu" :menu ,sub1-menu)
+                                              ("CMD3" :command (cmd-3) :keystroke :z))
+                                      :inherit-from (list root)
+                                      :inherit-menu inherit-menu))
+        (with-keystroke-item-testers ()
+          ;; Find keystroke doesn't look in submenus while lookup does.
+          (test-find :x sub1 nil nil)
+          (test-look :x sub1 '(com-x) root-menu)
+          (test-find :w sub1 nil nil)
+          (test-look :w sub1 '(com-w) sub1-menu)
+          ;; Entries are inherited
+          (test-find :y sub1 '(cmd-1) root)
+          ;; And may be shadowed
+          (test-find :z root '(cmd-2) root)
+          (test-find :z sub1 '(cmd-3) sub1))))))
+
+;;; This test is similar to the previous one, however it examines
+;;; :inherit-menu values that do not inherit keystrokes.
+(test commands.command-table.keystroke.2
+  (dolist (inherit-menu '(nil :menu))
+    (with-gestures ((:w #\w) (:x #\x) (:y #\y) (:z #\z))
+      (with-command-tables ((root-menu nil :menu `(("X" :command (com-x) :keystroke :x)))
+                            (sub1-menu nil :menu `(("Y" :command (com-y) :keystroke :y)
+                                                   ("W" :command (com-w) :keystroke :w)))
+                            (root nil :menu `(("Menu" :menu ,root-menu)
+                                              ("CMD1" :command (cmd-1) :keystroke :y)
+                                              ("CMD2" :command (cmd-2) :keystroke :z)))
+                            (sub1 nil :menu `(("Menu" :menu ,sub1-menu)
+                                              ("CMD3" :command (cmd-3) :keystroke :z))
+                                      :inherit-from (list root)
+                                      :inherit-menu inherit-menu))
+        (with-keystroke-item-testers ()
+          ;; Find keystroke doesn't look in submenus while lookup does. In
+          ;; this case lookup does not look into inherited submenus.
+          (test-find :x sub1 nil nil)
+          (test-look :x sub1 nil nil)
+          (test-find :w sub1 nil nil)
+          (test-look :w sub1 '(com-w) sub1-menu)
+          ;; Inheritance is inhibited.
+          (test-find :y sub1 nil nil))))))
+
+;;; This tests verifies whether we correctly descend into the menu command
+;;; table ancestors (or not) depending on :inherit-menu value. We add some
+;;; conflicts in root command table to check whether inherited keystrokes take
+;;; precedence over keystrokes that could be found in the menu.
+(test commands.command-table.keystroke.3
+  (with-gestures ((:w #\w) (:x #\x) (:y #\y) (:z #\z))
+    (with-command-tables ((subs-menu nil :menu `(("X" :command (com-x) :keystroke :x)))
+                          (sub1-menu nil :menu `(("Y" :command (com-y) :keystroke :y)
+                                                 ("W" :command (com-w) :keystroke :w))
+                                         :inherit-from (list subs-menu)
+                                         :inherit-menu t)
+                          (sub2-menu nil :menu `(("Y" :command (com-y) :keystroke :y)
+                                                 ("W" :command (com-w) :keystroke :w))
+                                         :inherit-from (list subs-menu)
+                                         :inherit-menu nil)
+                          (root nil :menu `(("CMD1" :command (cmd-1) :keystroke :y)
+                                            ("CMD2" :command (cmd-2) :keystroke :z)))
+                          (sub1 nil :menu `(("Menu" :menu ,sub1-menu))
+                                    :inherit-from (list root)
+                                    :inherit-menu t)
+                          (sub2 nil :menu `(("Menu" :menu ,sub2-menu))
+                                    :inherit-from (list root)
+                                    :inherit-menu t)
+                          (sub3 nil :menu `(("Menu" :menu ,sub2-menu))
+                                    :inherit-from (list root)
+                                    :inherit-menu nil))
+      (with-keystroke-item-testers ()
+        ;; Find keystroke doesn't look in submenus while lookup does. In
+        ;; this case lookup does not look into inherited submenus.
+        (test-find :x sub1 nil nil)
+        (test-look :x sub1 '(com-x) subs-menu)
+        (test-look :x sub2 nil nil)
+        ;; Check for conflict
+        (test-find :y sub1 '(cmd-1) root)
+        (test-find :y sub2 '(cmd-1) root)
+        (test-find :y sub3 nil nil)
+        (test-look :y sub3 '(com-y) sub2-menu)))))
+
+;;; This tests verifies that we don't follow sub-menus that have a keystroke
+;;; accelerator. This is to enable emacs-like chains C-x C-t to traverse
+;;; command tables. This lookup behavior is consistent with CLIM-TOS.
+(test commands.command-table.keystroke.4
+  (with-gestures ((:w #\w) (:x #\x) (:y #\y) (:z #\z))
+    (with-command-tables ((men1 nil :menu `(("Y" :command (com-y) :keystroke :y)))
+                          (men2 nil :menu `(("Z" :command (com-z) :keystroke :z)))
+                          (root nil :menu `(("menu1" :menu ,men1  :keystroke :w)
+                                            ("menu2" :menu ,men2))))
+      (with-keystroke-item-testers ()
+        (test-find :w root men1 root)
+        (test-look :y root nil nil)
+        (test-look :z root '(com-z) men2)))))
 
 
 ;;; command table errors (see 27.2)
