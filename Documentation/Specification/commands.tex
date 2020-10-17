@@ -183,14 +183,18 @@ support command-line processor interactions).
 \cl{define-presentation-to-command-translator}.
 
 \item A table that associates keyboard gesture names to menu items (used to
-support keystroke accelerator interactions).  The keystroke accelerator table
-does not contain any items inherited from superior command tables.
+support keystroke accelerator interactions).  By default, the keystroke
+accelerator table does not contain any items inherited from superior command
+tables, although this can be overridden by supplying \cl{t} or
+\cl{:keystrokes} as the value of the \cl{:inherit-menu} option to
+\cl{define-command-table}.
 
 \item A menu that associates menu names to command menu items (used to support
-interaction via command menus).  The command menu items can invoke commands or
-sub-menus.  By default, the menu does not contain any command menu items
-inherited from superior command tables, although this can be overridden by the
-\cl{:inherit-menu} option to \cl{define-command-table}.
+interaction via command menus).  The command menu items can invoke commands
+or sub-menus.  By default, the menu does not contain any command menu items
+inherited from superior command tables, although this can be overridden by
+supplying \cl{t} or \cl{:menu} as the \cl{:inherit-menu} option to
+\cl{define-command-table}.
 \end{itemize}
 
 We say that a command is \concept{present} in a command table when it has been
@@ -243,10 +247,11 @@ to inherit from CLIM's global command table.  (This command table contains such
 things as the ``menu'' translator that is associated with the right-hand button
 on pointers.)
 
-If \arg{inherit-menu} is \term{true}, the new command table will inherit the
-menu items and keystroke accelerators from all of the inherited command tables.
-If it is \term{false} (the default), no menu items or keystroke accelerators
-will be inherited.
+If \arg{inherit-menu} is \cl{t}, the new command table will inherit the menu
+items and keystroke accelerators from all of the inherited command tables.  If
+it is \term{nil} (the default), no menu items or keystroke accelerators will
+be inherited. If it is \cl{:menu}, only menu items will be inherited. If it is
+\cl{:keystrokes}, only keystroke accelerators will be inherited.
 
 \arg{menu} can be used to specify a menu for the command table.  The value of
 \arg{menu} is a list of clauses.  Each clause is a list with the syntax
@@ -576,7 +581,8 @@ If the item is not present in the command table's menu and \arg{errorp} is
 that the character case of \arg{string} is ignored when searching the command
 table's menu.
 
-\Defun {map-over-command-table-menu-items} {function command-table}
+
+\Defun {map-over-command-table-menu-items} {function command-table \key (inherited t)}
 
 Applies \arg{function} to all of the items in \arg{command-table}'s menu.
 \arg{function} must be a function of three arguments, the menu name, the
@@ -589,13 +595,19 @@ over in the order specified by \cl{add-menu-item-to-command-table}.
 programmer requires this behavior, he should examine the type of the command
 menu item to see if it is \cl{:menu}.
 
+If \arg{inherited} is \term{false}, this applies \arg{function} only to those
+menu items present in \arg{command-table}, that is, it does not map over any
+inherited menu items. If \arg{inherited} is \term{true}, then the inherited
+menus are traversed in the same order as for
+\cl{do-command-table-inheritance}.
+
 
 \Defun {find-menu-item} {menu-name command-table \key (errorp t)}
 
-Given a menu name and a command table, returns two values, the command menu item
-and the command table in which it was found.  (Since menus are not inherited,
-the second returned value will always be \arg{command-table}.)
-\arg{command-table} is a \term{command table designator}.
+Given a menu name and a command table, returns two values, the command menu
+item and the command table in which it was found.  \arg{command-table} is a
+\term{command table designator}.
+
 \ReadOnly
 
 If there is no command menu item corresponding to \arg{menu-name} present in
@@ -707,7 +719,7 @@ command table's menu and \arg{errorp} is \term{true}, then the
 \cl{command-not-present} error will be signalled.
 
 
-\Defun {map-over-command-table-keystrokes} {function command-table}
+\Defun {map-over-command-table-keystrokes} {function command-table \key (inherited t)}
 
 Applies \arg{function} to all of the keystroke accelerators in
 \arg{command-table}'s accelerator table.  \arg{function} must be a function of
@@ -719,13 +731,18 @@ keystroke accelerator, and the command menu item; it has dynamic extent.
 programmer requires this behavior, he should examine the type of the command
 menu item to see if it is \cl{:menu}.
 
+If \arg{inherited} is \term{false}, this applies \arg{function} only to those
+keystroke accelerators present in \arg{command-table}, that is, it does not
+map over any inherited menu items. If \arg{inherited} is \term{true}, then the
+inherited menus are traversed in the same order as for
+\cl{do-command-table-inheritance}.
+
 
 \Defun {find-keystroke-item} {gesture command-table \key test (errorp t)}
 
-Given a keyboard gesture \arg{gesture} and a command table, returns two values,
-the command menu item associated with the gesture and the command table in which
-it was found.  (Since keystroke accelerators are not inherited, the second
-returned value will always be \arg{command-table}.)
+Given a keyboard gesture \arg{gesture} and a command table, returns two
+values, the command menu item associated with the gesture and the command
+table in which it was found.
 
 \ReadOnly
 
@@ -743,13 +760,17 @@ Given a keyboard gesture \arg{gesture} and a command table, returns two values,
 the command menu item associated with the gesture and the command table in which
 it was found.  Note that \arg{gesture} may be either a keyboard gesture name of
 a gesture object, and is handled in the same way as in \cl{find-keystroke-item}.
+
 \ReadOnly
 
 Unlike \cl{find-keystroke-item}, this follows the sub-menu chains that can be
-created with \cl{add-menu-item-to-command-table}.  If the keystroke accelerator
-cannot be found in the command table or any of the command tables from which it
-inherits, \cl{lookup-keystroke-item} will return \cl{nil}.  \arg{command-table}
-is a \term{command table designator}.
+created with \cl{add-menu-item-to-command-table}. If a given sub-menu has an
+associated keystroke that is not \arg{gesture}, the function does not look in
+the keystroke accelerators table associated with the sub-menu.
+
+If the keystroke accelerator cannot be found in the command table or its
+menus, \cl{lookup-keystroke-item} will return \cl{nil}. \arg{command-table} is
+a \term{command table designator}.
 
 \arg{test} is the test used to compare the supplied gesture to the gesture name
 in the command table.  The supplied gesture will generally be an event object,
