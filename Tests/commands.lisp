@@ -266,6 +266,22 @@
         (test-look :y root nil nil)
         (test-look :z root '(com-z) men2)))))
 
+;;; This test checks, whether with-command-table-keystrokes correctly
+;;; traverses all menus and inherited command-tables.
+(test commands.command-table.keystroke.5
+  (with-gestures ((:w #\w) (:x #\x) (:y #\y) (:z #\z))
+    (with-command-tables ((men1 nil :menu `(("W" :command (com-w) :keystroke :w)))
+                          (men2 nil :menu `(("X" :command (com-y) :keystroke :x)))
+                          (root nil :menu `(("Y" :menu ,men1  :keystroke :y)
+                                            ("M" :menu ,men2)))
+                          (sub1 nil :inherit-from (list root) :inherit-menu t
+                                    :menu `(("Z" :command '(com-z) :keystroke :z))))
+      (with-command-table-keystrokes (keystrokes sub1)
+        (is (member :z keystrokes) "Keystrokes are not collected.")
+        (is (member :y keystrokes) "Keystrokes are not inherited.")
+        (is (not (member :w keystrokes)) "Keystroked-menu is traversed.")
+        (is (member :x keystrokes) "Keystrokes in sub-menus are not collected.")))))
+
 
 ;;; command table errors (see 27.2)
 
