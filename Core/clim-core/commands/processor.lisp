@@ -22,9 +22,15 @@
                                          &body body)
   (with-gensyms (table)
     `(let* ((,table (find-command-table ,command-table))
-            (,keystroke-var (loop for item in (slot-value ,table 'menu)
-                                  for acc = (command-menu-item-keystroke item)
-                                  when acc collect acc)))
+            (,keystroke-var
+              (let ((result '()))
+                (map-over-command-table-keystrokes*
+                 (lambda (item table)
+                   (declare (ignore table))
+                   (let ((keystroke (command-menu-item-keystroke item)))
+                     (setf result (adjoin keystroke result :test #'equal))))
+                 ,table)
+                result)))
        ,@body)))
 
 (defun command-line-command-parser (command-table stream)
@@ -100,19 +106,6 @@
 (defvar *partial-command-parser*
   #'command-line-read-remaining-arguments-for-partial-command)
 
-;; This is probably wrong - we should walk the menu rather than inheritance
-;; structure to be consistent with lookup-keystroke-item.
-(defun compute-inherited-keystrokes (command-table)
-  "Return a list containing the keyboard gestures of accelerators defined in
- 'command-table' and all tables it inherits from."
-  (let (accumulated-keystrokes)
-    (do-command-table-inheritance (comtab command-table)
-      (with-command-table-keystrokes (keystrokes comtab)
-        (dolist (keystroke keystrokes)
-          (setf accumulated-keystrokes
-                (adjoin keystroke accumulated-keystrokes :test #'equal)))))
-    accumulated-keystrokes))
-
 (defun read-command (command-table
                      &key (stream *standard-input*)
                           (command-parser *command-parser*)
@@ -124,10 +117,10 @@
         (*partial-command-parser* partial-command-parser))
     (cond (use-keystrokes
            (let ((stroke-result
-                   (read-command-using-keystrokes
-                    command-table
-                    (compute-inherited-keystrokes command-table)
-                    :stream stream)))
+                   (with-command-table-keystrokes (keystrokes command-table)
+                     (read-command-using-keystrokes command-table
+                                                    keystrokes
+                                                    :stream stream))))
              (if (consp stroke-result)
                  stroke-result
                  nil)))
