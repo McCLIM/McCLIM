@@ -25,9 +25,12 @@
 (defclass generic-colored-gadget (abstract-colored-gadget)
   ((color :initform +black+ :accessor colored-gadget-color)))
 
+(defmethod (setf colored-gadget-color) :after
+    ((new-value t) (gadget generic-colored-gadget))
+  (repaint-sheet gadget +everywhere+))
+
 (defmethod handle-repaint ((gadget generic-colored-gadget) region)
-  (declare (ignore region))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
+  (with-bounding-rectangle* (x1 y1 x2 y2) region
     (draw-rectangle* gadget x1 y1 x2 y2 :ink (colored-gadget-color gadget))))
 
 ;;; Slider callback and macro.
@@ -80,9 +83,8 @@
         (green (green frame))
         (blue (blue frame)))
     (flet ((update-gadget (gadget-name color)
-             (let ((colored (find-pane-named *application-frame* gadget-name)))
-               (setf (colored-gadget-color colored) color)
-               (repaint-sheet colored +everywhere+))))
+             (let ((colored (find-pane-named frame gadget-name)))
+               (setf (colored-gadget-color colored) color))))
       (update-gadget 'combined (make-rgb-color red green blue))
       (update-gadget 'red (make-rgb-color red 0 0))
       (update-gadget 'green (make-rgb-color 0 green 0))
