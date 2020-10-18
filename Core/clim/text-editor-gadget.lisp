@@ -211,35 +211,36 @@ cause the activate callback to be called."))
 
 (defmethod initialize-instance :after ((object text-editor-pane)
                                        &key armed-callback
-                                         disarmed-callback
-                                         activation-gestures activate-callback
-                                         scroll-bars
-                                         ncolumns nlines
-                                         value
-                                         (editable-p t))
+                                            disarmed-callback
+                                            activation-gestures activate-callback
+                                            (scroll-bars nil scroll-bars-p)
+                                            ncolumns nlines
+                                            value
+                                            (editable-p t))
   ;; Make an editor substrate object for the gadget. Propagate the
   ;; substrate's value-changed callback to our own
   ;; `value-changed-callback' method.
   (let* ((minibuffer (when scroll-bars
                        (make-pane 'drei::drei-minibuffer-pane)))
-         (substrate (make-pane 'drei-text-editor-substrate
-                               :user-gadget object
-                               :minibuffer minibuffer
-                               :text-style (pane-text-style object)
-                               :armed-callback armed-callback
-                               :disarmed-callback disarmed-callback
-                               :activation-gestures activation-gestures
-                               :activate-callback activate-callback
-                               :scroll-bars scroll-bars
-                               :ncolumns ncolumns
-                               :nlines nlines
-                               :value-changed-callback
-                               (lambda (gadget value)
-                                 (declare (ignore gadget))
-                                 (value-changed-callback
-                                  object (gadget-client object) (gadget-id object)
-                                  value))
-                               :editable-p editable-p))
+         (substrate (apply #'make-pane 'drei-text-editor-substrate
+                           :user-gadget object
+                           :minibuffer minibuffer
+                           :text-style (pane-text-style object)
+                           :armed-callback armed-callback
+                           :disarmed-callback disarmed-callback
+                           :activation-gestures activation-gestures
+                           :activate-callback activate-callback
+                           :ncolumns ncolumns
+                           :nlines nlines
+                           :value-changed-callback
+                           (lambda (gadget value)
+                             (declare (ignore gadget))
+                             (value-changed-callback
+                              object (gadget-client object) (gadget-id object)
+                              value))
+                           :editable-p editable-p
+                           (when scroll-bars-p
+                             (list :scroll-bars scroll-bars))))
          (sheet (cond ((and scroll-bars minibuffer)
                        (vertically ()
                          (scrolling (:scroll-bars scroll-bars)
