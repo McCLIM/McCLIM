@@ -328,54 +328,53 @@ designator) inherits menu items."
             (remhash (command-item-name item) (command-line-names table)))
           (remhash command-name commands)))))
 
-(defun map-over-command-table-menu-items
-    (function command-table &key (inherited t))
-  "Applies function to all of the items in `command-table's
-menu. `Command-table' must be a command table or the name of a
-command table. `Function' must be a function of three arguments,
-the menu name, the keystroke accelerator gesture (which will be
-NIL if there is none), and the command menu item; it has dynamic
-extent. The command menu items are mapped over in the order
-specified by `add-menu-item-to-command-table'. `Command-table' is
-a command table designator. Any inherited menu items will be
-mapped over after `command-table's own menu items.
+;;; This internal function is like map-over-command-menu-items, but it maps
+;;; over each element in the command table and (if inherited is t) its
+;;; ancestors. It does not descend into sub-menus. The mapped function accepts
+;;; two arguments: the item and the command table the item belongs to.
+(defun map-over-command-table-menu (function table &key (inherited t))
+  (setf table (find-command-table table))
+  (mapc #'(lambda (item)
+            (with-slots (menu-name keystroke type) item
+              (funcall function item table)))
+        (slot-value table 'menu))
+  (when inherited
+    (dolist (sub-table (command-table-inherit-from table))
+      (map-over-command-table-menu function sub-table))))
 
-`Map-over-command-table-menu-items' does not descend into
-sub-menus. If the programmer requires this behavior, he should
-examine the type of the command menu item to see if it is
-`:menu'."
-  (let ((table-object (find-command-table command-table)))
-    (flet ((map-table-entries (table)
-             (mapc #'(lambda (item)
-                       (with-slots (menu-name keystroke) item
-                         (when menu-name
-                           (funcall function
-                                    menu-name
-                                    keystroke
-                                    item))))
-                   (slot-value table 'menu))))
-      (map-table-entries table-object)
-      (when (and inherited (inherit-menu-items table-object))
-        (dolist (table (command-table-inherit-from table-object))
-          (map-over-command-table-menu-items function table))))
-    (values)))
+(defun map-over-command-table-menu-items (function table &key (inherited t))
+  "Applies function to all of the items in `table's menu. `table' must be a
+command table or the name of a command table. `Function' must be a function of
+three arguments, the menu name (which will be NIL if there is none), the
+keystroke accelerator gesture (which will be NIL if there is none), and the
+command menu item; it has dynamic extent. The command menu items are mapped
+over in the order specified by `add-menu-item-to-command-table'. `table' is a
+command table designator. Any inherited menu items will be mapped over after
+`command-table's own menu items.
 
-(defun find-menu-item (menu-name command-table &key (errorp t))
-  (loop with table = (find-command-table command-table)
-        for item in (slot-value table 'menu)
-        when (string-equal menu-name (command-menu-item-name item))
-          do (return-from find-menu-item
-               (values item command-table)))
-  (when (inherit-menu-items command-table)
-    (loop for table in (command-table-inherit-from command-table)
-          do (multiple-value-bind (found-item source-table)
-                 (find-menu-item menu-name table :errorp nil)
-               (when found-item
-                 (return-from find-menu-item
-                   (values found-item source-table))))))
+`Map-over-command-table-menu-items' does not descend into sub-menus. If the
+programmer requires this behavior, they should examine the type of the command
+menu item to see if it is `:menu'."
+  (flet ((fun (item table)
+           (declare (ignore table))
+           (with-slots (menu-name keystroke type) item
+             (when (or menu-name (eq type :divider))
+               (funcall function menu-name keystroke item)))))
+    (map-over-command-table-menu
+     #'fun table :inherited (and inherited (inherit-menu-items table))))
+  (values))
+
+(defun find-menu-item (menu-name table &key (errorp t))
+  (check-type menu-name string)
+  (flet ((fun (item table)
+           (let ((item-name (command-menu-item-name item)))
+             (when (equalp item-name menu-name)
+               (return-from find-menu-item (values item table))))))
+    (map-over-command-table-menu
+     #'fun table :inherited (inherit-menu-items table)))
   (when errorp
     (error 'command-not-present :command-table-name
-           (command-table-designator-as-name command-table))))
+           (command-table-designator-as-name table))))
 
 (defun add-menu-item-to-command-table (command-table
                                        string type value
@@ -411,40 +410,48 @@ examine the type of the command menu item to see if it is
         (error 'command-not-present :command-table-name
                (command-table-designator-as-name table))))))
 
-(defun map-over-command-table-keystrokes
-    (function command-table &key (inherited t))
-  (let ((table-object (find-command-table command-table)))
-    (flet ((map-table-entries (table)
-             (mapc #'(lambda (item)
-                       (with-slots (menu-name keystroke) item
-                         (when keystroke
-                           (funcall function menu-name keystroke item))))
-                   (slot-value table 'menu))))
-      (map-table-entries table-object)
-      (when (and inherited (inherit-keystrokes table-object))
-        (dolist (table (command-table-inherit-from table-object))
-          (map-over-command-table-keystrokes function table))))
-    (values)))
+(defun map-over-command-table-keystrokes (function table &key (inherited t))
+  (flet ((fun (item table)
+           (declare (ignore table))
+           (with-slots (menu-name keystroke type) item
+             (when keystroke
+               (funcall function menu-name keystroke item)))))
+    (map-over-command-table-menu
+     #'fun table :inherited (and inherited (inherit-keystrokes table))))
+  (values))
 
 (defun find-keystroke-item (gesture table
                             &key (test #'event-matches-gesture-name-p)
                               (errorp t))
-  (setf table (find-command-table table))
-  (loop for item in (slot-value table 'menu)
-        when (funcall test gesture (command-menu-item-keystroke item))
-          do (return-from find-keystroke-item
-               (values item table)))
-  (when (inherit-keystrokes table)
-    (loop for table in (command-table-inherit-from table)
-          do (multiple-value-bind (found-item source-table)
-                 (find-keystroke-item gesture table
-                                      :errorp nil :test test)
-               (when found-item
-                 (return-from find-keystroke-item
-                   (values found-item source-table))))))
+  (flet ((fun (item table)
+           (when-let ((keystroke (command-menu-item-keystroke item)))
+             (when (funcall test gesture keystroke)
+               (return-from find-keystroke-item (values item table))))))
+    (map-over-command-table-menu
+     #'fun table :inherited (inherit-keystrokes table)))
   (when errorp
     (error 'command-not-present :command-table-name
            (command-table-designator-as-name table))))
+
+(defun lookup-keystroke-item (gesture table
+                              &key (test #'event-matches-gesture-name-p))
+  ;; We call FIND-KEYSTROKE-ITEM before descending into sub-menus to ensure
+  ;; that top-level keystrokes are found before nested ones.
+  (multiple-value-bind (item table)
+      (find-keystroke-item gesture table :test test :errorp nil)
+    (when item
+      (return-from lookup-keystroke-item (values item table))))
+  (flet ((fun (item table)
+           (declare (ignore table))
+           (when (and (null (command-menu-item-keystroke item))
+                      (eq (command-menu-item-type item) :menu))
+             (multiple-value-bind (item table)
+                 (lookup-keystroke-item gesture (command-menu-item-value item)
+                                        :test test)
+               (when item
+                 (return-from lookup-keystroke-item (values item table)))))))
+    (map-over-command-table-menu
+     #'fun table :inherited (inherit-keystrokes table))))
 
 (defun add-keystroke-to-command-table (command-table gesture type value
                                        &key documentation (errorp t))
@@ -465,29 +472,6 @@ examine the type of the command menu item to see if it is
         (when errorp
           (error 'command-not-present :command-table-name
                  (command-table-designator-as-name command-table)))))))
-
-(defun lookup-keystroke-item (gesture command-table
-                              &key (test #'event-matches-gesture-name-p))
-  (let ((command-table (find-command-table command-table)))
-    (multiple-value-bind (item table)
-        (find-keystroke-item gesture command-table :test test :errorp nil)
-      (when table
-        (return-from lookup-keystroke-item (values item table)))
-      (map-over-command-table-menu-items
-       #'(lambda (name keystroke item)
-           (declare (ignore name keystroke))
-           (when (and (null (command-menu-item-keystroke item))
-                      (eq (command-menu-item-type item) :menu))
-             (multiple-value-bind (sub-item sub-command-table)
-                 (lookup-keystroke-item gesture
-                                        (command-menu-item-value item)
-                                        :test test)
-               (when sub-command-table
-                 (return-from lookup-keystroke-item
-                   (values sub-item sub-command-table))))))
-       command-table
-       ;; Tricky!
-       :inherited (inherit-keystrokes command-table)))))
 
 ;;; XXX The spec says that GESTURE may be a gesture name, but also that the
 ;;; default test is event-matches-gesture-name-p.  Uh...
