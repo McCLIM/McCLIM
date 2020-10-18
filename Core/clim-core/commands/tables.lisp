@@ -420,6 +420,24 @@ menu item to see if it is `:menu'."
      #'fun table :inherited (and inherited (inherit-keystrokes table))))
   (values))
 
+;;; Unlike map-over-command-table-keystrokes this function descends into
+;;; sub-menus to look for keystrokes. The function accepts (item table).
+(defun map-over-command-table-keystrokes* (function table &key (inherited t))
+  (flet ((map-items (item table)
+           (when-let ((keystroke (command-menu-item-keystroke item)))
+             (funcall function item table)))
+         (map-menus (item table)
+           (declare (ignore table))
+           (when (and (null (command-menu-item-keystroke item))
+                      (eq (command-menu-item-type item) :menu))
+             (let ((table (command-menu-item-value item)))
+               (map-over-command-table-keystrokes* function table
+                                                   :inherited t)))))
+    (let ((inherit (and inherited (inherit-keystrokes table))))
+      (map-over-command-table-menu #'map-items table :inherited inherit)
+      (map-over-command-table-menu #'map-menus table :inherited inherit))
+    (values)))
+
 (defun find-keystroke-item (gesture table
                             &key (test #'event-matches-gesture-name-p)
                               (errorp t))
@@ -435,23 +453,12 @@ menu item to see if it is `:menu'."
 
 (defun lookup-keystroke-item (gesture table
                               &key (test #'event-matches-gesture-name-p))
-  ;; We call FIND-KEYSTROKE-ITEM before descending into sub-menus to ensure
-  ;; that top-level keystrokes are found before nested ones.
-  (multiple-value-bind (item table)
-      (find-keystroke-item gesture table :test test :errorp nil)
-    (when item
-      (return-from lookup-keystroke-item (values item table))))
-  (flet ((fun (item table)
-           (declare (ignore table))
-           (when (and (null (command-menu-item-keystroke item))
-                      (eq (command-menu-item-type item) :menu))
-             (multiple-value-bind (item table)
-                 (lookup-keystroke-item gesture (command-menu-item-value item)
-                                        :test test)
-               (when item
-                 (return-from lookup-keystroke-item (values item table)))))))
-    (map-over-command-table-menu
-     #'fun table :inherited (inherit-keystrokes table))))
+  (map-over-command-table-keystrokes*
+   (lambda (item table)
+     (when-let ((keystroke (command-menu-item-keystroke item)))
+       (when (funcall test gesture keystroke)
+         (return-from lookup-keystroke-item (values item table)))))
+   table :inherited t))
 
 (defun add-keystroke-to-command-table (command-table gesture type value
                                        &key documentation (errorp t))

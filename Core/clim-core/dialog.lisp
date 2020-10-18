@@ -278,7 +278,9 @@ highlighting, etc." ))
                                   ,(query-identifier
                                     (first
                                      (queries *accepting-values-stream*))))))
-           (*accelerator-gestures* (compute-inherited-keystrokes command-table)))
+           (*accelerator-gestures* (with-command-table-keystrokes
+                                       (keystrokes command-table)
+                                     keystrokes)))
       (letf (((frame-command-table *application-frame*)
               (find-command-table command-table)))
         (unwind-protect
