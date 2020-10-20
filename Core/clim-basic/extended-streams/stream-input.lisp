@@ -365,23 +365,25 @@ keys read."))
 
 (defmethod stream-read-gesture ((stream standard-extended-input-stream)
                                 &key &allow-other-keys)
-  (multiple-value-bind (gesture unavailable-reason)
-      (call-next-method)
-    (if (null gesture)
-        (values nil unavailable-reason)
-        (flet ((abort-gesture-p (gesture)
-                 (loop for gesture-name in *abort-gestures*
-                         thereis (event-matches-gesture-name-p gesture gesture-name)))
-               (accelerator-gesture-p (gesture)
-                 (loop for gesture-name in *accelerator-gestures*
-                         thereis (event-matches-gesture-name-p gesture gesture-name))))
-          (cond
-            ((abort-gesture-p gesture)
-             (signal 'abort-gesture :event gesture))
-            ((accelerator-gesture-p gesture)
-             (signal 'accelerator-gesture :event gesture))
-            (t
-             (return-from stream-read-gesture gesture)))))))
+  (loop
+    (multiple-value-bind (gesture unavailable-reason)
+        (call-next-method)
+      (if (null gesture)
+          (return-from stream-read-gesture
+            (values nil unavailable-reason))
+          (flet ((abort-gesture-p (gesture)
+                   (loop for gesture-name in *abort-gestures*
+                           thereis (event-matches-gesture-name-p gesture gesture-name)))
+                 (accelerator-gesture-p (gesture)
+                   (loop for gesture-name in *accelerator-gestures*
+                           thereis (event-matches-gesture-name-p gesture gesture-name))))
+            (cond
+              ((abort-gesture-p gesture)
+               (signal 'abort-gesture :event gesture))
+              ((accelerator-gesture-p gesture)
+               (signal 'accelerator-gesture :event gesture))
+              (t
+               (return-from stream-read-gesture gesture))))))))
 
 
 ;;; stream-read-gesture on string strings. Needed for accept-from-string.
