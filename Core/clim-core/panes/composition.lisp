@@ -754,10 +754,15 @@
     (dolist (child (sheet-children pane))
       (sheet-disown-child pane child))
 
-    (let* ((clients  (mapcar #'parse-box-content contents))
-           (children (remove nil (mapcar #'box-client-pane clients))))
-      (setf (box-layout-mixin-clients pane) clients)
-      (mapc (curry #'sheet-adopt-child pane) children))))
+    (loop for box in contents
+          for client = (parse-box-content box)
+          for box-pane = (box-client-pane client)
+          collect client into clients
+          when box-pane
+            collect box-pane into children
+          finally
+             (setf (box-layout-mixin-clients pane) clients)
+             (mapc (curry #'sheet-adopt-child pane) children))))
 
 (defclass hbox-pane (box-pane)
   ()

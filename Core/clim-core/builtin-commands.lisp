@@ -123,10 +123,6 @@
                      :stream stream
                      :sensitive nil)))))
   (object presentation)
-  ;; returning (PRESENTATION-TYPE PRESENTATION) as the ptype is
-  ;; formally undefined, as this means that the translator returns a
-  ;; presentation type which is not PRESENTATION-SUBTYPEP the
-  ;; translator's TO-TYPE.
   (values object (presentation-type presentation)))
 
 (define-presentation-action presentation-menu
