@@ -119,8 +119,9 @@
                                           (menu nil menu-supplied-p)
                                           inherit-menu)
   `(if-let ((old-table (gethash ',name *command-tables* nil)))
-     (with-slots (inherit-from menu) old-table
-       (setq inherit-from ',inherit-from)
+     (with-slots (inherit-from inherit-menu menu) old-table
+       (setq inherit-from ',inherit-from
+             inherit-menu ',inherit-menu)
        ,(when menu-supplied-p
           `(setq menu (menu-items-from-list ',menu)))
        old-table)
