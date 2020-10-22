@@ -21,14 +21,14 @@ top-level sheets in form of the following protocol:
 @include docstrings/fun-clim-extensions-sheet-pretty-name.texi
 @include docstrings/fun-clim-extensions-setf-sheet-pretty-name.texi
 
-The class @code{clim-extensions:top-level-sheet-mixin} can be added as a
+The class @class{clim-extensions:top-level-sheet-mixin} can be added as a
 superclass to sheet classes that implement the above protocol. Otherwise
 default methods on @code{clim-extensions:sheet-name} and
 @code{clim-extensions:sheet-pretty-name} return @t{nil} and @t{"(Unnamed
 sheet)"} respectively.
 
-Furthermore @mcclim provides a way for clients to be notified when the
-pretty name of frame changes:
+Furthermore @mcclim{} provides a way for clients to be notified when the
+pretty name of a frame changes:
 
 @include docstrings/fun-clim-extensions-note-frame-pretty-name-changed.texi
 
@@ -135,7 +135,7 @@ exactly one child is visible at any time, with a row of buttons
 allowing the user to choose between them.
 
 See also the @file{tabdemo.lisp} example code located under
-@file{Examples} in the @mcclim distribution.  It can be started using
+@file{Examples} in the @mcclim{} distribution.  It can be started using
 @code{(clim-demo:demodemo)}.
 
 @include class-clim-tab-layout-tab-layout.texi
@@ -175,9 +175,9 @@ See also the @file{tabdemo.lisp} example code located under
 @node Extended Text Styles
 @subsection Extended Text Styles
 
-@mcclim extends the legal values for the @cl{family} and @cl{face}
+@mcclim{} extends the legal values for the @cl{family} and @cl{face}
 arguments to @cl{make-text-style} to include strings (in additional to
-the portable keyword symbols), as permitted by the @clim spec, section
+the portable keyword symbols), as permitted by the @clim{} spec, section
 11.1.
 
 Each backend defines its own specific syntax for these family and face
@@ -204,7 +204,7 @@ documentation for details on the syntax of face names.  Example:
 @node Listing Fonts
 @subsection Listing Fonts
 
-@mcclim's font listing functions allow applications to list all
+@mcclim{}'s font listing functions allow applications to list all
 available fonts available on a @class{port} and create text style
 instances for them.
 
@@ -296,7 +296,7 @@ Raster image backend includes a medium that implements:
 
 Within @code{body}, @code{stream-var} is bound to a stream that produces
 a raster image.  This stream is suitable as a stream or medium argument
-to any @clim output utility, such as @code{draw-line*} or
+to any @clim{} output utility, such as @code{draw-line*} or
 @code{write-string}.
 
 The value of @code{options} is a list consisting of alternating keyword and value
