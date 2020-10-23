@@ -119,6 +119,10 @@
    ;; The difference between grabbed-sheet and pressed-sheet is that
    ;; the former takes all pointer events while pressed-sheet receives
    ;; replicated pointer motion events. -- jd 2019-08-21
+   ;;
+   ;; If GRABBED-SHEET is T, then WITH-POINTER-GRABBED was invoked with
+   ;; :MULTIPLE-WINDOW T, that is events should be delivered to their owner.
+   ;; -- jd 2020-11-02
    (grabbed-sheet :initform nil :accessor port-grabbed-sheet
 		  :documentation "The sheet the pointer is grabbing, if any")
    (pressed-sheet :initform nil :accessor port-pressed-sheet
@@ -294,9 +298,10 @@ is a McCLIM extension.")
          (dispatch-event-p nil))
     ;; First phase: compute new pointer sheet for PORT.
     (flet ((update-pointer-sheet (new-sheet)
-             (unless (eql old-pointer-sheet new-sheet)
-               (setf (port-pointer-sheet port) new-sheet
-                     new-pointer-sheet new-sheet))))
+             (when new-sheet
+               (unless (eql old-pointer-sheet new-sheet)
+                 (setf (port-pointer-sheet port) new-sheet
+                       new-pointer-sheet new-sheet)))))
       (typecase event
         ;; Ignore grab-enter and ungrab-leave boundary events.
         ((or pointer-grab-enter-event pointer-ungrab-leave-event))
@@ -401,18 +406,19 @@ is a McCLIM extension.")
   ;; - Pressing the button sends the focus event
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (when-let ((grabbed-sheet (port-grabbed-sheet port)))
-    (return-from distribute-event
-      (unless (typep event 'pointer-boundary-event)
-        (dispatch-event-copy grabbed-sheet event))))
+  (let ((grabbed-sheet (port-grabbed-sheet port)))
+    (when (sheetp grabbed-sheet)
+      (return-from distribute-event
+        (unless (typep event 'pointer-boundary-event)
+          (dispatch-event-copy grabbed-sheet event)))))
   ;; Synthesize boundary events and update the port-pointer-sheet.
   (let ((pressed-sheet (port-pressed-sheet port))
         (new-pointer-sheet (synthesize-boundary-events port event)))
     ;; Set the pointer cursor.
     (when-let ((cursor-sheet (or pressed-sheet new-pointer-sheet)))
       (let* ((event-sheet (event-sheet event))
-             (old-pointer-cursor (port-lookup-current-pointer-cursor
-                                  port event-sheet))
+             (old-pointer-cursor
+               (port-lookup-current-pointer-cursor port event-sheet))
              (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
         (unless (eql old-pointer-cursor new-pointer-cursor)
           (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
@@ -424,7 +430,8 @@ is a McCLIM extension.")
       (pointer-button-press-event
        (when (null pressed-sheet)
          (setf (port-pressed-sheet port) new-pointer-sheet))
-       (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event))
+       (when new-pointer-sheet
+         (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event)))
       ;; Releasing the button sets the pressed sheet to NIL without changing
       ;; the focus.
       (pointer-button-release-event
@@ -547,34 +554,39 @@ is a McCLIM extension.")
 
 ;;; Design decision: Recursive grabs are a no-op.
 
-(defgeneric port-grab-pointer (port pointer sheet)
+(defgeneric port-grab-pointer (port pointer sheet &key multiple-window)
   (:documentation "Grab the specified pointer.")
-  (:method ((port basic-port) pointer sheet)
-    (declare (ignorable port pointer sheet))
+  (:method ((port basic-port) pointer sheet &key multiple-window)
+    (declare (ignore pointer sheet multiple-window))
     (warn "Port ~A has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet)
-    (declare (ignorable port pointer sheet))
+  (:method :around ((port basic-port) pointer sheet &key multiple-window)
+    (declare (ignore pointer))
     (unless (port-grabbed-sheet port)
-      (setf (port-grabbed-sheet port) sheet)
-      (call-next-method))))
+      (when (call-next-method)
+        (setf (port-grabbed-sheet port)
+              (if multiple-window
+                  t
+                  sheet))))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
   (:documentation "Ungrab the specified pointer.")
   (:method ((port basic-port) pointer sheet)
-    (declare (ignorable port pointer sheet))
+    (declare (ignore pointer sheet))
     (warn "Port ~A  has not implemented pointer grabbing." port))
   (:method :around ((port basic-port) pointer sheet)
-    (declare (ignorable port pointer sheet))
+    (declare (ignore pointer))
     (when (port-grabbed-sheet port)
       (setf (port-grabbed-sheet port) nil)
       (call-next-method))))
 
-(defmacro with-pointer-grabbed ((port sheet &key pointer) &body body)
+(defmacro with-pointer-grabbed ((port sheet &key pointer multiple-window)
+                                &body body)
   (with-gensyms (the-port the-sheet the-pointer)
     `(let* ((,the-port ,port)
 	    (,the-sheet ,sheet)
 	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
-       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet))
+       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet
+                                   :multiple-window ,multiple-window))
            (warn "Port ~A failed to grab a pointer." ,the-port)
            (unwind-protect
                 (handler-bind
