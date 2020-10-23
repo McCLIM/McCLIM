@@ -404,13 +404,14 @@
                          :modifier-state (clim-xcommon:x-event-state-modifiers
                                           port mask)))))))
 
-(defmethod port-grab-pointer ((port clx-basic-port) pointer sheet)
+(defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
+                              &key multiple-window)
   (let ((mirror (sheet-xmirror sheet))
         (events '(:button-press :button-release
 	          :leave-window :enter-window
 	          :pointer-motion)))
     ;; Probably we want to set :cursor here..
-    (eq :success (xlib:grab-pointer mirror events :owner-p t))))
+    (eq :success (xlib:grab-pointer mirror events :owner-p multiple-window))))
 
 (defmethod port-ungrab-pointer ((port clx-basic-port) pointer sheet)
   (declare (ignore pointer sheet))
