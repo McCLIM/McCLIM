@@ -126,9 +126,8 @@
       (center-output-record record sheet)
       (replay record sheet))))
 
-(defclass update-clock-event (device-event)
-  ()
-  (:default-initargs :modifier-state 0))
+(defclass update-clock-event (climi::standard-event)
+  ())
 
 (defmethod handle-event ((client clock-pane) (event update-clock-event))
   (with-application-frame (frame)
