@@ -71,13 +71,13 @@
                                      ,@(cond
                                          ((eq menu-bar t)
                                           `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar ',class-name))))
+                                                  (make-menu-bar ',class-name frame 'hmenu-pane))))
                                          ((consp menu-bar)
                                           `((make-menu-bar
-                                             (make-command-table
-                                              nil :menu ',menu-bar))))
+                                             (make-command-table nil :menu ',menu-bar)
+                                             frame 'hmenu-pane)))
                                          (menu-bar
-                                          `((make-menu-bar ',menu-bar)))
+                                          `((make-menu-bar ',menu-bar frame 'hmenu-pane)))
                                          (t nil))
                                      ,@(rest layout)
                                      ,@(when pointer-documentation

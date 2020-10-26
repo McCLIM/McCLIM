@@ -311,7 +311,7 @@ documentation produced by presentations.")
 (defmethod (setf frame-command-table) :around (new-command-table frame)
   (prog1 (call-next-method)
     (when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
-      (update-menu-bar menu-bar-pane new-command-table))))
+      (update-menu-bar menu-bar-pane frame new-command-table))))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
