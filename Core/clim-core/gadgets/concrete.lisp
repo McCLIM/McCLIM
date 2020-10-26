@@ -996,23 +996,24 @@ response to scroll wheel events."))
 (defgeneric generic-list-pane-item-height (generic-list-pane))
 
 (defmethod generic-list-pane-item-height ((pane generic-list-pane))
-  (+ (text-style-ascent  (pane-text-style pane) pane)
-     (text-style-descent (pane-text-style pane) pane)))
+  (text-style-height (pane-text-style pane) pane))
 
 (defmethod visible-items ((pane generic-list-pane))
   (or (slot-value pane 'visible-items)
       (generic-list-pane-items-length pane)))
 
 (defmethod (setf visible-items) (new-value (pane generic-list-pane))
-  (setf (slot-value pane 'visible-items) new-value))
+  (setf (slot-value pane 'visible-items) new-value)
+  (change-space-requirements pane)
+  (repaint-sheet pane +everywhere+))
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
   (declare (ignore width height))
   (let* ((n (visible-items pane))
          (w (generic-list-pane-items-width pane))
          (h (* n (generic-list-pane-item-height pane))))
-    (make-space-requirement :width w     :height h
-                            :min-width w :min-height h
+    (make-space-requirement :min-width w :min-height h
+                            :width w :height h
                             :max-width +fill+ :max-height +fill+)))
 
 (defmethod allocate-space ((pane generic-list-pane) w h)
@@ -1027,47 +1028,65 @@ response to scroll wheel events."))
     (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
         (if (bounding-rectangle-p region)
             region
-            (or (pane-viewport-region pane)   ; workaround for +everywhere+
+            (or (pane-viewport-region pane) ; workaround for +everywhere+
                 (sheet-region pane)))
-      (let ((item-height (generic-list-pane-item-height pane))
-            (highlight-ink (list-pane-highlight-ink pane)))
-        (do* ((index (floor (- ry0 sy0) item-height) (1+ index))
-              (elt-index (+ index (items-origin pane)) (1+ elt-index)))
-             ((or (> (+ sy0 (* item-height index)) ry1)
-                  (>= elt-index (generic-list-pane-items-length pane))
-                  (>= elt-index (+ (items-origin pane) (visible-items pane)))))
-          (let ((y0 (+ sy0 (* index item-height)))
-                (y1 (+ sy0 (* (1+ index) item-height))))
-            (multiple-value-bind (background foreground)
-                (cond ((not (slot-boundp pane 'value))
-                       (values (pane-background pane) (pane-foreground pane)))
-                      ((if (list-pane-exclusive-p pane)
-                           (funcall (list-pane-test pane)
-                                    (elt (generic-list-pane-item-values pane)
-                                         elt-index)
-                                    (gadget-value pane))
-                           (member (elt (generic-list-pane-item-values pane)
-                                        elt-index)
-                                   (gadget-value pane)
-                                   :test (list-pane-test pane)))
-                       (values highlight-ink (pane-background pane)))
-                      (t (values (pane-background pane) (pane-foreground pane))))
-              (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
-              (let ((x sx0)
-                    (y (+ y0 (text-style-ascent (pane-text-style pane) pane)))
-                    (el (elt (generic-list-pane-item-strings pane)
-                             elt-index)))
-                (if (gadget-active-p pane)
-                    (draw-text* pane el x y
-                                :ink foreground
-                                :text-style (pane-text-style pane))
-                    (progn
-                      (draw-text* pane el (1+ x) (1+ y)
-                                  :ink *3d-light-color*
-                                  :text-style (pane-text-style pane))
-                      (draw-text* pane el (1+ x) (1+ y)
-                                  :ink *3d-dark-color*
-                                  :text-style (pane-text-style pane))))))))))))
+      (let* ((values (generic-list-pane-item-values pane))
+             (foreground-ink (pane-foreground pane))
+             (background-ink (pane-background pane))
+             (highlight-ink (list-pane-highlight-ink pane))
+             ;; Depending on the presence of a value in the VALUE slot
+             ;; and whether PANE is in "exclusive mode" select a
+             ;; function for computing the foreground and background
+             ;; inks of items.
+             (inks (cond ((not (slot-boundp pane 'value))
+                          (lambda (elt-index)
+                            (declare (ignore elt-index))
+                            (values foreground-ink background-ink)))
+                         ((list-pane-exclusive-p pane)
+                          (let ((test (list-pane-test pane))
+                                (value (gadget-value pane)))
+                            (lambda (elt-index)
+                              (if (funcall test (elt values elt-index) value)
+                                  (values background-ink highlight-ink)
+                                  (values foreground-ink background-ink)))))
+                         (t
+                          (let ((test (list-pane-test pane))
+                                (value (gadget-value pane)))
+                            (lambda (elt-index)
+                              (if (member (elt values elt-index) value :test test)
+                                  (values background-ink highlight-ink)
+                                  (values foreground-ink background-ink))))))))
+        (with-drawing-options (pane :text-style (pane-text-style pane))
+          (loop with strings = (generic-list-pane-item-strings pane)
+                with origin = (items-origin pane)
+                with end-index = (min (generic-list-pane-items-length pane)
+                                      (+ origin (visible-items pane)))
+                with text-style = (pane-text-style pane)
+                with ascent = (text-style-ascent text-style pane)
+                with item-height = (generic-list-pane-item-height pane)
+                for index = (floor (- ry0 sy0) item-height) then (1+ index)
+                for elt-index = (+ index origin) then (1+ elt-index)
+                for y0 = (+ sy0 (* index item-height))
+                for y1 = (+ y0 item-height)
+                while (and (< y0 ry1) (< elt-index end-index))
+                do (multiple-value-bind (foreground background)
+                       (funcall inks elt-index)
+                     (draw-rectangle* pane rx0 y0 rx1 y1 :filled t :ink background)
+                     (let ((x sx0)
+                           (y (+ y0 ascent))
+                           (string (elt strings elt-index)))
+                       (if (gadget-active-p pane)
+                           (draw-text* pane string x y :ink foreground)
+                           (progn
+                             (draw-text* pane string (1+ x) (1+ y) :ink *3d-light-color*)
+                             (draw-text* pane string x      y      :ink *3d-dark-color*)))))
+                ;; If the displayed items do not fill the entire sheet
+                ;; region/viewport region, fill the part that is not
+                ;; covered using the background ink.
+                finally
+                   (when (<= y0 ry1)
+                     (draw-rectangle* pane rx0 y0 rx1 ry1
+                                      :filled t :ink background-ink))))))))
 
 (defun generic-list-pane-select-item (pane item-value)
   "Toggle selection  of a single item in the generic-list-pane.
@@ -1234,40 +1253,28 @@ if INVOKE-CALLBACK is given."))
 (defmethod (setf list-pane-items) :after
     (newval (pane meta-list-pane) &key invoke-callback)
   (when (slot-boundp pane 'value)
-    (let ((new-values
-            (coerce (generic-list-pane-item-values pane) 'list))
+    (let ((value (gadget-value pane))
+          (new-values (coerce (generic-list-pane-item-values pane) 'list))
           (test (list-pane-test pane)))
       (setf (gadget-value pane :invoke-callback invoke-callback)
-            (if (list-pane-exclusive-p pane)
-                (if (find (gadget-value pane) new-values :test test)
-                    (gadget-value pane)
-                    nil)
-                (intersection (gadget-value pane) new-values :test test)))))
+            (cond ((not (list-pane-exclusive-p pane))
+                   (intersection value new-values :test test))
+                  ((find value new-values :test test)
+                   value)
+                  (t
+                   nil)))))
   (change-space-requirements pane))
 
 (defmethod (setf list-pane-items)
     (newval (pane generic-list-pane) &key invoke-callback)
   (declare (ignore invoke-callback))
   (call-next-method)
-  (with-slots (items items-length item-strings item-values items-width) pane
+  (with-slots (items items-length item-strings item-values items-width items-origin) pane
     (setf items-length (length newval))
     (setf item-strings nil)
     (setf item-values nil)
-    (setf items-width nil)))
-
-(defmethod (setf list-pane-items) :after
-    (newval (pane generic-list-pane) &key invoke-callback)
-  (declare (ignore invoke-callback))
-  (let ((space (compose-space pane)))
-    (change-space-requirements
-     pane
-     :height (space-requirement-height space)
-     :width (space-requirement-width space)))
-  ;; the whole sheet region must be cleaned.
-  (with-bounding-rectangle* (sx0 sy0 sx1 sy1)
-      (sheet-region pane)
-    (draw-rectangle* pane sx0 sy0 sx1 sy1 :filled t :ink (pane-background pane)))
-  (handle-repaint pane +everywhere+))
+    (setf items-width nil)
+    (setf items-origin 0)))
 
 ;;; OPTION-PANE
 
