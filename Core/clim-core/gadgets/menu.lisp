@@ -29,20 +29,65 @@
      :inherited (inherit-menu table))
     (items +fill+)))
 
-(defun make-menu-bar (command-table &optional (class 'hmenu-pane))
-  (let ((menu-bar (make-pane class)))
-    (setf (%pane-contents menu-bar)
-          (make-menu-buttons command-table menu-bar))
-    menu-bar))
+(defun make-menu-bar (command-table client class)
+  (make-pane class :contents (make-menu-buttons command-table client)))
 
-(defun update-menu-bar (menu-bar table)
+(defun update-menu-bar (menu-bar client command-table)
   (setf (%pane-contents menu-bar)
-        (and table (make-menu-buttons table menu-bar)))
+        (and command-table (make-menu-buttons command-table client)))
   (change-space-requirements menu-bar))
 
+(defun menu-children (client)
+  (when-let ((rack (typecase client
+                     (application-frame (frame-menu-bar-pane client))
+                     (menu-button-submenu-pane (submenu-pane client))
+                     (otherwise nil))))
+    (remove-if-not (lambda (elt)
+                     (and (typep elt 'menu-button-pane)
+                          (gadget-active-p elt)))
+                   ;; Composite panes adopt children in
+                   ;; order, so they are in reverse order.
+                   (reverse (sheet-children rack)))))
+
+(defun start-menu-bar (menu-bar active-button
+                       &aux (first-release t) (frame (pane-frame menu-bar)))
+  (declare (ignore active-button))
+  (unwind-protect (tracking-pointer (menu-bar :multiple-window t)
+                    (:pointer-button-press
+                     (window)
+                     (when (typep window 'menu-button-pane)
+                       (arm-gadget window)))
+                    (:pointer-button-release
+                     (window)
+                     (typecase window
+                       (menu-button-leaf-pane
+                        (when (gadget-armed-p window)
+                          (with-slots (label client id) window
+                            (value-changed-callback window client id label))))
+                       (menu-button-submenu-pane
+                        (if (gadget-armed-p window)
+                            (unless first-release
+                              (when (eq frame (gadget-client window))
+                                (return-from start-menu-bar)))
+                            (arm-gadget window)))
+                       (otherwise
+                        (return-from start-menu-bar)))
+                     (setf first-release nil))
+                    (:pointer-motion
+                     (window)
+                     (when (typep window 'menu-button-pane)
+                       (if (gadget-armed-p window)
+                           (mapc #'disarm-gadget (menu-children window))
+                           (arm-gadget window))))
+                    (:keyboard
+                     ()
+                     (return-from start-menu-bar)))
+    (loop for child in (menu-children menu-bar)
+          do (disarm-gadget child))))
+
 (defclass menu-button-submenu-pane (menu-button-pane)
-  ((submenu-pane :initarg :submenu-pane :reader submenu-pane)
-   (submenu-frame :initarg :submenu-frame :reader submenu-frame)))
+  ((submenu-pane :reader submenu-pane)
+   (submenu-frame :reader submenu-frame)))
 
 ;;; These methods are responsible for ensuring enough space for a marker, that
 ;;; shows a triangle at the right edge (visual clue that it may be expanded).
@@ -56,7 +101,7 @@
 
   (defmethod compose-space ((gadget menu-button-submenu-pane) &key width height)
     (declare (ignorable width height))
-    (when (typep (gadget-client gadget) 'hmenu-pane)
+    (when (typep (sheet-parent gadget) 'hmenu-pane)
       (return-from compose-space (call-next-method)))
     (multiple-value-bind (width min-width max-width height min-height max-height)
         (space-requirement-components (call-next-method))
@@ -70,7 +115,7 @@
 
   (defmethod handle-repaint ((gadget menu-button-submenu-pane) region)
     (call-next-method)
-    (when (typep (gadget-client gadget) 'hmenu-pane)
+    (when (typep (sheet-parent gadget) 'hmenu-pane)
       (return-from handle-repaint))
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region gadget)
       (when (and (> (- x2 x1) total-width)
@@ -99,7 +144,7 @@
 
 (defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
   (call-next-method)
-  (let ((orientation (box-layout-orientation (gadget-client pane)))
+  (let ((orientation (box-layout-orientation (sheet-parent pane)))
         (line-ink +dark-grey+))
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (if-let ((label (slot-value pane 'label)))
@@ -121,54 +166,21 @@
           (:vertical   (draw-line* pane x1 y1 x2 y1 :ink line-ink))
           (:horizontal (draw-line* pane x1 y1 x1 y2 :ink line-ink)))))))
 
-(defgeneric menu-children (pane)
-  (:method (pane)
-    nil)
-  (:method ((pane menu-bar-mixin))
-    (sheet-children pane))
-  (:method ((submenu menu-button-submenu-pane))
-    (sheet-children (submenu-pane submenu))))
-
 (defmethod handle-event ((pane menu-button-pane) (event pointer-button-press-event))
-  (let ((root (sheet-parent pane)))
-    (unwind-protect
-         (catch :exit
-           (arm-gadget pane)
-           (tracking-pointer (root :multiple-window t)
-             (:pointer-button-press
-              (window)
-              (when (typep window 'menu-button-pane)
-                (arm-gadget window)))
-             (:pointer-button-release
-              (window)
-              (when (and (typep window 'menu-button-leaf-pane)
-                         (gadget-armed-p window))
-                (with-slots (label client id) window
-                  (value-changed-callback window client id label)))
-              (throw :exit nil))
-             (:pointer-motion
-              (window)
-              (when (typep window 'menu-button-pane)
-                (if (gadget-armed-p window)
-                    (mapc #'disarm-gadget (menu-children window))
-                    (arm-gadget window))))
-             (:keyboard
-              ()
-              (throw :exit nil))))
-      (loop for child in (menu-children root)
-            do (disarm-gadget child)))))
+  (arm-gadget pane)
+  (start-menu-bar (sheet-parent pane) pane))
 
 (defgeneric arm-menu-button-callback (button)
   ;; Disarm all siblings
   (:method ((button menu-button-pane))
-    (let ((client (gadget-client button)))
-      (mapc #'disarm-gadget (remove button (menu-children client)))))
+    (let ((rack (sheet-parent button)))
+      (mapc #'disarm-gadget (remove button (sheet-children rack)))))
   ;; Show the sub-menu frame
   (:method ((button menu-button-submenu-pane))
     (call-next-method)
     (let ((fm (frame-manager (pane-frame button)))
           (sf (submenu-frame button)))
-      (let ((bottomp (typep (gadget-client button) 'hrack-pane)))
+      (let ((bottomp (typep (sheet-parent button) 'hrack-pane)))
         (with-bounding-rectangle* (xmin ymin xmax ymax) (sheet-region button)
           (multiple-value-bind (x y)
               (transform-position (sheet-delta-transformation button nil)
@@ -196,13 +208,14 @@
          (type (command-menu-item-type item))
          (value (command-menu-item-value item))
          (text-style (command-menu-item-text-style item))
-         (frame (pane-frame client))
+         (frame (typecase client
+                  (application-frame client)
+                  (pane (pane-frame client))
+                  (otherwise *application-frame*)))
          (manager (frame-manager frame)))
     (flet ((make-sub-pane (class &rest initargs &key &allow-other-keys)
              (apply #'make-pane-1 manager frame class
                     :label name :client client :text-style text-style
-                    :armed-callback 'arm-menu-button-callback
-                    :disarmed-callback 'disarm-menu-button-callback
                     initargs)))
       (case type
         (:command
@@ -212,7 +225,9 @@
                               :value-changed-callback
                               (lambda (gadget val)
                                 (declare (ignore gadget val))
-                                (throw-object-ptype item 'menu-item)))
+                                (throw-object-ptype item 'menu-item))
+                              :armed-callback 'arm-menu-button-callback
+                              :disarmed-callback 'disarm-menu-button-callback)
                (let ((pane (make-sub-pane 'menu-button-leaf-pane
                                           :value-changed-callback
                                           (lambda (gadget val)
@@ -230,15 +245,20 @@
                           ;; one, so we pass NIL for now.
                           ;; FIXME: We don't have a numeric argument, either.
                           (let ((command (funcall value nil nil)))
-                            (throw-object-ptype command 'command)))))
+                            (throw-object-ptype command 'command)))
+                        :armed-callback 'arm-menu-button-callback
+                        :disarmed-callback 'disarm-menu-button-callback))
         (:divider
          (setf text-style
                (merge-text-styles text-style '(:sans-serif :roman :smaller)))
          (make-sub-pane 'menu-divider-leaf-pane))
         (:menu
-         (let* ((rack (make-menu-bar value 'vmenu-pane))
+         (let* ((sub-pane (make-sub-pane 'menu-button-submenu-pane
+                                         :armed-callback 'arm-menu-button-callback
+                                         :disarmed-callback 'disarm-menu-button-callback))
+                (rack (make-menu-bar value sub-pane 'vmenu-pane))
                 (border (make-pane 'raised-pane :contents (list rack))))
-           (make-sub-pane 'menu-button-submenu-pane
-                          :submenu-pane rack
-                          :submenu-frame (make-menu-frame border))))
+           (setf (slot-value sub-pane 'submenu-pane) rack
+                 (slot-value sub-pane 'submenu-frame) (make-menu-frame border))
+           sub-pane))
         (otherwise (error "Don't know how to create a menu button for ~W" type))))))
