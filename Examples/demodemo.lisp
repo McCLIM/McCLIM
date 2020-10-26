@@ -267,32 +267,30 @@ name."))
   ()
   (:menu-bar nil)
   (:panes
-   (substring :text-field :value "INTER"
+   (substring :text-field :value "inter"
                           :value-changed-callback
               (lambda (pane value)
-                (declare (ignore value))
-                (when (find-pane-named *application-frame* 'result-list)
-                  (update-list-test pane))))
+                (alexandria:when-let*
+                    ((frame (gadget-client pane))
+                     (result-list (find-pane-named frame 'result-list)))
+                  (setf (list-pane-items result-list)
+                        (apropos-list value :clim #+sbcl t)))))
    (result-list
     (make-pane 'list-pane
-               :value 'clim:region-intersection
-               :items (apropos-list "INTER" :clim)
+               :value 'region-intersection
+               :items (apropos-list "inter" :clim #+sbcl t)
                :presentation-type-key (constantly 'list-test-symbol)
-               :name-key (lambda (x) (format nil "~(~S~)" x))))
+               :name-key #'string-downcase))
    (interactor :interactor :height 200))
   (:layouts
    (defaults
-    (labelling (:label "Matching symbols"
-                :text-style (make-text-style :sans-serif :roman :normal))
-      (vertically ()
+    (vertically ()
+      (labelling (:label "Matching symbols")
         (scrolling (:height 200)
-          result-list)
-        (horizontally ()
-          substring
-          (make-pane 'push-button
-                     :label "Update"
-                     :activate-callback 'update-list-test))
-        interactor)))))
+          result-list))
+      (spacing (:thickness 4)
+        substring)
+      interactor))))
 
 (define-presentation-type list-test-symbol ())
 
@@ -302,13 +300,6 @@ name."))
   (with-input-from-string (s (with-output-to-string (s) (describe sym s)))
     (dotimes (x 3)
       (write-line (read-line s nil "") *standard-input*))))
-
-(defun update-list-test (pane)
-  (declare (ignore pane))
-  (setf (list-pane-items (find-pane-named *application-frame* 'result-list))
-        (apropos-list (gadget-value
-                       (find-pane-named *application-frame* 'substring))
-                      :clim #+sbcl t)))
 
 (define-application-frame option-test ()
   ()
