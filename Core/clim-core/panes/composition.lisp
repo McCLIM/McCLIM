@@ -1123,33 +1123,31 @@
   ;; requirements of the child, apart from the max sizes. If the child
   ;; does not want to go bigger than a specific size, we should not
   ;; force it to do so.
-  (let ((child-sr (compose-space (sheet-child pane))))
-    (if child-sr
-        (make-space-requirement :max-width (space-requirement-max-width child-sr)
-                                :max-height (space-requirement-max-height child-sr))
-        (make-space-requirement))))
+  (if-let ((child-sr (compose-space (sheet-child pane))))
+    (make-space-requirement :max-width (space-requirement-max-width child-sr)
+                            :max-height (space-requirement-max-height child-sr))
+    (make-space-requirement)))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
-  (let* ((parent           (sheet-parent pane))
-         (child            (sheet-child pane))
-         (child-space      (compose-space child))
-         (child-width      (space-requirement-width child-space))
-         (child-min-width  (space-requirement-min-width child-space))
-         (child-height     (space-requirement-height child-space))
-         (child-min-height (space-requirement-min-height child-space)))
+  (let* ((parent       (sheet-parent pane))
+         (child        (sheet-child pane))
+         (child-space  (compose-space child))
+         (child-width  (space-requirement-width child-space))
+         (child-height (space-requirement-height child-space)))
+    ;; This must update (and perform the required repaints) the
+    ;; transformation and region of the child and the scrollbars.
+    ;;
+    ;; Step 1: Allocate space of CHILD. This will resize but not move CHILD.
+    (allocate-space child (max child-width width) (max child-height height))
+    ;; Step 2: Update the scroll bars. This looks at the bounding
+    ;; rectangle of CHILD which should already be updated.
+    (scroller-pane/update-scroll-bars parent)
+    ;; Step 3: move CHILD to the position corresponding to the updated
+    ;; values of the scroll bars.
     (with-slots (hscrollbar vscrollbar) parent
-      (move-and-resize-sheet child
-                             (if hscrollbar (- (gadget-value hscrollbar)) 0)
-                             (if vscrollbar (- (gadget-value vscrollbar)) 0)
-                             (max child-width  width)
-                             (max child-height height)))
-    ;; move-and-resize-sheet does not allocate space for the sheet...  so we
-    ;; do it manually for this case, which may be wrong - CHECKME if this is
-    ;; the right place, reusing the above calculation might be a good idea
-    (allocate-space child
-                    (max child-min-width child-width  width)
-                    (max child-min-height child-height height))
-    (scroller-pane/update-scroll-bars parent)))
+      (move-sheet child
+                  (if hscrollbar (- (gadget-value hscrollbar)) 0)
+                  (if vscrollbar (- (gadget-value vscrollbar)) 0)))))
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
