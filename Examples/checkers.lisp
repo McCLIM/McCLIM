@@ -1,6 +1,13 @@
-;;;;  Copyright (c) 2020 Daniel Kochmański
-;;;;
-;;;;    License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;   License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2020 Daniel Kochmański
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A game of checkers which demonstrates drawing functions,
+;;; presentations, translators and commands.
 
 (defpackage #:clim-demo.checkers
   (:use #:clim-lisp #:clim)
@@ -187,9 +194,8 @@
             (:player-2 (setf player-2-pawns t)))
           (when (and player-1-pawns player-2-pawns)
             (return-from winnerp nil)))))
-    (cond
-      ((not player-1-pawns) :player-2)
-      ((not player-2-pawns) :player-1))))
+    (cond ((not player-1-pawns) :player-2)
+          ((not player-2-pawns) :player-1))))
 
 (defun checker-movable-p (game-state checker)
   (and (eql (player game-state)
@@ -253,14 +259,17 @@
 (defclass board () ())
 (defclass board-view (gadget-view) ())
 
+(defun player-color (player-name)
+  (ecase player-name
+    (:player-1 +dark-red+)
+    (:player-2 +black+)))
+
 (define-presentation-method present
     ((checker checker) (type checker) stream (view board-view) &key)
   (when-let* ((field (field checker))
               (x (+ (col field) .5))
               (y (+ (row field) .5))
-              (ink (ecase (player checker)
-                     (:player-1 +dark-red+)
-                     (:player-2 +black+))))
+              (ink (player-color (player checker))))
     (draw-circle* stream x y .4 :ink ink)
     (when (queenp checker)
       (draw-circle* stream x y .2
@@ -270,7 +279,7 @@
                     :line-unit :normal
                     ;; XXX: bug in clx backend: too big scaling and
                     ;; :coordinate unit lands us in a debugger.
-                    
+
                     ;; XXX: bug in clim core: line-unit is not
                     ;; recorded. Repaint sheet with custom unit to have it
                     ;; default unit style.
@@ -342,9 +351,7 @@
     (if-let ((winner (game-over *application-frame*)))
       (let ((x (/ *cols* 2))
             (y (/ *rows* 2)))
-        (draw-circle* stream x y 2 :ink (ecase winner
-                                          (:player-1 +dark-red+)
-                                          (:player-2 +black+))))
+        (draw-circle* stream x y 2 :ink (player-color winner)))
       (dotimes (row *rows*)
         (dotimes (col *cols*)
           ;; slow down to test with: incremental redisplay,
@@ -364,14 +371,15 @@
    :height (* (1+ *rows*) *square-side*)
    :min-height (* (1+ *rows*) *square-side*)
    :max-height (* (1+ *rows*) *square-side*)
-   :default-view (make-instance 'board-view)))
+   :default-view (make-instance 'board-view))
+  (:menu-bar nil))
 
 (defun display (frame pane)
   (with-first-quadrant-coordinates (pane 0 (* (1+ *rows*) *square-side*))
     (with-scaling (pane *square-side* *square-side*)
       (with-translation (pane -.5 -.5)
         (setf (game-over frame) (winnerp frame))
-        (present nil 'board :stream pane :single-box t )))))
+        (present nil 'board :stream pane :single-box t)))))
 
 (defun test-checker (object &rest args)
   (declare (ignore args))
@@ -388,10 +396,11 @@
 
 (define-command (com-select-checker :name t :command-table clim-checkers)
     ((checker checker :gesture nil))
-  (let ((field (field checker)))
-    (if (eql field (active-field *application-frame*))
-        (setf (active-field *application-frame*) nil)
-        (setf (active-field *application-frame*) field))))
+  (let ((frame *application-frame*)
+        (field (field checker)))
+    (setf (active-field frame) (if (eql field (active-field frame))
+                                   nil
+                                   field))))
 
 (define-command (com-select-field :name t :command-table clim-checkers)
     ((dst-field field :gesture (:select :tester test-field)))
@@ -407,27 +416,34 @@
 (define-command (com-new-game :name t :command-table clim-checkers) ()
   (new-game *application-frame*))
 
-
 (define-drag-and-drop-translator tr-move-checker
     (checker command (or field checker) clim-checkers
-             :feedback (lambda (frame pres stream x0 y0 x1 y1 state)
-                         (declare (ignore frame pres x0 y0))
+             :feedback (lambda (frame presentation stream x0 y0 x1 y1 state)
+                         (declare (ignore frame))
                          (case state
                            (:highlight
-                            (with-output-recording-options (stream :draw t :record nil)
-                              (draw-circle* stream x1 y1 32)))
+                            ;; Delay feedback until the pointer has
+                            ;; moved a bit. This avoids the feedback
+                            ;; icon popping up very briefly when the
+                            ;; users clicks to selects.
+                            (when (> (sqrt (+ (expt (- x1 x0) 2) (expt (- y1 y0) 2))) 8)
+                              (let* ((checker (presentation-object presentation))
+                                     (ink (player-color (player checker))))
+                                (with-output-recording-options (stream :draw t :record nil)
+                                  (draw-circle* stream x1 y1 32 :ink ink)))))
                            (:unhighlight
-                            (stream-replay stream (make-rectangle*
+                            (repaint-sheet stream (make-rectangle*
                                                    (- x1 32)
                                                    (- y1 32)
                                                    (+ x1 32)
                                                    (+ y1 32))))))
              :tester
-             ((object) ;; XXX: fix-args should allow i.e &rest args
-              (and (checker-movable-p *application-frame* object)
-                   (multiple-value-bind (moves takep)
-                       (possible-moves *application-frame* object)
-                     (and moves (or takep (not (takesp *application-frame*)))))))
+             ((object) ; XXX: fix-args should allow i.e &rest args
+              (let ((frame *application-frame*))
+                (and (checker-movable-p frame object)
+                     (multiple-value-bind (moves takep)
+                         (possible-moves frame object)
+                       (and moves (or takep (not (takesp frame))))))))
              :destination-tester
              ((object destination-object)
               (or (eq object destination-object)
