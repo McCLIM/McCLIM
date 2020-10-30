@@ -330,19 +330,21 @@ designator) inherits menu items."
                                           command-table
                                           &key (errorp t))
   (let* ((table (find-command-table command-table))
-         (item (gethash command-name (commands table))))
+         (commands (commands table))
+         (item (gethash command-name commands)))
     (if (null item)
         (when errorp
           (error 'command-not-present :command-table-name (command-table-name command-table)))
         (progn
           (when (typep item '%menu-item)
-            (remove-menu-item-from-command-table table
-                                                 (command-menu-item-name item)
-                                                 :errorp nil))
-
+            ;; Remove the keystroke and/or the menu entry.
+            (setf (slot-value table 'menu)
+                  (delete command-name
+                          (slot-value table 'menu)
+                          :key #'command-item-name)))
           (when (command-item-name item)
             (remhash (command-item-name item) (command-line-names table)))
-          (remhash command-name (commands table))))))
+          (remhash command-name commands)))))
 
 (defun map-over-command-table-menu-items (function command-table)
   "Applies function to all of the items in `command-table's
