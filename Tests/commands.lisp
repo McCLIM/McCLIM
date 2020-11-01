@@ -64,11 +64,33 @@
     (is (= 1 count))))
 
 (test commands.add-and-remove-command
-  (let ((ct (make-command-table nil)))
-    (add-command-to-command-table 'com-test-command ct)
-    (remove-command-from-command-table 'com-test-command ct)
-    (signals command-not-present
-      (remove-command-from-command-table 'com-test-command ct))))
+  (with-command-table (ct nil :inherit-from nil)
+    (with-gestures ((:x #\x) (:y #\y))
+      (add-command-to-command-table 'com-test1 ct)
+      (add-command-to-command-table 'com-test2 ct :menu "test2")
+      (add-command-to-command-table 'com-test3 ct :keystroke :x)
+      (add-command-to-command-table 'com-test4 ct :menu "test4" :keystroke :y)
+      ;;
+      (is (find-menu-item "test2" ct :errorp nil))
+      (is (find-menu-item "test4" ct :errorp nil))
+      (is (find-keystroke-item :x ct :test #'eql :errorp nil))
+      (is (find-keystroke-item :y ct :test #'eql :errorp nil))
+      ;;
+      (remove-command-from-command-table 'com-test1 ct)
+      (remove-command-from-command-table 'com-test2 ct)
+      (remove-command-from-command-table 'com-test3 ct)
+      (remove-command-from-command-table 'com-test4 ct)
+      (signals command-not-present
+        (remove-command-from-command-table 'com-test5 ct))
+      ;;
+      (is (null (find-menu-item "test2" ct :errorp nil)))
+      (is (null (find-menu-item "test4" ct :errorp nil)))
+      (is (null (find-keystroke-item :x ct :test #'eql :errorp nil)))
+      (is (null (find-keystroke-item :y ct :test #'eql :errorp nil)))
+      (mapc (lambda (com)
+              (signals command-not-present
+                (remove-command-from-command-table com ct)))
+            '(com-test1 com-test2 com-test3 com-test4)))))
 
 
 ;;; command table menu items and keystrokes definition
