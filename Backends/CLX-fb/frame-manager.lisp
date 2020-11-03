@@ -13,7 +13,7 @@
 
 (defclass clx-fb-frame-manager (clim-clx::clx-frame-manager)
   ()
-  (:default-initargs :mirroring (clim-clx::mirror-factory :single)
+  (:default-initargs :mirroring :single
                      :class-gensym (gensym "CLXFB")))
 
 (defmethod find-concrete-pane-class ((fm clx-fb-frame-manager)
@@ -21,12 +21,14 @@
   ;; This backend doesn't have any specialized pane implementations
   ;; but depending on circumstances it may add optional mirroring to
   ;; the class. See CLX backend for more information.
-  (maybe-mirroring fm (find-concrete-pane-class t pane-type errorp)
-                   (find-package '#:clim-clx-fb)
-                   (lambda (concrete-pane-class concrete-pane-class-name)
-                     `(clx-fb-mirrored-sheet-mixin
-                       climi::always-repaint-background-mixin
-                       ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-                           '(;; temporary-medium-sheet-output-mixin
-                             permanent-medium-sheet-output-mixin))
-                       ,concrete-pane-class-name))))
+  (let ((concrete-pane-class (find-concrete-pane-class t pane-type errorp)))
+    (maybe-add-mirroring-superclasses
+     concrete-pane-class (mirroring fm)
+     (symbol-name (class-gensym fm)) (find-package '#:clim-clx-fb)
+     (lambda (concrete-pane-class concrete-pane-class-name)
+       `(clx-fb-mirrored-sheet-mixin
+         climi::always-repaint-background-mixin
+         ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
+             '(;; temporary-medium-sheet-output-mixin
+               permanent-medium-sheet-output-mixin))
+         ,concrete-pane-class-name)))))

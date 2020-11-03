@@ -18,9 +18,9 @@
 ;;; CLX-FRAME-MANAGER class
 
 (defclass clx-frame-manager (frame-manager)
-  ((mirroring-fn :initarg :mirroring
-                 :initform (mirror-factory :full)
-                 :reader mirroring-p)
+  ((mirroring :initarg :mirroring
+              :initform :full
+              :reader mirroring)
    (class-gensym :initarg :class-gensym
                  :initform (gensym "CLX-")
                  :reader class-gensym)))
@@ -31,55 +31,58 @@
 (defmethod initialize-instance :after ((instance clx-frame-manager)
                                        &key &allow-other-keys))
 
-;;; Default mirroring predicates
-(defun mirror-factory (kind)
-  (etypecase kind
-    (null nil)
-    (function kind)
-    ((eql :single)
-     #'(lambda (class)
-         (and (not (subtypep class 'mirrored-sheet-mixin))
-              (subtypep class 'top-level-sheet-pane))))
-    ((eql :full)
-     #'(lambda (class)
-         (and (not (subtypep class 'mirrored-sheet-mixin))
-              (subtypep class 'basic-pane))))
-    ((eql :random) ;; for testing
-     #'(lambda (class)
-         (and (not (subtypep class 'mirrored-sheet-mixin))
-              (or (subtypep class 'top-level-sheet-pane)
-                  (zerop (random 2))))))))
-
 ;; Abstract pane lookup logic
 
 (defmethod find-concrete-pane-class ((fm clx-frame-manager)
                                      pane-type &optional errorp)
   ;; This backend doesn't have any specialized pane implementations
   ;; but depending on circumstances it may add optional mirroring to
-  ;; the class. Such automatically defined concrete class has the same
-  ;; name but with a gensym prefix and symbol in the backend package.
+  ;; the class by defining an ad-hoc subclass. Such automatically
+  ;; defined concrete classes use a name that is interned in the
+  ;; backend package and derived from the original class name by
+  ;; including a gensym prefix, the original symbol package and the
+  ;; original symbol name.
   (declare (ignore errorp))
-  (maybe-mirroring fm (call-next-method)
-                   (find-package '#:clim-clx)
-                   (lambda (concrete-pane-class concrete-pane-class-name)
-                     `(mirrored-sheet-mixin
-                       ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-                           '(permanent-medium-sheet-output-mixin))
-                       ,concrete-pane-class-name))))
+  (maybe-add-mirroring-superclasses
+   (call-next-method) (mirroring fm)
+   (symbol-name (class-gensym fm)) (find-package '#:clim-clx)
+   (lambda (concrete-pane-class)
+     `(,(find-class 'mirrored-sheet-mixin)
+       ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
+           `(,(find-class 'permanent-medium-sheet-output-mixin)))
+       ,concrete-pane-class))))
 
-;;; This is an example of how make-pane-1 might create specialized
+;;; Default mirroring predicate
+(defun add-mirroring-superclasses-p (class mirroring)
+  (cond ((functionp mirroring)
+         (funcall mirroring class))
+        ((subtypep class 'mirrored-sheet-mixin)
+         nil)
+        ((and (eq mirroring :single)
+              (subtypep class 'top-level-sheet-pane))
+         t)
+        ((and (eq mirroring :full)
+              (subtypep class 'basic-pane))
+         t)
+        ((and (eq mirroring :random) ; for testing
+              (or (subtypep class 'top-level-sheet-pane)
+                  (zerop (random 2)))))))
+
+;;; This is an example of how MAKE-PANE-1 might create specialized
 ;;; instances of the generic pane types based upon the type of the
-;;; frame-manager. However, in the CLX case, we don't expect there to
+;;; frame manager. However, in the CLX case, we don't expect there to
 ;;; be any CLX specific panes. CLX uses the default generic panes
 ;;; instead.
-(defun maybe-mirroring (fm concrete-pane-class class-name-package compute-superclasses)
-  (when (funcall (mirroring-p fm) concrete-pane-class)
+(defun maybe-add-mirroring-superclasses
+    (concrete-pane-class mirroring
+     class-name-prefix class-name-package compute-superclasses)
+  (when (add-mirroring-superclasses-p concrete-pane-class mirroring)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
                                           concrete-pane-class)))
       (multiple-value-bind (class-symbol foundp)
           (alexandria:ensure-symbol
-           (alexandria:symbolicate (class-gensym fm) "-"
+           (alexandria:symbolicate class-name-prefix "-"
                                    (symbol-name concrete-pane-class-symbol))
            class-name-package)
         (unless foundp
