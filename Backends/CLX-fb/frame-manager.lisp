@@ -20,15 +20,16 @@
                                      pane-type &optional (errorp t))
   ;; This backend doesn't have any specialized pane implementations
   ;; but depending on circumstances it may add optional mirroring to
-  ;; the class. See CLX backend for more information.
+  ;; the class. Such automatically defined concrete class has the same
+  ;; name but with a gensym prefix and symbol in the backend package.
   (let ((concrete-pane-class (find-concrete-pane-class t pane-type errorp)))
     (maybe-add-mirroring-superclasses
      concrete-pane-class (mirroring fm)
      (symbol-name (class-gensym fm)) (find-package '#:clim-clx-fb)
-     (lambda (concrete-pane-class concrete-pane-class-name)
-       `(clx-fb-mirrored-sheet-mixin
-         climi::always-repaint-background-mixin
+     (lambda (concrete-pane-class)
+       `(,(find-class 'clx-fb-mirrored-sheet-mixin)
+         ,(find-class 'climi::always-repaint-background-mixin)
          ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-             '(;; temporary-medium-sheet-output-mixin
-               permanent-medium-sheet-output-mixin))
-         ,concrete-pane-class-name)))))
+             `(;; temporary-medium-sheet-output-mixin
+               ,(find-class 'permanent-medium-sheet-output-mixin)))
+         ,concrete-pane-class)))))
