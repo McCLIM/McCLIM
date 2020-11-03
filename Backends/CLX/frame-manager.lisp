@@ -1,25 +1,19 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998,1999,2000,2001 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2004 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2016-2018 Elias Mårtenson <lokedhs@gmail.com>
+;;;  (c) copyright 2016-2019 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; The frame manager and ad-hoc sheet class generation logic of the
+;;; CLX backend.
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 ;;; CLX-FRAME-MANAGER class
 
