@@ -1,5 +1,15 @@
-(in-package :clim-clx-fb)
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2016 Alessandro Serra <gas2serra@gmail.com>
+;;;  (c) copyright 2018-2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; The frame manager the CLX framebuffer backend.
 
+(in-package #:clim-clx-fb)
 
 (defclass clx-fb-frame-manager (clim-clx::clx-frame-manager)
   ()
@@ -9,7 +19,7 @@
 ;;; if the pane is a subclass of basic-pane and it is not mirrored we create a new class.
 (defun maybe-mirroring (fm concrete-pane-class)
   (when (and (not (subtypep concrete-pane-class 'mirrored-sheet-mixin))
-	     (funcall (clim-clx::mirroring-p fm) concrete-pane-class))
+             (funcall (clim-clx::mirroring-p fm) concrete-pane-class))
     (let* ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
                                           concrete-pane-class)))
@@ -18,7 +28,7 @@
            (alexandria:symbolicate (clim-clx::class-gensym fm) "-"
                                    (symbol-name concrete-pane-class-symbol))
            :clim-clx-fb)
-	(unless foundp
+        (unless foundp
           (let ((superclasses (if (subtypep concrete-pane-class 'sheet-with-medium-mixin)
                                   (list 'clx-fb-mirrored-sheet-mixin
                                         'climi::always-repaint-background-mixin
