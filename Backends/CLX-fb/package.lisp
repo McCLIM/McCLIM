@@ -43,6 +43,7 @@
                 #:clx-port-screen
                 #:clx-graft
                 #:clx-port-window
+                #:maybe-mirroring
                 #:sheet-xmirror
                 #:sheet-direct-xmirror)
   (:import-from #:climi
