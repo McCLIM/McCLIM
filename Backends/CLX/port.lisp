@@ -80,7 +80,7 @@
 
 (defun parse-clx-server-path (path)
   (let* ((port-type (pop path))
-         (mirroring (mirror-factory (getf path :mirroring))))
+         (mirroring (getf path :mirroring)))
     (remf path :mirroring)
     (if path
         `(,port-type
