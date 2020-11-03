@@ -99,15 +99,14 @@
 (defmethod print-object ((object clx-port) stream)
   (print-unreadable-object (object stream :identity t :type t)
     (when (slot-boundp object 'display)
-      (let ((display (slot-value object 'display)))
-        (when display
-          (format stream "~S ~S ~S ~S"
-                  :host (xlib:display-host display)
-                  :display-id (xlib:display-display display)))))))
+      (when-let ((display (slot-value object 'display)))
+        (format stream "~S ~S ~S ~S"
+                :host (xlib:display-host display)
+                :display-id (xlib:display-display display))))))
 
 
 (defun realize-mirror-aux (port sheet
-                                &key (width 100) (height 100) (x 0) (y 0)
+                           &key (width 100) (height 100) (x 0) (y 0)
                                 (override-redirect :off)
                                 (map t)
                                 (backing-store :not-useful)
@@ -124,52 +123,46 @@
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
                             (permanent-medium-sheet-output-mixin ;; sheet-with-medium-mixin
-                              (medium-background sheet))
+                             (medium-background sheet))
                             (pane ; CHECKME [is this sensible?] seems to be
-                              (let ((background (pane-background sheet)))
-                                (if (typep background 'color)
-                                    background
-                                    +white+)))
+                             (let ((background (pane-background sheet)))
+                               (if (typep background 'color)
+                                   background
+                                   +white+)))
                             (t
-                              +white+)))
+                             +white+)))
            (color (multiple-value-bind (r g b)
                       (color-rgb desired-color)
                     (xlib:make-color :red r :green g :blue b)))
            (screen (clx-port-screen port))
            (pixel (xlib:alloc-color (xlib:screen-default-colormap screen) color))
-           (mirror-region (%sheet-mirror-region sheet))
-           (mirror-transformation (%sheet-mirror-transformation sheet))
-           (window (xlib:create-window
-                    :parent (sheet-xmirror (sheet-parent sheet))
-                    :width (if mirror-region
-                               (round-coordinate (bounding-rectangle-width mirror-region))
-                               width)
-                    :height (if mirror-region
-                                (round-coordinate (bounding-rectangle-height mirror-region))
-                                height)
-                    :x (if mirror-transformation
-                           (round-coordinate (nth-value 0 (transform-position
-                                                           mirror-transformation
-                                                           0 0)))
-                           x)
-                    :y (if mirror-transformation
-                           (round-coordinate (nth-value 1 (transform-position
-                                                           mirror-transformation
-                                                           0 0)))
-                           y)
-                    :override-redirect override-redirect
-                    :backing-store backing-store
-                    :save-under save-under
-                    :gravity :north-west
-                    ;; Evil Hack -- but helps enormously (Has anybody
-                    ;; a good idea how to sneak the concept of
-                    ;; bit-gravity into CLIM)? --GB
-                    :bit-gravity (if (typep sheet 'climi::extended-output-stream)
-                                     :north-west
-                                     :forget)
-                    :background pixel
-                    :event-mask (apply #'xlib:make-event-mask
-                                       event-mask))))
+           (window (multiple-value-bind (x y)
+                       (if-let ((transformation (%sheet-mirror-transformation sheet)))
+                         (transform-position transformation 0 0)
+                         (values x y))
+                     (multiple-value-bind (width height)
+                         (if-let ((region (%sheet-mirror-region sheet)))
+                           (bounding-rectangle-size region)
+                           (values width height))
+                       (xlib:create-window
+                        :parent (sheet-xmirror (sheet-parent sheet))
+                        :width (round-coordinate width)
+                        :height (round-coordinate height)
+                        :x (round-coordinate x)
+                        :y (round-coordinate y)
+                        :override-redirect override-redirect
+                        :backing-store backing-store
+                        :save-under save-under
+                        :gravity :north-west
+                        ;; Evil Hack -- but helps enormously (Has anybody
+                        ;; a good idea how to sneak the concept of
+                        ;; bit-gravity into CLIM)? --GB
+                        :bit-gravity (if (typep sheet 'climi::extended-output-stream)
+                                         :north-west
+                                         :forget)
+                        :background pixel
+                        :event-mask (apply #'xlib:make-event-mask
+                                           event-mask))))))
       (port-register-mirror (port sheet) sheet window)
       (when map
         (xlib:map-window window)
@@ -181,8 +174,7 @@
   (%realize-mirror port sheet))
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
-  (realize-mirror-aux port sheet
-                      :map (sheet-enabled-p sheet)))
+  (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
   (let* ((q (compose-space sheet))
@@ -205,32 +197,26 @@
                           :WINDOW 32)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet unmanaged-sheet-mixin))
-  (realize-mirror-aux port sheet
-                      :override-redirect :on
-                      :save-under :on
-                      :map nil))
+  (realize-mirror-aux port sheet :override-redirect :on
+                                 :save-under :on
+                                 :map nil))
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
-  (let ((graft (make-instance 'clx-graft
-                 :port port :mirror (clx-port-window port)
-                 :orientation orientation :units units))
-        (width (xlib:screen-width (clx-port-screen port)))
-        (height (xlib:screen-height (clx-port-screen port))))
+  (let* ((graft (make-instance 'clx-graft
+                               :port port :mirror (clx-port-window port)
+                               :orientation orientation :units units))
+         (screen (clx-port-screen port))
+         (width (xlib:screen-width screen))
+         (height (xlib:screen-height screen)))
     (let ((region (make-bounding-rectangle 0 0 width height)))
       (climi::%%set-sheet-region region graft))
     graft))
 
 (defmethod make-medium ((port clx-port) sheet)
-  (make-instance 'clx-medium
-                 ;; :port port
-                 ;; :graft (find-graft :port port)
-                 :sheet sheet))
+  (make-instance 'clx-medium :sheet sheet))
 
 (defmethod make-medium ((port clx-render-port) sheet)
-  (make-instance 'clx-render-medium
-                 ;; :port port
-                 ;; :graft (find-graft :port port)
-                 :sheet sheet))
+  (make-instance 'clx-render-medium :sheet sheet))
 
 (defmethod graft ((port clx-port))
   (first (port-grafts port)))
@@ -249,7 +235,7 @@
     (values)))
 
 (defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
-  (alexandria:when-let ((mirror (port-lookup-mirror port pixmap)))
+  (when-let ((mirror (port-lookup-mirror port pixmap)))
     (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
                                  (xlib:pixmap-plist mirror))))
       (xlib:render-free-picture picture))
@@ -257,11 +243,10 @@
     (port-unregister-mirror port pixmap mirror)))
 
 (defmethod port-allocate-pixmap ((port clx-port) sheet width height)
-  (let ((pixmap (make-instance 'mirrored-pixmap
-                               :sheet sheet
-                               :width width
-                               :height height
-                               :port port)))
+  (let ((pixmap (make-instance 'mirrored-pixmap :sheet sheet
+                                                :width width
+                                                :height height
+                                                :port port)))
     (when (sheet-grafted-p sheet)
       (realize-mirror port pixmap))
     pixmap))
@@ -274,9 +259,9 @@
 
 ;;; FIXME this is evil.
 (defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
-  (when (sheet-direct-xmirror pane)
+  (when-let ((mirror (sheet-direct-xmirror pane)))
     (with-slots (space-requirement) pane
-      '(setf (xlib:wm-normal-hints (sheet-direct-xmirror pane))
+      '(setf (xlib:wm-normal-hints mirror) ; FIXME this has no effect
             (xlib:make-wm-size-hints
              :width (round width)
              :height (round height)
