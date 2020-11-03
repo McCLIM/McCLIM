@@ -196,7 +196,7 @@ to the pane.
 This section describes the various composite and layout panes provided by CLIM,
 and the protocol that the layout panes obey.
 
-The layout panes describe in this section are all composite panes that are
+The layout panes described in this section are all composite panes that are
 responsible for positioning their children according to various layout rules.
 Layout panes can be selected in the same way as other panes using \cl{make-pane}
 or \cl{make-instance}.  For convenience and readability of application pane
@@ -327,7 +327,7 @@ one-third of the space, then second takes two-thirds of the space.
 
 
 \deflpane {vbox-pane}
-\Defmacro {vertically} {(\rest options \key spacing \allow) \body contents} 
+\Defmacro {vertically} {(\rest options \key spacing \allow) \body contents}
 
 The \cl{vbox-pane} class lays out all of its child panes vertically, from top to
 bottom.  The child panes are separated by the amount of space specified by
@@ -378,7 +378,7 @@ size in each of the two dimensions.
 
 
 \deflpane {spacing-pane}
-\Defmacro {spacing} {(\rest options \key thickness \allow) \body contents} 
+\Defmacro {spacing} {(\rest options \key thickness \allow) \body contents}
 
 This pane reserves some margin space of thickness \arg{thickness} around a
 single child pane.  The space requirement keys that are passed in indicate the
@@ -387,7 +387,7 @@ child.
 
 
 \deflpane {outlined-pane}
-\Defmacro {outlining} {(\rest options \key thickness \allow) \body contents} 
+\Defmacro {outlining} {(\rest options \key thickness \allow) \body contents}
 
 This layout pane puts a outline of thickness \arg{thickness} around its contents.
 
@@ -522,7 +522,7 @@ indicating the number of device units (such as pixels).
 The protocol class of all space requirement objects.  There are one or more
 subclasses of \cl{space-requirement} with implementation-dependent names that
 implement space requirements.  The exact names of these classes is explicitly
-unspecified.  
+unspecified.
 \IfYouWantClass {a} {space requirement} {space-requirement}
 
 All of the instantiable space requirement classes provided by CLIM are
@@ -571,7 +571,7 @@ Returns a new space whose components are the sum of each of the components of
 
 \Defun {space-requirement+*} {space-req \key width min-width max-width
                                              height min-height max-height}
-                             
+
 Returns a new space requirement whose components are the sum of each of the
 components of \arg{space-req} added to the appropriate keyword argument (for
 example, the width component of \arg{space-req} is added to \arg{width}).
@@ -580,7 +580,7 @@ This is intended to be a more efficient, ``spread'' version of
 \cl{space-requirement+}.
 
 
-\Defgeneric {compose-space} {pane \key width height} 
+\Defgeneric {compose-space} {pane \key width height}
 
 During the space composition pass, a composite pane will typically ask each of
 its children how much space it requires by calling \cl{compose-space}.  They
@@ -604,7 +604,7 @@ each of the child panes.  \arg{width} and \arg{height} are the width and height
 of \arg{pane} in device units.
 
 
-\Defgeneric {change-space-requirements} {pane \key resize-frame \rest space-req-keys} 
+\Defgeneric {change-space-requirements} {pane \key resize-frame \rest space-req-keys}
 
 This function can be invoked to indicate that the space requirements for
 \arg{pane} have changed.  Any of the options that applied to the pane at
@@ -779,9 +779,9 @@ in the allocated space, so scroll bars are nearly always desirable.  CLIM
 therefore provides a convenient form for creating composite panes that include
 the CLIM stream pane, scroll bars, labels, and so forth.
 
-\Defun {make-clim-stream-pane} {\rest options 
+\Defun {make-clim-stream-pane} {\rest options
                                 \key type label label-alignment scroll-bars borders
-                                     display-after-commands \allow} 
+                                     display-after-commands \allow}
 
 Creates a pane of type \arg{type}, which defaults to \cl{clim-stream-pane}.
 
@@ -891,7 +891,7 @@ described in Section~\ref{clim-pane-options}.
 \arg{scroll-bars} specifies whether scroll bars should be included in the
 resulting window.  It may be one of \arg{nil}, \cl{:vertical} (the default),
 \cl{:horizontal}, or \cl{:both}.
- 
+
 \arg{borders} is a booleans that specifies whether or not the resulting window
 should have a border drawn around it.  The default is \cl{t}.  \arg{label} is
 either \cl{nil} or a string to use as a label for the window.
@@ -977,7 +977,7 @@ interaction that triggers them.
 \end{verbatim}
 
 
-\subsection {Defining a New Composite Pane} 
+\subsection {Defining a New Composite Pane}
 
 To define a new layout pane implementation, the programmer must define how the
 much space the pane takes, where its children go, and what the pane looks like.
@@ -1002,7 +1002,7 @@ around its child pane, proceed as follows:
         (child (sheet-child pane)))
     (space-requirement+
       (compose-space child :width width :height height)
-      (make-space-requirement 
+      (make-space-requirement
         :width (* 2 thickness)
         :height (* 2 thickness)))))
 
@@ -1013,7 +1013,7 @@ around its child pane, proceed as follows:
       (sheet-child pane)
       thickness thickness
       (- width (* 2 thickness)) (- height (* 2 thickness)))))
-  
+
 (defmethod handle-repaint ((pane dashed-border-pane) region)
   (declare (ignore region))                     ;not worth checking
   (with-sheet-medium (medium pane)
