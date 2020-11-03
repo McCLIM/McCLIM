@@ -30,7 +30,7 @@
 (defclass clx-render-port (clx-port) ())
 
 
-(defun automagic-clx-server-path (port-type)
+(defun server-options-from-environment ()
   (let ((name (get-environment-variable "DISPLAY")))
     (assert name (name)
             "Environment variable DISPLAY is not set")
@@ -55,33 +55,30 @@
                                     (string-upcase (subseq name 0 slash-i))
                                     :keyword))
                    (t :internet))))
-      (list port-type
-            :host host
+      (list :host host
             :display-id (or display 0)
             :screen-id (or screen 0)
             :protocol protocol))))
 
-(defun helpfully-automagic-clx-server-path (port-type)
-  (restart-case (automagic-clx-server-path port-type)
+(defun server-options-from-environment-with-localhost-fallback ()
+  (restart-case (server-options-from-environment)
     (use-localhost ()
       :report "Use local display"
-      #+windows (parse-clx-server-path `(,port-type :host "localhost" :protocol :internet))
-      #-windows (parse-clx-server-path `(,port-type :host "" :protocol :unix)))))
+      #+windows '(:host "localhost" :protocol :internet :display-id 0 :screen-id 0)
+      #-windows '(:host "" :protocol :unix :display-id 0 :screen-id 0))))
 
 (defun parse-clx-server-path (path)
-  (let* ((port-type (pop path))
-         (mirroring (getf path :mirroring)))
-    (remf path :mirroring)
-    (if path
-        `(,port-type
-          :host ,(getf path :host "localhost")
-          :display-id ,(getf path :display-id 0)
-          :screen-id ,(getf path :screen-id 0)
-          :protocol ,(getf path :protocol :internet)
-          ,@(when mirroring (list :mirroring mirroring)))
-        (append (helpfully-automagic-clx-server-path port-type)
-                (when mirroring
-                  (list :mirroring mirroring))))))
+  (destructuring-bind (port-type &key (host "localhost" hostp)
+                                      (protocol :internet protocolp)
+                                      (display-id 0 display-id-p)
+                                      (screen-id 0 screen-id-p)
+                                      (mirroring nil mirroringp))
+      path
+    `(,port-type ,@(if (or hostp protocolp display-id-p screen-id-p)
+                       `(:host ,host :protocol ,protocol
+                         :display-id ,display-id :screen-id ,screen-id)
+                       (server-options-from-environment-with-localhost-fallback))
+                 ,@(when mirroringp `(:mirroring ,mirroring)))))
 
 (setf (get :x11 :port-type) 'clx-port)
 (setf (get :x11 :server-path-parser) 'parse-clx-server-path)
