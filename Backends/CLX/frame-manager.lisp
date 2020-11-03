@@ -59,14 +59,20 @@
   ;; the class. Such automatically defined concrete class has the same
   ;; name but with a gensym prefix and symbol in the backend package.
   (declare (ignore errorp))
-  (maybe-mirroring fm (call-next-method)))
+  (maybe-mirroring fm (call-next-method)
+                   (find-package '#:clim-clx)
+                   (lambda (concrete-pane-class concrete-pane-class-name)
+                     `(mirrored-sheet-mixin
+                       ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
+                           '(permanent-medium-sheet-output-mixin))
+                       ,concrete-pane-class-name))))
 
 ;;; This is an example of how make-pane-1 might create specialized
 ;;; instances of the generic pane types based upon the type of the
 ;;; frame-manager. However, in the CLX case, we don't expect there to
 ;;; be any CLX specific panes. CLX uses the default generic panes
 ;;; instead.
-(defun maybe-mirroring (fm concrete-pane-class)
+(defun maybe-mirroring (fm concrete-pane-class class-name-package compute-superclasses)
   (when (funcall (mirroring-p fm) concrete-pane-class)
     (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
                                           (class-name concrete-pane-class)
@@ -75,16 +81,15 @@
           (alexandria:ensure-symbol
            (alexandria:symbolicate (class-gensym fm) "-"
                                    (symbol-name concrete-pane-class-symbol))
-           :clim-clx)
+           class-name-package)
         (unless foundp
-          (eval
-           `(defclass ,class-symbol
-                (mirrored-sheet-mixin
-                 ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
-                     '(permanent-medium-sheet-output-mixin))
-                 ,concrete-pane-class-symbol)
-              ()
-              (:metaclass ,(type-of (find-class concrete-pane-class-symbol))))))
+          (let ((superclasses (funcall compute-superclasses
+                                       concrete-pane-class
+                                       concrete-pane-class-symbol)))
+            (eval
+             `(defclass ,class-symbol ,superclasses
+                ()
+                (:metaclass ,(type-of (find-class concrete-pane-class-symbol)))))))
         (setf concrete-pane-class (find-class class-symbol)))))
   concrete-pane-class)
 
