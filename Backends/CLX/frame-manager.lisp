@@ -76,25 +76,33 @@
 (defun maybe-add-mirroring-superclasses
     (concrete-pane-class mirroring
      class-name-prefix class-name-package compute-superclasses)
-  (when (add-mirroring-superclasses-p concrete-pane-class mirroring)
-    (let ((concrete-pane-class-symbol (if (typep concrete-pane-class 'class)
-                                          (class-name concrete-pane-class)
-                                          concrete-pane-class)))
-      (multiple-value-bind (class-symbol foundp)
-          (alexandria:ensure-symbol
-           (alexandria:symbolicate class-name-prefix "-"
-                                   (symbol-name concrete-pane-class-symbol))
-           class-name-package)
-        (unless foundp
-          (let ((superclasses (funcall compute-superclasses
-                                       concrete-pane-class
-                                       concrete-pane-class-symbol)))
-            (eval
-             `(defclass ,class-symbol ,superclasses
-                ()
-                (:metaclass ,(type-of (find-class concrete-pane-class-symbol)))))))
-        (setf concrete-pane-class (find-class class-symbol)))))
-  concrete-pane-class)
+  (flet ((make-class-name (concrete-class-name)
+           (let ((*package* class-name-package))
+             (alexandria:symbolicate
+              class-name-prefix "-"
+              (if-let ((package (symbol-package concrete-class-name)))
+                (package-name package)
+                "UNINTERNED")
+              ":" (symbol-name concrete-class-name))))
+         (define-class (metaclass name concrete-class)
+           (let* ((superclasses (funcall compute-superclasses concrete-class))
+                  (class (make-instance metaclass
+                                        :name name
+                                        :direct-superclasses superclasses)))
+             (setf (find-class name) class))))
+    (if (add-mirroring-superclasses-p concrete-pane-class mirroring)
+        (multiple-value-bind (concrete-class concrete-class-name)
+            (if (typep concrete-pane-class 'class)
+                (values concrete-pane-class (class-name concrete-pane-class))
+                (values (find-class concrete-pane-class) concrete-pane-class))
+          (multiple-value-bind (class-symbol foundp)
+              (make-class-name concrete-class-name)
+            (if foundp
+                (find-class class-symbol)
+                (define-class (class-of concrete-class)
+                              class-symbol
+                              concrete-class))))
+        concrete-pane-class)))
 
 (defmethod adopt-frame :before ((fm clx-frame-manager) (frame menu-frame))
   ;; Temporary kludge.
