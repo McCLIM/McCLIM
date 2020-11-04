@@ -2004,6 +2004,7 @@
   (:use :clim :clim-extensions)
   (:export
    ;; CLIM-INTERNALS
+   #:find-port-type
    #:make-graft
    #:medium-draw-circle*
    #:mirror-transformation

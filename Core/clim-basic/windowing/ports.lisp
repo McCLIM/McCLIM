@@ -43,34 +43,33 @@
             (t :clx-ttf))
     :null))
 
-(defun find-default-server-path ()
-  (loop for port in *server-path-search-order*
-        if (get port :port-type)
-           do (return-from find-default-server-path (list port))
-        finally (error "No CLIM backends have been loaded!")))
+(defgeneric find-port-type (port)
+  (:method ((port symbol))
+    (values (get port :port-type)
+            (get port :server-path-parser))))
 
 (defvar *all-ports* nil)
 
 (defun find-port (&key (server-path *default-server-path*))
-  (if (null server-path)
-      (setq server-path (find-default-server-path)))
-  (if (atom server-path)
-      (setq server-path (list server-path)))
-  (setq server-path
-        (funcall (get (first server-path) :server-path-parser) server-path))
-  (loop for port in *all-ports*
-        if (equal server-path (port-server-path port))
-        do (return port)
-        finally (let ((port-type (get (first server-path) :port-type))
-                      port)
-                  (if (null port-type)
-                      (error "Don't know how to make a port of type ~S"
-                             server-path))
-                  (setq port
-                        (funcall 'make-instance port-type
-                                 :server-path server-path))
-                  (push port *all-ports*)
-                  (return port))))
+  (setf server-path (alexandria:ensure-list server-path))
+  (let (port-class)
+    (flet ((try-port (type path)
+             (multiple-value-bind (class parser) (find-port-type type)
+               (when class
+                 (setf port-class class
+                       server-path (if (null parser)
+                                       path
+                                       (funcall parser path)))))))
+      (if (null server-path)
+          (loop for port-type in *server-path-search-order*
+                do (try-port port-type (list port-type))
+                while (null port-class))
+          (try-port (first server-path) server-path))
+      (when (null port-class)
+        (error "No CLIM backends have been loaded!"))
+      (or (find server-path *all-ports* :test #'equal :key #'port-server-path)
+          (first (push (make-instance port-class :server-path server-path)
+                       *all-ports*))))))
 
 (defmacro with-port ((port-var server &rest args &key &allow-other-keys)
                      &body body)
