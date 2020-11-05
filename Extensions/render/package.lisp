@@ -51,9 +51,9 @@
                 ;; backend
                 #:realize-mirror
                 #:mirrored-pixmap
-                #:port-lookup-mirror
                 #:port-lookup-sheet
-                #:pixmap-medium)
+                #:pixmap-medium
+                #:pixmap-mirror)
   (:import-from #:mcclim-truetype
                 #:glyph-info
                 #:font-glyph-info

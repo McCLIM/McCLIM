@@ -11,4 +11,4 @@
   (pixmap-medium pixmap))
 
 (defmethod sheet-direct-mirror ((pixmap image-pixmap-mixin))
-  (climi::port-lookup-mirror (port pixmap) pixmap))
+  (pixmap-mirror pixmap))

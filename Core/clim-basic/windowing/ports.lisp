@@ -99,7 +99,6 @@
    (sheet->mirror :initform (make-hash-table :test #'eq))
    (mirror->sheet :initform (make-hash-table :test #'eq))
    (pixmap->mirror :initform (make-hash-table :test #'eq))
-   (mirror->pixmap :initform (make-hash-table :test #'eq))
    (event-process
     :initform nil
     :initarg  :event-process
@@ -505,21 +504,12 @@ is a McCLIM extension.")
 (defmethod port-lookup-mirror ((port basic-port) (pixmap pixmap))
   (gethash pixmap (slot-value port 'pixmap->mirror)))
 
-;;; FIXME: The generic function PORT-LOOKUP-PIXMAP appear not to be
-;;; used anywhere.
-(defgeneric port-lookup-pixmap (port mirror))
-
-(defmethod port-lookup-pixmap ((port basic-port) mirror)
-  (gethash mirror (slot-value port 'mirror->pixmap)))
-
 (defmethod port-register-mirror ((port basic-port) (pixmap pixmap) mirror)
   (setf (gethash pixmap (slot-value port 'pixmap->mirror)) mirror)
-  (setf (gethash mirror (slot-value port 'mirror->pixmap)) pixmap)
   nil)
 
 (defmethod port-unregister-mirror ((port basic-port) (pixmap pixmap) mirror)
   (remhash pixmap (slot-value port 'pixmap->mirror))
-  (remhash mirror (slot-value port 'mirror->pixmap))
   nil)
 
 (defmethod realize-mirror ((port basic-port) (pixmap mirrored-pixmap))

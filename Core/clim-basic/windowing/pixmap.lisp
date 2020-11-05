@@ -36,6 +36,9 @@
 (defgeneric medium-copy-area (from-drawable from-x from-y width height
                               to-drawable to-x to-y))
 
+(defmethod pixmap-mirror ((pixmap pixmap))
+  (port-lookup-mirror (port pixmap) pixmap))
+
 (defclass mirrored-pixmap (pixmap)
   ((port :initform nil :initarg :port :accessor port)
    (medium :initform nil :accessor pixmap-medium)
