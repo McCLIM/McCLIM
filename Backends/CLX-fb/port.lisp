@@ -42,9 +42,9 @@
 			     :pointer-motion :button-motion))
 
 (defmethod clim-clx::realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
-   (clim-clx::%realize-mirror port sheet)
-   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (port-lookup-mirror port sheet)))
-   (port-lookup-mirror port sheet))
+  (clim-clx::%realize-mirror port sheet)
+  (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (sheet-mirror sheet)))
+  (sheet-mirror sheet))
 
 (defmethod clim-clx::realize-mirror ((port clx-fb-port) (pixmap pixmap))
   )
@@ -133,5 +133,5 @@
     pixmap))
 
 (defmethod port-deallocate-pixmap ((port clx-fb-port) pixmap)
-  (when (port-lookup-mirror port pixmap)
+  (when (pixmap-mirror pixmap)
     (destroy-mirror port pixmap)))

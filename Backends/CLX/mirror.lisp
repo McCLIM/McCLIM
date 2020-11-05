@@ -76,8 +76,8 @@
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when (sheet-xmirror sheet)
     (xlib:destroy-window (sheet-xmirror sheet)))
-  (when (port-lookup-mirror port sheet)
-    (port-unregister-mirror port sheet (sheet-mirror sheet))))
+  (when-let ((mirror (sheet-mirror sheet)))
+    (port-unregister-mirror port sheet mirror)))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
   (let ((mirror (sheet-xmirror sheet)))

@@ -12,7 +12,7 @@
 
 (defun clx-render-medium-picture (medium)
   (with-slots (picture) medium
-    (when-let* ((mirror (port-lookup-mirror (port medium) (medium-sheet medium)))
+    (when-let* ((mirror (medium-drawable medium))
                 (format (xlib:find-window-picture-format (xlib:drawable-root mirror))))
       (cond
         ((null picture)

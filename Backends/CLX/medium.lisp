@@ -293,7 +293,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
   (let* ((port (port medium))
-         (mirror (port-lookup-mirror port (medium-sheet medium))))
+         (mirror (medium-drawable medium)))
     (with-slots (gc) medium
       (unless gc
         (setf gc (xlib:create-gcontext :drawable mirror)
@@ -974,8 +974,7 @@ translated, so they begin at different position than [0,0])."))
               (max-y (round-coordinate (max top bottom))))
           (let ((^cleanup nil))
             (unwind-protect
-                 (xlib:draw-rectangle (port-lookup-mirror (port medium)
-                                                          (medium-sheet medium))
+                 (xlib:draw-rectangle (medium-drawable medium)
                                       (medium-gcontext medium (medium-background medium))
                                       (clamp min-x           #x-8000 #x7fff)
                                       (clamp min-y           #x-8000 #x7fff)

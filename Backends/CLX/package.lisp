@@ -17,7 +17,6 @@
                 #:+alt-key+
                 ;;
                 #:port-text-style-mappings
-                #:port-lookup-mirror
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
