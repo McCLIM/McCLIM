@@ -136,7 +136,6 @@
 ;;;
 (defgeneric sheet-direct-xmirror (sheet))
 (defgeneric sheet-xmirror (sheet))
-(defgeneric pixmap-xmirror (sheet))
 
 (defmethod sheet-xmirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
@@ -152,6 +151,3 @@
 
 (defmethod sheet-direct-xmirror ((pixmap pixmap))
   (sheet-direct-mirror pixmap))
-
-(defmethod pixmap-xmirror ((pixmap pixmap))
-  (pixmap-mirror pixmap))
