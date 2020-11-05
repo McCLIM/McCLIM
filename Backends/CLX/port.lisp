@@ -257,20 +257,5 @@
   (when (pixmap-mirror pixmap)
     (destroy-mirror port pixmap)))
 
-;;; Top-level-sheet
-
-;;; FIXME this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
-  (when-let ((mirror (sheet-direct-xmirror pane)))
-    (with-slots (space-requirement) pane
-      '(setf (xlib:wm-normal-hints mirror) ; FIXME this has no effect
-            (xlib:make-wm-size-hints
-             :width (round width)
-             :height (round height)
-             :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
-             :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
-             :min-width (round (space-requirement-min-width space-requirement))
-             :min-height (round (space-requirement-min-height space-requirement)))))))
-
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))
