@@ -117,7 +117,10 @@ interface management system."
                               :components ((:file "presentation-types")
                                            (:file "presentation-functions")
                                            (:file "presentation-inheritance")
-                                           (:file "translators"))))))
+                                           (:file "translators")))
+                             (:module "frames"
+                              :depends-on ("package")
+                              :components ((:file "define-application-frame"))))))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:clim-tests '#:run-tests)))
 
