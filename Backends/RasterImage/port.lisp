@@ -32,11 +32,6 @@
 (defmethod destroy-port :before ((port raster-image-port))
   (%destroy-all-mirrors port))
 
-;;; server path
-
-(defun parse-raster-image-server-path (path)
-  path)
-
 ;;; Port-Graft methods
 
 (defmethod make-graft ((port raster-image-port) &key (orientation :default) (units :device))

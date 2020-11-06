@@ -8,8 +8,8 @@
 (defclass clx-freetype-port (clim-clx:clx-render-port) ())
 (defclass clx-freetype-medium (clim-clx:clx-render-medium) ())
 
-(setf (get :clx-ff :port-type) 'clx-freetype-port)
-(setf (get :clx-ff :server-path-parser) 'clim-clx::parse-clx-server-path)
+(defmethod climb:find-port-type ((port (eql :clx-ff)))
+  (values 'clx-freetype-port (nth-value 1 (climb:find-port-type :clx))))
 
 (defmethod clim:make-medium ((port clx-freetype-port) sheet)
   (make-instance 'clx-freetype-medium :sheet sheet))

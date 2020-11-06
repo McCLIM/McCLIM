@@ -5,8 +5,8 @@
 		       clim-clx::clx-basic-port)
   ())
 
-(setf (get :clx-fb :port-type) 'clx-fb-port)
-(setf (get :clx-fb :server-path-parser) 'clim-clx::parse-clx-server-path)
+(defmethod find-port-type ((type (eql :clx-fb)))
+  (values 'clx-fb-port (nth-value 1 (find-port-type :clx))))
 
 (defmethod initialize-instance :after ((port clx-fb-port) &rest args)
   (declare (ignore args))
@@ -17,7 +17,6 @@
   (initialize-clx port)
   (initialize-clx-framebuffer port)
   (clim-extensions:port-all-font-families port))
-
 
 (defun initialize-clx-framebuffer (port)
   (clim-sys:make-process (lambda ()

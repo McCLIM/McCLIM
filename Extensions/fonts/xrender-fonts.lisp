@@ -57,8 +57,8 @@
 
 (defclass clx-ttf-port (clim-clx:clx-render-port) ())
 
-(setf (get :clx-ttf :port-type) 'clx-ttf-port)
-(setf (get :clx-ttf :server-path-parser) 'clim-clx::parse-clx-server-path)
+(defmethod climb:find-port-type ((port (eql :clx-ttf)))
+  (values 'clx-ttf-port (nth-value 1 (climb:find-port-type :clx))))
 
 (defclass clx-truetype-font (cached-truetype-font)
   ((display           :initarg :display :reader clx-truetype-font-display)
