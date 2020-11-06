@@ -13,7 +13,7 @@
 (defmethod realize-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
-    (%make-image mirror sheet)
+    (%make-image (mirror->%image port mirror) sheet)
     mirror))
 
 (defmethod destroy-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))

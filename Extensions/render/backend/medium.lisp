@@ -6,28 +6,29 @@
   ())
 
 (defun %medium-stroke-paths (medium paths)
-  (when-let ((mirror (medium-drawable medium))
+  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))
              (transformation (sheet-native-transformation (medium-sheet medium))))
-    (%stroke-paths medium mirror paths
+    (%stroke-paths medium %image paths
                    (medium-line-style medium)
                    transformation
                    (climi::medium-device-region medium)
                    (transform-region transformation (medium-ink medium)))))
 
 (defun %medium-fill-paths (medium paths)
-  (when-let ((mirror (medium-drawable medium))
+  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))
              (transformation (sheet-native-transformation (medium-sheet medium))))
-    (%fill-paths mirror paths
+    (%fill-paths %image paths
                  transformation
                  (climi::medium-device-region medium)
                  (transform-region transformation (medium-ink medium)))))
 
 (defun %medium-draw-image (medium image x y width height to-x to-y)
-  (when-let ((mirror (medium-drawable medium))
+  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))
              (image (etypecase image
-                      (basic-sheet (image-mirror-image (sheet-mirror image)))
+                      (basic-sheet (image-mirror-image
+                                    (mirror->%image (port image) (sheet-mirror image))))
                       (clime:image-pattern image))))
-    (%draw-image mirror image
+    (%draw-image %image image
                  (round x) (round y)
                  (round width) (round height)
                  (round to-x) (round to-y)
@@ -35,8 +36,8 @@
 
 ;;; XXX: used only for medium-draw-text* for now.
 (defun %medium-fill-image-mask (medium mask-image from-x from-y width height to-x to-y)
-  (when-let ((mirror (medium-drawable medium)))
-    (%fill-image mirror
+  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium))))
+    (%fill-image %image
                  (round from-x) (round from-y)
                  (round width) (round height)
                  (transform-region (sheet-native-transformation (medium-sheet medium))
@@ -46,8 +47,8 @@
                  mask-image (round to-x) (round to-y))))
 
 (defun %medium-fill-image (medium x y width height)
-  (when-let ((mirror (medium-drawable medium)))
-    (%fill-image mirror
+  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium))))
+    (%fill-image %image
                  (round x) (round y)
                  (round width) (round height)
                  (transform-region (sheet-native-transformation (medium-sheet medium))

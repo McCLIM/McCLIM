@@ -4,6 +4,5 @@
   ())
 
 (defmethod allocate-space :before ((sheet image-sheet-mixin) width height)
-  (when-let ((mirror (sheet-mirror sheet)))
-    (let ((region (make-rectangle* 0 0 width height)))
-      (%set-image-region mirror region))))
+  (when-let ((image (mirror->%image (port sheet) (sheet-mirror sheet))))
+    (%set-image-region image (make-rectangle* 0 0 width height))))
