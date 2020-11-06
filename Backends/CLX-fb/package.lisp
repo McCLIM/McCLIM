@@ -17,7 +17,7 @@
         #:clim-clx
         #:mcclim-render-extensions)
   (:import-from #:alexandria
-                #:when-let #:when-let* #:maphash-keys)
+                #:when-let #:when-let* #:maphash-keys #:maphash-values)
   (:import-from #:climi
                 #:port-register-mirror
                 #:port-grafts
@@ -38,7 +38,10 @@
                 #:image-mirror-image
                 #:image-sheet-mixin
                 #:image-pixmap-mixin
-                #:image-mirror-mixin)
+                #:image-mirror-mixin
+                ;;
+                #:mirror->%image
+                #:%make-image)
   (:import-from #:clim-clx
                 #:clx-port-display
                 #:initialize-clx

@@ -23,6 +23,7 @@
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
+                  #:mirror->%image
                   #:%make-image
                   #:image-mirror-image
 		  ;;#:save-image-to-file

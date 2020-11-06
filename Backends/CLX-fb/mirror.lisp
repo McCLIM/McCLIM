@@ -12,11 +12,11 @@
    (skip-count :initform 0)))
 
 ;;; for port
-(defmethod mcclim-render-internals::%create-mirror-image :after ((sheet clx-fb-mirror) w h)
-  (with-slots (mcclim-render-internals::dirty-region) sheet
+(defmethod mcclim-render-internals::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
+  (with-slots (mcclim-render-internals::dirty-region) mirror
     (setf mcclim-render-internals::dirty-region nil))
-  ;;(let ((data (climi::pattern-array (image-mirror-image sheet))))
-  (with-slots (width height clx-image xlib-image) sheet
+  ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
+  (with-slots (width height clx-image xlib-image) mirror
     (setf width w
           height h)
     ;; Fill the image with a recognizable color so that pixels in the

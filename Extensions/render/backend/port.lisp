@@ -5,11 +5,15 @@
 (defclass render-port-mixin (basic-port)
   ((all-font-families :initform nil :accessor all-font-families)))
 
+(defun mirror->%image (port mirror)
+  (declare (ignore port))
+  mirror)
+
 ;;; change geometry
 
 (defmethod port-set-mirror-region :after ((port render-port-mixin) mirror region)
   (let ((sheet (port-lookup-sheet port mirror)))
-    (%set-image-region (sheet-mirror sheet) region)))
+    (%set-image-region (mirror->%image port (sheet-mirror sheet)) region)))
 
 (defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transformation)
   (declare (ignore port mirror transformation))
