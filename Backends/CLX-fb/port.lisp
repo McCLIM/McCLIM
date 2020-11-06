@@ -41,12 +41,12 @@
 			     :structure-notify
 			     :pointer-motion :button-motion))
 
-(defmethod clim-clx::realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
+(defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (clim-clx::%realize-mirror port sheet)
   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (sheet-mirror sheet)))
   (sheet-mirror sheet))
 
-(defmethod clim-clx::realize-mirror ((port clx-fb-port) (pixmap pixmap))
+(defmethod realize-mirror ((port clx-fb-port) (pixmap pixmap))
   )
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
