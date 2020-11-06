@@ -190,8 +190,5 @@
 
 ;;; Port
 
-(setf (get :pdf :port-type) 'pdf-port)
-(setf (get :pdf :server-path-parser) 'parse-pdf-server-path)
-
-(defun parse-pdf-server-path (path)
-  path)
+(defmethod find-port-type ((type (eql :pdf)))
+  (values 'pdf-port 'identity))

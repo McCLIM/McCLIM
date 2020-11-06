@@ -257,8 +257,5 @@
 
 ;;; Port
 
-(setf (get :ps :port-type) 'postscript-port)
-(setf (get :ps :server-path-parser) 'parse-postscript-server-path)
-
-(defun parse-postscript-server-path (path)
-  path)
+(defmethod find-port-type ((type (eql :ps)))
+  (values 'postscript-port 'identity))

@@ -7,8 +7,8 @@
 (defclass rgb-image-port (raster-image-port)
   ())
 
-(setf (get :rgb-image :port-type) 'rgb-image-port)
-(setf (get :rgb-image :server-path-parser) 'parse-raster-image-server-path)
+(defmethod find-port-type ((type (eql :rgb-image)))
+  (values 'rgb-image-port 'identity))
 
 (defmethod realize-mirror ((port rgb-image-port) sheet)
   (setf (sheet-parent sheet) (graft port))

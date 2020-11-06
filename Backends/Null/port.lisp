@@ -30,14 +30,8 @@
    (pointer :accessor port-pointer :initform (make-instance 'null-pointer))
    (window :initform nil :accessor null-port-window)))
 
-(defun parse-null-server-path (path)
-  path)
-
-;;; FIXME: if :port-type and :server-path-parser aren't CLIM-specified
-;;; keywords, they should be altered to be in some mcclim-internal
-;;; package instead.
-(setf (get :null :port-type) 'null-port)
-(setf (get :null :server-path-parser) 'parse-null-server-path)
+(defmethod find-port-type ((type (eql :null)))
+  (values 'null-port 'identity))
 
 (defmethod initialize-instance :after ((port null-port) &rest initargs)
   (declare (ignore initargs))

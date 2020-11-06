@@ -19,7 +19,7 @@
 ;;; Boston, MA  02111-1307  USA.
 
 (cl:defpackage #:clim-postscript
-  (:use #:clim #:clim-extensions #:clim-lisp #:clim-postscript-font)
+  (:use #:clim #:clime #:climb #:clim-lisp #:clim-postscript-font)
   (:import-from #:clim-internals
                 #:get-environment-variable
                 #:map-repeated-sequence
