@@ -34,14 +34,6 @@
                                        :height height
                                        :format :z-pixmap))))
 
-(defgeneric image-mirror-to-x (sheet))
-
-(defmethod image-mirror-to-x ((sheet image-mirror-mixin))
-  )
-
-(defmethod image-mirror-to-x ((sheet xlib:window))
-  )
-
 (defun image-mirror-put (width height xmirror gcontext clx-image dirty-r)
   (map-over-region-set-regions
    #'(lambda (region)
@@ -84,7 +76,7 @@
                             (setf y min-y))))))))))
     (map-over-region-set-regions fn dirty-r)))
 
-(defmethod image-mirror-to-x ((sheet clx-fb-mirror))
+(defun image-mirror-to-x (mirror)
   (declare (optimize speed))
   (with-slots (xmirror
                clx-image xlib-image
@@ -93,9 +85,9 @@
                mcclim-render-internals::finished-output
                mcclim-render-internals::updating-p
                width height dirty-xr skip-count)
-      sheet
+      mirror
     (when (not (region-equal dirty-xr +nowhere+))
-      (let ((reg))
+      (let (reg)
         (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
           (setf reg dirty-xr)
           (setf dirty-xr +nowhere+))
@@ -109,7 +101,6 @@
   (clim-clx::port-set-mirror-transformation port (slot-value mirror 'xmirror) mirror-transformation))
 
 (defun %mirror-force-output (mirror)
-  (check-type mirror clx-fb-mirror)
   (with-slots (mcclim-render-internals::image-lock mcclim-render-internals::dirty-region dirty-xr width height clx-image
                xlib-image xmirror)
       mirror
