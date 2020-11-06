@@ -16,6 +16,8 @@
         #:clim-backend
         #:clim-clx
         #:mcclim-render-extensions)
+  (:import-from #:alexandria
+                #:when-let #:when-let* #:maphash-keys)
   (:import-from #:climi
                 #:port-register-mirror
                 #:port-grafts

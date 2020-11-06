@@ -232,11 +232,3 @@
                                   (+ y2 (- min-y y1))
                                   (- max-x min-x) (- max-y min-y)
                                   min-x min-y))))))))
-
-(defmethod medium-finish-output ((medium render-medium-mixin))
-  (when-let ((mirror (medium-drawable medium)))
-    (%mirror-force-output mirror)))
-
-(defmethod medium-force-output ((medium render-medium-mixin))
-  (when-let ((mirror (medium-drawable medium)))
-    (%mirror-force-output mirror)))
