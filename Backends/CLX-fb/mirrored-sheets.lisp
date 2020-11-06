@@ -14,14 +14,14 @@
 (defmethod sheet-direct-xmirror ((mirror image-mirror-mixin))
     nil)
 
-(defmethod realize-mirror :after ((port render-port-mixin) (sheet clx-fb-mirrored-sheet-mixin))
+(defmethod realize-mirror :after ((port clx-fb-port) (sheet clx-fb-mirrored-sheet-mixin))
   (when (and (sheet-mirror sheet) (sheet-xmirror sheet))
     (with-slots (gcontext) (sheet-mirror sheet)
       (setf gcontext (xlib:create-gcontext :drawable (sheet-xmirror sheet)
 					   :background (values 0 0 0)
 					   :foreground (values 255 255 255))))))
 
-(defmethod destroy-mirror :before ((port render-port-mixin) (sheet clx-fb-mirrored-sheet-mixin))
+(defmethod destroy-mirror :before ((port clx-fb-port) (sheet clx-fb-mirrored-sheet-mixin))
   (declare (ignore port))
   (with-slots (gcontext clx-image) (sheet-mirror sheet)
     (xlib:free-gcontext gcontext)
