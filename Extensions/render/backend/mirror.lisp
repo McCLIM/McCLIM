@@ -13,9 +13,6 @@
       (setf resize-image-p nil)
       (setf image img))))
 
-(defgeneric %mirror-force-output (mirror)
-  (:method ((mirror image-mirror-mixin)) nil))
-
 ;;; implementation
 
 (defun %make-image (mirror sheet)

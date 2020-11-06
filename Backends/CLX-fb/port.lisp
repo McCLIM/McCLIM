@@ -22,7 +22,7 @@
   (clim-sys:make-process (lambda ()
                            (loop
                              (handler-case
-                                 (alexandria:maphash-keys
+                                 (maphash-keys
                                   (lambda (key)
                                     (when (typep key 'clx-fb-mirrored-sheet-mixin)
                                       (image-mirror-to-x (sheet-mirror key))))
@@ -104,10 +104,10 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
-  (alexandria:maphash-keys
+  (maphash-keys
    (lambda (key)
      (when (typep key 'clx-fb-mirrored-sheet-mixin)
-       (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
+       (%mirror-force-output (sheet-mirror key))))
    (slot-value port 'climi::sheet->mirror))
   (xlib:display-force-output (clx-port-display port)))
 

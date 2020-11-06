@@ -108,9 +108,10 @@
     ((port clx-fb-port) (mirror clx-fb-mirror) mirror-transformation)
   (clim-clx::port-set-mirror-transformation port (slot-value mirror 'xmirror) mirror-transformation))
 
-(defmethod mcclim-render-internals::%mirror-force-output ((mirror clx-fb-mirror))
+(defun %mirror-force-output (mirror)
+  (check-type mirror clx-fb-mirror)
   (with-slots (mcclim-render-internals::image-lock mcclim-render-internals::dirty-region dirty-xr width height clx-image
-                          xlib-image xmirror)
+               xlib-image xmirror)
       mirror
     (when mcclim-render-internals::dirty-region
       (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
