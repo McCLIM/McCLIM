@@ -49,6 +49,7 @@
             (get port :server-path-parser))))
 
 (defvar *all-ports* nil)
+(defvar *all-ports-lock* (make-lock "All ports lock."))
 
 (defun find-port (&key (server-path *default-server-path*))
   (setf server-path (alexandria:ensure-list server-path))
@@ -67,9 +68,10 @@
           (try-port (first server-path) server-path))
       (when (null port-class)
         (error "No CLIM backends have been loaded!"))
-      (or (find server-path *all-ports* :test #'equal :key #'port-server-path)
-          (first (push (make-instance port-class :server-path server-path)
-                       *all-ports*))))))
+      (with-lock-held (*all-ports-lock*)
+        (or (find server-path *all-ports* :test #'equal :key #'port-server-path)
+            (first (push (make-instance port-class :server-path server-path)
+                         *all-ports*)))))))
 
 (defmacro with-port ((port-var server &rest args &key &allow-other-keys)
                      &body body)
