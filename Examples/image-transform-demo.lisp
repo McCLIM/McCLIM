@@ -1,3 +1,14 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2018 Elias Mårtenson <lokedhs@gmail.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Demonstrates the application of transforms to image patterns and
+;;; text.
+
 (defpackage #:clim-demo.image-transform-demo
   (:use #:clim-lisp)
   (:export #:image-transform-demo))
@@ -62,30 +73,31 @@
                          :drag-callback #'slider-updated-callback))
   (:layouts (default (clim:vertically ()
                        (14/20 (clim:labelling (:label "Test Image"
-					       :align-x :center
-					       :label-alignment :top)
-				image-demo))
-		       (clim:horizontally ()
-			 (clim:vertically ()
-			   (1/20 (clim:labelling (:label "Rotate")
-				   rot-slider))
-			   (1/20 (clim:labelling (:label "Translate X")
-				   x-slider)))
-			 (clim:vertically ()
-			   (1/20 (clim:labelling (:label "Translate Y")
-				   y-slider))
-			   (1/20 (clim:labelling (:label "Scale")
-				   scale-slider)))
-			 (clim:vertically ()
-			   (1/20 (clim:labelling (:label "Skew X")
-				   x-skew-slider))
-			   (1/20 (clim:labelling (:label "Skew Y")
-				   y-skew-slider))))))))
+                                               :align-x :center
+                                               :label-alignment :top)
+                                image-demo))
+                       (clim:horizontally ()
+                         (clim:vertically ()
+                           (1/20 (clim:labelling (:label "Rotate")
+                                   rot-slider))
+                           (1/20 (clim:labelling (:label "Translate X")
+                                   x-slider)))
+                         (clim:vertically ()
+                           (1/20 (clim:labelling (:label "Translate Y")
+                                   y-slider))
+                           (1/20 (clim:labelling (:label "Scale")
+                                   scale-slider)))
+                         (clim:vertically ()
+                           (1/20 (clim:labelling (:label "Skew X")
+                                   x-skew-slider))
+                           (1/20 (clim:labelling (:label "Skew Y")
+                                   y-skew-slider))))))))
 
 (defmethod initialize-instance :after ((obj image-transform-demo) &key)
   (setf (image-transform-demo/image obj)
-        (clim:make-pattern-from-bitmap-file (merge-pathnames #p"images/kitten.jpg"
-                                                             (asdf:system-source-directory :clim-examples)))))
+        (clim:make-pattern-from-bitmap-file
+         (merge-pathnames #p"images/kitten.jpg"
+                          (asdf:system-source-directory :clim-examples)))))
 
 (defun slider-updated-callback (gadget value)
   (declare (ignore gadget value))
