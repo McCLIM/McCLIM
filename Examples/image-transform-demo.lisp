@@ -15,94 +15,63 @@
 
 (in-package #:clim-demo.image-transform-demo)
 
+(defun make-slider (initial-value min-value max-value)
+  (clim:make-pane :slider
+                  :value initial-value
+                  :show-value-p nil
+                  :orientation :horizontal
+                  :min-value min-value
+                  :max-value max-value
+                  :value-changed-callback 'slider-updated-callback
+                  :drag-callback 'slider-updated-callback))
+
 (clim:define-application-frame image-transform-demo ()
   ((image :initarg :image
-          :accessor image-transform-demo/image))
+          :accessor image))
   (:menu-bar nil)
   (:panes (image-demo :application
                       :display-function 'display-image-demo
                       :scroll-bars :both
                       :incremental-redisplay t)
-          (rot-slider :slider
-                      :value 0
-                      :show-value-p nil
-                      :orientation :horizontal
-                      :min-value 0
-                      :max-value (* pi 2)
-                      :value-changed-callback #'slider-updated-callback
-                      :drag-callback #'slider-updated-callback)
-          (x-slider :slider
-                    :value 0
-                    :show-value-p nil
-                    :orientation :horizontal
-                    :min-value 0
-                    :max-value 200
-                    :value-changed-callback #'slider-updated-callback
-                    :drag-callback #'slider-updated-callback)
-          (y-slider :slider
-                    :value 0
-                    :show-value-p nil
-                    :orientation :horizontal
-                    :min-value 0
-                    :max-value 200
-                    :value-changed-callback #'slider-updated-callback
-                    :drag-callback #'slider-updated-callback)
-          (scale-slider :slider
-                        :value 1
-                        :show-value-p nil
-                        :orientation :horizontal
-                        :min-value 0.1
-                        :max-value 5
-                        :value-changed-callback #'slider-updated-callback
-                        :drag-callback #'slider-updated-callback)
-          (x-skew-slider :slider
-                         :value 0
-                         :show-value-p nil
-                         :orientation :horizontal
-                         :min-value -1
-                         :max-value 1
-                         :value-changed-callback #'slider-updated-callback
-                         :drag-callback #'slider-updated-callback)
-          (y-skew-slider :slider
-                         :value 0
-                         :show-value-p nil
-                         :orientation :horizontal
-                         :min-value -1
-                         :max-value 1
-                         :value-changed-callback #'slider-updated-callback
-                         :drag-callback #'slider-updated-callback))
+          (rot-slider (make-slider 0 0 (* pi 2)))
+          (x-slider (make-slider 0 0 200))
+          (y-slider (make-slider 0 0 200))
+          (scale-slider (make-slider 1 0.1 5))
+          (x-skew-slider (make-slider 0 -1 1))
+          (y-skew-slider (make-slider 0 -1 1)))
   (:layouts (default (clim:vertically ()
-                       (14/20 (clim:labelling (:label "Test Image"
-                                               :align-x :center
-                                               :label-alignment :top)
-                                image-demo))
+                       (7/10 (clim:labelling (:label "Test Image"
+                                              :align-x :center
+                                              :label-alignment :top)
+                               image-demo))
                        (clim:horizontally ()
                          (clim:vertically ()
-                           (1/20 (clim:labelling (:label "Rotate")
-                                   rot-slider))
-                           (1/20 (clim:labelling (:label "Translate X")
-                                   x-slider)))
+                           (1/2 (clim:labelling (:label "Rotate")
+                                  rot-slider))
+                           (1/2 (clim:labelling (:label "Translate X")
+                                  x-slider)))
                          (clim:vertically ()
-                           (1/20 (clim:labelling (:label "Translate Y")
-                                   y-slider))
-                           (1/20 (clim:labelling (:label "Scale")
-                                   scale-slider)))
+                           (1/2 (clim:labelling (:label "Translate Y")
+                                  y-slider))
+                           (1/2 (clim:labelling (:label "Scale")
+                                  scale-slider)))
                          (clim:vertically ()
-                           (1/20 (clim:labelling (:label "Skew X")
-                                   x-skew-slider))
-                           (1/20 (clim:labelling (:label "Skew Y")
-                                   y-skew-slider))))))))
+                           (1/2 (clim:labelling (:label "Skew X")
+                                  x-skew-slider))
+                           (1/2 (clim:labelling (:label "Skew Y")
+                                  y-skew-slider))))))))
 
-(defmethod initialize-instance :after ((obj image-transform-demo) &key)
-  (setf (image-transform-demo/image obj)
+(defmethod initialize-instance :after ((instance image-transform-demo) &key)
+  (setf (image instance)
         (clim:make-pattern-from-bitmap-file
          (merge-pathnames #p"images/kitten.jpg"
                           (asdf:system-source-directory :clim-examples)))))
 
 (defun slider-updated-callback (gadget value)
-  (declare (ignore gadget value))
-  (let ((frame clim:*application-frame*))
-    (clim:redisplay-frame-pane frame (clim:find-pane-named frame 'image-demo))))
+  (declare (ignore value))
+  (let* ((frame (clim:gadget-client gadget))
+         (image-pane (clim:find-pane-named frame 'image-demo)))
+    (clim:redisplay-frame-pane frame image-pane)))
 
 (defun make-skew-transformation (x-skew y-skew)
   (clim:make-transformation 1 (tan x-skew)
@@ -111,7 +80,7 @@
 
 (defun display-image-demo (frame stream)
   (clim:updating-output (stream)
-    (let* ((image (image-transform-demo/image frame))
+    (let* ((image (image frame))
            (width (clim:pattern-width image))
            (height (clim:pattern-height image))
            (rotation (clim:gadget-value (clim:find-pane-named frame 'rot-slider)))
