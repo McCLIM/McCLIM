@@ -86,7 +86,22 @@
      ;; Update frame-current-panes and the special pane slots.
      (update-frame-pane-lists frame)))
 
+(defun geometry-specification-p (thing)
+  (and (alexandria:proper-list-p thing)
+       (evenp (length thing))
+       (loop for (key value) on thing by #'cddr
+             always (member key '(:left :top :right :bottom :width :height)))))
+
 (defun parse-define-application-frame-options (options)
+  ;; Note that options are always of the form (KEY . ARGUMENTS).
+  ;; Depending on KEY, ARGUMENTS is expected to have one of two
+  ;; shapes:
+  ;; 1) an arbitrary list, denoted by * in the INFOS table. In this
+  ;;    case, the "value" of the option is just ARGUMENTS.
+  ;; 2) a singleton list (that is the option is of the form (KEY
+  ;;    VALUE)), denoted by 1 in the INFOS table. In this case the
+  ;;    "value" of the option is (first arguments). :TYPE in the INFOS
+  ;;    table is the expected type of this value, not of ARGUMENTS.
   (let ((infos '(;; CLIM
                  (:pane                  * :conflicts (:panes :layouts))
                  (:panes                 * :conflicts (:pane))
@@ -97,7 +112,7 @@
                  (:disabled-commands     *)
                  (:top-level             1 :type (cons (or symbol cons) list))
                  ;; :icon is the CLIM specification but we don't support it
-                 (:geometry              *)
+                 (:geometry              * :type (satisfies geometry-specification-p))
                  (:resize-frame          1)
                  ;; McCLIM extensions
                  (:pointer-documentation 1)
@@ -108,23 +123,24 @@
         (all-values '()))
     (labels ((definedp (key)
                (not (eq (getf all-values key 'undefined) 'undefined)))
-             (maybe-check-type (key values type value-count)
-               (flet ((check-one-value (value)
-                        (when (and type (not (typep value type)))
-                          (error "~@<The value ~S for option ~S is ~
+             (maybe-check-type (key arguments expected-type expected-argument-count)
+               (flet ((check-value (value)
+                        (when (and expected-type (not (typep value expected-type)))
+                          (error "~@<The argument ~S for option ~S is ~
                                   not of type ~A.~@:>"
-                                 value key type))
+                                 value key expected-type))
                         value))
-                 (ecase value-count
+                 (ecase expected-argument-count
                    (1
-                    (unless (null (rest values))
+                    (unless (typep arguments '(cons t null))
                       (error "~@<The option ~S takes a single ~
-                              argument (not ~{~S~^ ~} which are ~
+                              argument (not ~@[~{~S~^ ~} which are ~]~
                               ~R).~@:>"
-                             key values (length values)))
-                    (check-one-value (first values)))
-                   (* (mapcar #'check-one-value values)))))
-             (parse-option (key values)
+                             key arguments (length arguments)))
+                    (check-value (first arguments)))
+                   (*
+                    (check-value arguments)))))
+             (parse-option (key arguments)
                (when-let ((info (find key infos :key #'first)))
                  (destructuring-bind (name value-count &key conflicts type) info
                    (declare (ignore name))
@@ -142,21 +158,21 @@
                           (setf (getf all-values :pane)
                                 t
                                 (getf all-values :panes)
-                                `((single-pane ,@values))
+                                `((single-pane ,@arguments))
                                 (getf all-values :layouts)
                                 `((:default single-pane))))
                          ((eq key :default-initargs)
                           (destructuring-bind
                               (&key ((:pretty-name user-pretty-name) nil pretty-name-p)
                                &allow-other-keys)
-                              values
+                              arguments
                             (when pretty-name-p
                               (parse-option :pretty-name (list user-pretty-name))))
                           (setf (getf all-values :user-default-initargs)
-                                (alexandria:remove-from-plist values :pretty-name)))
+                                (alexandria:remove-from-plist arguments :pretty-name)))
                          (t
                           (setf (getf all-values key)
-                                (maybe-check-type key values type value-count)))))
+                                (maybe-check-type key arguments type value-count)))))
                  t)))
       (loop :for option :in options
             :for (key . values) = option
