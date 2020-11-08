@@ -12,7 +12,7 @@
             (,exit-fn (sheet stream)
               (declare (ignorable stream))
               (climi::write-bitmap-file
-               (image-mirror-image (sheet-mirror sheet))
+               (image-mirror-image sheet)
                ,stream :format ,format))
             (,enter-fn (sheet stream)
               (declare (ignore sheet stream))
@@ -33,7 +33,7 @@
               (,exit-fn (sheet stream)
                 (declare (ignore stream))
                 (climi::write-bitmap-file
-                 (image-mirror-image (sheet-mirror sheet))
+                 (image-mirror-image sheet)
                  ,file :format ,format))
               (,enter-fn (sheet stream)
                 (declare (ignore sheet stream))
@@ -50,7 +50,7 @@
                 ,@body)
               (,exit-fn (sheet stream)
                 (declare (ignore stream))
-                (image-mirror-image (sheet-mirror sheet)))
+                (image-mirror-image sheet))
               (,enter-fn (sheet stream)
                 (declare (ignore stream))
                 (when ,image
