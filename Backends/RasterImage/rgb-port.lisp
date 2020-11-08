@@ -10,11 +10,14 @@
 (defmethod find-port-type ((type (eql :rgb-image)))
   (values 'rgb-image-port 'identity))
 
-(defmethod realize-mirror ((port rgb-image-port) sheet)
-  (setf (sheet-parent sheet) (graft port))
+(defmethod realize-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
-    (%make-image mirror sheet)))
+    (%make-image mirror sheet)
+    mirror))
+
+(defmethod destroy-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
+  (port-unregister-mirror port sheet (sheet-direct-mirror sheet)))
 
 ;;;
 ;;; Pixmap

@@ -35,3 +35,10 @@
     (map-product (lambda (&rest args)
                    (finishes (apply #'do-it args)))
                  '(60 :compute) '(60 :compute) '(0 20))))
+
+(test with-output-to-image.nesting
+  (finishes
+    (mcclim-raster-image::with-output-to-image (str nil)
+      (let ((image (mcclim-raster-image::with-output-to-image (str2 nil)
+                     (clim:draw-line* str2 0 0 10 10))))
+        (clim:draw-design str image)))))
