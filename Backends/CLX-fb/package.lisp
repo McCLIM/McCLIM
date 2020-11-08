@@ -50,8 +50,6 @@
                 #:clx-port-window
                 #:mirroring
                 #:class-gensym
-                #:maybe-add-mirroring-superclasses
-                #:sheet-xmirror
-                #:sheet-direct-xmirror)
+                #:maybe-add-mirroring-superclasses)
   (:import-from #:climi
                 #:standard-port))

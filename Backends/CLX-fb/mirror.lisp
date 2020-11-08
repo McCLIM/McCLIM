@@ -93,13 +93,6 @@
           (setf dirty-xr +nowhere+))
         (image-mirror-put width height xmirror gcontext clx-image reg)))))
 
-(defmethod clim-clx::port-set-mirror-region ((port clx-fb-port) (mirror clx-fb-mirror) mirror-region)
-  (clim-clx::port-set-mirror-region port (slot-value mirror 'xmirror) mirror-region))
-
-(defmethod clim-clx::port-set-mirror-transformation
-    ((port clx-fb-port) (mirror clx-fb-mirror) mirror-transformation)
-  (clim-clx::port-set-mirror-transformation port (slot-value mirror 'xmirror) mirror-transformation))
-
 (defun %mirror-force-output (mirror)
   (with-slots (mcclim-render-internals::image-lock mcclim-render-internals::dirty-region dirty-xr width height clx-image
                xlib-image xmirror)

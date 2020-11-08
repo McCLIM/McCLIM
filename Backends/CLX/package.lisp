@@ -84,6 +84,4 @@
    #:clx-port-screen
    #:clx-graft
    #:clx-port-window
-   #:sheet-xmirror
-   #:sheet-direct-xmirror
    #:port-find-all-font-families))
