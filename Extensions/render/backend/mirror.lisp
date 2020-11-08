@@ -7,17 +7,26 @@
    (dirty-region :initform nil)
    (state :initform (aa:make-state))))
 
+(defmethod image-mirror-image ((sheet sheet))
+  (when-let* ((mirror (sheet-mirror sheet))
+              (image (mirror->%image (port sheet) mirror)))
+    (image-mirror-image image)))
+
 (defmethod (setf image-mirror-image) (img (mirror image-mirror-mixin))
   (when img
     (with-slots (image resize-image-p) mirror
       (setf resize-image-p nil)
       (setf image img))))
 
+(defmethod (setf image-mirror-image) (img (sheet sheet))
+  (when-let ((mirror (image-mirror-image sheet)))
+    (setf (image-mirror-image mirror) img)))
+
 ;;; implementation
 
 (defun %make-image (mirror sheet)
   (check-type mirror image-mirror-mixin)
-  (with-slots (image resize-image-p) mirror
+  (with-slots (image) mirror
     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
         (sheet-region sheet)
       (let ((width (ceiling (- max-x min-x)))
