@@ -115,14 +115,14 @@
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame menu-frame))
   (when (sheet-enabled-p (slot-value frame 'top-level-sheet))
-    (xlib:map-window (sheet-direct-xmirror (slot-value frame 'top-level-sheet)))))
+    (xlib:map-window (sheet-direct-mirror (slot-value frame 'top-level-sheet)))))
 
 (defgeneric tell-window-manager-about-space-requirements (pane))
 
 (defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
-           (mirror (sheet-direct-xmirror top-level-sheet)))
+           (mirror (sheet-direct-mirror top-level-sheet)))
       (case (clim-extensions:find-frame-type frame)
         (:override-redirect (setf (xlib:window-override-redirect mirror) :on))
         (:dialog (xlib:change-property mirror
@@ -144,7 +144,7 @@
       ;; Care for calling-frame, be careful not to trip on missing bits
       (let* ((calling-frame (frame-calling-frame frame))
              (tls (and calling-frame (frame-top-level-sheet calling-frame)))
-             (calling-mirror (and tls (sheet-xmirror tls))))
+             (calling-mirror (and tls (sheet-mirror tls))))
         (when calling-mirror
           (setf (xlib:transient-for mirror)
                 calling-mirror)))
@@ -156,7 +156,7 @@
   (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
     (declare (ignore w h))
     (let ((q (compose-space pane)))
-      (let ((mirror (sheet-direct-xmirror pane)))
+      (let ((mirror (sheet-direct-mirror pane)))
         (setf (xlib:wm-normal-hints mirror)
               (xlib:make-wm-size-hints
                :user-specified-position-p (and x y)

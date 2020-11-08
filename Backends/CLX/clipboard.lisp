@@ -49,7 +49,7 @@
                                                   (object climb:selection-object)
                                                   object-type)
                 (declare (ignore port object-type))
-                (let* ((window (sheet-direct-xmirror (climb:selection-object-owner object)))
+                (let* ((window (sheet-direct-mirror (climb:selection-object-owner object)))
                        (display (xlib:window-display window)))
                   ;; We're not actually supposed to call set-selection-owner without
                   ;; a timestamp due to the following statemnt in ICCCM:
@@ -78,7 +78,7 @@
                                                   (object climb:selection-object))
                 (when-let*
                     ((sheet (climb:selection-object-owner object))
-                     (window (sheet-direct-xmirror sheet))
+                     (window (sheet-direct-mirror sheet))
                      (display (xlib:window-display window)))
                   (when (eq window (xlib:selection-owner display selection))
                     (xlib:set-selection-owner display selection nil nil)))
@@ -101,7 +101,7 @@
 (defun clx-request-selection (port selection requested-object)
   (setf (clipboard-outstanding-request port) requested-object)
   (let ((sheet (selection-object-owner requested-object))
-        (window (sheet-xmirror (selection-object-owner requested-object)))
+        (window (sheet-mirror (selection-object-owner requested-object)))
         (to-type (selection-object-type requested-object))
         (table (climi::get-object-table requested-object)))
     (labels ((wait-for-request ()
@@ -164,7 +164,7 @@
                 (when-let*
                     ((object (climi::stored-object port selection))
                      (sheet (climb:selection-object-owner object))
-                     (window (sheet-direct-xmirror sheet))
+                     (window (sheet-direct-mirror sheet))
                      (display (xlib:window-display window)))
                   (if (eq window (xlib:selection-owner display selection))
                       (return-from request-selection (call-next-method))

@@ -144,7 +144,7 @@
                            (bounding-rectangle-size region)
                            (values width height))
                        (xlib:create-window
-                        :parent (sheet-xmirror (sheet-parent sheet))
+                        :parent (sheet-mirror (sheet-parent sheet))
                         :width (round-coordinate width)
                         :height (round-coordinate height)
                         :x (round-coordinate x)
@@ -227,7 +227,7 @@
 
 (defmethod realize-mirror ((port clx-port) (pixmap pixmap))
   (when (null (pixmap-mirror pixmap))
-    (let* ((window (sheet-xmirror (pixmap-sheet pixmap)))
+    (let* ((window (sheet-mirror (pixmap-sheet pixmap)))
            (pix (xlib:create-pixmap
                     :width (round (pixmap-width pixmap))
                     :height (round (pixmap-height pixmap))

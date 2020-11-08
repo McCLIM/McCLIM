@@ -74,20 +74,19 @@
           (xlib:drawable-y mirror) (round-coordinate y))))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
-  (when (sheet-xmirror sheet)
-    (xlib:destroy-window (sheet-xmirror sheet)))
   (when-let ((mirror (sheet-mirror sheet)))
+    (xlib:destroy-window mirror)
     (port-unregister-mirror port sheet mirror)))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-xmirror sheet)))
+  (let ((mirror (sheet-mirror sheet)))
     (when (and mirror
                (typep mirror 'xlib:window))
       (setf (xlib:window-priority mirror) :above)
       (xlib:display-force-output (clx-port-display port)))))
 
 (defmethod bury-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-xmirror sheet)))
+  (let ((mirror (sheet-mirror sheet)))
     (when (and mirror
                (typep mirror 'xlib:window))
       (setf (xlib:window-priority mirror) :below)
@@ -98,7 +97,7 @@
                                    (xlib:drawable-y mirror)))
 
 (defmethod port-enable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:map-window (sheet-direct-xmirror mirror)) )
+  (xlib:map-window (sheet-direct-mirror mirror)) )
 
 (defmethod port-disable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:unmap-window (sheet-direct-xmirror mirror)) )
+  (xlib:unmap-window (sheet-direct-mirror mirror)) )
