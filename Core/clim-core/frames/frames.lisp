@@ -75,6 +75,10 @@
   (declare (ignore frame-manager frame command-name))
   nil)
 
+(declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
+(defvar *default-icon-large* nil)
+(defvar *default-icon-small* nil)
+
 (defclass standard-application-frame (application-frame
                                       presentation-history-mixin)
   ((port :initform nil
@@ -240,12 +244,13 @@ documentation produced by presentations.")
                 (map 'list #'coerce-to-icon thing))
                (t
                 thing))))
-    (setf (slot-value obj 'icon) (cond ((not icon-supplied-p)
-                                        nil)
-                                       ((null icon)
-                                        nil)
-                                       (t
-                                        (coerce-to-icon icon)))))
+    (setf (slot-value obj 'icon)
+          (cond ((not icon-supplied-p)
+                 (remove nil (list *default-icon-large* *default-icon-small*)))
+                ((null icon)
+                 nil)
+                (t
+                 (coerce-to-icon icon)))))
   (unless (frame-event-queue obj)
     (when-let* ((calling-frame (frame-calling-frame obj))
                 (calling-queue (frame-event-queue calling-frame)))
