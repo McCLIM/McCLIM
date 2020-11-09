@@ -1889,11 +1889,14 @@
    #:event-listen-or-wait
    #:schedule-event
    #:window-manager-focus-event
+   ;; frames
+   #:frame-icon
    ;; sheets
    #:top-level-sheet-mixin
    #:unmanaged-sheet-mixin
    #:sheet-name
    #:sheet-pretty-name
+   #:sheet-icon
 
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -1980,6 +1983,7 @@
    #:note-input-focus-changed
    #:find-frame-type
    #:note-frame-pretty-name-changed
+   #:note-frame-icon-changed
    ;; images
    #:rgb-image
    #:xpm-parse-file
@@ -2017,6 +2021,7 @@
    #:port-ungrab-pointer
    #:with-pointer-grabbed
    #:port-set-mirror-name
+   #:port-set-mirror-icon
    #:port-set-mirror-region
    #:port-set-mirror-transformation
    #:queue-callback

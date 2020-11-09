@@ -1,0 +1,8 @@
+@anchor{Generic-Function clim-extensions:sheet-icon}
+@deffn {Generic Function} {@symbol{sheet-icon,clim-extensions}} sheet
+Return the icon or icons of @var{sheet}.
+
+These icons are typically used by window managers to represent windows
+that are not currently visible or added to other representations of
+windows to make them more easily recognizable.
+@end deffn

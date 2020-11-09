@@ -231,6 +231,20 @@ NEW-NAME must be a string.
 Changing the pretty name of SHEET usually changes the title of the
 window associated with it."))
 
+(defgeneric sheet-icon (sheet)
+  (:documentation "McMCLIM extension: Return the icon or icons of SHEET.
+The return value is either a `clim-extensions:image-pattern' or
+a sequence of those.
+These icons are typically used by window managers to represent windows
+that are not currently visible or added to other representations of
+windows to make them more easily recognizable."))
+(defgeneric (setf sheet-icon) (new-value sheet)
+  (:documentation "McMCLIM extension: Set icon or icons of SHEET to NEW-VALUE.
+NEW-VALUE must be a `clim-extensions:image-pattern' or a sequence of
+those. If a sequence is supplied, the window manager is instructed to
+prefer the first element, if possible. Some window managers select
+different icons for different purposes based on the icon sizes."))
+
 ;;; 7.3.1 Sheet Geometry Functions [complete]
 
 (defgeneric sheet-transformation (sheet))
@@ -959,6 +973,23 @@ standardised form."))
 (defgeneric frame-name (frame))
 (defgeneric frame-pretty-name (frame))
 (defgeneric (setf frame-pretty-name) (name frame))
+(defgeneric frame-icon (frame)
+  (:documentation "McMCLIM extension: Return the icon or icons of FRAME.
+The return value is either a `clim-extensions:image-pattern' or
+a sequence of those.
+These icons are typically used - via the top-level sheet of FRAME - by
+window managers to represent windows that are not currently visible or
+added to other representations of windows to make them more easily
+recognizable."))
+(defgeneric (setf frame-icon) (new-value frame)
+  (:documentation "McMCLIM extension: Set icon or icons of FRAME to NEW-VALUE.
+NEW-VALUE must be a `clim-extensions:image-pattern' or a sequence of
+those. If a sequence is supplied, the window manager is instructed to
+prefer the first element, if possible. Some window managers select
+different icons for different purposes based on the icon sizes.
+This function also sets NEW-VALUE as the icon(s) of the top-level
+sheet of FRAME."))
+
 (defgeneric frame-command-table (frame))
 (defgeneric (setf frame-command-table) (command-table frame))
 
@@ -1059,12 +1090,19 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric note-frame-deiconified (frame-manager frame))
 (defgeneric note-command-enabled (frame-manager frame command-name))
 (defgeneric note-command-disabled (frame-manager frame command-name))
+
 (defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
   (:documentation "McMCLIM extension: Notify client that the pretty
 name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
 FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
 the time of the change.")
   (:method (frame-manager frame new-name)))
+(defgeneric note-frame-icon-changed (frame-manager frame new-icon)
+  (:documentation "McMCLIM extension: Notify client that the icon of
+FRAME, managed by FRAME-MANAGER, changed to NEW-ICON.
+FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
+the time of the change.")
+  (:method (frame-manager frame new-icon)))
 
 (defgeneric frame-manager-notify-user
     (framem message-string &key frame associated-window title

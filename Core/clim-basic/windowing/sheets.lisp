@@ -707,6 +707,12 @@ might be different from the sheet's native region."
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (climb:port-set-mirror-name (port sheet) mirror new-name)))
 
+(defmethod (setf sheet-icon) :after (new-value (sheet mirrored-sheet-mixin))
+  ;; SHEET might not yet have a mirror if this is called e.g. during
+  ;; the pane generation phase of an application frame.
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (climb:port-set-mirror-icon (port sheet) mirror new-value)))
+
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
     (setf ;;native-transformation nil
@@ -753,7 +759,12 @@ might be different from the sheet's native region."
    ;; in the PANE class so that both collapse into a single effective
    ;; slot in e.g. the TOP-LEVEL-SHEET-PANE class.
    (name :initarg :name :reader sheet-name)
-   (%pretty-name :initarg :pretty-name :accessor clime:sheet-pretty-name)))
+   (%pretty-name :initarg :pretty-name :accessor clime:sheet-pretty-name)
+   (icon :initarg :icon :accessor sheet-icon
+         :documentation "If non-NIL, an array pattern or a sequence of
+                         array patterns that should be used by the
+                         host's window manager to represent the sheet,
+                         for example when its mirror is iconified.")))
 
 ;;; Unmanaged sheet is not managed by the window manager.
 (defclass unmanaged-sheet-mixin () ())

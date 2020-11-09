@@ -1,0 +1,8 @@
+@anchor{Generic-Function clim-extensions:note-frame-icon-changed}
+@deffn {Generic Function} {@symbol{note-frame-icon-changed,clim-extensions}} frame-manager frame new-icon
+Notify client that the pretty name of @var{frame}, managed by @var{frame-manager},
+changed to @var{new-icon}.
+
+@var{frame-manager} can be @cl{nil} if @var{frame} is not owned by a
+frame manager at the time of the change.
+@end deffn

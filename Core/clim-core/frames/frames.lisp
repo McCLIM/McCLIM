@@ -7,6 +7,7 @@
 ;;;  (c) copyright 2000 by Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2014 by Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2019, 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -74,6 +75,15 @@
   (declare (ignore frame-manager frame command-name))
   nil)
 
+(defun %coerce-to-icon (thing)
+  (typecase thing
+    ((or string pathname)
+     (clim:make-pattern-from-bitmap-file thing))
+    (sequence
+     (map 'list #'coerce-to-icon thing))
+    (t
+     thing)))
+
 (defclass standard-application-frame (application-frame
                                       presentation-history-mixin)
   ((port :initform nil
@@ -86,6 +96,11 @@
          :reader frame-name)
    (pretty-name :initarg :pretty-name
                 :accessor frame-pretty-name)
+   (icon :accessor frame-icon
+         :documentation "If non-NIL, an array pattern or a sequence
+                         of array patterns that should be used by the
+                         host's window manager to represent the
+                         frame, for example when it is iconified.")
    (command-table :initarg :command-table
                   :initform nil
                   :accessor frame-command-table)
@@ -224,7 +239,11 @@ documentation produced by presentations.")
 ;;; events. Alternative approach is executed with window-stream frames which
 ;;; have a standalone-event-loop (see panes.lisp). -- jd 2018-12-27
 (defmethod initialize-instance :after ((obj standard-application-frame)
-                                       &key &allow-other-keys)
+                                       &key (icon nil icon-supplied-p)
+                                       &allow-other-keys)
+  (setf (slot-value obj 'icon) (if icon-supplied-p
+                                   (%coerce-to-icon icon)
+                                   nil))
   (unless (frame-event-queue obj)
     (when-let* ((calling-frame (frame-calling-frame obj))
                 (calling-queue (frame-event-queue calling-frame)))
@@ -251,6 +270,15 @@ documentation produced by presentations.")
     (setf (sheet-pretty-name top-level-sheet) new-value))
   ;; Let client code know.
   (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
+
+(defmethod (setf frame-icon) :after (new-value frame)
+  ;; If there is a top-level sheet, set its icon. The port can reflect
+  ;; this change by telling the window manager which might display the
+  ;; new icon somewhere.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-icon top-level-sheet) new-value))
+  ;; Let client code know.
+  (note-frame-icon-changed (frame-manager frame) frame new-value))
 
 (defmethod frame-all-layouts ((frame application-frame))
   (mapcar #'car (frame-layouts frame)))
@@ -684,6 +712,7 @@ documentation produced by presentations.")
   (make-pane-1 fm frame 'top-level-sheet-pane
                :name (frame-name frame)
                :pretty-name (frame-pretty-name frame)
+               :icon (frame-icon frame)
                ;; sheet is enabled from enable-frame
                :enabled-p nil))
 

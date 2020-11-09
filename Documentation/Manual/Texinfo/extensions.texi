@@ -2,6 +2,7 @@
 @chapter Extensions
 
 @menu
+* Frame and sheet icons::
 * Frame and sheet names::
 * Text editor substrate::
 * Extended text formatting::
@@ -10,11 +11,25 @@
 * Raster Images::
 @end menu
 
+@node Frame and sheet icons
+@section Frame and sheet icons
+
+According to the @clim{} specification, an icon can be defined for an
+application frame class using the @initarg{:icon} initarg of the
+@fmacro{define-application-frame} macro.  @mcclim{} extends this design to
+top-level sheets and adds
+
+@include docstrings/fun-clim-extensions-sheet-icon.texi
+@include docstrings/fun-clim-extensions-setf-sheet-icon.texi
+@include docstrings/fun-clim-extensions-frame-icon.texi
+@include docstrings/fun-clim-extensions-setf-frame-icon.texi
+@include docstrings/fun-clim-extensions-note-frame-icon-changed.texi
+
 @node Frame and sheet names
 @section Frame and sheet names
 
-According to the @clim specification, a frame has a name and a pretty
-name the latter of which can be changed. @mcclim extends this design to
+According to the @clim{} specification, a frame has a name and a pretty
+name the latter of which can be changed. @mcclim{} extends this design to
 top-level sheets in form of the following protocol:
 
 @include docstrings/fun-clim-extensions-sheet-name.texi
