@@ -75,15 +75,6 @@
   (declare (ignore frame-manager frame command-name))
   nil)
 
-(defun %coerce-to-icon (thing)
-  (typecase thing
-    ((or string pathname)
-     (clim:make-pattern-from-bitmap-file thing))
-    (sequence
-     (map 'list #'coerce-to-icon thing))
-    (t
-     thing)))
-
 (defclass standard-application-frame (application-frame
                                       presentation-history-mixin)
   ((port :initform nil
@@ -241,9 +232,20 @@ documentation produced by presentations.")
 (defmethod initialize-instance :after ((obj standard-application-frame)
                                        &key (icon nil icon-supplied-p)
                                        &allow-other-keys)
-  (setf (slot-value obj 'icon) (if icon-supplied-p
-                                   (%coerce-to-icon icon)
-                                   nil))
+  (labels ((coerce-to-icon (thing)
+             (typecase thing
+               ((or string pathname)
+                (make-pattern-from-bitmap-file thing))
+               (sequence
+                (map 'list #'coerce-to-icon thing))
+               (t
+                thing))))
+    (setf (slot-value obj 'icon) (cond ((not icon-supplied-p)
+                                        nil)
+                                       ((null icon)
+                                        nil)
+                                       (t
+                                        (coerce-to-icon icon)))))
   (unless (frame-event-queue obj)
     (when-let* ((calling-frame (frame-calling-frame obj))
                 (calling-queue (frame-event-queue calling-frame)))
