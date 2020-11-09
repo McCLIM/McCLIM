@@ -7,6 +7,7 @@
 ;;;  (c) copyright 2000 by Julien Boninfante (boninfan@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000, 2014 by Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2019, 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -111,7 +112,7 @@
                  (:menu-bar              1 :type (or symbol list))
                  (:disabled-commands     *)
                  (:top-level             1 :type (cons (or symbol cons) list))
-                 ;; :icon is the CLIM specification but we don't support it
+                 (:icon                  1)
                  (:geometry              * :type (satisfies geometry-specification-p))
                  (:resize-frame          1)
                  ;; McCLIM extensions
@@ -191,6 +192,7 @@
                             (menu-bar t)
                             disabled-commands
                             (top-level '(default-frame-top-level))
+                            (icon nil icon-supplied-p)
                             geometry
                             resize-frame
                             ;; McCLIM extensions
@@ -213,6 +215,7 @@
          (:default-initargs
           :name              ',name
           :pretty-name       ,pretty-name
+          ,@(when icon-supplied-p `(:icon ,icon))
           :command-table     (find-command-table ',(first command-table))
           :disabled-commands ',disabled-commands
           :menu-bar          ',menu-bar

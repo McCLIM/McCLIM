@@ -1,0 +1,10 @@
+@anchor{Generic-Function clim-extensions:frame-icon}
+@deffn {Generic Function} {@symbol{frame-icon,clim-extensions}} frame
+Return the icon or icons of @var{frame}.
+
+The return value is either a @class{clim-extensions:image-pattern} or
+sequence of those.  These icons are typically used -- via the top-level
+sheet of @var{frame} -- by window managers to represent windows that are
+not currently visible or added to other representations of windows to
+make them more easily recognizable.
+@end deffn

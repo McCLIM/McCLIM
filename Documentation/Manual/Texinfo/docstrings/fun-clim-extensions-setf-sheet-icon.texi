@@ -1,0 +1,10 @@
+@anchor{Generic-Function clim-extensions:setf-sheet-icon}
+@deffn {Generic Function} {@symbol{@setf{sheet-icon},clim-extensions}} new-value sheet
+Set icon or icons of @var{sheet} to @var{new-value}.
+
+@var{new-value} must be a @class{clim-extensions:image-pattern} or a
+sequence of those.  If a sequence is supplied, the window manager is
+instructed to prefer the first element, if possible.  Some window
+managers select different icons for different purposes based on the icon
+sizes.
+@end deffn
