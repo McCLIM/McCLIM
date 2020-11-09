@@ -200,8 +200,9 @@ The function must take at least one argument, the frame.  The rest of the list
 consists of additional arguments to be passed to the function.  The default
 function is \cl{default-frame-top-level}.
 
-\item \cl{:icon} \arg{pixmap} specifies a pixmap to be displayed by the host's
-window manager when the frame is iconified.
+\item \cl{:icon} \arg{pattern} specifies an array pattern to be
+displayed by the host's window manager to visually enhance or
+represent the frame, for example when it is iconified.
 
 \item \cl{:geometry} \arg{plist}, where \arg{plist} is a property list
 containing the default values for the \cl{:left}, \cl{:top}, \cl{:right},
@@ -214,11 +215,11 @@ The values of each of the options are evaluated.
 
 
 \Defun {make-application-frame} {frame-name \rest options
-                                 \key pretty-name 
-                                      frame-manager enable state 
+                                 \key pretty-name
+                                      frame-manager enable state
                                       left top right bottom width height
                                       save-under frame-class
-                                 \allow} 
+                                 \allow}
 
 Makes an instance of the application frame of type \arg{frame-class}.  If
 \arg{frame-class} is not supplied, it defaults to \arg{frame-name}.
@@ -272,7 +273,7 @@ match.  If \arg{port} is supplied, only those frames that use that port match.
 \arg{function} is a function of one argument, the frame.  It has dynamic extent.
 
 
-\Defgeneric {destroy-frame} {frame} 
+\Defgeneric {destroy-frame} {frame}
 
 Destroys the application frame \arg{frame}.
 
@@ -363,7 +364,7 @@ An example of the use of \cl{:panes} is:
   (buttons (horizontally ()
              (make-pane 'push-button :label "Press me")
              (make-pane 'push-button :label "Squeeze me")))
-  (toggle toggle-button 
+  (toggle toggle-button
           :label "Toggle me")
   (interactor :interactor
               :width 300 :height 300)
@@ -383,9 +384,9 @@ layouts could be specified:
 
 \begin{verbatim}
 (:layouts
-  (default 
+  (default
     (vertically ()
-      button toggle 
+      button toggle
       (scrolling () application)
       interactor))
   (alternate
@@ -637,7 +638,7 @@ on each of the panes in \arg{frame} that are visible in the current layout.
 When the boolean \arg{force-p} is \term{true}, the maximum level of redisplay is
 forced (that is, the pane is displayed ``from scratch'').
 
-\Defgeneric {frame-replay} {frame stream \optional region} 
+\Defgeneric {frame-replay} {frame stream \optional region}
 
 Replays the contents of \arg{stream} in the \term{frame} \arg{frame} within the
 region specified by the region \arg{region}, which defaults to viewport of
@@ -662,7 +663,7 @@ implementation-dependent.
 
 
 \defgeneric {frame-properties} {frame property}
-\Defgeneric {(setf frame-properties)} {value frame property} 
+\Defgeneric {(setf frame-properties)} {value frame property}
 
 Frame properties can be used to associate frame specific data with frames
 without adding additional slots to the frame's class.  CLIM may use frame
@@ -736,7 +737,7 @@ Left: '(1 2 3); Middle: (DESCRIBE '(1 2 3)); Right: Menu
 
 
 \Defgeneric {frame-drag-and-drop-feedback} {frame presentation stream
-                                            initial-x initial-y new-x new-y state} 
+                                            initial-x initial-y new-x new-y state}
 
 The default feedback function for translators defined by
 \cl{define-drag-and-drop-translator}, which provides visual feedback during the
@@ -810,7 +811,7 @@ bindings for the application, including (but not limited to) binding
 \cl{*pointer-button-press-handler*} to \cl{nil}.
 
 
-\Defgeneric {default-frame-top-level} {frame \key command-parser command-unparser 
+\Defgeneric {default-frame-top-level} {frame \key command-parser command-unparser
                                                   partial-command-parser
                                                   prompt}
 
@@ -957,7 +958,7 @@ Some frames will support the embedding of other frames within themselves.  Such
 frames would not only use frames but also act as frame managers, so that other
 frames could insert frames.  In this case, the embedded frames are mostly
 unaware that they are nested within other frames, but only know that they are
-controlled by a particular frame manager.  
+controlled by a particular frame manager.
 
 \issue {SWM} {How does one write a frame that supports an embedded frame, such
 as an editor frame within a documentation-writing frame?}
@@ -1027,7 +1028,7 @@ contexts.  \arg{body} may have zero or more declarations as its first forms.
 
 \subsection {Frame Manager Operations}
 
-\Defgeneric {frame-manager} {frame} 
+\Defgeneric {frame-manager} {frame}
 
 Returns the current frame manager of \arg{frame} if it is adopted, otherwise
 returns \cl{nil}.
@@ -1039,13 +1040,13 @@ frame is disowned from its old frame manager and is adopted into the new frame
 manager.  Transferring a frame preserves its \cl{frame-state}, for example, if
 the frame was previously enabled it will be enabled in the new frame manager.
 
-\Defgeneric {frame-manager-frames} {frame-manager} 
+\Defgeneric {frame-manager-frames} {frame-manager}
 
 Returns a list of all of the frames being managed by \arg{frame-manager}.
 \ReadOnly
 
 \defgeneric {adopt-frame} {frame-manager frame}
-\Defgeneric {disown-frame} {frame-manager frame} 
+\Defgeneric {disown-frame} {frame-manager frame}
 
 These functions insert or remove a frame from a frame manager's control.  These
 functions allow a frame manager to allocate and deallocate resources associated
@@ -1196,8 +1197,8 @@ The following is an example that outlines a simple 4-by-4 sliding piece puzzle:
   (frame-exit *application-frame*))
 
 (defun puzzle ()
-  (let ((puzzle 
-          (make-application-frame 'puzzle 
+  (let ((puzzle
+          (make-application-frame 'puzzle
             :width 80 :height 80)))
     (run-frame-top-level puzzle)))
 \end{verbatim}
@@ -1217,7 +1218,7 @@ The following is an application frame with two layouts:
        :width 300 :max-width +fill+
        :height 300 :max-height +fill+))
   (:layouts
-    (default 
+    (default
       (vertically ()
         a b c (scrolling () e)))
     (other
@@ -1231,7 +1232,7 @@ The following is an application frame with two layouts:
           (default other)
           (other default))))
 
-(let ((test-frame 
+(let ((test-frame
         (make-application-frame 'test-frame)))
   (run-frame-top-level test-frame))
 \end{verbatim}
