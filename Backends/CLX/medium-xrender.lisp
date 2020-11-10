@@ -33,10 +33,10 @@
 
 (defmethod clim:medium-copy-area ((from-drawable clx-render-medium) from-x from-y
                                   width height
-                                  (to-drawable pixmap) to-x to-y)
+                                  (to-drawable xlib:pixmap) to-x to-y)
   (call-next-method))
 
-(defmethod clim:medium-copy-area ((from-drawable pixmap) from-x from-y
+(defmethod clim:medium-copy-area ((from-drawable xlib:pixmap) from-x from-y
                                   width height
                                   (to-drawable clx-render-medium) to-x to-y)
   (call-next-method))

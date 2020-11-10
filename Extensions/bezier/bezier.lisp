@@ -795,16 +795,14 @@ second curve point, yielding (200 50)."
                  do (when (zerop (aref picture l c))
                       (decf (aref reduced-picture (floor l 4) (floor c 4))))))
         (setf (gethash (list sheet ink design) *pixmaps*)
-              (with-output-to-pixmap (pixmap-medium sheet
-                                                    :width (/ width 4)
-                                                    :height (/ height 4))
+              (with-output-to-pixmap (medium sheet :width (/ width 4)
+                                                   :height (/ height 4))
                 (loop for l from 0 below (/ height 4)
                    do (loop for c from 0 below (/ width 4)
-                         do (draw-point*
-                             pixmap-medium c l
-                             :ink (make-ink
-                                   medium
-                                   (aref reduced-picture l c)))))))))))
+                         do (draw-point* medium c l
+                                         :ink (make-ink
+                                               medium
+                                               (aref reduced-picture l c)))))))))))
 
 (defun render-through-pixmap (design medium)
   (multiple-value-bind (min-x min-y)

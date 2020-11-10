@@ -163,12 +163,15 @@
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
-          :writer (setf %medium-sheet) ))
+          :writer (setf %medium-sheet) )
+   (drawable :initform nil
+             :accessor %medium-drawable))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
 (defmethod medium-drawable ((medium basic-medium))
-  (when-let ((sheet (medium-sheet medium)))
-    (sheet-mirror sheet)))
+  (or (%medium-drawable medium)
+      (when-let ((sheet (medium-sheet medium)))
+        (sheet-mirror sheet))))
 
 (defclass ungrafted-medium (basic-medium) ())
 
@@ -203,23 +206,6 @@
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
-
-;;; with-sheet-medium moved to output.lisp. --GB
-;;; with-sheet-medium-bound moved to output.lisp. --GB
-
-(defmacro with-pixmap-medium ((medium pixmap) &body body)
-  (let ((old-medium (gensym))
-        (old-pixmap (gensym)))
-    `(let* ((,old-medium (pixmap-medium ,pixmap))
-            (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
-            (,old-pixmap (medium-sheet ,medium)))
-       (setf (pixmap-medium ,pixmap) ,medium)
-       (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
-       (unwind-protect
-            (progn
-              ,@body)
-         (setf (pixmap-medium ,pixmap) ,old-medium)
-         (setf (%medium-sheet ,medium) ,old-pixmap)))))
 
 ;;; Medium Device functions
 

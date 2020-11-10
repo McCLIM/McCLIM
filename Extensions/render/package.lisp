@@ -50,10 +50,7 @@
                 #:standard-flipping-ink
                 ;; backend
                 #:realize-mirror
-                #:mirrored-pixmap
-                #:port-lookup-sheet
-                #:pixmap-medium
-                #:pixmap-mirror)
+                #:port-lookup-sheet)
   (:import-from #:mcclim-truetype
                 #:glyph-info
                 #:font-glyph-info

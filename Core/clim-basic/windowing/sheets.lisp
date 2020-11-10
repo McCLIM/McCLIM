@@ -787,32 +787,3 @@ might be different from the sheet's native region."
 ;;; The null sheet
 
 (defclass null-sheet (basic-sheet) ())
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; dangerous codes
-;;; postfix: %%%
-;;;
-
-;; used by invoke-with-double-buffering
-(defmacro with-temp-mirror%%% ((mirrored-sheet new-mirror new-native-transformation new-region)
-                               &body body)
-  (alexandria:once-only (mirrored-sheet new-mirror new-native-transformation new-region)
-    (alexandria:with-gensyms (port old-native-transformation old-region set-native)
-      `(let ((,port (port sheet))
-             (,old-native-transformation (sheet-native-transformation ,mirrored-sheet))
-             (,old-region (sheet-region ,mirrored-sheet)))
-         (flet ((,set-native (transform region sheet)
-                  (invalidate-cached-regions sheet)
-                  (invalidate-cached-transformations sheet)
-                  (%%set-sheet-native-transformation transform sheet)
-                  (setf (slot-value sheet 'region) region))
-                ((setf sheet-direct-mirror) (new-mirror sheet)
-                  (port-register-mirror ,port sheet new-mirror)))
-           (letf (((sheet-parent ,mirrored-sheet) nil)
-                  ((sheet-direct-mirror ,mirrored-sheet) ,new-mirror))
-             (unwind-protect
-                  (progn
-                    (,set-native ,new-native-transformation ,new-region ,mirrored-sheet)
-                    ,@body)
-               (,set-native ,old-native-transformation ,old-region ,mirrored-sheet)
-               (port-unregister-mirror ,port ,mirrored-sheet ,new-mirror))))))))

@@ -30,8 +30,7 @@
                 #:height                ; used to access a slot
                 #:width                 ; ditto
                 ;;
-                #:make-medium
-                #:pixmap-mirror)
+                #:make-medium)
   (:import-from #:mcclim-render-internals
                 #:render-medium-mixin
                 #:render-port-mixin

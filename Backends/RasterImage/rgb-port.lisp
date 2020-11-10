@@ -14,7 +14,9 @@
   (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port sheet mirror)
     (setf (mirror->%image port mirror) mirror)
-    (%make-image mirror sheet)
+    (multiple-value-bind (width height)
+        (bounding-rectangle-size sheet)
+      (%make-image mirror width height))
     mirror))
 
 (defmethod destroy-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
@@ -24,19 +26,12 @@
 ;;; Pixmap
 ;;;
 
-(defclass rgb-image-pixmap (image-pixmap-mixin basic-pane)
-  ((region :initform +nowhere+)))
+(defclass rgb-image-pixmap (image-pixmap-mixin)
+  ())
 
-(defmethod port-allocate-pixmap ((port rgb-image-port) sheet width height)
-  (let ((pixmap (make-instance 'rgb-image-pixmap
-                               :sheet sheet
-                               :width width
-                               :height height
-                               :port port)))
-    (when (sheet-grafted-p sheet)
-      (realize-mirror port pixmap))
+(defmethod allocate-pixmap ((medium raster-image-medium) width height)
+  (let ((pixmap (make-instance 'rgb-image-pixmap :width width :height height)))
+    (setf (mirror->%image (port medium) pixmap) pixmap)
+    (%make-image pixmap width height)
     pixmap))
 
-(defmethod port-deallocate-pixmap ((port rgb-image-port) pixmap)
-  (when (pixmap-mirror pixmap)
-    (destroy-mirror port pixmap)))

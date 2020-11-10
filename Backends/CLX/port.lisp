@@ -223,39 +223,5 @@
 (defmethod graft ((port clx-port))
   (first (port-grafts port)))
 
-;;; Pixmap
-
-(defmethod realize-mirror ((port clx-port) (pixmap pixmap))
-  (when (null (pixmap-mirror pixmap))
-    (let* ((window (sheet-mirror (pixmap-sheet pixmap)))
-           (pix (xlib:create-pixmap
-                    :width (round (pixmap-width pixmap))
-                    :height (round (pixmap-height pixmap))
-                    :depth (xlib:drawable-depth window)
-                    :drawable window)))
-      (port-register-mirror port pixmap pix))
-    (values)))
-
-(defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
-  (when-let ((mirror (pixmap-mirror pixmap)))
-    (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
-                                 (xlib:pixmap-plist mirror))))
-      (xlib:render-free-picture picture))
-    (xlib:free-pixmap mirror)
-    (port-unregister-mirror port pixmap mirror)))
-
-(defmethod port-allocate-pixmap ((port clx-port) sheet width height)
-  (let ((pixmap (make-instance 'mirrored-pixmap :sheet sheet
-                                                :width width
-                                                :height height
-                                                :port port)))
-    (when (sheet-grafted-p sheet)
-      (realize-mirror port pixmap))
-    pixmap))
-
-(defmethod port-deallocate-pixmap ((port clx-port) pixmap)
-  (when (pixmap-mirror pixmap)
-    (destroy-mirror port pixmap)))
-
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))

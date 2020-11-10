@@ -2013,8 +2013,6 @@
    #:make-graft
    #:medium-draw-circle*
    #:mirror-transformation
-   #:port-allocate-pixmap
-   #:port-deallocate-pixmap
    #:port-disable-sheet
    #:port-enable-sheet
    #:port-shrink-sheet

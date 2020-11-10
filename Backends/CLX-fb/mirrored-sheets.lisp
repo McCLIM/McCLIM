@@ -20,5 +20,3 @@
       (setf gcontext nil
             clx-image nil))))
 
-(defclass clx-fb-pixmap (image-pixmap-mixin basic-pane)
-  ())

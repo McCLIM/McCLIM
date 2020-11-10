@@ -49,9 +49,6 @@
           (make-instance 'clx-fb-mirror :xmirror mirror))
     mirror))
 
-(defmethod realize-mirror ((port clx-fb-port) (pixmap pixmap))
-  )
-
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
 		      :event-mask *event-mask*
@@ -112,27 +109,16 @@
 
 ;;; Pixmap
 
-(defmethod destroy-mirror ((port clx-fb-port) (pixmap image-pixmap-mixin))
-  (call-next-method))
+(defclass clx-fb-pixmap (image-pixmap-mixin)
+  ((port :initarg :port :accessor port)))
 
-(defmethod realize-mirror ((port clx-fb-port) (pixmap image-pixmap-mixin))
-  (setf (sheet-parent pixmap) (graft port))
-  (let ((mirror (make-instance 'image-mirror-mixin)))
-    (port-register-mirror port pixmap mirror)
-    (setf (mirror->%image port mirror) mirror)
-    (%make-image mirror pixmap)
-    mirror))
-
-(defmethod port-allocate-pixmap ((port clx-fb-port) sheet width height)
-  (let ((pixmap (make-instance 'clx-fb-pixmap
-			       :sheet sheet
-			       :width width
-			       :height height
-			       :port port)))
-    (when (sheet-grafted-p sheet)
-      (realize-mirror port pixmap))
+(defmethod allocate-pixmap ((medium clx-fb-medium) width height)
+  (let* ((port (port medium))
+         (pixmap (make-instance 'clx-fb-pixmap
+                                :width width :height height :port port)))
+    (setf (mirror->%image port pixmap) pixmap)
+    (%make-image pixmap width height)
     pixmap))
 
-(defmethod port-deallocate-pixmap ((port clx-fb-port) pixmap)
-  (when (pixmap-mirror pixmap)
-    (destroy-mirror port pixmap)))
+(defmethod deallocate-pixmap ((pixmap clx-fb-pixmap))
+  (setf (mirror->%image (port pixmap) pixmap) nil))

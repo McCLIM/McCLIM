@@ -22,7 +22,7 @@
                 :serial t
                 :components ((:file "mirror")
                              (:file "mirrored-sheet")
-                             (:file "pixmap")
                              (:file "medium")
+                             (:file "pixmap")
                              (:file "fonts")
                              (:file "port")))))

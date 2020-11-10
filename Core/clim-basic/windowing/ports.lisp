@@ -98,7 +98,6 @@
 		   :reader frame-managers)
    (sheet->mirror :initform (make-hash-table :test #'eq))
    (mirror->sheet :initform (make-hash-table :test #'eq))
-   (pixmap->mirror :initform (make-hash-table :test #'eq))
    (event-process
     :initform nil
     :initarg  :event-process
@@ -505,36 +504,6 @@ is a McCLIM extension.")
 			   (return-from find-graft graft)))
 		   port)
   (make-graft port :orientation orientation :units units))
-
-;;; Pixmap
-
-(defmethod port-lookup-mirror ((port basic-port) (pixmap pixmap))
-  (gethash pixmap (slot-value port 'pixmap->mirror)))
-
-(defmethod port-register-mirror ((port basic-port) (pixmap pixmap) mirror)
-  (setf (gethash pixmap (slot-value port 'pixmap->mirror)) mirror)
-  nil)
-
-(defmethod port-unregister-mirror ((port basic-port) (pixmap pixmap) mirror)
-  (remhash pixmap (slot-value port 'pixmap->mirror))
-  nil)
-
-(defmethod realize-mirror ((port basic-port) (pixmap mirrored-pixmap))
-  (declare (ignorable port pixmap))
-  (error "Don't know how to realize the mirror on a generic port"))
-
-(defmethod destroy-mirror ((port basic-port) (pixmap mirrored-pixmap))
-  (declare (ignorable port pixmap))
-  (error "Don't know how to destroy the mirror on a generic port"))
-
-(defmethod port-allocate-pixmap ((port basic-port) sheet width height)
-  (declare (ignore sheet width height))
-  (error "ALLOCATE-PIXMAP is not implemented for generic PORTs"))
-
-(defmethod port-deallocate-pixmap ((port basic-port) pixmap)
-  (declare (ignore pixmap))
-  (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
-
 
 (defgeneric port-force-output (port)
   (:documentation "Flush the output buffer of PORT, if there is one."))
