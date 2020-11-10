@@ -16,9 +16,11 @@
 
 (in-package #:clim-demo)
 
-(defun select-font (&key (port (find-port)))
-  (let ((frame
-         (make-application-frame 'font-selector :font-selector-port port)))
+(defun select-font (&key (port (find-port)) calling-frame)
+  (let ((frame (apply #'make-application-frame 'font-selector
+                      :font-selector-port port
+                      (when calling-frame
+                        (list :calling-frame calling-frame)))))
     (run-frame-top-level frame)
     (font-selector-text-style frame)))
 
@@ -34,47 +36,38 @@
            :scroll-bars nil
            :display-time t
            :display-function 'display-font-preview)
-   (family
-    (make-pane 'list-pane
-               :items nil
-               :name-key #'font-family-name
-               :value-changed-callback 'family-changed))
-   (face (make-pane 'list-pane
-                    :items nil
+   (family :list-pane :items nil
+                      :name-key #'font-family-name
+                      :value-changed-callback 'family-changed)
+   (face :list-pane :items nil
                     :name-key #'font-face-name
-                    :value-changed-callback 'face-changed))
-   (size (make-pane 'list-pane
-                    :items nil
-                    :value-changed-callback 'size-changed)))
+                    :value-changed-callback 'face-changed)
+   (size :list-pane :items nil
+                    :value-changed-callback 'size-changed)
+   (ok :push-button :label "OK"
+                    :activate-callback (lambda (gadget)
+                                         (frame-exit (gadget-client gadget))))
+   (cancel :push-button :label "Cancel"
+                        :activate-callback (lambda (gadget)
+                                             (let ((frame (gadget-client gadget)))
+                                               (setf (font-selector-text-style frame) nil)
+                                               (frame-exit frame)))))
   (:layouts
    (default
-       (vertically (:height 400 :width 600)
-         (horizontally ()
-           (labelling (:label "Family") (scrolling () family))
-           (labelling (:label "Face") (scrolling () face))
-           (labelling (:label "Size") (scrolling () size)))
-         canvas
-         (horizontally ()
-           +fill+
-           (make-pane 'push-button
-                      :label "OK"
-                      :activate-callback
-                      (lambda (ignore)
-                        ignore
-                        (frame-exit *application-frame*)))
-           (make-pane 'push-button
-                      :label "Cancel"
-                      :activate-callback
-                      (lambda (ignore)
-                        ignore
-                        (setf (font-selector-text-style *application-frame*)
-                              nil)
-                        (frame-exit *application-frame*))))))))
+    (vertically (:height 400 :width 600)
+      (horizontally ()
+        (labelling (:label "Family") (scrolling () family))
+        (labelling (:label "Face") (scrolling () face))
+        (labelling (:label "Size") (scrolling () size)))
+      canvas
+      (horizontally ()
+        +fill+
+        ok
+        cancel)))))
 
 (defmethod generate-panes :after (fm (frame font-selector))
   (reset-list-pane (find-pane-named frame 'family)
-                       (port-all-font-families
-                        (font-selector-port *application-frame*))))
+                   (port-all-font-families (font-selector-port frame))))
 
 (defun family-changed (pane value)
   (declare (ignore pane))
@@ -111,8 +104,7 @@
 
 (defun reset-list-pane (pane items &optional (index 0))
   ;; umm
-  (setf (climi::visible-items pane) (length items))
-  (setf (climi::list-pane-items pane :invoke-callback nil) items)
+  (setf (clime:list-pane-items pane :invoke-callback nil) items)
   (setf (gadget-value pane :invoke-callback t)
         (or (and (slot-boundp pane 'climi::value) (gadget-value pane))
             (let ((values (climi::generic-list-pane-item-values pane)))
@@ -127,17 +119,16 @@
          (str "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
          (style (font-selector-text-style frame))
          (ok nil))
-    (cond
-      ((not (eq (port frame) (font-selector-port frame)))
-        (setf str (format nil
-                          "Cannot preview font for ~A"
-                          (font-selector-port frame)))
-        (setf style (make-text-style :sans-serif :italic :normal)))
-      ((null style)
-        (setf str "Error: Text style is null")
-        (setf style (make-text-style :sans-serif :italic :normal)))
-      (t
-        (setf ok t)))
+    (cond ((not (eq (port frame) (font-selector-port frame)))
+           (setf str (format nil
+                             "Cannot preview font for ~A"
+                             (font-selector-port frame)))
+           (setf style (make-text-style :sans-serif :italic :normal)))
+          ((null style)
+           (setf str "Error: Text style is null")
+           (setf style (make-text-style :sans-serif :italic :normal)))
+          (t
+           (setf ok t)))
     (multiple-value-bind (width height final-x final-y baseline)
         (text-size stream str :text-style style)
       (declare (ignore final-x final-y))
