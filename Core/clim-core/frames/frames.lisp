@@ -446,13 +446,11 @@ documentation produced by presentations.")
 ;;; Command loop interface
 
 (define-condition frame-exit (condition)
-  ((frame :initarg :frame :reader %frame-exit-frame)))
+  ((frame :initarg :frame :reader frame-exit-frame)
+   (handled :accessor %frame-exit-handled :initform nil)))
 
 (defmethod frame-exit ((frame standard-application-frame))
   (signal 'frame-exit :frame frame))
-
-(defmethod frame-exit-frame ((c frame-exit))
-  (%frame-exit-frame c))
 
 (defmethod redisplay-frame-pane ((frame application-frame) pane &key force-p)
   (declare (ignore pane force-p))
@@ -529,27 +527,29 @@ documentation produced by presentations.")
                 (eq (frame-state frame) :shrunk))
       (enable-frame frame))
     (unwind-protect
-         (loop
-           named run-frame-loop
-           for query-io = (frame-query-io frame)
-           for *default-frame-manager* = (frame-manager frame)
-           do (block run-frame-iter
-                (handler-bind
-                    ((frame-layout-changed
-                       (lambda (c)
-                         (declare (ignore c))
-                         (return-from run-frame-iter)))
-                     (frame-exit
-                       (lambda (c)
-                         (let ((exiting-frame (frame-exit-frame c)))
-                           (if (eq exiting-frame frame)
-                               (return-from run-frame-loop)
-                               (disown-frame (frame-manager exiting-frame) exiting-frame))))))
-                  (return-from run-frame-loop
-                    (if query-io
-                        (with-input-focus (query-io)
-                          (call-next-method))
-                        (call-next-method))))))
+         (loop named run-frame-loop
+               for query-io = (frame-query-io frame)
+               for *default-frame-manager* = (frame-manager frame)
+               do (block run-frame-iter
+                    (handler-bind
+                        ((frame-layout-changed
+                           (lambda (condition)
+                             (declare (ignore condition))
+                             (return-from run-frame-iter)))
+                         (frame-exit
+                           (lambda (condition)
+                             (unless (%frame-exit-handled condition)
+                               (setf (%frame-exit-handled condition) t)
+                               (let ((exiting-frame (frame-exit-frame condition)))
+                                 (if (eq exiting-frame frame)
+                                     (return-from run-frame-loop)
+                                     (disown-frame (frame-manager exiting-frame)
+                                                   exiting-frame)))))))
+                      (return-from run-frame-loop
+                        (if query-io
+                            (with-input-focus (query-io)
+                              (call-next-method))
+                            (call-next-method))))))
       (case original-state
         (:disabled
          (disable-frame frame))
