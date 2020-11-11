@@ -105,9 +105,9 @@
                    (+ pi (* 2 pi)))))
     (%medium-fill-paths medium (list path))))
 
-(defmethod medium-draw-circle* ((medium render-medium-mixin)
-                                center-x center-y radius start-angle end-angle
-                                filled)
+(defmethod clime:medium-draw-circle* ((medium render-medium-mixin)
+                                      center-x center-y radius start-angle end-angle
+                                      filled)
   (let ((path (arc center-x center-y radius (+ pi start-angle) (+ pi end-angle))))
     (if filled
         (%medium-fill-paths medium (list path))
