@@ -34,7 +34,7 @@
                                 (d2 (clime:design-ink (slot-value ink 'climi::design2) x y)))
                            (logior (logxor (climi::%rgba-value d1)
                                            (climi::%rgba-value d2))
-                                   #xff)))
+                                   #xff000000)))
           (let-rgba ((r.bg g.bg b.bg a.bg) (aref pixels y x))
             (setf (aref pixels y x)
                   (octet-blend-function*
