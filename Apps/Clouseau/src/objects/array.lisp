@@ -68,7 +68,7 @@
 
 (defmethod accepts-value-p ((place vector-fill-pointer-place) (value t))
   (and (call-next-method)
-       (<= (array-total-size (container place)))))
+       (<= value (array-total-size (container place)))))
 
 (defmethod value ((place vector-fill-pointer-place))
   (fill-pointer (container place)))
