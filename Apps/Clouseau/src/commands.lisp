@@ -337,7 +337,8 @@
                                            (with-safe-and-terse-printing (stream)
                                              (format stream ,(format nil "~@(~A~) ~~A by 1"
                                                                      operator-name)
-                                                     object)))))
+                                                     object))))
+                 :echo nil)
                 (object)
               (list object))))))
   (define com-increment-place 1+ "increment" :increment :wheel-up)
