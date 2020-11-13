@@ -94,7 +94,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port null-port) sheet)
-  (make-instance 'null-medium :sheet sheet))
+  (make-instance 'null-medium :port port :sheet sheet))
 
 (defmethod text-style-mapping
     ((port null-port) (text-style text-style) &optional character-set)

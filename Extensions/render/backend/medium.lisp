@@ -11,7 +11,7 @@
                       medium)))
     (if (typep drawable 'image-pixmap-mixin)
         +identity-transformation+
-        (sheet-native-transformation (medium-sheet medium)))))
+        (medium-native-transformation medium))))
 
 (defun maybe-region (medium)
   (let ((drawable (if (mediump medium)
@@ -19,7 +19,7 @@
                       medium)))
     (if (typep drawable 'image-pixmap-mixin)
         (make-rectangle* 0 0 (pixmap-width drawable) (pixmap-height drawable))
-        (sheet-device-region (medium-sheet medium)))))
+        (medium-device-region medium))))
 
 (defun %medium-stroke-paths (medium paths)
   (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))

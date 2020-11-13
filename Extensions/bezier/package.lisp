@@ -2,7 +2,8 @@
   (:use #:clim #:clim-lisp)
 
   (:import-from #:clim-internals
-                #:with-transformed-position)
+                #:with-transformed-position
+                #:medium-native-transformation)
 
   (:import-from #:clim-null
                 #:null-medium)

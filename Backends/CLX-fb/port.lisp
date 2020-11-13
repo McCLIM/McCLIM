@@ -99,7 +99,7 @@
 
 (defmethod make-medium ((port clx-fb-port) sheet)
   (make-instance 'clx-fb-medium
-		 ;; :port port
+		 :port port
 		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
 

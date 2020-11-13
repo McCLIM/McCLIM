@@ -950,7 +950,7 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-curve))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (cl-pdf:with-saved-state
       (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
       (%pdf-draw-bezier-curve (transform-region tr design))
@@ -958,7 +958,7 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-area))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (cl-pdf:with-saved-state
       (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
       (%pdf-draw-bezier-curve (transform-region tr design))
@@ -966,7 +966,7 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-union))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (cl-pdf:with-saved-state
       (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
       (dolist (area (areas design))
@@ -975,7 +975,7 @@ second curve point, yielding (200 50)."
 
 (defmethod medium-draw-bezier-design*
     ((medium clim-pdf::pdf-medium) (design bezier-difference))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (cl-pdf:with-saved-state
       (clim-pdf::pdf-actualize-graphics-state medium :color :line-style)
       (dolist (area (negative-areas design))
@@ -992,7 +992,7 @@ second curve point, yielding (200 50)."
 
 (defun %ps-draw-bezier-path (stream medium design)
   (format stream "newpath~%")
-  (let ((tr (sheet-native-transformation (medium-sheet medium)))
+  (let ((tr (medium-native-transformation medium))
         (segments (segments design)))
     (let ((p0 (slot-value (elt segments 0) 'p0)))
       (let ((x0 (point-x p0))

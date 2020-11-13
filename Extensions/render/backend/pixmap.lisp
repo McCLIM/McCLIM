@@ -19,17 +19,15 @@
                               width height))
     (with-bounding-rectangle* (min-x min-y max-x max-y)
         (region-intersection
-         (climi::medium-device-region to-drawable)
-         (transform-region
-          (sheet-native-transformation (medium-sheet to-drawable))
-          (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
+         (medium-device-region to-drawable)
+         (transform-region (medium-native-transformation to-drawable)
+                           (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
       (multiple-value-bind (x1 y1)
-          (transform-position
-           (sheet-native-transformation (medium-sheet to-drawable))
-           to-x to-y)
+          (transform-position (medium-native-transformation to-drawable)
+                              to-x to-y)
         (multiple-value-bind (x2 y2)
             (transform-position
-             (sheet-native-transformation (medium-sheet from-drawable))
+             (medium-native-transformation from-drawable)
              from-x from-y)
           (%medium-draw-image to-drawable
                               (medium-sheet from-drawable)
@@ -52,7 +50,7 @@
          (make-rectangle* to-x to-y (+ to-x w) (+ to-y h)))
       (multiple-value-bind (x2 y2)
           (transform-position
-           (sheet-native-transformation (medium-sheet from-drawable))
+           (medium-native-transformation from-drawable)
            from-x from-y)
         (%medium-draw-image to-drawable
                             (medium-sheet from-drawable)
@@ -65,7 +63,7 @@
                              width height
                              (to-drawable render-medium-mixin) to-x to-y)
   (when-let* ((to-sheet (medium-sheet to-drawable))
-              (to-native (sheet-native-transformation to-sheet))
+              (to-native (medium-native-transformation to-drawable))
               (to-transformation (sheet-transformation to-sheet)))
     (when (medium-drawable to-drawable)
       (multiple-value-bind (w h)

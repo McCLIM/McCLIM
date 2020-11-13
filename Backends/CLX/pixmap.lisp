@@ -29,45 +29,38 @@
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
-  (let* ((from-sheet (medium-sheet from-drawable))
-         (from-transformation (sheet-native-transformation from-sheet))
-         (to-sheet (medium-sheet to-drawable))
-         (to-transformation (sheet-native-transformation to-sheet)))
-    (with-transformed-position (from-transformation from-x from-y)
-      (with-transformed-position (to-transformation to-x to-y)
-        (multiple-value-bind (width height)
-            (transform-distance (medium-transformation from-drawable)
-                                width height)
-          (xlib:copy-area (medium-drawable from-drawable)
-                          ;; why using the context of from-drawable?
-                          (medium-gcontext from-drawable +background-ink+)
-                          (round-coordinate from-x) (round-coordinate from-y)
-                          (round width) (round height)
-                          (medium-drawable to-drawable)
-                          (round-coordinate to-x) (round-coordinate to-y)))))))
+  (with-transformed-position
+      ((medium-native-transformation from-drawable) from-x from-y)
+    (with-transformed-position
+        ((medium-native-transformation to-drawable) to-x to-y)
+      (multiple-value-bind (width height)
+          (transform-distance (medium-transformation from-drawable) width height)
+        (xlib:copy-area (medium-drawable from-drawable)
+                        (medium-gcontext to-drawable +background-ink+)
+                        (round-coordinate from-x) (round-coordinate from-y)
+                        (round width) (round height)
+                        (medium-drawable to-drawable)
+                        (round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
                              (to-drawable xlib:pixmap) to-x to-y)
-  (let* ((from-sheet (medium-sheet from-drawable))
-         (from-transformation (sheet-native-transformation from-sheet)))
-    (with-transformed-position (from-transformation from-x from-y)
-      (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
-        (xlib:copy-area (medium-drawable from-drawable)
-                        gcontext
-                        (round-coordinate from-x)
-                        (round-coordinate from-y)
-                        (round width)
-                        (round height)
-                        to-drawable
-                        (round-coordinate to-x)
-                        (round-coordinate to-y))
-        (xlib:free-gcontext gcontext)))))
+  (with-transformed-position
+      ((medium-native-transformation from-drawable) from-x from-y)
+    (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
+      (xlib:copy-area (medium-drawable from-drawable)
+                      gcontext
+                      (round-coordinate from-x)
+                      (round-coordinate from-y)
+                      (round width)
+                      (round height)
+                      to-drawable
+                      (round-coordinate to-x)
+                      (round-coordinate to-y))
+      (xlib:free-gcontext gcontext))))
 
 (defmethod medium-copy-area ((from-drawable xlib:pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
-  (with-transformed-position ((sheet-native-transformation
-                               (medium-sheet to-drawable))
-                              to-x to-y)
+  (with-transformed-position ((medium-native-transformation to-drawable) to-x to-y)
     (xlib:copy-area from-drawable
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)

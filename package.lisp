@@ -2107,6 +2107,11 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
+   ;; transformations
+   #:medium-device-transformation
+   #:medium-device-region
+   #:medium-native-transformation
+   #:medium-native-region
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-circle*

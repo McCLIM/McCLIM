@@ -71,7 +71,7 @@
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
   (declare (ignore filled))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (climb:medium-native-transformation medium)))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (let ((x1 (round-coordinate x1))

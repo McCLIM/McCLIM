@@ -53,7 +53,7 @@
 ;;; medium
 
 (defmethod make-medium ((port raster-image-port) (sheet basic-sheet))
-  (make-instance 'raster-image-medium :sheet sheet))
+  (make-instance 'raster-image-medium :port port :sheet sheet))
 
 ;;; mirror
 
