@@ -43,16 +43,32 @@
 			     :pointer-motion :button-motion))
 
 (defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
-  (let ((mirror (clim-clx::%realize-mirror port sheet)))
-    (port-register-mirror port sheet mirror)
-    (setf (mirror->%image port mirror)
-          (make-instance 'clx-fb-mirror :xmirror mirror))
+  (let* ((mirror (clim-clx::%realize-mirror port sheet))
+         (%image (make-instance 'clx-fb-mirror :xmirror mirror)))
+    (setf (getf (xlib:window-plist mirror) 'sheet) sheet)
+    (setf (slot-value %image 'gcontext)
+          (xlib:create-gcontext :drawable mirror
+                                :background (values 0 0 0)
+                                :foreground (values 255 255 255)))
+    (setf (mirror->%image port mirror) %image)
     mirror))
+
+(defmethod destroy-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
+  (let* ((mirror (sheet-direct-mirror sheet))
+         (%image (mirror->%image port mirror)))
+    (with-slots (gcontext clx-image) %image
+      (xlib:free-gcontext gcontext)
+      ;;(xlib:destroy-image clx-image)
+      (setf gcontext nil
+            clx-image nil))
+    (remf (xlib:window-plist mirror) 'sheet)
+    (xlib:destroy-window mirror)
+    (setf (mirror->%image port mirror) nil)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
-		      :event-mask *event-mask*
-                      :map (sheet-enabled-p sheet)))
+		                :event-mask *event-mask*
+                                :map (sheet-enabled-p sheet)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))
   (let ((q (compose-space sheet)))

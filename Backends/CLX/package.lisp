@@ -17,7 +17,6 @@
                 #:+alt-key+
                 ;;
                 #:port-text-style-mappings
-                #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
                 #:%%sheet-native-transformation
@@ -26,8 +25,6 @@
                 ;;
                 #:clamp
                 #:get-environment-variable
-                #:port-lookup-sheet
-                #:port-unregister-mirror
                 #:port-pointer-sheet
                 #:map-repeated-sequence
                 #:do-sequence

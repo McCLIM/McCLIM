@@ -19,7 +19,6 @@
   (:import-from #:alexandria
                 #:when-let #:when-let* #:maphash-keys #:maphash-values)
   (:import-from #:climi
-                #:port-register-mirror
                 #:port-grafts
                 ;;
                 #:pixmap

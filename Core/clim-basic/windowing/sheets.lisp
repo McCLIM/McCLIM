@@ -666,6 +666,10 @@
 
 (defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)
+   (mirror
+    :initform nil
+    :reader sheet-direct-mirror
+    :writer (setf %sheet-direct-mirror))
    (native-transformation :initform +identity-transformation+)
    (mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not be
@@ -678,9 +682,6 @@ if a foreign application changes our mirror's geometry. Also note that this
 might be different from the sheet's native region."
     :initform nil
     :accessor %sheet-mirror-region)))
-
-(defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
-  (port-lookup-mirror (port sheet) sheet))
 
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)

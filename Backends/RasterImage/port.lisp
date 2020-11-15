@@ -25,7 +25,6 @@
 
 (defun %destroy-all-mirrors (port)
   (maphash (lambda (key val)
-             (port-unregister-mirror port key val)
              (destroy-mirror port key))
            (slot-value port 'climi::sheet->mirror)))
 

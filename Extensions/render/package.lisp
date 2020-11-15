@@ -47,10 +47,7 @@
                 #:when-let*)
   (:import-from #:clim-internals
                 #:standard-color
-                #:standard-flipping-ink
-                ;; backend
-                #:realize-mirror
-                #:port-lookup-sheet)
+                #:standard-flipping-ink)
   (:import-from #:mcclim-truetype
                 #:glyph-info
                 #:font-glyph-info

@@ -12,7 +12,6 @@
 
 (defmethod realize-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (make-instance 'image-mirror-mixin)))
-    (port-register-mirror port sheet mirror)
     (setf (mirror->%image port mirror) mirror)
     (multiple-value-bind (width height)
         (bounding-rectangle-size sheet)
@@ -20,7 +19,8 @@
     mirror))
 
 (defmethod destroy-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
-  (port-unregister-mirror port sheet (sheet-direct-mirror sheet)))
+  (let ((mirror (sheet-direct-mirror sheet)))
+    (setf (mirror->%image port mirror) nil)))
 
 ;;;
 ;;; Pixmap

@@ -81,9 +81,9 @@
             (xlib:drawable-y mirror) (round-coordinate y)))))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
-  (when-let ((mirror (sheet-mirror sheet)))
-    (xlib:destroy-window mirror)
-    (port-unregister-mirror port sheet mirror)
+  (let ((window (sheet-direct-mirror sheet)))
+    (remf (xlib:window-plist window) 'sheet)
+    (xlib:destroy-window window)
     (xlib:display-force-output (clx-port-display port))))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
