@@ -60,13 +60,25 @@
   `(let ((graft ,graft))
      ,@body))
 
-(defun graft-pixels-per-millimeter (graft)
-  ;; We assume square pixels here --GB
-  (/ (graft-width graft :units :device)
-     (graft-width graft :units :millimeters)))
+(defmethod graft-pixel-aspect-ratio ((graft graft))
+  (values (graft-pixels-per-inch graft :orientation :horizontal)
+          (graft-pixels-per-inch graft :orientation :vertical)))
 
-(defun graft-pixels-per-inch (graft)
-  ;; We assume square pixels here --GB
-  (/ (graft-width graft :units :device)
-     (graft-width graft :units :inches)))
+(defun graft-pixels-per-millimeter (graft &key (orientation :horizontal))
+  (ecase orientation
+    (:horizontal
+     (/ (graft-width graft :units :device)
+        (graft-width graft :units :millimeters)))
+    (:vertical
+     (/ (graft-height graft :units :device)
+        (graft-height graft :units :millimeters)))))
+
+(defun graft-pixels-per-inch (graft &key (orientation :horizontal))
+  (ecase orientation
+    (:horizontal
+     (/ (graft-width graft :units :device)
+        (graft-width graft :units :inches)))
+    (:vertical
+     (/ (graft-height graft :units :device)
+        (graft-height graft :units :inches)))))
 
