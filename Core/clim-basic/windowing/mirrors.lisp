@@ -116,16 +116,15 @@ infinite recursion on (setf sheet-*).")
   (setf (%sheet-mirror-transformation sheet) MT)
   (when (and (sheet-direct-mirror sheet)
              (not (eql *configuration-event-p* sheet)))
-    (let ((port (port sheet))
-          (mirror (sheet-direct-mirror sheet)))
-      (port-set-mirror-region port mirror MR)
+    (let ((port (port sheet)))
+      (port-set-mirror-region port sheet MR)
       ;; TOP-LEVEL-SHEET-PANE is our window (and it is managed by the window
       ;; manager - decorations and such. We can't pinpoint exact translation. On
       ;; the other hand UNMANAGED-TOP-LEVEL-SHEET-PANE is essential for menus
       ;; and has exact position set (thanks to not being managed by WM).
       (unless (and (typep sheet 'top-level-sheet-mixin)
                    (null (typep sheet 'unmanaged-sheet-mixin)))
-        (port-set-mirror-transformation port mirror MT)))
+        (port-set-mirror-transformation port sheet MT)))
     (when invalidate-transformations
       (with-slots (native-transformation device-transformation) sheet
         (setf native-transformation nil
@@ -277,10 +276,9 @@ very hard)."
                  (setf (%sheet-mirror-transformation sheet) MT)
                  (when (and (sheet-direct-mirror sheet)
                             (not (eql *configuration-event-p* sheet)))
-                   (let ((port (port sheet))
-                         (mirror (sheet-direct-mirror sheet)))
-                     (port-set-mirror-region port mirror MR)
-                     (port-set-mirror-transformation port mirror MT)))
+                   (let ((port (port sheet)))
+                     (port-set-mirror-region port sheet MR)
+                     (port-set-mirror-transformation port sheet MT)))
                  ;; update the native transformation if necessary.
                  (unless (and old-native-transformation
                               (transformation-equal native-transformation

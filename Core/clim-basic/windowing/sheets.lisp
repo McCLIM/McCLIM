@@ -702,16 +702,10 @@ might be different from the sheet's native region."
         (port-disable-sheet (port sheet) sheet))))
 
 (defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
-  ;; SHEET might not yet have a mirror if this is called e.g. during
-  ;; the pane generation phase of an application frame.
-  (when-let ((mirror (sheet-direct-mirror sheet)))
-    (climb:port-set-mirror-name (port sheet) mirror new-name)))
+  (port-set-mirror-name (port sheet) sheet new-name))
 
 (defmethod (setf sheet-icon) :after (new-value (sheet mirrored-sheet-mixin))
-  ;; SHEET might not yet have a mirror if this is called e.g. during
-  ;; the pane generation phase of an application frame.
-  (when-let ((mirror (sheet-direct-mirror sheet)))
-    (climb:port-set-mirror-icon (port sheet) mirror new-value)))
+  (port-set-mirror-icon (port sheet) sheet new-value))
 
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
