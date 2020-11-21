@@ -17,11 +17,14 @@
 
 ;;; change geometry
 
-(defmethod port-set-mirror-region :after ((port render-port-mixin) mirror region)
-  (%set-image-region (mirror->%image port mirror) region))
+(defmethod port-set-mirror-region :after
+    ((port render-port-mixin) (sheet mirrored-sheet-mixin) region)
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (%set-image-region (mirror->%image port mirror) region)))
 
-(defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transformation)
-  (declare (ignore port mirror transformation))
+(defmethod port-set-mirror-transformation :after
+    ((port render-port-mixin) (sheet mirrored-sheet-mixin) transformation)
+  (declare (ignore port sheet transformation))
   nil)
 
 ;;; realize/destroy mirrors

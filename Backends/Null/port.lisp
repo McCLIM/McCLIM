@@ -44,11 +44,11 @@
   (print-unreadable-object (object stream :identity t :type t)
     (format stream "~S ~S" :id (slot-value object 'id))))
 
-(defmethod port-set-mirror-region ((port null-port) mirror mirror-region)
+(defmethod port-set-mirror-region ((port null-port) sheet region)
   ())
                                    
 (defmethod port-set-mirror-transformation
-    ((port null-port) mirror mirror-transformation)
+    ((port null-port) sheet transformation)
   ())
 
 (defmethod realize-mirror ((port null-port) (sheet mirrored-sheet-mixin))

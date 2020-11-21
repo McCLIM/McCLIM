@@ -191,7 +191,7 @@
     (%set-window-name window pretty-name)
     (%set-window-icon-name window pretty-name)
     (when icon
-      (port-set-mirror-icon port window icon))
+      (%mirror-install-icons window icon))
     (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
     (setf (xlib:wm-protocols window) `(:wm_take_focus :wm_delete_window))
     (xlib:change-property window
