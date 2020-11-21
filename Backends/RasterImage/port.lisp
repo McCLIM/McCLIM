@@ -62,12 +62,13 @@
   (declare (ignore port sheet))
   nil)
 
-(defmethod port-set-mirror-region ((port raster-image-port) mirror region)
-  (declare (ignore port mirror region))
+(defmethod port-set-mirror-region ((port raster-image-port) sheet region)
+  (declare (ignore port sheet region))
   nil)
 
-(defmethod port-set-mirror-transformation ((port raster-image-port) mirror transformation)
-  (declare (ignore port mirror transformation))
+(defmethod port-set-mirror-transformation
+    ((port raster-image-port) sheet transformation)
+  (declare (ignore port sheet transformation))
   nil)
 
 (defgeneric make-raster-top-level-sheet (port format))
