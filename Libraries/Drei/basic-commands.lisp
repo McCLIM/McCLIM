@@ -256,6 +256,16 @@ with a negative argument -n, move point forward by n lines."
 	 'movement-table
 	 '((:down :control)))
 
+(define-command (com-insert-space :name t :command-table editing-table)
+    ()
+  (insert-sequence (point) (string #\Space)))
+
+;; Originally, the following binding wasn't needed, as Shift-Space simply generated
+;; space gesture. After a change which caused the shift key to be treated as a regular
+;; modifier key, the self-insertion command will not trigger for shifted space anymore.
+;; Therefore, this binding is added to address this.
+(set-key 'com-insert-space 'editing-table '((#\Space :shift)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
 ;;; Editing commands.
