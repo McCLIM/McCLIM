@@ -621,10 +621,15 @@ documentation produced by presentations.")
       (object)
       (call-next-method)
     (menu-item
-     (let ((command (command-menu-item-value object))
-           (table (frame-command-table frame)))
-       (unless (listp command)
-         (setq command (partial-command-from-name command table)))
+     (let* ((command (alexandria:ensure-list (command-menu-item-value object)))
+            (table (frame-command-table frame))
+            (canonical (partial-command-from-name (car command) table)))
+       ;; When the command has more arguments than its "canonical form", that
+       ;; is the command with all required arguments filled, that means that
+       ;; it has all required arguments *and* some optional arguments.
+       (unless (> (length command) (length canonical))
+         (map-into canonical #'identity command)
+         (setf command canonical))
        (if (partial-command-p command)
            (funcall *partial-command-parser* table stream command 0)
            command)))))
