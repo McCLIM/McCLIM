@@ -778,6 +778,10 @@ unspecified. "))
 (defgeneric (setf presentation-single-box) (single-box presentation))
 (defgeneric presentation-modifier (presentation))
 
+;;; This function is used to create *null-presentation*-like objects that have
+;;; the output record position set (i.e when dragging output).
+(declfun make-blank-area-presentation (x y))
+
 ;;; 23.4 Typed output
 
 (defgeneric stream-present

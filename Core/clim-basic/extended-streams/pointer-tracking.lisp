@@ -115,7 +115,7 @@
                  (return-from sheet-find-presentation record))))
       (or (innermost-first (stream-output-history stream))
           (and (presentation-subtypep 'blank-area context-type)
-               *null-presentation*)))))
+               (make-blank-area-presentation x y))))))
 
 ;;; Function is responsible for handling events in tracking-pointer
 ;;; macro.
