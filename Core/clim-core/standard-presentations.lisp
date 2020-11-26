@@ -121,8 +121,25 @@
 (define-presentation-type blank-area ()
   :inherit-from t)
 
+;;; Do other slots of this have to be bound in order for this to be
+;;; useful?  Guess we'll see.
+;;;
+;;; KLUDGE: blank-area presentation-typep predicate depends on the
+;;; *null-presentation* which is defined to be of type blank-area. The
+;;; presentation initialize-instance :after method may call
+;;; presentation-typep to ensure, that the presentation object matches
+;;; the presentation type. That's why we fix the presentation-type of
+;;; the *null-presentation* after creating the object.
+(defvar *null-presentation*
+  (let ((instance (make-instance 'standard-presentation
+                                 :object nil
+                                 :type t
+                                 :view +textual-view+)))
+    (setf (presentation-type instance) 'blank-area)
+    instance))
+
 (define-presentation-method presentation-typep (object (type blank-area))
-  (null object))
+  (eq object (presentation-object *null-presentation*)))
 
 (define-presentation-method highlight-presentation ((type blank-area)
                                                     record
@@ -131,20 +148,7 @@
   (declare (ignore record stream state))
   nil)
 
-;;; Do other slots of this have to be bound in order for this to be
-;;; useful?  Guess we'll see.
-;;;
-;;; At least binding x and y is useful for drag and drop translators - not all
-;;; presentations of the type blank-area are eq to the *null-presentation*.
-(defun make-blank-area-presentation (x y)
-  (make-instance 'standard-presentation
-                 :object nil
-                 :type 'blank-area
-                 :view +textual-view+
-                 :x-position x :y-position y))
 
-(defvar *null-presentation*
-  (make-blank-area-presentation 0 0))
 
 (define-presentation-type number ()
   :inherit-from 't)

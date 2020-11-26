@@ -626,7 +626,7 @@ and used to ensure that presentation-translators-caches are up to date.")
      #'(lambda (translator presentation context)
          (return-from find-innermost-presentation-match
            (values presentation translator context)))
-     (make-blank-area-presentation x y)
+     *null-presentation*
      input-context
      frame
      window
