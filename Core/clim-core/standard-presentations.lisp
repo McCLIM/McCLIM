@@ -137,11 +137,13 @@
 ;;; At least binding x and y is useful for drag and drop translators - not all
 ;;; presentations of the type blank-area are eq to the *null-presentation*.
 (defun make-blank-area-presentation (x y)
-  (make-instance 'standard-presentation
-                 :object nil
-                 :type 'blank-area
-                 :view +textual-view+
-                 :x-position x :y-position y))
+  (if (and x y)
+      (make-instance 'standard-presentation
+                     :object nil
+                     :type 'blank-area
+                     :view +textual-view+
+                     :x-position x :y-position y)
+      *null-presentation*))
 
 (defvar *null-presentation*
   (make-blank-area-presentation 0 0))
