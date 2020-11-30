@@ -464,18 +464,12 @@ real numbers, and default to 0."
      ,@body))
 
 (defmacro with-scaling ((medium sx &optional sy origin) &body body)
-  (if sy
-      `(with-drawing-options (,medium
-			      :transformation
-			      (make-scaling-transformation
-			       ,sx ,sy ,@(if origin (list origin) nil)))
-         ,@body)
-    (let ((sx-var (make-symbol "SX")))
-      `(let* ((,sx-var ,sx))
-         (with-drawing-options (,medium 
-                                :transformation
-				(make-scaling-transformation ,sx-var ,sx-var))
-           ,@body)) )))
+  (with-gensyms (sx-var sy-var transformation)
+    `(let* ((,sx-var ,sx)
+            (,sy-var (or ,sy ,sx-var))
+            (,transformation (make-scaling-transformation ,sx-var ,sy-var ,origin)))
+       (with-drawing-options (,medium :transformation ,transformation)
+         ,@body))))
 
 (defmacro with-rotation ((medium angle &optional origin) &body body)
   `(with-drawing-options (,medium 
