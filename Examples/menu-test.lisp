@@ -65,7 +65,22 @@
                     :menu '(("Hello there" :menu kenobi-command-table)
                             ("Hi there"    :command com-hi)))
 
-(make-command-table 'menubar-command-table
-                    :errorp nil
-                    :menu '(("Buffer" :menu buffer-command-table)
-                            ("File"   :command com-file)))
+(defun get-kenobi (gesture numeric)
+  (declare (ignore gesture numeric))
+  '(com-kenobi))
+
+(define-command-table menubar-command-table
+  :menu (("Buffer" :menu buffer-command-table)
+         ("File"   :command com-file)
+         ;; horizontal divider
+         ("divider" :divider nil)
+         ;; literal submenu (McCLIM extension)
+         ("About"   :menu (("McCLIM"
+                            :menu (("super!" :divider nil)
+                                   ("kenobi" :command (com-kenobi))
+                                   ("extra!" :divider nil
+                                             :text-style (nil :bold nil))
+                                   ("kenobi" :function get-kenobi)))
+                           ("Lisp"
+                            :menu (("()()()" :divider nil)
+                                   ("empty"  :menu nil)))))))
