@@ -906,7 +906,9 @@ frames and will not have focus.
 
 (defmethod disown-frame ((fm frame-manager) (frame menu-frame))
   (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
-  (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
+  (let ((tps (frame-top-level-sheet frame)))
+    (sheet-disown-child tps (frame-panes frame))
+    (sheet-disown-child (graft frame) tps))
   (setf (frame-manager frame) nil))
 
 (defmethod enable-frame ((frame menu-frame))
