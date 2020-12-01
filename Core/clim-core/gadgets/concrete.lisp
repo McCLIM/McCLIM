@@ -178,6 +178,7 @@
 
 (defclass menu-button-pane (sheet-leaf-mixin
                             activate/deactivate-repaint-mixin
+                            arm/disarm-repaint-mixin
                             menu-button)
   ()
   (:default-initargs :background *3d-normal-color*
@@ -194,9 +195,10 @@
         (draw-rectangle* pane x1 y1 x2 y2
                          :ink (effective-gadget-background pane)
                          :filled t)
-        (cond ((slot-value pane 'armed)
-               (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :outset :border-width *3d-border-thickness*))
-              (t))
+        (when (gadget-armed-p pane)
+          (draw-bordered-rectangle* pane x1 y1 x2 y2
+                                    :style :outset
+                                    :border-width *3d-border-thickness*))
         (multiple-value-bind (x1 y1 x2 y2)
             (values (+ x1 x-spacing) (+ y1 y-spacing)
                     (- x2 x-spacing) (- y2 y-spacing))
