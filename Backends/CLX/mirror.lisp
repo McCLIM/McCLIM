@@ -83,13 +83,15 @@
   (let ((mirror (sheet-xmirror sheet)))
     (when (and mirror
                (typep mirror 'xlib:window))
-      (xlib:circulate-window-up mirror))))
+      (setf (xlib:window-priority mirror) :above)
+      (xlib:display-force-output (clx-port-display port)))))
 
 (defmethod bury-mirror ((port clx-basic-port) (sheet basic-sheet))
   (let ((mirror (sheet-xmirror sheet)))
     (when (and mirror
                (typep mirror 'xlib:window))
-      (xlib:circulate-window-down mirror))))
+      (setf (xlib:window-priority mirror) :below)
+      (xlib:display-force-output (clx-port-display port)))))
 
 (defmethod mirror-transformation ((port clx-basic-port) mirror)
   (make-translation-transformation (xlib:drawable-x mirror)
