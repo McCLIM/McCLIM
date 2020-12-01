@@ -49,14 +49,22 @@
                    ;; order, so they are in reverse order.
                    (reverse (sheet-children rack)))))
 
+(define-gesture-name :menu-exit  :keyboard :escape)
+(define-gesture-name :menu-left  :keyboard :left)
+(define-gesture-name :menu-right :keyboard :right)
+(define-gesture-name :menu-up    :keyboard :up)
+(define-gesture-name :menu-down  :keyboard :down)
+(define-gesture-name :menu-enter :keyboard #\return)
+(define-gesture-name :menu-enter :keyboard #\space :unique nil)
+
 (defun start-menu-bar (menu-bar active-button
                        &aux (first-release t) (frame (pane-frame menu-bar)))
-  (declare (ignore active-button))
   (unwind-protect (tracking-pointer (menu-bar :multiple-window t)
                     (:pointer-button-press
                      (window)
                      (when (typep window 'menu-button-pane)
-                       (arm-gadget window)))
+                       (arm-gadget window)
+                       (setf active-button window)))
                     (:pointer-button-release
                      (window)
                      (typecase window
@@ -72,21 +80,97 @@
                             (arm-gadget window)))
                        (otherwise
                         (return-from start-menu-bar)))
-                     (setf first-release nil))
+                     (setf first-release nil)
+                     (setf active-button window))
                     (:pointer-motion
                      (window)
                      (when (typep window 'menu-button-pane)
                        (if (gadget-armed-p window)
                            (mapc #'disarm-gadget (menu-children window))
-                           (arm-gadget window))))
+                           (arm-gadget window))
+                       (setf active-button window)))
                     (:keyboard
-                     ()
-                     (return-from start-menu-bar)))
-    (loop for child in (menu-children menu-bar)
+                     (event)
+                     (labels ((go-top ()
+                                (let ((client (gadget-client active-button)))
+                                  (if (application-frame-p client)
+                                      (mapc #'disarm-gadget (menu-children active-button))
+                                      (progn
+                                        (setf active-button client)
+                                        (go-top)))))
+                              (go-parent ()
+                                (let ((client (gadget-client active-button))
+                                      (active active-button))
+                                  (unless (application-frame-p client)
+                                    (setf active-button client)
+                                    (arm-gadget client)
+                                    (mapc #'disarm-gadget (menu-children client))
+                                    (unless (eq (box-layout-orientation (sheet-parent active))
+                                                (box-layout-orientation (sheet-parent client)))
+                                      (go-previous)))))
+                              (go-child ()
+                                (if-let ((child (first (menu-children active-button))))
+                                  (progn
+                                    (setf active-button child)
+                                    (arm-gadget child))
+                                  (progn
+                                    (go-top)
+                                    (go-next))))
+                              (go-next ()
+                                (when-let* ((client (gadget-client active-button))
+                                            (siblings (menu-children client))
+                                            (remainder (member active-button siblings)))
+                                  (setf active-button
+                                        (if (null (cdr remainder))
+                                            (first siblings)
+                                            (second remainder)))
+                                  (arm-gadget active-button)))
+                              (go-previous ()
+                                (when-let* ((client (gadget-client active-button))
+                                            (siblings (reverse (menu-children client)))
+                                            (remainder (member active-button siblings)))
+                                  (setf active-button
+                                        (if (null (cdr remainder))
+                                            (first siblings)
+                                            (second remainder)))
+                                  (arm-gadget active-button)))
+                              (enter ()
+                                (etypecase active-button
+                                  (menu-button-leaf-pane
+                                   (with-slots (label client id) active-button
+                                     (value-changed-callback active-button client id label)))
+                                  (menu-button-submenu-pane
+                                   (when-let ((child (first (menu-children active-button))))
+                                     (arm-gadget child)
+                                     (setf active-button child))))))
+                       (gesture-case event
+                         (:menu-exit
+                          (return-from start-menu-bar))
+                         (:menu-enter
+                          (enter))
+                         (:menu-left
+                          ;; sheet parent is the layout
+                          (ecase (box-layout-orientation (sheet-parent active-button))
+                            (:horizontal (go-previous))
+                            (:vertical (go-parent))))
+                         (:menu-right
+                          (ecase (box-layout-orientation (sheet-parent active-button))
+                            (:horizontal (go-next))
+                            (:vertical (go-child))))
+                         (:menu-up
+                          (ecase (box-layout-orientation (sheet-parent active-button))
+                            (:horizontal (go-parent))
+                            (:vertical (go-previous))))
+                         (:menu-down
+                          (ecase (box-layout-orientation (sheet-parent active-button))
+                            (:horizontal (go-child))
+                            (:vertical (go-next))))))))
+    (loop for child in (sheet-children menu-bar)
           do (disarm-gadget child))))
 
 (defclass menu-button-submenu-pane (menu-button-pane)
   ((submenu-pane :reader submenu-pane)
+   (submenu-items :reader submenu-items)
    (submenu-frame :reader submenu-frame)))
 
 ;;; These methods are responsible for ensuring enough space for a marker, that
@@ -257,8 +341,15 @@
                                          :armed-callback 'arm-menu-button-callback
                                          :disarmed-callback 'disarm-menu-button-callback))
                 (rack (make-menu-bar value sub-pane 'vmenu-pane))
-                (border (make-pane 'raised-pane :contents (list rack))))
+                (border (make-pane 'raised-pane :contents (list rack)))
+                (active (remove-if-not (lambda (elt)
+                                         (and (typep elt 'menu-button-pane)
+                                              (gadget-active-p elt)))
+                                       ;; Composite panes adopt children in
+                                       ;; order, so they are in reverse order.
+                                       (reverse (sheet-children rack)))))
            (setf (slot-value sub-pane 'submenu-pane) rack
+                 (slot-value sub-pane 'submenu-items) active
                  (slot-value sub-pane 'submenu-frame) (make-menu-frame border))
            sub-pane))
         (otherwise (error "Don't know how to create a menu button for ~W" type))))))

@@ -979,3 +979,16 @@ COUNT specifies how many breaks we want to collect."
   (if (typep sheet '(or top-level-sheet-mixin null))
       sheet
       (get-top-level-sheet (sheet-parent sheet))))
+
+;;; Convenience macro
+(defmacro gesture-case (event &body cases)
+  (alexandria:once-only (event)
+    (flet ((make-match (match body)
+             `((event-matches-gesture-name-p ,event ,match) ,@body)))
+      `(cond ,@(loop for (match . body) in cases
+                     appending (if (atom match)
+                                   (list (if (member match '(otherwise t))
+                                             `(t ,@body)
+                                             (make-match match body)))
+                                   (loop for match in match
+                                         collect (make-match match body))))))))

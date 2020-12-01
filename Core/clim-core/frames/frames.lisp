@@ -310,8 +310,10 @@ documentation produced by presentations.")
 
 (defmethod (setf frame-command-table) :around (new-command-table frame)
   (prog1 (call-next-method)
-    (when-let ((menu-bar-pane (frame-menu-bar-pane frame)))
-      (update-menu-bar menu-bar-pane frame new-command-table))))
+    ;; Update the menu-bar only when its value was T. Otherwise it was either
+    ;; a manually specified command table or a verbatim menu. -- jd 2020-11-03
+    (when (eq t (slot-value frame 'menu-bar))
+      (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table))))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
