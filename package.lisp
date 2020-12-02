@@ -2016,6 +2016,8 @@
    #:port-deallocate-pixmap
    #:port-disable-sheet
    #:port-enable-sheet
+   #:port-shrink-sheet
+   #:port-puffup-sheet
    #:port-force-output
    #:port-grab-pointer
    #:port-ungrab-pointer

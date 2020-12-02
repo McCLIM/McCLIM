@@ -1311,6 +1311,8 @@ rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-deallocate-pixmap (port pixmap))
 (defgeneric port-enable-sheet (port sheet))
 (defgeneric port-disable-sheet (port sheet))
+(defgeneric port-shrink-sheet (port sheet))
+(defgeneric port-puffup-sheet (port sheet))
 (defgeneric port-pointer (port))
 
 (defgeneric pointer-update-state (pointer event)

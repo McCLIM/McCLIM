@@ -73,6 +73,8 @@
 (defgeneric note-sheet-disowned (sheet))
 (defgeneric note-sheet-enabled (sheet))
 (defgeneric note-sheet-disabled (sheet))
+(defgeneric note-sheet-iconified (sheet))
+(defgeneric note-sheet-deiconified (sheet))
 (defgeneric note-sheet-region-changed (sheet))
 (defgeneric note-sheet-transformation-changed (sheet))
 
@@ -111,7 +113,11 @@
    (enabled-p :type boolean
 	      :initarg :enabled-p
               :initform t
-              :accessor sheet-enabled-p)))
+              :accessor sheet-enabled-p)
+   (shrank-p :type boolean
+             :initarg :shrank-p
+             :initform nil
+             :accessor sheet-shrank-p)))
 
 ;;; Native region is volatile, and is only computed at the first
 ;;; request when it's equal to nil.
@@ -218,6 +224,13 @@
     (dispatch-repaint (sheet-parent sheet)
                       (transform-region (sheet-transformation sheet)
                                         (sheet-region sheet)))))
+
+(defmethod (setf sheet-shrank-p) :around (shrank-p (sheet basic-sheet))
+  (unless (eql shrank-p (sheet-shrank-p sheet))
+    (call-next-method)
+    (if shrank-p
+        (note-sheet-iconified sheet)
+        (note-sheet-deiconified sheet))))
 
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
@@ -700,6 +713,15 @@ might be different from the sheet's native region."
     (if new-value
         (port-enable-sheet (port sheet) sheet)
         (port-disable-sheet (port sheet) sheet))))
+
+(defmethod (setf sheet-shrank-p) :after
+    (new-value (sheet mirrored-sheet-mixin))
+  (format *debug-io* "after~%")
+  (when (sheet-direct-mirror sheet)
+    ;; We do this only if the sheet actually has a mirror.
+    (if new-value
+        (port-shrink-sheet (port sheet) sheet)
+        (port-puffup-sheet (port sheet) sheet))))
 
 (defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
   (port-set-mirror-name (port sheet) sheet new-name))

@@ -111,3 +111,11 @@
 (defmethod port-disable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
   (xlib:unmap-window (sheet-direct-mirror mirror))
   (xlib:display-force-output (clx-port-display port)))
+
+(defmethod port-shrink-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
+  (xlib:iconify-window (sheet-direct-mirror mirror) (clx-port-screen port))
+  (xlib:display-force-output (clx-port-display port)))
+
+(defmethod port-puffup-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
+  (xlib:map-window (sheet-direct-mirror mirror))
+  (xlib:display-force-output (clx-port-display port)))
