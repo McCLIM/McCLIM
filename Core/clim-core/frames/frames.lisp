@@ -65,6 +65,14 @@
   (declare (ignore frame))
   t)
 
+(defmethod note-frame-iconified ((fm frame-manager) frame)
+  (declare (ignore frame))
+  t)
+
+(defmethod note-frame-deiconified ((fm frame-manager) frame)
+  (declare (ignore frame))
+  t)
+
 ;;; XXX These should force the redisplay of the menu bar. They don't yet.
 
 (defmethod note-command-enabled (frame-manager frame command-name)
@@ -776,14 +784,28 @@ documentation produced by presentations.")
   frame)
 
 (defmethod enable-frame ((frame application-frame))
-  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
-  (setf (slot-value frame 'state) :enabled)
-  (note-frame-enabled (frame-manager frame) frame))
+  (ecase (slot-value frame 'state)
+    (:disabled
+     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
+     (note-frame-enabled (frame-manager frame) frame))
+    (:shrunk
+     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
+     (note-frame-deiconified (frame-manager frame) frame))
+    (:enabled))
+  (setf (slot-value frame 'state) :enabled))
 
 (defmethod disable-frame ((frame application-frame))
-  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
+  (let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-enabled-p top-level-sheet) nil))
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
+
+(defmethod shrink-frame ((frame application-frame))
+  (unless (eq (slot-value frame 'state) :disabled)
+    (shrink-sheet (frame-top-level-sheet frame))
+    (setf (slot-value frame 'state) :shrunk)
+    (note-frame-iconified (frame-manager frame) frame))
+  (frame-state frame))
 
 (defmethod destroy-frame ((frame application-frame))
   (when (eq (frame-state frame) :enabled)
@@ -940,6 +962,10 @@ frames and will not have focus.
   (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
+
+(defmethod shrink-frame ((frame menu-frame))
+  (declare (ignore frame))
+  (warn "MENU-FRAME can't be shrunk."))
 
 (defun make-menu-frame (pane &key (left 0) (top 0) (min-width 1))
   (make-instance 'menu-frame :panes pane :left left :top top :min-width min-width))

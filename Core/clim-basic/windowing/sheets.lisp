@@ -89,6 +89,7 @@
 ;;; conditions
 
 (define-condition sheet-is-not-child (error) ())
+(define-condition sheet-is-top-level (error) ())
 (define-condition sheet-ordering-underspecified (error) ())
 (define-condition sheet-is-not-ancestor (error) ())
 (define-condition sheet-already-has-parent (error) ())
@@ -179,6 +180,8 @@
 (defmethod bury-sheet ((sheet basic-sheet))
   (error 'sheet-is-not-child))
 
+(defmethod shrink-sheet ((sheet basic-sheet))
+  (error 'sheet-is-not-top-level))
 
 (defmethod reorder-sheets ((sheet basic-sheet) new-ordering)
   (when (set-difference (sheet-children sheet) new-ordering)
@@ -757,6 +760,10 @@ might be different from the sheet's native region."
                          array patterns that should be used by the
                          host's window manager to represent the sheet,
                          for example when its mirror is iconified.")))
+
+(defmethod shrink-sheet ((sheet top-level-sheet-mixin))
+  (when (sheet-enabled-p sheet)
+    (port-shrink-sheet (port sheet) sheet)))
 
 ;;; Unmanaged sheet is not managed by the window manager.
 (defclass unmanaged-sheet-mixin () ())

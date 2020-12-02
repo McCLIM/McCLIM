@@ -1897,6 +1897,7 @@
    #:sheet-name
    #:sheet-pretty-name
    #:sheet-icon
+   #:shrink-sheet
 
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -2016,6 +2017,7 @@
    #:port-deallocate-pixmap
    #:port-disable-sheet
    #:port-enable-sheet
+   #:port-shrink-sheet
    #:port-force-output
    #:port-grab-pointer
    #:port-ungrab-pointer
