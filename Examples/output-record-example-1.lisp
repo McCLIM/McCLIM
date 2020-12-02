@@ -87,7 +87,8 @@
 ;;; output record.
 (defclass circle-output-record (clim:graphics-displayed-output-record)
   ((%center-x :initarg :center-x :accessor center-x)
-   (%center-y :initarg :center-y :accessor center-y)))
+   (%center-y :initarg :center-y :accessor center-y)
+   (%parent :initarg :parent :accessor clim:output-record-parent)))
 
 ;;; CLIM requires us to define a method on BOUNDING-RECTANGLE,
 ;;; specialized to our output-record class.  We just use a fixed size,
