@@ -108,14 +108,17 @@
   (:method (sheet context-type x y event)
     nil)
   (:method ((stream output-recording-stream) context-type x y event)
-    (labels ((innermost-first (record)
+    (labels ((matches-context-p (presentation)
+               (presentation-subtypep (presentation-type presentation) context-type))
+             (innermost-first (record)
                (map-over-output-records-containing-position #'innermost-first record x y)
                (when (and (presentationp record)
-                          (presentation-subtypep (presentation-type record) context-type))
+                          (matches-context-p record))
                  (return-from sheet-find-presentation record))))
       (or (innermost-first (stream-output-history stream))
-          (and (presentation-subtypep 'blank-area context-type)
-               *null-presentation*)))))
+          (let ((presentation (make-blank-area-presentation stream x y event)))
+            (when (matches-context-p presentation)
+              presentation))))))
 
 ;;; This function is responsible for handling events in
 ;;; tracking-pointer macro.

@@ -6,6 +6,7 @@
 * Frame and sheet names::
 * Text editor substrate::
 * Extended text formatting::
+* Extended blank area presentation type::
 * Tab Layout::
 * Fonts and Extended Text Styles::
 * Raster Images::
@@ -141,6 +142,49 @@ The macro preserves a @code{text-style}, @code{ink} and indentation from
 state in which it was invoked.  That means in particular that
 @code{indenting-output} may be called from inside @code{filling-output}
 and @code{after-line-break} will be printed without this indent.
+
+@node Extended blank area presentation type
+@section Extended blank area presentation type
+
+@cindex blank area
+
+@clim{} specifies @code{clim:blank-area} as a special presentation type
+that represents places at which no other presentation is applicable
+given the current input context.  The value of
+@code{clim:*null-presentation*} is specified to a presentation instance
+with presentation type @code{clim:blank-area}.  The specification
+implies that there is only one such instance.  @mcclim{} slightly
+deviates from this by
+@enumerate
+@item
+allowing multiple presentation instances with presentation type
+@code{clim:blank-area}.
+
+@item
+adding keyword parameters to the @code{clim:blank-area} presentation
+type: @code{&key sheet region}.
+@end enumerate
+When the system constructs a presentation instance with presentation
+type @code{clim:blank-area} for a pointer motion or click at position
+(@var{x},@var{y}) on sheet @var{sheet}:
+@itemize
+@item
+The object of the presentation instance is a pointer event with sheet
+@var{sheet} and position (@var{x},@var{y}).
+
+@item
+The value of the @code{sheet} presentation type parameter is
+@var{sheet}.
+
+@item
+The value of the @code{region} presentation type parameter is a
+@code{clim:point} instance with position (@var{x},@var{y}).
+@end itemize
+
+The subtype relation for @code{clim:blank-area} presentation types with
+supplied parameters is based on the sheet matching if supplied and the
+region of the subtype being contained in the region of the supertype if
+supplied.
 
 @node Tab Layout
 @section Tab Layout

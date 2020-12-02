@@ -778,6 +778,8 @@ unspecified. "))
 (defgeneric (setf presentation-single-box) (single-box presentation))
 (defgeneric presentation-modifier (presentation))
 
+(declfun make-blank-area-presentation (sheet x y event))
+
 ;;; 23.4 Typed output
 
 (defgeneric stream-present

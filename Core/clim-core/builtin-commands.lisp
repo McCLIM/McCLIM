@@ -78,7 +78,7 @@
      :gesture :describe-presentation
      :tester ((object presentation)
               (declare (ignore object))
-              (not (eq presentation *null-presentation*)))
+              (not (presentation-subtypep (presentation-type presentation) 'blank-area)))
      :documentation "Describe Presentation"
      :pointer-documentation "Describe Presentation"
      :menu presentation-debugging)
