@@ -118,28 +118,47 @@
   (declare (ignore acceptably for-context-type))
   (prin1 object stream))
 
-(define-presentation-type blank-area ()
-  :inherit-from t)
-
-;;; Do other slots of this have to be bound in order for this to be
-;;; useful?  Guess we'll see.
+;;; The BLANK-AREA accepts POINTER-EVENTs as presented object and can
+;;; optionally encode the sheet containing the blank area and a region
+;;; within the sheet region as presentation type parameters.
 ;;;
-;;; KLUDGE: blank-area presentation-typep predicate depends on the
-;;; *null-presentation* which is defined to be of type blank-area. The
-;;; presentation initialize-instance :after method may call
-;;; presentation-typep to ensure, that the presentation object matches
-;;; the presentation type. That's why we fix the presentation-type of
-;;; the *null-presentation* after creating the object.
-(defvar *null-presentation*
-  (let ((instance (make-instance 'standard-presentation
-                                 :object nil
-                                 :type t
-                                 :view +textual-view+)))
-    (setf (presentation-type instance) 'blank-area)
-    instance))
+;;; The presented POINTER-EVENT instance corresponds to the sheet for
+;;; which the blank area presentation is constructed and the pointer
+;;; position on that sheet. The event instance is only accepted by a
+;;; BLANK-AREA presentation type that has unspecified SHEET and REGION
+;;; parameters or the same sheet as the event and a region containing
+;;; the position respectively.
+;;;
+;;; Correspondingly, sub-typing between BLANK-AREA presentation types
+;;; with parameters is based on matching sheets and region
+;;; containment. Specifically the region of the subtype has to be
+;;; contained in the region of the supertype.
+
+(define-presentation-type blank-area (&key sheet region))
 
 (define-presentation-method presentation-typep (object (type blank-area))
-  (eq object (presentation-object *null-presentation*)))
+  (if (null object)
+      (and (eq sheet '*)
+           (eq region '*))
+      (and (typep object 'pointer-event)
+           (or (eq sheet '*) (eq (event-sheet object) sheet))
+           (or (eq region '*) (region-contains-position-p
+                               region
+                               (pointer-event-x object)
+                               (pointer-event-y object))))))
+
+(define-presentation-method presentation-subtypep ((type blank-area)
+                                                   putative-supertype)
+  (destructuring-bind (&key ((:sheet sub-sheet) '*)
+                            ((:region sub-region) '*))
+      (decode-parameters type)
+    (destructuring-bind (&key ((:sheet super-sheet) '*)
+                              ((:region super-region) '*))
+        (decode-parameters putative-supertype)
+      (values (and (or (eq super-sheet '*) (eq sub-sheet super-sheet))
+                   (or (eq super-region '*) (region-contains-region-p
+                                             super-region sub-region)))
+              t))))
 
 (define-presentation-method highlight-presentation ((type blank-area)
                                                     record
@@ -149,6 +168,33 @@
   nil)
 
 
+;;; *NULL-PRESENTATION* is provided as something what the user may
+;;; want to return (or pass somewhere else), clicking on the area
+;;; without a presentation in a context involving blank-area will
+;;; create a distinct presentation instance with more information, in
+;;; particular the event sheet and pointer position of the click.
+;;;
+;;; The object may not be fully initialized as a presentation. Do
+;;; other slots have to be bound in order for it to be useful?  Guess
+;;; we'll see.
+
+(defvar *null-presentation*
+  (make-instance 'standard-presentation :object nil
+                                        :type 'blank-area
+                                        :view +textual-view+))
+
+(defun make-blank-area-presentation (sheet x y event)
+  (if (null sheet)
+      *null-presentation*
+      (let ((event (or event
+                       (make-instance 'pointer-event :sheet sheet :x x :y y))))
+        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* sheet)
+          (make-instance 'standard-presentation
+                         :object event
+                         :type `((blank-area :sheet ,sheet :region ,(make-point x y))
+                                 :description "Blank Area")
+                         :view +textual-view+
+                         :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (define-presentation-type number ()
   :inherit-from 't)
