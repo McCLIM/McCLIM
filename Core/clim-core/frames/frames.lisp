@@ -753,7 +753,6 @@ documentation produced by presentations.")
   (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
   (setf (%frame-manager frame) nil)
   (setf (slot-value frame 'state) :disowned)
-  (port-force-output (port fm))
   frame)
 
 (defmethod enable-frame ((frame application-frame))
@@ -762,10 +761,7 @@ documentation produced by presentations.")
   (note-frame-enabled (frame-manager frame) frame))
 
 (defmethod disable-frame ((frame application-frame))
-  (let ((t-l-s (frame-top-level-sheet frame)))
-    (setf (sheet-enabled-p t-l-s) nil)
-    (when (port t-l-s)
-      (port-force-output (port t-l-s))))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
 
@@ -919,13 +915,9 @@ frames and will not have focus.
   (note-frame-enabled (frame-manager frame) frame))
 
 (defmethod disable-frame ((frame menu-frame))
-  (let ((t-l-s (frame-top-level-sheet frame)))
-    (setf (sheet-enabled-p t-l-s) nil)
-    (when (port t-l-s)
-      (port-force-output (port t-l-s))))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
-
 
 (defun make-menu-frame (pane &key (left 0) (top 0) (min-width 1))
   (make-instance 'menu-frame :panes pane :left left :top top :min-width min-width))
