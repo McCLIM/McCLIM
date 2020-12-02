@@ -120,13 +120,14 @@
   (when (null (port-lookup-mirror port sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
-                            (permanent-medium-sheet-output-mixin ;; sheet-with-medium-mixin
-                             (medium-background sheet))
                             (pane ; CHECKME [is this sensible?] seems to be
                              (let ((background (pane-background sheet)))
                                (if (typep background 'color)
                                    background
                                    +white+)))
+                             ;; sheet-with-medium-mixin
+                            (permanent-medium-sheet-output-mixin
+                             (medium-background sheet))
                             (t
                              +white+)))
            (color (multiple-value-bind (r g b)
