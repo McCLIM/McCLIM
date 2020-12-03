@@ -448,7 +448,8 @@
              ((object destination-object)
               (or (eq object destination-object)
                   (valid-move-p *application-frame* object destination-object)))
-             :multiple-window nil)
+             :multiple-window nil
+             :menu nil)
     (checker destination-object)
   (if (eq checker destination-object)
       `(com-select-checker ,checker)
