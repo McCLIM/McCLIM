@@ -144,7 +144,9 @@
                           frame window x y
                           :for-menu t
                           :label (format nil "Operation on ~A"
-                                         (presentation-type presentation))))
+                                         (with-output-to-string (stream)
+                                           (describe-presentation-type
+                                            (presentation-type presentation) stream 1)))))
 
 ;;; Action for possibilities menu of complete-input
 ;;;
