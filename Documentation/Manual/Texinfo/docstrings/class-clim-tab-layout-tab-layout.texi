@@ -5,6 +5,6 @@ Class precedence list: @code{@w{tab-layout}, @w{sheet-multiple-child-mixin}, @w{
 The abstract tab layout pane is a composite pane arranging
 its children so that exactly one child is visible at any time, with a row of
 buttons allowing the user to choose between them.  Use @code{with-tab-layout} to
-define a tab layout and its children, or use the :@code{pages} argument
+define a tab layout and its children, or use the @code{:pages} argument
 to specify its contents when creating it dynamically using @code{make-pane}.
 @end deftp

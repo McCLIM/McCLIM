@@ -3,8 +3,8 @@
 Class precedence list: @code{@w{tab-page}, @w{standard-object}, @w{slot-object}, @w{t}}
 
 Instances of @code{tab-page} represent the pages in a @code{tab-layout}.
-For each child pane, there is a @code{tab-page} providing the page's title and
-additional information about the child.  Valid initialization arguments
-are :@code{title}, :@code{pane} (required) and :@code{presentation-type},:DRAWING-OPTIONS
-(optional).
+For each child pane, there is a @code{tab-page} providing the page's
+title and additional information about the child.  Valid initialization
+arguments are @code{:title}, @code{:pane} (required),
+@code{:presentation-type} and @code{:drawing-options} (optional).
 @end deftp
