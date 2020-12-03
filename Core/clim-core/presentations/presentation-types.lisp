@@ -439,17 +439,15 @@ filled in."
 
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro with-presentation-type-decoded ((name
-                                             &optional (params nil params-p)
-                                               (options nil options-p))
+  (defmacro with-presentation-type-decoded ((name &optional (params nil params-p)
+                                                            (options nil options-p))
                                             type &body body)
     (let ((type-var (gensym "TYPE-VAR")))
       `(let* ((,type-var ,type)
               (,name (presentation-type-name ,type-var))
               ,@(and params-p `((,params (decode-parameters ,type-var))))
               ,@(and options-p `((,options (decode-options ,type-var)))))
-         ,@body)))
-  )
+         ,@body))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun make-expansion-lambda (params-ll options-ll)

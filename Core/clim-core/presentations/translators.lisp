@@ -444,12 +444,10 @@ and used to ensure that presentation-translators-caches are up to date.")
                (process-presentation context record))))
     (if (and (presentationp presentation)
              (presentation-subtypep (presentation-type presentation) 'blank-area))
-        (loop
-          for context in input-context
-          do (process-presentation context presentation))
-        (loop
-          for context in input-context
-          do (mopscp context presentation)))))
+        (loop for context in input-context
+              do (process-presentation context presentation))
+        (loop for context in input-context
+              do (mopscp context presentation)))))
 
 (defun window-modifier-state (window)
   "Provides default modifier state for presentation translator functions."
@@ -560,7 +558,6 @@ and used to ensure that presentation-translators-caches are up to date.")
   (multiple-value-bind (item object event)
       (menu-choose
        items
-       :label label
        :associated-window window
        :printer #'(lambda (item stream)
                     (let ((object (first item)))
