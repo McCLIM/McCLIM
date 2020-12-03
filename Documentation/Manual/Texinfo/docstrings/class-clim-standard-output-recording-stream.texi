@@ -10,5 +10,5 @@ This flag is used for dealing with streams outputting strings char-by-char.
 @end itemize
 
 This class is mixed into some other stream class to
-add output recording facilities. It is not instantiable.
+add output recording facilities.  It is not instantiable.
 @end deftp

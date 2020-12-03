@@ -1,5 +1,6 @@
 @anchor{Generic-Function clim:delete-output-record}
-@deffn {Generic Function} {@symbol{delete-output-record,clim}} child record &optional errorp
-If CHILD is a child of RECORD, sets the parent of
-CHILD to NIL.
+@deffn {Generic Function} {@symbol{delete-output-record,clim}}@
+  child record &optional errorp
+If @var{child} is a child of @var{record}, sets the parent of
+@var{child} to @code{nil}.
 @end deffn

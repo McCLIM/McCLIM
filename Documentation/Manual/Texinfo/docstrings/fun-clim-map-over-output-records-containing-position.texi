@@ -1,14 +1,15 @@
 @anchor{Generic-Function clim:map-over-output-records-containing-position}
-@deffn {Generic Function} {@symbol{map-over-output-records-containing-position,clim}} function record x y &optional x-offset y-offset &rest function-args
-Maps over all of the children of RECORD that
-contain the point at (X,Y), calling FUNCTION on each one. FUNCTION is
-a function of one or more arguments, the first argument being the
-record containing the point. FUNCTION is also called with all of
-FUNCTION-ARGS as APPLY arguments.
+@deffn {Generic Function} {@symbol{map-over-output-records-containing-position,clim}}@
+  function record x y &optional x-offset y-offset &rest function-args
+Maps over all of the children of @var{record} that contain the point at
+(@var{x},@var{y}), calling @var{function} on each one.  @var{function} is
+a function of one or more arguments, the first argument being the record
+containing the point.  @var{function} is also called with all of
+@var{function-args} as @code{apply} arguments.
 
 If there are multiple records that contain the point,
-MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION hits the most recently
-inserted record first and the least recently inserted record
-last. Otherwise, the order in which the records are traversed is
+@code{map-over-output-records-containing-position} hits the most
+recently inserted record first and the least recently inserted record
+last.  Otherwise, the order in which the records are traversed is
 unspecified.
 @end deffn

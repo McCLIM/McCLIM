@@ -1,10 +1,9 @@
 @anchor{Generic-Function clim:replay-output-record}
 @deffn {Generic Function} {@symbol{replay-output-record,clim}} record stream &optional region x-offset y-offset
-Displays the output captured by RECORD on the
-STREAM, exactly as it was originally captured. The current user
-transformation, line style, text style, ink and clipping region of
-STREAM are all ignored. Instead, these are gotten from the output
-record.
+Displays the output captured by @var{record} on the @var{stream},
+exactly as it was originally captured. The current user transformation,
+line style, text style, ink and clipping region of @var{stream} are all
+ignored. Instead, these are gotten from the output record.
 
-Only those records that overlap @code{region} are displayed.
+Only those records that overlap @var{region} are displayed.
 @end deffn
