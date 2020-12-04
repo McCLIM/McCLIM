@@ -360,24 +360,27 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event (modifier-state 0) for-menu)
-  (flet ((match-gesture (gesture event modifier-state)
-           (or (eq gesture t)
-               for-menu
-               (loop
-                 with modifiers = (if event
-                                      (event-modifier-state event)
-                                      modifier-state)
-                 for g in gesture
-                   thereis (and (eql modifiers (caddr g))
-                                (or (null event)
-                                    (eql (pointer-event-button event)
-                                         (cadr g))))))))
+     &key event modifier-state for-menu)
+  (flet ((match-gesture (gesture)
+           ;; When both event and modifier-state are supplied consequences are
+           ;; undefined. We interpret it as: when both are supplied, then the
+           ;; event is ignored in the tester.
+           (when (or (eq gesture t) for-menu)
+             (return-from match-gesture t))
+           (if (or modifier-state (null event))
+               (loop with mod = (or modifier-state 0)
+                     for g in gesture
+                       thereis (eql mod (caddr g)))
+               (loop with mod = (event-modifier-state event)
+                     with btn = (pointer-event-button event)
+                     for g in gesture
+                       thereis (and (eql mod (caddr g))
+                                    (eql btn (cadr g)))))))
     (let ((from-type (from-type translator))
           (to-type (to-type translator))
           (ptype (presentation-type presentation))
           (object (presentation-object presentation)))
-      (and (match-gesture (gesture translator) event modifier-state)
+      (and (match-gesture (gesture translator))
            ;; We call PRESENTATION-SUBTYPEP because applicable translators are
            ;; matched only by the presentation type's name.
            ;;
@@ -410,7 +413,7 @@ and used to ensure that presentation-translators-caches are up to date.")
            t))))
 
 (defun map-applicable-translators (func presentation input-context frame window x y
-                                   &key event (modifier-state 0) for-menu)
+                                   &key event modifier-state for-menu)
   (labels ((process-presentation (context presentation)
              (let* ((context-ptype (first context))
                     (maybe-translators
@@ -453,7 +456,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-applicable-translators
     (presentation input-context frame window x y
-     &key event (modifier-state (window-modifier-state window)) for-menu fastp)
+     &key event modifier-state for-menu fastp)
+  (when (and (not modifier-state) (not event))
+    (setf modifier-state (window-modifier-state window)))
   (let ((results nil))
     (flet ((fast-func (translator presentation context)
              (declare (ignore translator presentation context))
@@ -469,7 +474,7 @@ and used to ensure that presentation-translators-caches are up to date.")
       (nreverse results))))
 
 (defun presentation-matches-context-type
-    (presentation context-type frame window x y &key event (modifier-state 0))
+    (presentation context-type frame window x y &key event modifier-state)
   (let* ((ptype (expand-presentation-type-abbreviation (presentation-type presentation)))
          (ctype (expand-presentation-type-abbreviation context-type))
          (table (frame-command-table frame)))
@@ -630,9 +635,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-innermost-applicable-presentation
     (input-context window x y
-     &key (frame *application-frame*)
-       (modifier-state (window-modifier-state window))
-       event)
+     &key (frame *application-frame*) modifier-state event)
+  (when (and (not modifier-state) (not event))
+    (setf modifier-state (window-modifier-state window)))
   (values (find-innermost-presentation-match input-context
                                              (stream-output-history window)
                                              frame
@@ -652,7 +657,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                            (event-sheet event)
                                            x y
                                            event
-                                           0)
+                                           nil)
       (when p
         (multiple-value-bind (object ptype options)
             (call-presentation-translator translator

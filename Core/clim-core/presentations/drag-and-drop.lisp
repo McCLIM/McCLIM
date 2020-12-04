@@ -106,6 +106,7 @@
   (declare (ignore command-table))
   (let* ((*dragged-presentation* from-presentation)
          (*dragged-object* (presentation-object from-presentation))
+         (modifier-state (and (null event) (window-modifier-state window)))
          (translators (collect (collect-translator)
                         ;; Translator order matters.
                         (map-applicable-translators
