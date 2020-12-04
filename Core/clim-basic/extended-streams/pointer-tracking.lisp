@@ -104,10 +104,10 @@
     (setf (slot-value instance 'highlight)
           (or p-p pbp-p pbr-p))))
 
-(defgeneric sheet-find-presentation (sheet context-type x y)
-  (:method (sheet context-type x y)
+(defgeneric sheet-find-presentation (sheet context-type x y event)
+  (:method (sheet context-type x y event)
     nil)
-  (:method ((stream output-recording-stream) context-type x y)
+  (:method ((stream output-recording-stream) context-type x y event)
     (labels ((innermost-first (record)
                (map-over-output-records-containing-position #'innermost-first record x y)
                (when (and (presentationp record)
@@ -117,8 +117,8 @@
           (and (presentation-subtypep 'blank-area context-type)
                *null-presentation*)))))
 
-;;; Function is responsible for handling events in tracking-pointer
-;;; macro.
+;;; This function is responsible for handling events in
+;;; tracking-pointer macro.
 (defgeneric track-event (state event x y)
   (:method ((state tracking-pointer-state) event x y)
     (default-tracking-handler :event event))
@@ -132,10 +132,10 @@
                 (let ((window (event-sheet event)))
                   (when-let ((highlighted (%highlighted-presentation state)))
                     (highlight-output-record highlighted window :unhighlight))
-                  (when-let*
-                      ((context-type (context-type state))
-                       (handler (,presentation-handler state))
-                       (presentation (sheet-find-presentation window context-type x y)))
+                  (when-let* ((context-type (context-type state))
+                              (handler (,presentation-handler state))
+                              (presentation (sheet-find-presentation
+                                             window context-type x y event)))
                     (when (highlight state)
                       (setf (%highlighted-presentation state) presentation)
                       (highlight-output-record presentation window :highlight))
