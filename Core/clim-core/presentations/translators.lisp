@@ -358,12 +358,9 @@ and used to ensure that presentation-translators-caches are up to date.")
             (setf (gethash cache-key cache-table)
                   (remove-duplicates translators))))))))
 
-;;; :button is a pointer button state, for performing matches where we want to
-;;; restrict the match to certain gestures but don't have a real event.
-
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event (modifier-state 0) for-menu button)
+     &key event (modifier-state 0) for-menu)
   (flet ((match-gesture (gesture event modifier-state)
            (or (eq gesture t)
                for-menu
@@ -373,12 +370,9 @@ and used to ensure that presentation-translators-caches are up to date.")
                                       modifier-state)
                  for g in gesture
                    thereis (and (eql modifiers (caddr g))
-                                (or (and button (eql button (cadr g)))
-                                    (and (null button)
-                                         (or (null event)
-                                             (eql (pointer-event-button
-                                                   event)
-                                                  (cadr g))))))))))
+                                (or (null event)
+                                    (eql (pointer-event-button event)
+                                         (cadr g))))))))
     (let ((from-type (from-type translator))
           (to-type (to-type translator))
           (ptype (presentation-type presentation))
@@ -416,7 +410,7 @@ and used to ensure that presentation-translators-caches are up to date.")
            t))))
 
 (defun map-applicable-translators (func presentation input-context frame window x y
-                                   &key event (modifier-state 0) for-menu button)
+                                   &key event (modifier-state 0) for-menu)
   (labels ((process-presentation (context presentation)
              (let* ((context-ptype (first context))
                     (maybe-translators
@@ -429,7 +423,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                 translator presentation context-ptype
                                 frame window x y
                                 :event event :modifier-state modifier-state
-                                :for-menu for-menu :button button))
+                                :for-menu for-menu))
                        do (funcall func translator presentation context))))
            (mopscp (context record)
              "maps recursively over all presentations in record, including record."
@@ -589,7 +583,7 @@ and used to ensure that presentation-translators-caches are up to date.")
 ;;; 23.7.3 Finding Applicable Presentations
 
 (defun find-innermost-presentation-match
-    (input-context top-record frame window x y event modifier-state button)
+    (input-context top-record frame window x y event modifier-state)
   "Helper function that implements the \"innermost-smallest\" input-context
   presentation matching algorithm.  Returns presentation, translator, and
   matching input context."
@@ -617,8 +611,7 @@ and used to ensure that presentation-translators-caches are up to date.")
      window
      x y
      :event event
-     :modifier-state modifier-state
-     :button button)
+     :modifier-state modifier-state)
     (when result
       (return-from find-innermost-presentation-match
         (values result result-translator result-context)))
@@ -632,8 +625,7 @@ and used to ensure that presentation-translators-caches are up to date.")
      window
      x y
      :event event
-     :modifier-state modifier-state
-     :button button))
+     :modifier-state modifier-state))
   nil)
 
 (defun find-innermost-applicable-presentation
@@ -647,24 +639,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                              window
                                              x y
                                              event
-                                             modifier-state
-                                             nil)))
-
-(defun find-innermost-presentation-context
-    (input-context window x y
-     &key (top-record (stream-output-history window))
-       (frame *application-frame*)
-       event
-       (modifier-state (window-modifier-state window))
-       button)
-  (find-innermost-presentation-match input-context
-                                     top-record
-                                     frame
-                                     window
-                                     x y
-                                     event
-                                     modifier-state
-                                     button))
+                                             modifier-state)))
 
 (defun throw-highlighted-presentation (presentation input-context event)
   (let ((x (pointer-event-x event))
@@ -677,8 +652,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                            (event-sheet event)
                                            x y
                                            event
-                                           0
-                                           nil)
+                                           0)
       (when p
         (multiple-value-bind (object ptype options)
             (call-presentation-translator translator
