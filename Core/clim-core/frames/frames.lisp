@@ -1031,18 +1031,64 @@ frames and will not have focus.
   (let* ((current-modifier (event-modifier-state event))
          (x (device-event-x event))
          (y (device-event-y event))
-         (new-translators
-          (loop for (button) in +button-documentation+
-              for context-list = (multiple-value-list
-                                  (find-innermost-presentation-context
-                                   input-context
-                                   stream
-                                   x y
-                                   :modifier-state current-modifier
-                                   :button button))
-              when (car context-list)
-              collect (cons button context-list))))
-    (list current-modifier new-translators)))
+         (history (stream-output-history stream))
+         (results (loop for (button) in +button-documentation+
+                        collect (cons button nil)))
+         (processed nil))
+    (block mapper
+      (labels ((presentation-size (presentation)
+                 (multiple-value-bind (min-x min-y max-x max-y)
+                     (output-record-hit-detection-rectangle* presentation)
+                   (* (- max-x min-x) (- max-y min-y))))
+               (translator-suitable-p (translator button)
+                 (if (member button processed)
+                     nil
+                     (loop for g in (gesture translator)
+                             thereis (eql button (cadr g)))))
+               (update-button (presentation translator context size result
+                               &aux (button (car result)))
+                 (cond
+                   ((not (translator-suitable-p translator button)))
+                   ((null (cdr result))
+                    (setf (cdr result)
+                          (list presentation translator context size)))
+                   (t
+                    (destructuring-bind (presentation* translator* context* size*)
+                        (cdr result)
+                      (declare (ignore presentation* translator*))
+                      (if (not (eq context* context))
+                          (push button processed)
+                          (when (> size* size)
+                            (setf (cdr result)
+                                  (list presentation translator context size))))))))
+               (presentation-for-buttons (translator presentation context)
+                 (loop
+                   with size = (presentation-size presentation)
+                   for result in results
+                   do (update-button presentation translator context size result)
+                   finally
+                      (when (alexandria:length= results processed)
+                        (return-from mapper))))
+               (blank-for-buttons (translator presentation context)
+                 (loop
+                   for result in results
+                   when (and (null (cdr result))
+                             (translator-suitable-p translator (car result)))
+                     do (push (car result) processed)
+                        (setf (cdr result)
+                              (list presentation translator context))
+                   finally
+                      (when (alexandria:length= results processed)
+                        (return-from mapper)))))
+        (map-applicable-translators
+         #'presentation-for-buttons
+         history input-context frame stream x y
+         :modifier-state current-modifier)
+        (map-applicable-translators
+         #'blank-for-buttons
+         history input-context frame stream x y
+         :modifier-state current-modifier)))
+    (list current-modifier (remove nil results :key #'cdr))))
 
 (defun record-on-display (stream record)
   "Return true if `record' is part of the output history of
