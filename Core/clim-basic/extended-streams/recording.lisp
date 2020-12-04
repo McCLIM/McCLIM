@@ -254,10 +254,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (:documentation "Implementation class for the Basic Output Record Protocol."))
 
 (defmethod initialize-instance :after ((record basic-output-record)
-                                       &key (x-position 0.0d0)
-                                            (y-position 0.0d0))
-  (setf (rectangle-edges* record)
-        (values x-position y-position x-position y-position)))
+                                       &key (x-position 0.0d0 x-position-p)
+                                            (y-position 0.0d0 y-position-p))
+  (when (or x-position-p y-position-p)
+    (setf (rectangle-edges* record)
+          (values x-position y-position x-position y-position))))
 
 ;;; We need to remember initial record position (hence x,y slots) in case when
 ;;; we add children expanding record in top-left direction and then call
