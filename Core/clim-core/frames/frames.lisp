@@ -1044,15 +1044,6 @@ frames and will not have focus.
               collect (cons button context-list))))
     (list current-modifier new-translators)))
 
-(defgeneric frame-compare-pointer-documentation-state
-    (frame input-context stream old-state new-state))
-
-(defmethod frame-compare-pointer-documentation-state
-    ((frame standard-application-frame) input-context stream
-     old-state new-state)
-  (declare (ignore input-context stream))
-  (equal old-state new-state))
-
 (defun record-on-display (stream record)
   "Return true if `record' is part of the output history of
 `stream', false otherwise."
