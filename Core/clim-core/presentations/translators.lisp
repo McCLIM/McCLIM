@@ -359,31 +359,33 @@ and used to ensure that presentation-translators-caches are up to date.")
                   (remove-duplicates translators))))))))
 
 ;;; :button is a pointer button state, for performing matches where we want to
-;;; restrict the match to certain gestures but don't have a real event.
+;;; restrict the match to certain gestures but don't have a real event and its
+;;; interpretation is similar to :modifier-state.
+;;;
+;;; It is not specified what happens when both event and modifier-state is
+;;; passed - McCLIM expolits this undefined behavior and uses the following
+;;; interpretation: when either modifier-state or button is supplied, then the
+;;; event is ignored when performing the match. -- jd 2020-12-05
 
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event (modifier-state 0) for-menu button)
-  (flet ((match-gesture (gesture event modifier-state)
-           (or (eq gesture t)
-               for-menu
-               (loop
-                 with modifiers = (if event
-                                      (event-modifier-state event)
-                                      modifier-state)
-                 for g in gesture
-                   thereis (and (eql modifiers (caddr g))
-                                (or (and button (eql button (cadr g)))
-                                    (and (null button)
-                                         (or (null event)
-                                             (eql (pointer-event-button
-                                                   event)
-                                                  (cadr g))))))))))
+     &key event modifier-state for-menu button)
+  (flet ((match-gesture (gesture)
+           (when (or for-menu (eq gesture t))
+             (return-from match-gesture t))
+           (if (or modifier-state button (null event))
+               (setf modifier-state (or modifier-state 0))
+               (setf modifier-state (event-modifier-state event)
+                     button (pointer-event-button event)))
+           (loop for g in gesture
+                   thereis (and (eql modifier-state (caddr g))
+                                (or (null button)
+                                    (eql button (cadr g)))))))
     (let ((from-type (from-type translator))
           (to-type (to-type translator))
           (ptype (presentation-type presentation))
           (object (presentation-object presentation)))
-      (and (match-gesture (gesture translator) event modifier-state)
+      (and (match-gesture (gesture translator))
            ;; We call PRESENTATION-SUBTYPEP because applicable translators are
            ;; matched only by the presentation type's name.
            ;;
@@ -416,7 +418,7 @@ and used to ensure that presentation-translators-caches are up to date.")
            t))))
 
 (defun map-applicable-translators (func presentation input-context frame window x y
-                                   &key event (modifier-state 0) for-menu button)
+                                   &key event modifier-state for-menu button)
   (labels ((process-presentation (context presentation)
              (let* ((context-ptype (first context))
                     (maybe-translators
@@ -457,7 +459,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-applicable-translators
     (presentation input-context frame window x y
-     &key event (modifier-state (window-modifier-state window)) for-menu fastp)
+     &key event modifier-state for-menu fastp)
+  (when (and (not modifier-state) (not event))
+    (setf modifier-state (window-modifier-state window)))
   (let ((results nil))
     (flet ((fast-func (translator presentation context)
              (declare (ignore translator presentation context))
@@ -473,7 +477,7 @@ and used to ensure that presentation-translators-caches are up to date.")
       (nreverse results))))
 
 (defun presentation-matches-context-type
-    (presentation context-type frame window x y &key event (modifier-state 0))
+    (presentation context-type frame window x y &key event modifier-state)
   (let* ((ptype (expand-presentation-type-abbreviation (presentation-type presentation)))
          (ctype (expand-presentation-type-abbreviation context-type))
          (table (frame-command-table frame)))
@@ -635,9 +639,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun find-innermost-applicable-presentation
     (input-context window x y
-     &key (frame *application-frame*)
-       (modifier-state (window-modifier-state window))
-       event)
+     &key (frame *application-frame*) modifier-state event)
+  (when (and (not modifier-state) (not event))
+    (setf modifier-state (window-modifier-state window)))
   (values (find-innermost-presentation-match input-context
                                              (stream-output-history window)
                                              frame
@@ -650,10 +654,9 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun find-innermost-presentation-context
     (input-context window x y
      &key (top-record (stream-output-history window))
-       (frame *application-frame*)
-       event
-       (modifier-state (window-modifier-state window))
-       button)
+       (frame *application-frame*) event modifier-state button)
+  (when (and (not modifier-state) (not event))
+    (setf modifier-state (window-modifier-state window)))
   (find-innermost-presentation-match input-context
                                      top-record
                                      frame
@@ -674,7 +677,7 @@ and used to ensure that presentation-translators-caches are up to date.")
                                            (event-sheet event)
                                            x y
                                            event
-                                           0
+                                           nil
                                            nil)
       (when p
         (multiple-value-bind (object ptype options)
