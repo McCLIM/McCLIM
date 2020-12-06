@@ -62,23 +62,26 @@
          ;; [BTS] added this, but is not sure that this is correct for
          ;; adding a menu-bar transparently, should also only be done
          ;; where the exterior window system does not support menus
+         (setf (frame-menu-bar-pane frame) nil)
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
                  ,@(if (or menu-bar pointer-documentation)
                        (mapcar (lambda (layout)
                                  `(,(first layout)
                                    (vertically ()
-                                     (setf (frame-menu-bar-pane frame)
-                                           ,(cond
-                                              ((eq menu-bar t)
-                                               `(make-menu-bar ',class-name frame 'hmenu-pane))
-                                              ((consp menu-bar)
-                                               `(make-menu-bar
-                                                 (make-command-table nil :menu ',menu-bar)
-                                                 frame 'hmenu-pane))
-                                              (menu-bar
-                                               `(make-menu-bar ',menu-bar frame 'hmenu-pane))
-                                              (t nil)))
+                                     ,@(cond
+                                         ((eq menu-bar t)
+                                          `((setf (frame-menu-bar-pane frame)
+                                                  (make-menu-bar ',class-name frame 'hmenu-pane))))
+                                         ((consp menu-bar)
+                                          `((setf (frame-menu-bar-pane frame)
+                                                  (make-menu-bar
+                                                   (make-command-table nil :menu ',menu-bar)
+                                                   frame 'hmenu-pane))))
+                                         (menu-bar
+                                          `((setf (frame-menu-bar-pane frame)
+                                                  (make-menu-bar ',menu-bar frame 'hmenu-pane))))
+                                         (t nil))
                                      ,@(rest layout)
                                      ,@(when pointer-documentation
                                          '(%pointer-documentation%)))))
