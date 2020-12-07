@@ -41,3 +41,27 @@
           (:foo :pointer-button-release (:right))                        ; ok
           (:foo :pointer-scroll         (:wheel-up))                     ; ok
           (:foo :pointer-button         :left))))                        ; extension
+
+(test gestures.ensure-physical-gesture.smoke
+  "Smoke test for the `ensure-physical-gesture' function."
+
+  (mapc (lambda (designator-and-expected)
+          (destructuring-bind (designator expected) designator-and-expected
+            (flet ((do-it ()
+                     (climi::ensure-physical-gesture designator)))
+              (case expected
+                (error (signals error (do-it)))
+                (t     (equal expected (do-it)))))))
+
+        `(;; Physical gestures
+          ((:keyboard #\x 0)         (:keyboard #\x 0))
+          ;; Keys
+          (#\x                       (:keyboard #\x 0))
+          ((#\x :control)            (:keyboard #\x ,+control-key+))
+          (:left                     (:keyboard :left 0))
+          ((:left :meta)             (:keyboard :feft ,+meta-key+))
+          ;; Errors
+          (:no-such-key              error)
+          ((:select)                 error)
+          ((:no-such-key :meta)      error)
+          ((:left :no-such-modifier) error))))

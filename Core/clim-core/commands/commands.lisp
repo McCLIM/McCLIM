@@ -80,14 +80,12 @@
              (apply #'make-menu-item name type value args))))
    menu))
 
-(defun make-menu-item (name type value
-                       &key
-                         documentation
-                         keystroke
-                         text-style
-                         command-name
-                         command-line-name
-                       &allow-other-keys)
+(defun make-menu-item (name type value &key documentation
+                                            keystroke
+                                            text-style
+                                            command-name
+                                            command-line-name
+                                       &allow-other-keys)
   (ecase type
     (:command
      ;; This is specified to be a cons, but McCLIM is more permissive
@@ -111,12 +109,7 @@
   (make-instance '%menu-item
                  :menu-name name :type type :value value
                  :documentation documentation
-                 :keystroke (if (or (null keystroke)
-                                    (and (symbolp keystroke)
-                                         (gethash keystroke *gesture-names*)))
-                                keystroke
-                                (multiple-value-list
-                                 (normalize-physical-gesture :keyboard keystroke)))
+                 :keystroke (when keystroke (ensure-gesture keystroke))
                  :text-style text-style
                  :command-name command-name
                  :command-line-name command-line-name))

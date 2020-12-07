@@ -81,8 +81,7 @@
 (defun normalize-keyboard-physical-gesture (gesture-spec)
   (destructuring-bind (key-or-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((or (eq key-or-name t)
-                       (characterp key-or-name))
+    (values (cond ((characterp key-or-name)
                    key-or-name)
                   ((alexandria:assoc-value
                     +gesture-key-name-to-char+ key-or-name))
@@ -108,9 +107,7 @@
 (defun normalize-pointer-physical-gesture (gesture-spec)
   (destructuring-bind (button-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((eq button-name t)
-                   button-name)
-                  ((alexandria:assoc-value
+    (values (cond ((alexandria:assoc-value
                     +gesture-button-to-event-button+ button-name))
                   (t
                    (error "~@<~S is not a known pointer button. Known ~
@@ -161,6 +158,33 @@
     (normalize-physical-gesture type gesture-spec)) ; for effect
   `(add-gesture-name ',name ',type ',gesture-spec ,@(when unique
                                                       `(:unique ',unique))))
+
+(defun ensure-physical-gesture (designator)
+  ;; Just to be nice, we special-case literal characters here.  We
+  ;; also special-case literal 'physical' gesture specs of the form
+  ;; (type device-name modifier-state).  The CLIM spec requires
+  ;; neither of these things.
+  (flet ((make-keyboard-gesture (gesture-spec)
+           (multiple-value-list
+            (normalize-physical-gesture :keyboard gesture-spec))))
+    (typecase designator
+      ((cons gesture-type) ; Physical gesture
+       designator)
+      (cons
+       (make-keyboard-gesture designator))
+      (character
+       (make-keyboard-gesture designator))
+      (symbol ; could be a key name or a gesture name
+       (make-keyboard-gesture
+        (if-let ((character (alexandria:assoc-value
+                             +gesture-key-name-to-char+ designator)))
+          character
+          designator))))))
+
+(defun ensure-gesture (designator)
+  (if (and (symbolp designator) (find-gesture designator))
+      designator
+      (ensure-physical-gesture designator)))
 
 (defgeneric character-gesture-name (name)
   (:method ((name character))
@@ -229,16 +253,12 @@
          (eql (event-modifier-state event) modifier-state))))
 
 (defun event-matches-gesture-name-p (event gesture-name)
-  ;; Just to be nice, we special-case literal characters here.  We also
-  ;; special-case literal 'physical' gesture specs of the form (type device-name
-  ;; modifier-state).  The CLIM spec requires neither of these things.
-  (let ((gesture-entry
-          (typecase gesture-name
-            (character (list (multiple-value-list
-                              (normalize-physical-gesture :keyboard gesture-name))))
-            (cons (list gesture-name)) ; Literal physical gesture
-            (t (gethash gesture-name *gesture-names*)))))
-    (loop for (type device-name modifier-state) in gesture-entry
+  (let ((physical-gestures
+          (cond ((when (symbolp gesture-name)
+                   (find-gesture gesture-name)))
+                ((when-let ((gesture (ensure-physical-gesture gesture-name)))
+                   (list gesture))))))
+    (loop for (type device-name modifier-state) in physical-gestures
           do (when (%event-matches-gesture event
                                            type
                                            device-name
