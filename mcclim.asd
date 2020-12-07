@@ -110,6 +110,9 @@ interface management system."
                               :depends-on ("package")
                               :components ((:file "medium")
                                            (:file "design")))
+                             (:module "extended-streams"
+                              :depends-on ("package")
+                              :components ((:file "gestures")))
                              (:module "presentations"
                               :depends-on ("package")
                               :components ((:file "presentation-types")

@@ -116,7 +116,7 @@
                                          (gethash keystroke *gesture-names*)))
                                 keystroke
                                 (multiple-value-list
-                                 (realize-gesture-spec :keyboard keystroke)))
+                                 (normalize-physical-gesture :keyboard keystroke)))
                  :text-style text-style
                  :command-name command-name
                  :command-line-name command-line-name))

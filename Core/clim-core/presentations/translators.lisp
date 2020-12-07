@@ -161,7 +161,7 @@ and used to ensure that presentation-translators-caches are up to date.")
       :to-type ',real-to-type
       :gesture ,(if (eq gesture t)
                     t
-                    `(gethash ',gesture *gesture-names*))
+                    `(find-gesture ',gesture))
       :tester ,(if (symbolp tester)
                    `',tester
                    `(function ,(make-translator-fun (car tester) (cdr tester))))
