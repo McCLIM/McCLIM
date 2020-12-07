@@ -1057,6 +1057,7 @@ panes."))
 (defgeneric default-frame-top-level
     (frame &key command-parser command-unparser partial-command-parser prompt))
 (defgeneric read-frame-command (frame &key stream))
+(defgeneric execute-frame-command (frame command))
 (defgeneric run-frame-top-level (frame &key &allow-other-keys))
 (defgeneric command-enabled (command-name frame))
 (defgeneric (setf command-enabled) (enabled command-name frame))
