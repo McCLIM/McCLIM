@@ -65,3 +65,39 @@
           ((:select)                 error)
           ((:no-such-key :meta)      error)
           ((:left :no-such-modifier) error))))
+
+(test gestures.event-data-matches-gesture-p.smoke
+  "Smoke test for the `event-data-matches-gesture-p' function."
+
+  (mapc (lambda (arguments-and-expected)
+          (destructuring-bind (type device-name modifier-state gesture expected)
+              arguments-and-expected
+            (is (eq expected
+                    (climi::event-data-matches-gesture-p
+                     type device-name modifier-state gesture)))))
+        `(;; Wildcard gesture
+          (:keyboard             #\a   0             t                                 t) ; extension
+          (:keyboard             #\a   nil           t                                 t) ; extension
+          (nil                   nil   nil           t                                 t) ; extension
+          ;; Wildcards in event data
+          (nil                   #\a   0             ((:keyboard             #\a   0)) t)
+          (:keyboard             nil   0             ((:keyboard             #\a   0)) t)
+          (:keyboard             #\a   nil           ((:keyboard             #\a   0)) t)
+          ;; Keyboard
+          (:keyboard             #\a   0             ((:keyboard             #\a   0)) t)
+          (:keyboard             #\b   0             ((:keyboard             #\a   0)) nil)
+          (:keyboard             #\a   ,+shift-key+  ((:keyboard             #\a   0)) nil)
+          (:keyboard             :down 0             ((:keyboard             :down 0)) t)
+          ;; Pointer
+          (:pointer-button-press :left  0            ((:pointer-button-press :left 0)) t)
+          (:pointer-button-press :right 0            ((:pointer-button-press :left 0)) nil)
+          (:pointer-button-press :left  ,+shift-key+ ((:pointer-button-press :left 0)) nil)
+          ;; `:pointer-button' "sub-typing"
+          (:pointer-button-press :left 0             ((:pointer-button       :left 0)) t)
+          ;; Multiple physical gestures
+          (:keyboard             #\a   0             ((:keyboard             #\b   0)
+                                                      (:keyboard             #\a   0))
+                                                                                       t)
+          (:keyboard             #\a   nil           ((:keyboard             #\a   0)
+                                                      (:keyboard             #\b   0))
+                                                                                       t))))

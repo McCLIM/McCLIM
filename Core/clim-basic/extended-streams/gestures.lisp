@@ -195,62 +195,43 @@
         (when (and (eq type :keyboard) (eql modifier-state 0))
           device-name)))))
 
-(defgeneric %event-matches-gesture (event type device-name modifier-state)
-  (:method (event type device-name modifier-state)
-    (declare (ignore event type device-name modifier-state))
+;;; GESTURE is T or a list of normalized physical gestures.
+(defun event-data-matches-gesture-p (type device-name modifier-state
+                                     physical-gestures)
+  (labels ((matches-with-wildcards-p (value gesture-value)
+             (or (eq value nil)
+                 (eql value gesture-value)))
+           (physical-gesture-matches-p (gesture)
+             (destructuring-bind
+                 (gesture-type gesture-device-name gesture-modifier-state)
+                 gesture
+               (and (or (matches-with-wildcards-p type gesture-type)
+                        (and (eq gesture-type :pointer-button)
+                             (typep type 'pointer-gesture-type)))
+                    (matches-with-wildcards-p device-name gesture-device-name)
+                    (matches-with-wildcards-p
+                     modifier-state gesture-modifier-state)))))
+    (or (eq physical-gestures t)
+        (and (eq type nil) (eq device-name nil) (eq modifier-state nil))
+        (some #'physical-gesture-matches-p physical-gestures))))
+
+(defgeneric event-matches-gesture-p (event physical-gestures)
+  (:method (event physical-gestures)
     nil)
-  (:method ((event character)
-            (type (eql :keyboard))
-            device-name
-            modifier-state)
-    ;; Because gesture objects are either characters or event objects,
-    ;; support characters here too.
-    (and (eql event device-name)
-         (eql modifier-state 0)))
-  (:method ((event key-press-event)
-            (type (eql :keyboard))
-            device-name
-            modifier-state)
-    (let ((character (keyboard-event-character event))
-          (name      (keyboard-event-key-name event)))
-      (and (if character
-               (eql character device-name)
-               (eql name device-name))
-           (eql (event-modifier-state event) modifier-state))))
-  (:method ((event pointer-button-press-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-press)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-button-release-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-release)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-scroll-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-scroll)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-button-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-press)
-             (eql type :pointer-button-release)
-             (eql type :pointer-scroll)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state))))
+  (:method ((event character) physical-gestures)
+    (event-data-matches-gesture-p :keyboard event 0 physical-gestures))
+  (:method ((event keyboard-event) physical-gestures)
+    (event-data-matches-gesture-p
+     :keyboard
+     (or (keyboard-event-character event)
+         (keyboard-event-key-name event))
+     (event-modifier-state event)
+     physical-gestures))
+  (:method ((event pointer-button-event) physical-gestures)
+    (event-data-matches-gesture-p (event-type event)
+                                  (pointer-event-button event)
+                                  (event-modifier-state event)
+                                  physical-gestures)))
 
 (defun event-matches-gesture-name-p (event gesture-name)
   (let ((physical-gestures
@@ -258,13 +239,7 @@
                    (find-gesture gesture-name)))
                 ((when-let ((gesture (ensure-physical-gesture gesture-name)))
                    (list gesture))))))
-    (loop for (type device-name modifier-state) in physical-gestures
-          do (when (%event-matches-gesture event
-                                           type
-                                           device-name
-                                           modifier-state)
-               (return-from event-matches-gesture-name-p t))
-          finally (return nil))))
+    (event-matches-gesture-p event physical-gestures)))
 
 (defun modifier-state-matches-gesture-name-p (modifier-state gesture-name)
   (some (lambda (physical-gesture)
