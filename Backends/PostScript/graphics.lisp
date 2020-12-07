@@ -375,6 +375,11 @@ setmatrix")
   (declare (ignore medium))
   (color-rgb ink))
 
+(defmethod medium-color-rgb (medium ink)
+  (declare (ignore medium))
+  (warn "~s: unsupported ink ~s." medium ink)
+  (values 1.0 0.0 1.0))
+
 (defmethod postscript-set-graphics-state (stream medium (kind (eql :color)))
   (multiple-value-bind (r g b)
       (medium-color-rgb medium (medium-ink medium))

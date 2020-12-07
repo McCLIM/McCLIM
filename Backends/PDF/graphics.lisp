@@ -391,22 +391,6 @@ is T."
     ))
 
 ;;; Color
-(defgeneric medium-color-rgb (medium ink))
-
-(defmethod medium-color-rgb (medium (ink clime:indirect-ink))
-  ;; If foreground/background doesn't resolve properly it is a bug in core
-  ;; system. We could have masked it with the following code. --jd 2018-09-27
-  #+ (or)
-  (alexandria:switch (ink)
-    (+foreground-ink+ (medium-color-rgb (medium-foreground medium)))
-    (+background-ink+ (medium-color-rgb (medium-background medium)))
-    (otherwise (medium-color-rgb (clime:indirect-ink-ink ink))))
-  (medium-color-rgb medium (clime:indirect-ink-ink ink)))
-
-(defmethod medium-color-rgb (medium (ink color))
-  (declare (ignore medium))
-  (color-rgb ink))
-
 (defmethod pdf-set-graphics-state (medium (kind (eql :color)))
   (multiple-value-bind (r g b)
       (medium-color-rgb medium (medium-ink medium))

@@ -23,6 +23,8 @@
 (defpackage #:clim-pdf
   (:use #:clim #:clim-extensions #:clim-lisp #:clim-backend)
   (:export #:with-output-to-pdf-stream)
+  (:import-from #:clim-postscript
+                #:medium-color-rgb)
   (:import-from #:clim-internals
                 #:map-repeated-sequence
                 #:with-transformed-position
