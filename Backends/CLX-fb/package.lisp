@@ -16,8 +16,9 @@
         #:clim-backend
         #:clim-clx
         #:mcclim-render-extensions)
+  (:import-from #:alexandria
+                #:when-let #:when-let* #:maphash-keys #:maphash-values)
   (:import-from #:climi
-                #:port-lookup-mirror
                 #:port-register-mirror
                 #:port-grafts
                 ;;
@@ -29,14 +30,18 @@
                 #:height                ; used to access a slot
                 #:width                 ; ditto
                 ;;
-                #:make-medium)
+                #:make-medium
+                #:pixmap-mirror)
   (:import-from #:mcclim-render-internals
                 #:render-medium-mixin
                 #:render-port-mixin
                 #:image-mirror-image
                 #:image-sheet-mixin
                 #:image-pixmap-mixin
-                #:image-mirror-mixin)
+                #:image-mirror-mixin
+                ;;
+                #:mirror->%image
+                #:%make-image)
   (:import-from #:clim-clx
                 #:clx-port-display
                 #:initialize-clx
@@ -45,8 +50,6 @@
                 #:clx-port-window
                 #:mirroring
                 #:class-gensym
-                #:maybe-add-mirroring-superclasses
-                #:sheet-xmirror
-                #:sheet-direct-xmirror)
+                #:maybe-add-mirroring-superclasses)
   (:import-from #:climi
                 #:standard-port))

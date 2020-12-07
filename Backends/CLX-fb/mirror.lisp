@@ -12,11 +12,11 @@
    (skip-count :initform 0)))
 
 ;;; for port
-(defmethod mcclim-render-internals::%create-mirror-image :after ((sheet clx-fb-mirror) w h)
-  (with-slots (mcclim-render-internals::dirty-region) sheet
+(defmethod mcclim-render-internals::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
+  (with-slots (mcclim-render-internals::dirty-region) mirror
     (setf mcclim-render-internals::dirty-region nil))
-  ;;(let ((data (climi::pattern-array (image-mirror-image sheet))))
-  (with-slots (width height clx-image xlib-image) sheet
+  ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
+  (with-slots (width height clx-image xlib-image) mirror
     (setf width w
           height h)
     ;; Fill the image with a recognizable color so that pixels in the
@@ -33,14 +33,6 @@
                                        :width width
                                        :height height
                                        :format :z-pixmap))))
-
-(defgeneric image-mirror-to-x (sheet))
-
-(defmethod image-mirror-to-x ((sheet image-mirror-mixin))
-  )
-
-(defmethod image-mirror-to-x ((sheet xlib:window))
-  )
 
 (defun image-mirror-put (width height xmirror gcontext clx-image dirty-r)
   (map-over-region-set-regions
@@ -84,7 +76,7 @@
                             (setf y min-y))))))))))
     (map-over-region-set-regions fn dirty-r)))
 
-(defmethod image-mirror-to-x ((sheet clx-fb-mirror))
+(defun image-mirror-to-x (mirror)
   (declare (optimize speed))
   (with-slots (xmirror
                clx-image xlib-image
@@ -93,24 +85,17 @@
                mcclim-render-internals::finished-output
                mcclim-render-internals::updating-p
                width height dirty-xr skip-count)
-      sheet
+      mirror
     (when (not (region-equal dirty-xr +nowhere+))
-      (let ((reg))
+      (let (reg)
         (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
           (setf reg dirty-xr)
           (setf dirty-xr +nowhere+))
         (image-mirror-put width height xmirror gcontext clx-image reg)))))
 
-(defmethod clim-clx::port-set-mirror-region ((port clx-fb-port) (mirror clx-fb-mirror) mirror-region)
-  (clim-clx::port-set-mirror-region port (slot-value mirror 'xmirror) mirror-region))
-
-(defmethod clim-clx::port-set-mirror-transformation
-    ((port clx-fb-port) (mirror clx-fb-mirror) mirror-transformation)
-  (clim-clx::port-set-mirror-transformation port (slot-value mirror 'xmirror) mirror-transformation))
-
-(defmethod mcclim-render-internals::%mirror-force-output ((mirror clx-fb-mirror))
+(defun %mirror-force-output (mirror)
   (with-slots (mcclim-render-internals::image-lock mcclim-render-internals::dirty-region dirty-xr width height clx-image
-                          xlib-image xmirror)
+               xlib-image xmirror)
       mirror
     (when mcclim-render-internals::dirty-region
       (clim-sys:with-lock-held (mcclim-render-internals::image-lock)

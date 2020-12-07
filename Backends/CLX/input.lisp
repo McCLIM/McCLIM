@@ -309,7 +309,7 @@
        (case message
          (:wm_take_focus
           ;; hmm, this message seems to be sent twice.
-          (when-let ((mirror (sheet-xmirror sheet)))
+          (when-let ((mirror (sheet-mirror sheet)))
             (xlib:set-input-focus (clx-port-display *clx-port*)
                                   mirror :parent (elt data 1)))
           (make-instance 'window-manager-focus-event :sheet sheet :timestamp time))
@@ -388,7 +388,7 @@
               ;; XXX Should we rely on port-pointer-sheet being correct? -- moore
               (sheet (port-pointer-sheet port))
               (ancestor (sheet-mirrored-ancestor sheet))
-              (mirror (sheet-direct-xmirror ancestor)))
+              (mirror (sheet-direct-mirror ancestor)))
     (multiple-value-bind (x y same-screen-p child mask root-x root-y)
         (xlib:query-pointer mirror)
       (declare (ignore child))
@@ -406,7 +406,7 @@
 
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
                               &key multiple-window)
-  (let ((mirror (sheet-xmirror sheet))
+  (let ((mirror (sheet-mirror sheet))
         (events '(:button-press :button-release
 	          :leave-window :enter-window
 	          :pointer-motion)))

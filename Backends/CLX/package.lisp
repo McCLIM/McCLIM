@@ -17,7 +17,6 @@
                 #:+alt-key+
                 ;;
                 #:port-text-style-mappings
-                #:port-lookup-mirror
                 #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
@@ -85,6 +84,4 @@
    #:clx-port-screen
    #:clx-graft
    #:clx-port-window
-   #:sheet-xmirror
-   #:sheet-direct-xmirror
    #:port-find-all-font-families))

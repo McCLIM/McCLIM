@@ -262,7 +262,7 @@
       (otherwise
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
-         (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+         (let* ((drawable (medium-drawable medium))
                 (mask (xlib:create-pixmap :drawable drawable
                                           :depth 1
                                           :width (+ x1 width)
@@ -292,8 +292,7 @@ specialized on class too. Keep in mind, that inks may be transformed (i.e
 translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
-  (let* ((port (port medium))
-         (mirror (port-lookup-mirror port (medium-sheet medium))))
+  (let ((mirror (medium-drawable medium)))
     (with-slots (gc) medium
       (unless gc
         (setf gc (xlib:create-gcontext :drawable mirror)
@@ -476,7 +475,7 @@ translated, so they begin at different position than [0,0])."))
 (defmethod design-gcontext ((medium clx-medium) (ink clime:pattern)
                             &aux (ink* (climi::transformed-design-design
                                         (clime:effective-transformed-design ink))))
-  (let* ((drawable (sheet-xmirror (medium-sheet medium)))
+  (let* ((drawable (medium-drawable medium))
          (rgba-pattern (climi::%collapse-pattern ink))
          (pm (compute-rgb-image drawable rgba-pattern))
          (mask (if (typep ink* 'clime:rectangular-tile)
@@ -529,7 +528,7 @@ translated, so they begin at different position than [0,0])."))
                                 medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-            (,mirror (sheet-xmirror (medium-sheet ,medium-var)))
+            (,mirror (medium-drawable ,medium-var))
             (^cleanup nil))
        (when ,mirror
          (unwind-protect (let* ((,line-style (medium-line-style ,medium-var))
@@ -556,12 +555,12 @@ translated, so they begin at different position than [0,0])."))
         (multiple-value-bind (width height)
             (transform-distance (medium-transformation from-drawable)
                                 width height)
-          (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
+          (xlib:copy-area (medium-drawable from-drawable)
                           ;; why using the context of from-drawable?
                           (medium-gcontext from-drawable +background-ink+)
                           (round-coordinate from-x) (round-coordinate from-y)
                           (round width) (round height)
-                          (sheet-xmirror (medium-sheet to-drawable))
+                          (medium-drawable to-drawable)
                           (round-coordinate to-x) (round-coordinate to-y)))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
@@ -570,33 +569,33 @@ translated, so they begin at different position than [0,0])."))
          (from-transformation (sheet-native-transformation from-sheet)))
     (with-transformed-position (from-transformation from-x from-y)
       (climi::with-pixmap-medium (to-medium to-drawable)
-        (xlib:copy-area (sheet-xmirror (medium-sheet from-drawable))
+        (xlib:copy-area (medium-drawable from-drawable)
                         ;; we can not use from-drawable
                         (medium-gcontext to-medium +background-ink+)
                         (round-coordinate from-x) (round-coordinate from-y)
                         (round width) (round height)
-                        (pixmap-xmirror to-drawable)
+                        (pixmap-mirror to-drawable)
                         (round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
                               to-x to-y)
-    (xlib:copy-area (pixmap-xmirror from-drawable)
+    (xlib:copy-area (pixmap-mirror from-drawable)
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
                     (round width) (round height)
-                    (sheet-xmirror (medium-sheet to-drawable))
+                    (medium-drawable to-drawable)
                     (round-coordinate to-x) (round-coordinate to-y))))
 
 (defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
                              (to-drawable pixmap) to-x to-y)
-  (xlib:copy-area (pixmap-xmirror from-drawable)
+  (xlib:copy-area (pixmap-mirror from-drawable)
                   (medium-gcontext (sheet-medium (slot-value to-drawable 'sheet))
                                    +background-ink+)
                   (round-coordinate from-x) (round-coordinate from-y)
                   (round width) (round height)
-                  (pixmap-xmirror to-drawable)
+                  (pixmap-mirror to-drawable)
                   (round-coordinate to-x) (round-coordinate to-y)))
 
 
@@ -974,8 +973,7 @@ translated, so they begin at different position than [0,0])."))
               (max-y (round-coordinate (max top bottom))))
           (let ((^cleanup nil))
             (unwind-protect
-                 (xlib:draw-rectangle (port-lookup-mirror (port medium)
-                                                          (medium-sheet medium))
+                 (xlib:draw-rectangle (medium-drawable medium)
                                       (medium-gcontext medium (medium-background medium))
                                       (clamp min-x           #x-8000 #x7fff)
                                       (clamp min-y           #x-8000 #x7fff)

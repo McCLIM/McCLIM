@@ -3,20 +3,33 @@
 ;;; Port
 
 (defclass render-port-mixin (basic-port)
-  ((all-font-families :initform nil :accessor all-font-families)))
+  ((all-font-families :initform nil :accessor all-font-families)
+   (mirror->%image :initform (make-hash-table))))
+
+(defun mirror->%image (port mirror)
+  (gethash mirror (slot-value port 'mirror->%image)))
+
+(defun (setf mirror->%image) (%image port mirror)
+  (check-type %image (or null image-mirror-mixin))
+  (if %image
+      (setf (gethash mirror (slot-value port 'mirror->%image)) %image)
+      (remhash mirror (slot-value port 'mirror->%image))))
 
 ;;; change geometry
 
 (defmethod port-set-mirror-region :after ((port render-port-mixin) mirror region)
-  (let ((sheet (port-lookup-sheet port mirror)))
-    (%set-image-region (sheet-mirror sheet) region)))
+  (%set-image-region (mirror->%image port mirror) region))
 
 (defmethod port-set-mirror-transformation :after ((port render-port-mixin) mirror transformation)
   (declare (ignore port mirror transformation))
   nil)
 
 ;;; realize/destroy mirrors
-(defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin)))
+
+;;; We return a gensym because the RENDER-PORT-MIXIN maintains a hash table
+;;; which maps mirrors to images - a key must be unique. -- jd 2020-11-09
+(defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin))
+  (gensym "RENDER-PORT-MIRROR"))
 
 ;;; Fonts
 

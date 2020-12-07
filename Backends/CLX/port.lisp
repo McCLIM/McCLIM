@@ -117,7 +117,7 @@
                                               :structure-notify
                                               :pointer-motion
                                               :button-motion)))
-  (when (null (port-lookup-mirror port sheet))
+  (when (null (sheet-mirror sheet))
     ;;(update-mirror-geometry sheet (%%sheet-native-transformation sheet))
     (let* ((desired-color (typecase sheet
                             (pane ; CHECKME [is this sensible?] seems to be
@@ -144,7 +144,7 @@
                            (bounding-rectangle-size region)
                            (values width height))
                        (xlib:create-window
-                        :parent (sheet-xmirror (sheet-parent sheet))
+                        :parent (sheet-mirror (sheet-parent sheet))
                         :width (round-coordinate width)
                         :height (round-coordinate height)
                         :x (round-coordinate x)
@@ -166,7 +166,7 @@
       (when map
         (xlib:map-window window)
         (xlib:display-finish-output (clx-port-display port)))))
-  (port-lookup-mirror port sheet))
+  (sheet-mirror sheet))
 
 (defmethod realize-mirror ((port clx-port) (sheet mirrored-sheet-mixin))
   ;;mirrored-sheet-mixin is always in the top of the Class Precedence List
@@ -226,8 +226,8 @@
 ;;; Pixmap
 
 (defmethod realize-mirror ((port clx-port) (pixmap pixmap))
-  (when (null (port-lookup-mirror port pixmap))
-    (let* ((window (sheet-xmirror (pixmap-sheet pixmap)))
+  (when (null (pixmap-mirror pixmap))
+    (let* ((window (sheet-mirror (pixmap-sheet pixmap)))
            (pix (xlib:create-pixmap
                     :width (round (pixmap-width pixmap))
                     :height (round (pixmap-height pixmap))
@@ -237,7 +237,7 @@
     (values)))
 
 (defmethod destroy-mirror ((port clx-port) (pixmap pixmap))
-  (when-let ((mirror (port-lookup-mirror port pixmap)))
+  (when-let ((mirror (pixmap-mirror pixmap)))
     (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
                                  (xlib:pixmap-plist mirror))))
       (xlib:render-free-picture picture))
@@ -254,23 +254,8 @@
     pixmap))
 
 (defmethod port-deallocate-pixmap ((port clx-port) pixmap)
-  (when (port-lookup-mirror port pixmap)
+  (when (pixmap-mirror pixmap)
     (destroy-mirror port pixmap)))
-
-;;; Top-level-sheet
-
-;;; FIXME this is evil.
-(defmethod allocate-space :after ((pane top-level-sheet-mixin) width height)
-  (when-let ((mirror (sheet-direct-xmirror pane)))
-    (with-slots (space-requirement) pane
-      '(setf (xlib:wm-normal-hints mirror) ; FIXME this has no effect
-            (xlib:make-wm-size-hints
-             :width (round width)
-             :height (round height)
-             :max-width (min 65535 (round (space-requirement-max-width space-requirement)))
-             :max-height (min 65535 (round (space-requirement-max-height space-requirement)))
-             :min-width (round (space-requirement-min-width space-requirement))
-             :min-height (round (space-requirement-min-height space-requirement)))))))
 
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))

@@ -13,6 +13,7 @@
 		  #:port-lookup-sheet
 		  #:destroy-mirror
 		  #:realize-mirror
+                  #:pixmap-mirror
                   #:unmanaged-top-level-sheet-pane
 		  #:vbox-pane)
     (:import-from :mcclim-render-internals
@@ -22,6 +23,7 @@
 		  #:image-sheet-mixin
 		  #:image-mirror-mixin
 		  #:image-pixmap-mixin
+                  #:mirror->%image
                   #:%make-image
                   #:image-mirror-image
 		  ;;#:save-image-to-file

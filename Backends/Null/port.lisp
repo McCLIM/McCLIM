@@ -116,7 +116,7 @@
 
 (defmethod port-deallocate-pixmap ((port null-port) pixmap)
   #+nil
-  (when (port-lookup-mirror port pixmap)
+  (when (pixmap-mirror port pixmap)
     (destroy-mirror port pixmap)))
 
 (defmethod pointer-position ((pointer null-pointer))

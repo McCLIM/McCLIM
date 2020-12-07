@@ -19,19 +19,20 @@
   (clim-extensions:port-all-font-families port))
 
 (defun initialize-clx-framebuffer (port)
-  (clim-sys:make-process (lambda ()
-                           (loop
-                             (handler-case
-                                 (alexandria:maphash-keys
-                                  (lambda (key)
-                                    (when (typep key 'clx-fb-mirrored-sheet-mixin)
-                                      (image-mirror-to-x (sheet-mirror key))))
-                                  (slot-value port 'climi::sheet->mirror))
-                               (condition (condition)
-                                 (format *debug-io* "~A~%" condition)))
-                             (xlib:display-force-output (clx-port-display port))
-                             (sleep 0.01)))
-                         :name (format nil "~S's event process." port)))
+  (clim-sys:make-process
+   (lambda ()
+     (loop with mirror->%image = (slot-value port 'mirror->%image)
+           do (handler-case
+                  (maphash-values
+                   (lambda (image)
+                     (when (typep image 'clx-fb-mirror)
+                       (image-mirror-to-x image)))
+                   mirror->%image)
+                (condition (condition)
+                  (format *debug-io* "~A~%" condition)))
+              (xlib:display-force-output (clx-port-display port))
+              (sleep 0.01)))
+   :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure
 			     :key-press :key-release
@@ -41,12 +42,14 @@
 			     :structure-notify
 			     :pointer-motion :button-motion))
 
-(defmethod clim-clx::realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
-   (clim-clx::%realize-mirror port sheet)
-   (port-register-mirror (port sheet) sheet (make-instance 'clx-fb-mirror :xmirror (port-lookup-mirror port sheet)))
-   (port-lookup-mirror port sheet))
+(defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
+  (let ((mirror (clim-clx::%realize-mirror port sheet)))
+    (port-register-mirror port sheet mirror)
+    (setf (mirror->%image port mirror)
+          (make-instance 'clx-fb-mirror :xmirror mirror))
+    mirror))
 
-(defmethod clim-clx::realize-mirror ((port clx-fb-port) (pixmap pixmap))
+(defmethod realize-mirror ((port clx-fb-port) (pixmap pixmap))
   )
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
@@ -72,7 +75,8 @@
       (setf (xlib:wm-protocols window) `(:wm_delete_window))
       (xlib:change-property window
                             :WM_CLIENT_LEADER (list (xlib:window-id window))
-                            :WINDOW 32))))
+                            :WINDOW 32)
+      window)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-sheet-mixin))
   (clim-clx::realize-mirror-aux port sheet
@@ -80,14 +84,11 @@
 		      :override-redirect :on
 		      :map nil))
 
-
-
 (defmethod make-medium ((port clx-fb-port) sheet)
   (make-instance 'clx-fb-medium
 		 ;; :port port
 		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
-
 
 (defmethod make-graft ((port clx-fb-port) &key (orientation :default) (units :device))
   (let ((graft (make-instance 'clx-graft
@@ -104,11 +105,10 @@
 
 
 (defmethod port-force-output ((port clx-fb-port))
-  (alexandria:maphash-keys
-   (lambda (key)
-     (when (typep key 'clx-fb-mirrored-sheet-mixin)
-       (mcclim-render-internals::%mirror-force-output (sheet-mirror key))))
-   (slot-value port 'climi::sheet->mirror))
+  (maphash-values (lambda (image)
+                    (when (typep image 'clx-fb-mirror)
+                      (%mirror-force-output image)))
+                  (slot-value port 'mirror->%image))
   (xlib:display-force-output (clx-port-display port)))
 
 ;;; Pixmap
@@ -120,7 +120,9 @@
   (setf (sheet-parent pixmap) (graft port))
   (let ((mirror (make-instance 'image-mirror-mixin)))
     (port-register-mirror port pixmap mirror)
-    (mcclim-render-internals::%make-image mirror pixmap)))
+    (setf (mirror->%image port mirror) mirror)
+    (%make-image mirror pixmap)
+    mirror))
 
 (defmethod port-allocate-pixmap ((port clx-fb-port) sheet width height)
   (let ((pixmap (make-instance 'clx-fb-pixmap
@@ -133,5 +135,5 @@
     pixmap))
 
 (defmethod port-deallocate-pixmap ((port clx-fb-port) pixmap)
-  (when (port-lookup-mirror port pixmap)
+  (when (pixmap-mirror pixmap)
     (destroy-mirror port pixmap)))
