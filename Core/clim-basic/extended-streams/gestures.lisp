@@ -81,7 +81,8 @@
 (defun normalize-keyboard-physical-gesture (gesture-spec)
   (destructuring-bind (key-or-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((characterp key-or-name)
+    (values (cond ((or (eq key-or-name t)
+                       (characterp key-or-name))
                    key-or-name)
                   ((alexandria:assoc-value
                     +gesture-key-name-to-char+ key-or-name))
@@ -107,7 +108,9 @@
 (defun normalize-pointer-physical-gesture (gesture-spec)
   (destructuring-bind (button-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((alexandria:assoc-value
+    (values (cond ((eq button-name t)
+                   button-name)
+                  ((alexandria:assoc-value
                     +gesture-button-to-event-button+ button-name))
                   (t
                    (error "~@<~S is not a known pointer button. Known ~
@@ -199,7 +202,8 @@
 (defun event-data-matches-gesture-p (type device-name modifier-state
                                      physical-gestures)
   (labels ((matches-with-wildcards-p (value gesture-value)
-             (or (eq value nil)
+             (or (eq gesture-value t)
+                 (eq value nil)
                  (eql value gesture-value)))
            (physical-gesture-matches-p (gesture)
              (destructuring-bind

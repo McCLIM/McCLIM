@@ -900,8 +900,10 @@ alive.")
               for gesture = (gesture translator)
               unless (eq gesture t)
               do (loop for (name type modifier) in gesture
-                       unless (eql modifier current-modifier)
-                       do (pushnew modifier other-modifiers)))
+                       unless (or (eql modifier current-modifier)
+                                  ;; T means "the wildcard modifier"
+                                  (eql modifier t))
+                         do (pushnew modifier other-modifiers)))
         (when other-modifiers
           (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
           (terpri pstream)

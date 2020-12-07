@@ -291,7 +291,7 @@
 
 (define-drag-and-drop-translator drag-file/invalid
     (file command directory file-manager
-     :gesture t :menu nil :priority -1
+     :gesture :select :menu nil :priority -1
      :tester ((object) (not (typep object 'root)))
      :feedback drag-file-feedback/invalid
      :pointer-documentation ((object destination-object stream event)
@@ -306,9 +306,12 @@
   (format t "Copying ~A to ~A~%" (name from) (name to))
   (copy from to))
 
+(define-gesture-name :copy-file
+  :pointer-button-press (:left t))
+
 (define-drag-and-drop-translator drag-file/copy
     (file command directory file-manager
-     :gesture t :menu nil
+     :gesture :copy-file :menu nil
      :tester ((object) (not (typep object 'root)))
      :destination-tester ((object destination-object event)
                           (and (= (event-modifier-state event) +meta-key+)
@@ -327,9 +330,12 @@
   (format t "Moving ~A to ~A~%" (name from) (name to))
   (move from to))
 
+(define-gesture-name :move-file
+  :pointer-button-press (:left t))
+
 (define-drag-and-drop-translator drag-file/move
     (file command directory file-manager
-     :gesture t :menu nil
+     :gesture :move-file :menu nil
      :tester ((object) (not (typep object 'root)))
      :destination-tester ((object destination-object event)
                           (and (zerop (event-modifier-state event))

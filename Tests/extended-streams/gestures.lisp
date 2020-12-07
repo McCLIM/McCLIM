@@ -32,6 +32,9 @@
           (:foo :keyboard               (#\a))                           ; ok
           (:foo :keyboard               (#\a :meta))                     ; ok
           (:foo :keyboard               #\a)                             ; extension
+          (:foo :keyboard               (t))                             ; extension
+          (:foo :keyboard               (#\a t))                         ; extension
+          (:foo :keyboard               (t t))                           ; extension
 
           (:foo :pointer-button         (1)                       error) ; invalid button
           (:foo :pointer-button         (:no-such-button)         error) ; invalid button
@@ -40,7 +43,10 @@
           (:foo :pointer-button-press   (:middle))                       ; ok
           (:foo :pointer-button-release (:right))                        ; ok
           (:foo :pointer-scroll         (:wheel-up))                     ; ok
-          (:foo :pointer-button         :left))))                        ; extension
+          (:foo :pointer-button         :left)                           ; extension
+          (:foo :pointer-button         (t))                             ; extension
+          (:foo :pointer-button         (:left t))                       ; extension
+          (:foo :pointer-button         (t t)))))                        ; extension
 
 (test gestures.ensure-physical-gesture.smoke
   "Smoke test for the `ensure-physical-gesture' function."
@@ -79,6 +85,10 @@
           (:keyboard             #\a   0             t                                 t) ; extension
           (:keyboard             #\a   nil           t                                 t) ; extension
           (nil                   nil   nil           t                                 t) ; extension
+          ;; Wildcards in gesture elements
+          (:keyboard             #\a   0             ((t                     #\a   0)) t) ; extension
+          (:keyboard             #\a   0             ((:keyboard             t     0)) t) ; extension
+          (:keyboard             #\a   0             ((:keyboard             #\a   t)) t) ; extension
           ;; Wildcards in event data
           (nil                   #\a   0             ((:keyboard             #\a   0)) t)
           (:keyboard             nil   0             ((:keyboard             #\a   0)) t)
