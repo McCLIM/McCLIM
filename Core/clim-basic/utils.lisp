@@ -242,53 +242,41 @@ Note:
                                              collect (pop q))))))))
           result-type))))
 
-;;; A different way of attacking iteration of sequences
 (defmacro do-sequence ((vars sequence &optional result-form) &body body)
   "Iterate over SEQUENCE.  VARS is a list of symbols (or a single
 symbol).  At each iteration the variables in VARS are bound to the
 initial elements of the sequence.  The iteration is then \"stepped\"
 by the number of variables in VARS."
-  (flet ((list-accessor (n)
-           (case n
-             (0 'car)
-             (1 'cadr)
-             (2 'caddr)
-             (3 'cadddr)
-             (t `(lambda (list) (nth ,n list)))))
-         (list-stepper (n)
+  (flet ((list-stepper (n)
            (case n
              (1 'cdr)
              (2 'cddr)
              (3 'cdddr)
              (4 'cddddr)
              (t `(lambda (list) (nthcdr ,n list))))))
-    (when (not (listp vars))
-      (setq vars (list vars)))
-    (let* ((body-fun (gensym "BODY-FUN"))
-           (var-length (length vars))
-           (seq-var (gensym "SEQ-VAR"))
-           (tail-var (gensym "TAIL-VAR"))
-           (i (gensym "I"))
-           (list-args (loop for j from 0 below var-length
-                            collect `(,(list-accessor j) ,tail-var)))
-           (vector-args (loop for j from 0 below var-length
-                              collect `(aref ,seq-var (+ ,i ,j)))))
-      `(block nil
-         (flet ((,body-fun ,vars
-                  (tagbody
-                     ,@body)))
-           (let ((,seq-var ,sequence))
-             (etypecase ,seq-var
-               (list
-                (loop for ,tail-var on ,seq-var by #',(list-stepper var-length)
-                      do (,body-fun ,@list-args)))
-               (vector
-                (loop for ,i of-type fixnum from 0 below (length ,seq-var) by ,var-length
-                      do (,body-fun ,@vector-args))))))
-         ,@(when result-form
-             `((let ,vars               ;Bind variables to nil
-                 (declare (ignorable ,@vars))
-                 ,result-form)))))))
+    (alexandria:with-unique-names (body-fun i)
+      (alexandria:once-only (sequence)
+        (let* ((vars        (alexandria:ensure-list vars))
+               (count       (length vars))
+               (vector-args (loop for j from 0 below count
+                                  collect `(aref ,sequence (+ ,i ,j)))))
+          `(block nil
+             (flet ((,body-fun ,vars
+                      (tagbody
+                         ,@body)))
+               (declare (dynamic-extent (function ,body-fun)))
+               (etypecase ,sequence
+                 (list
+                  (loop for ,vars on ,sequence by (function ,(list-stepper count))
+                        do (,body-fun ,@vars)))
+                 (vector
+                  (loop for ,i of-type alexandria:array-index
+                          from 0 below (length ,sequence) by ,count
+                        do (,body-fun ,@vector-args)))))
+             ,@(when result-form
+                 `((let ,vars ; bind variables to NIL
+                     (declare (ignorable ,@vars))
+                     ,result-form)))))))))
 
 ;;;;
 ;;;; meta functions
