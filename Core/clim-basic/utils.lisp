@@ -1,11 +1,18 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
+;;;  (c) copyright 2001 Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2018 Cyrus Harmon <ch-lisp@bobobeach.com>
+;;;  (c) copyright 2017-2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2019, 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
-;;; See toplevel file 'Copyright' for the copyright details.
+;;; ---------------------------------------------------------------------------
 ;;;
+;;; Utilities used through the McCLIM codebase. Things that are in
+;;; alexandria should not be duplicated here.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defun get-environment-variable (string)
   #+excl (sys:getenv string)
@@ -142,31 +149,31 @@ evaluated."
          new-values-set-form old-values-set-form
          update-form)
     (loop for (place new-value) in forms
-	  for (vars vals store-vars writer-form reader-form)
-	    = (multiple-value-list (get-setf-expansion place env))
-	  for old-value-names = (mapcar (lambda (var)
-					  (declare (ignore var))
-					  (gensym))
-					store-vars)
-	  nconc (mapcar #'list vars vals)
-	    into temp-init-let-form
-	  nconc (copy-list store-vars)
-	    into temp-init-let-form
-	  nconc (copy-list old-value-names)
-	    into temp-init-let-form
-	  nconc `(,(valueify old-value-names) ,reader-form)
-	    into temp-save-old-values-setf-form
-	  nconc `(,(valueify store-vars) ,new-value)
-	    into temp-new-values-set-form
-	  nconc `(,(valueify store-vars) ,(valueify old-value-names))
-	    into temp-old-values-set-form
-	  collect writer-form
-	    into temp-update-form
-	  finally (setq init-let-form temp-init-let-form
-			save-old-values-setf-form temp-save-old-values-setf-form
-			new-values-set-form temp-new-values-set-form
-			old-values-set-form temp-old-values-set-form
-			update-form (cons 'progn temp-update-form)))
+          for (vars vals store-vars writer-form reader-form)
+            = (multiple-value-list (get-setf-expansion place env))
+          for old-value-names = (mapcar (lambda (var)
+                                          (declare (ignore var))
+                                          (gensym))
+                                        store-vars)
+          nconc (mapcar #'list vars vals)
+            into temp-init-let-form
+          nconc (copy-list store-vars)
+            into temp-init-let-form
+          nconc (copy-list old-value-names)
+            into temp-init-let-form
+          nconc `(,(valueify old-value-names) ,reader-form)
+            into temp-save-old-values-setf-form
+          nconc `(,(valueify store-vars) ,new-value)
+            into temp-new-values-set-form
+          nconc `(,(valueify store-vars) ,(valueify old-value-names))
+            into temp-old-values-set-form
+          collect writer-form
+            into temp-update-form
+          finally (setq init-let-form temp-init-let-form
+                        save-old-values-setf-form temp-save-old-values-setf-form
+                        new-values-set-form temp-new-values-set-form
+                        old-values-set-form temp-old-values-set-form
+                        update-form (cons 'progn temp-update-form)))
     `(let* ,init-let-form
        (setf ,@save-old-values-setf-form)
        (unwind-protect
@@ -207,15 +214,15 @@ Note:
          ;; just map for effect
          (cond ((vectorp sequence)
                 (loop for i from 0 below (length sequence) by n
-		      do (apply function
-				(loop for j from 0 below n
-				      collect (aref sequence (+ i j))))))
+                      do (apply function
+                                (loop for j from 0 below n
+                                      collect (aref sequence (+ i j))))))
                ((listp sequence)
                 (let ((q sequence))
                   (loop until (null q)
-			do (apply function
-				  (loop for j from 0 below n
-					collect (pop q))))))))
+                        do (apply function
+                                  (loop for j from 0 below n
+                                        collect (pop q))))))))
         (t
          ;; Otherwise, we (for now) take the easy route of calling
          ;; COERCE.
@@ -223,16 +230,16 @@ Note:
           (cond ((vectorp sequence)
                  (loop for i from 0 below (length sequence) by n
                        nconc (multiple-value-list
-			      (apply function
-				     (loop for j from 0 below n
-					   collect (aref sequence (+ i j)))))))
+                              (apply function
+                                     (loop for j from 0 below n
+                                           collect (aref sequence (+ i j)))))))
                 ((listp sequence)
                  (let ((q sequence))
                    (loop until (null q)
-			 nconc (multiple-value-list
-				(apply function
-				       (loop for j from 0 below n
-					     collect (pop q))))))))
+                         nconc (multiple-value-list
+                                (apply function
+                                       (loop for j from 0 below n
+                                             collect (pop q))))))))
           result-type))))
 
 ;;; A different way of attacking iteration of sequences
@@ -242,46 +249,46 @@ symbol).  At each iteration the variables in VARS are bound to the
 initial elements of the sequence.  The iteration is then \"stepped\"
 by the number of variables in VARS."
   (flet ((list-accessor (n)
-	   (case n
-	     (0 'car)
-	     (1 'cadr)
-	     (2 'caddr)
-	     (3 'cadddr)
-	     (t `(lambda (list) (nth ,n list)))))
-	 (list-stepper (n)
-	   (case n
-	     (1 'cdr)
-	     (2 'cddr)
-	     (3 'cdddr)
-	     (4 'cddddr)
-	     (t `(lambda (list) (nthcdr ,n list))))))
+           (case n
+             (0 'car)
+             (1 'cadr)
+             (2 'caddr)
+             (3 'cadddr)
+             (t `(lambda (list) (nth ,n list)))))
+         (list-stepper (n)
+           (case n
+             (1 'cdr)
+             (2 'cddr)
+             (3 'cdddr)
+             (4 'cddddr)
+             (t `(lambda (list) (nthcdr ,n list))))))
     (when (not (listp vars))
       (setq vars (list vars)))
     (let* ((body-fun (gensym "BODY-FUN"))
-	   (var-length (length vars))
-	   (seq-var (gensym "SEQ-VAR"))
-	   (tail-var (gensym "TAIL-VAR"))
-	   (i (gensym "I"))
-	   (list-args (loop for j from 0 below var-length
-			    collect `(,(list-accessor j) ,tail-var)))
-	   (vector-args (loop for j from 0 below var-length
-			      collect `(aref ,seq-var (+ ,i ,j)))))
+           (var-length (length vars))
+           (seq-var (gensym "SEQ-VAR"))
+           (tail-var (gensym "TAIL-VAR"))
+           (i (gensym "I"))
+           (list-args (loop for j from 0 below var-length
+                            collect `(,(list-accessor j) ,tail-var)))
+           (vector-args (loop for j from 0 below var-length
+                              collect `(aref ,seq-var (+ ,i ,j)))))
       `(block nil
-	 (flet ((,body-fun ,vars
-		  (tagbody
-		     ,@body)))
-	   (let ((,seq-var ,sequence))
-	     (etypecase ,seq-var
-	       (list
-		(loop for ,tail-var on ,seq-var by #',(list-stepper var-length)
-		      do (,body-fun ,@list-args)))
-	       (vector
-		(loop for ,i of-type fixnum from 0 below (length ,seq-var) by ,var-length
-		      do (,body-fun ,@vector-args))))))
-	 ,@(when result-form
-	     `((let ,vars		;Bind variables to nil
-		 (declare (ignorable ,@vars))
-		 ,result-form)))))))
+         (flet ((,body-fun ,vars
+                  (tagbody
+                     ,@body)))
+           (let ((,seq-var ,sequence))
+             (etypecase ,seq-var
+               (list
+                (loop for ,tail-var on ,seq-var by #',(list-stepper var-length)
+                      do (,body-fun ,@list-args)))
+               (vector
+                (loop for ,i of-type fixnum from 0 below (length ,seq-var) by ,var-length
+                      do (,body-fun ,@vector-args))))))
+         ,@(when result-form
+             `((let ,vars               ;Bind variables to nil
+                 (declare (ignorable ,@vars))
+                 ,result-form)))))))
 
 ;;;;
 ;;;; meta functions
@@ -321,10 +328,10 @@ by the number of variables in VARS."
 ;;; comes before commands.lisp.
 
 (defmacro do-command-table-inheritance ((command-table-var command-table)
-					&body body)
+                                        &body body)
   `(apply-with-command-table-inheritance
     #'(lambda (,command-table-var)
-	,@body)
+        ,@body)
     (find-command-table ,command-table)))
 
 
@@ -344,12 +351,12 @@ by the number of variables in VARS."
  declarations at its top. Returns as values a list of the declarations and the
  rest of the body."
   (loop for bod on body
-	for (form) = bod
-	if (and (consp form) (eq (car form) 'declare))
-	  collect form into decls
-	else
-	  return (values decls bod)
-	finally	(return (values decls nil)))) ;It's all (declare ...)
+        for (form) = bod
+        if (and (consp form) (eq (car form) 'declare))
+          collect form into decls
+        else
+          return (values decls bod)
+        finally         (return (values decls nil)))) ;It's all (declare ...)
 
 (defun decode-specializer (specializer-name)
   (if (atom specializer-name)
@@ -407,22 +414,22 @@ by the number of variables in VARS."
   (let ((clean-tail arg-list))
     ;; First, determine a tail in which there are no keywords to be removed.
     (loop for arg-tail on arg-list by #'cddr
-	  for (key) = arg-tail
-	  do (when (member key keywords :test #'eq)
-	       (setq clean-tail (cddr arg-tail))))
+          for (key) = arg-tail
+          do (when (member key keywords :test #'eq)
+               (setq clean-tail (cddr arg-tail))))
     ;; Cons up the new arg list until we hit the clean-tail, then nconc that on
     ;; the end.
     (loop for arg-tail on arg-list by #'cddr
-	  for (key value) = arg-tail
-	  if (eq arg-tail clean-tail)
-	    nconc clean-tail
-	    and do (loop-finish)
-	  else if (not (member key keywords :test #'eq))
-		 nconc (list key value)
-	  end)))
+          for (key value) = arg-tail
+          if (eq arg-tail clean-tail)
+            nconc clean-tail
+            and do (loop-finish)
+          else if (not (member key keywords :test #'eq))
+                 nconc (list key value)
+          end)))
 
 (defmacro with-keywords-removed ((var keywords &optional (new-var var))
-				 &body body)
+                                 &body body)
   "Binds NEW-VAR (defaults to VAR) to VAR with the keyword arguments specified
 in KEYWORDS removed."
   `(let ((,new-var (remove-keywords ,var ',keywords)))
@@ -598,11 +605,11 @@ STREAM in the direction DIRECTION."
     for (list-item) = tail
     if (funcall test item (funcall key list-item))
       do (return-from delete-1
-	   (if tail-prev
-	       (progn
-		 (setf (cdr tail-prev) (cdr tail))
-		 (values list t))
-	       (values (cdr tail) t)))
+           (if tail-prev
+               (progn
+                 (setf (cdr tail-prev) (cdr tail))
+                 (values list t))
+               (values (cdr tail) t)))
     finally (return (values list nil))))
 
 (defun copy-sequence-into-vector (sequence)
@@ -662,8 +669,8 @@ index being halfway between INDEX-1 and INDEX-2."
      (substitute
       #\Space #\-
       (subseq name (if (string= '#:com- name :end2 (min (length name) 4))
-		       4
-		       0))))))
+                       4
+                       0))))))
 
 (defun keyword-arg-name-from-symbol (symbol)
   (let ((name (symbol-name symbol)))
