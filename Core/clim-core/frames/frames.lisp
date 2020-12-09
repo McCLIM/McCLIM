@@ -157,6 +157,24 @@
                  :accessor frame-input-buffer
                  :documentation "The input buffer queue that, by default, will
                                  be shared by all input streams in the frame")
+   ;; This slot is true during the execution of the FRAME-READ-COMMAND. It is
+   ;; used by the EXECUTE-FRAME-COMMAND to decide, whether the synchronous[1]
+   ;; command execution should be performed immedietely or enqueued in the
+   ;; event queue. This is to ensure advancement of the top level loop and
+   ;; redisplay of panes after the command execution.
+   ;;
+   ;; The frame-command-queue is used to schedule a command for the next
+   ;; iteration of the frame top level when the input context inside the call
+   ;; to FRAME-READ-COMMAND is different than the command (that may happen i.e
+   ;; when the frame has a temporarily amended command table or is waiting for
+   ;; an argument of the command that is currently parsed).
+   ;;
+   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in
+   ;; the frame's process.
+   ;;
+   ;; -- jd 2020-12-10
+   (reading-command-p :initform nil
+                      :accessor frame-reading-command-p)
    (command-queue :initform (make-instance 'concurrent-event-queue :port nil)
                   :reader frame-command-queue)
    (documentation-state :accessor frame-documentation-state
@@ -617,7 +635,8 @@ documentation produced by presentations.")
     ((frame application-frame) &key (stream *standard-input*))
   (declare (ignore stream))
   (or (event-queue-read-no-hang (frame-command-queue frame))
-      (call-next-method)))
+      (letf (((frame-reading-command-p frame) t))
+        (call-next-method))))
 
 (defmethod read-frame-command ((frame application-frame)
                                &key (stream *standard-input*))
@@ -656,7 +675,8 @@ documentation produced by presentations.")
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (check-type command cons)
-  (if (eq (frame-process frame) (current-process))
+  (if (and (eq (frame-process frame) (current-process))
+           (not (frame-reading-command-p frame)))
       (let ((name (command-name command))
             (args (command-arguments command)))
         (restart-case (apply name args)
