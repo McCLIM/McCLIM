@@ -625,29 +625,31 @@ documentation produced by presentations.")
 
 (define-event-class execute-command-event (window-manager-event)
   ((sheet :initarg :sheet :reader event-sheet)
+   (frame :initarg :frame :reader execute-command-event-frame)
    (command :initarg :command :reader execute-command-event-command)))
 
-(defmethod execute-frame-command ((frame application-frame) command)
-  ;; ### FIXME: I'd like a different method than checking for
-  ;; *application-frame* to decide, which process processes which
-  ;; frames command loop. Perhaps looking ath the process slot?
-  ;; --GB 2005-11-28
-  (check-type command cons)
-  (cond ((eq *application-frame* frame)
-         (restart-case
-             (apply (command-name command) (command-arguments command))
-           (try-again ()
-            :report (lambda (stream)
-                      (format stream "Try executing the command ~S again." (command-name command)))
-            (execute-frame-command frame command))))
-        (t
-         (let ((eq (sheet-event-queue (frame-top-level-sheet frame))))
-           (event-queue-append eq (make-instance 'execute-command-event
-                                                  :sheet frame
-                                                  :command command))))))
+(defmethod handle-event ((sheet top-level-sheet-mixin)
+                         (event execute-command-event))
+  (declare (ignore sheet))
+  (execute-frame-command (execute-command-event-frame event)
+                         (execute-command-event-command event)))
 
-(defmethod handle-event ((frame application-frame) (event execute-command-event))
-  (execute-frame-command frame (execute-command-event-command event)))
+(defmethod execute-frame-command ((frame application-frame) command)
+  (check-type command cons)
+  (if (eq (frame-process frame) (current-process))
+      (let ((name (command-name command))
+            (args (command-arguments command)))
+        (restart-case (apply name args)
+          (try-again ()
+            :report (lambda (stream)
+                      (format stream "Try executing the command ~S again." name))
+            (execute-frame-command frame command))))
+      (let* ((sheet (frame-top-level-sheet frame))
+             (queue (sheet-event-queue sheet)))
+        (event-queue-append queue (make-instance 'execute-command-event
+                                                 :sheet sheet
+                                                 :frame frame
+                                                 :command command)))))
 
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
