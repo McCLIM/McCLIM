@@ -51,6 +51,11 @@
   (format *standard-output* "You pressed the Hi button.~%")
   (finish-output *standard-output*))
 
+(define-menu-test-command (com-more :name t)
+    ((a 'string :prompt "String"))
+  (format *standard-output* "You accepted ~s.~%" a)
+  (finish-output *standard-output*))
+
 (make-command-table 'kenobi-command-table
                     :errorp nil
                     :menu '(("General Kenobi"   :command com-kenobi
@@ -82,5 +87,6 @@
                                              :text-style (nil :bold nil))
                                    ("kenobi" :function get-kenobi)))
                            ("Lisp"
-                            :menu (("()()()" :divider nil)
+                            :menu (("More" :command com-more)
+                                   (nil :divider nil)
                                    ("empty"  :menu nil)))))))
