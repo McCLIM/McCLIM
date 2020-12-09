@@ -438,6 +438,12 @@ highlighting, etc." ))
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
+(add-menu-item-to-command-table
+ 'accept-values "Accepting Values"
+ :divider nil
+ :text-style (make-text-style nil :italic :normal)
+ :errorp nil)
+
 (define-command (com-query-exit :command-table accept-values
                                 :keystroke (#\[ :control)
                                 :name nil
