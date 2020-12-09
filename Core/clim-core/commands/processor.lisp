@@ -106,6 +106,24 @@
 (defvar *partial-command-parser*
   #'command-line-read-remaining-arguments-for-partial-command)
 
+(defun ensure-complete-command (command command-table stream)
+  (unless command
+    (return-from ensure-complete-command))
+  (let ((canonical (partial-command-from-name (car command)
+                                              command-table)))
+    ;; When the command has more arguments than its "canonical
+    ;; form", that is the command with all required arguments
+    ;; filled, that means that it has all required arguments *and*
+    ;; some optional arguments.
+    (unless (> (length command) (length canonical))
+      (map-into canonical #'identity command)
+      (setf command canonical))
+    (if (partial-command-p command)
+        (funcall *partial-command-parser*
+                 command-table stream command
+                 (position *unsupplied-argument-marker* command))
+        command)))
+
 (defun read-command (command-table
                      &key (stream *standard-input*)
                           (command-parser *command-parser*)
@@ -133,24 +151,21 @@
                            :prompt nil
                            :default +null-command+
                            :default-type 'null-command)
-                 (cond ((eq ptype 'null-command)
-                        nil)
-                       ((partial-command-p command)
-                        (beep)
-                        (format *query-io* "~&Argument ~D not supplied.~&"
-                                (position *unsupplied-argument-marker* command))
-                        nil)
-                       (t command)))
+                 (if (eq ptype 'null-command)
+                     nil
+                     command))
              ((or simple-parse-error input-not-of-required-type)  (c)
                (beep)
                (fresh-line *query-io*)
                (princ c *query-io*)
                (terpri *query-io*)
                nil)))
-          (t (with-input-context (`(command :command-table ,command-table))
+          (t
+           (with-input-context (`(command :command-table ,command-table))
                (object)
                (loop (read-gesture :stream stream))
-               (t object))))))
+             (t
+              (ensure-complete-command object command-table stream)))))))
 
 (defun read-command-using-keystrokes
     (command-table keystrokes
@@ -375,11 +390,7 @@
                                            :rescan nil))
              input)
            (handle-command (command)
-             (if (partial-command-p command)
-                 (funcall *partial-command-parser*
-                          command-table stream command
-                          (position *unsupplied-argument-marker* command))
-                 command)))
+             (ensure-complete-command command command-table stream)))
       (with-input-context (type)
           (object type event options)
           (if-let ((command (funcall *command-parser* command-table stream)))
@@ -419,6 +430,29 @@
                             :prompt nil :history 'command-or-form)))
       (t
        (funcall (cdar *input-context*) object type event options)))))
+
+;;; MENU-ITEM is used as a default presentation type for displaying
+;;; objects in the menu. Display object is described in the spec of
+;;; the function FRAME-MANAGER-MENU-CHOOSE. From this description it
+;;; seems that anything may be a display object, so we fix the
+;;; predicate PRESENTATION-TYPEP to always return T. -- jd 2020-07-02
+(define-presentation-type menu-item ())
+
+(define-presentation-method presentation-typep (object (type menu-item))
+  (declare (ignore object))
+  t)
+
+(define-presentation-translator menu-item-command-to-command
+    (menu-item command global-command-table
+     :tester ((object event frame)
+              (and (typep object '%menu-item)
+                   (member (command-menu-item-type object)
+                           '(:function :command))
+                   (let ((command (extract-menu-item-command object event)))
+                     (command-enabled (command-name command) frame))))
+               :tester-definitive t)
+    (object event)
+  (extract-menu-item-command object event))
 
 ;;; Output destination extension for DEFINE-COMMAND
 ;;;

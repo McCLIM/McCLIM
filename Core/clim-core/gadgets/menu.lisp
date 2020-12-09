@@ -24,7 +24,9 @@
     (map-over-command-table-menu
      (lambda (item table)
        (declare (ignore table))
-       (items (make-menu-button-from-menu-item item client)))
+       (with-slots (menu-name keystroke type) item
+         (when (or menu-name (eq type :divider))
+           (items (make-menu-button-from-menu-item item client)))))
      table
      :inherited (inherit-menu table))
     (items +fill+)))
@@ -223,7 +225,11 @@
   (if-let ((label (slot-value gadget 'label)))
     (multiple-value-bind (width height)
         (text-size gadget label :text-style (pane-text-style gadget))
-      (make-space-requirement :min-width (+ width 4) :min-height height))
+      (ecase (box-layout-orientation (sheet-parent gadget))
+        (:vertical
+         (make-space-requirement :min-width (+ width 4) :min-height (+ height 2)))
+        (:horizontal
+         (make-space-requirement :min-width (+ width 6) :min-height (+ height 8)))))
     (make-space-requirement :min-width 1 :min-height 1)))
 
 (defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
@@ -235,7 +241,7 @@
         (let ((text-style (pane-text-style pane)))
           (multiple-value-bind (width height fx fy baseline)
               (text-size pane label :text-style text-style)
-            (declare (ignore fx fy))
+            (declare (ignore height fx fy))
             (ecase orientation
               (:vertical
                (let ((tx0 (+ x1 (/ (- (- x2 x1) width) 2)))
@@ -243,9 +249,9 @@
                  (draw-line* pane tx0 (1+ ty0) (+ tx0 width) (1+ ty0) :ink line-ink)
                  (draw-text* pane label tx0 ty0 :text-style text-style)))
               (:horizontal
-               (draw-line* pane x1 (- y2 height) x1 (- y2 1) :ink line-ink)
-               (draw-line* pane (- x2 1) (- y2 height) (- x2 1) (- y2 1) :ink line-ink)
-               (draw-text* pane label (+ x1 2) y2 :text-style text-style :align-y :bottom)))))
+               (draw-text* pane label (+ x1 2) (- y2 4)
+                           :text-style text-style
+                           :align-y :bottom)))))
         (ecase orientation
           (:vertical   (draw-line* pane x1 y1 x2 y1 :ink line-ink))
           (:horizontal (draw-line* pane x1 y1 x1 y2 :ink line-ink)))))))

@@ -334,8 +334,7 @@ designator) inherits menu items."
 (defun map-over-command-table-menu (function table &key (inherited t))
   (setf table (find-command-table table))
   (mapc #'(lambda (item)
-            (with-slots (menu-name keystroke type) item
-              (funcall function item table)))
+            (funcall function item table))
         (slot-value table 'menu))
   (when inherited
     (dolist (sub-table (command-table-inherit-from table))
