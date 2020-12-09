@@ -208,17 +208,6 @@
           (when deexpose ; Checkme as well.
             (disown-frame fm frame)))))))
 
-;;; MENU-ITEM is used as a default presentation type for displaying
-;;; objects in the menu. Display object is described in the spec of
-;;; the function FRAME-MANAGER-MENU-CHOOSE. From this description it
-;;; seems that anything may be a display object, so we fix the
-;;; predicate PRESENTATION-TYPEP to always return T. -- jd 2020-07-02
-(define-presentation-type menu-item ())
-
-(define-presentation-method presentation-typep (object (type menu-item))
-  (declare (ignore object))
-  t)
-
 (defmethod menu-choose
     (items &rest args &key associated-window &allow-other-keys)
   (let* ((associated-frame (if associated-window

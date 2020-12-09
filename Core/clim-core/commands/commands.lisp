@@ -121,6 +121,15 @@
                  :command-name command-name
                  :command-line-name command-line-name))
 
+(defun extract-menu-item-command
+    (menu-item gesture &optional numeric-argument)
+  (check-type menu-item %menu-item)
+  (let ((type (command-menu-item-type menu-item))
+        (value (command-menu-item-value menu-item)))
+    (ecase type
+      (:function (funcall value gesture numeric-argument))
+      (:command value))))
+
 (defun command-name (command)
   (first command))
 
