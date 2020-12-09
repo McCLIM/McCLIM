@@ -24,7 +24,9 @@
     (map-over-command-table-menu
      (lambda (item table)
        (declare (ignore table))
-       (items (make-menu-button-from-menu-item item client)))
+       (with-slots (menu-name keystroke type) item
+         (when (or menu-name (eq type :divider))
+           (items (make-menu-button-from-menu-item item client)))))
      table
      :inherited (inherit-menu table))
     (items +fill+)))
