@@ -310,22 +310,17 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 ;;; presentation/command system integration
 
-(define-command (com-switch-to-tab-page
-                 :command-table clim:global-command-table)
-    ((page 'tab-page :prompt "Tab page"))
+(define-command (com-switch-to-tab-page :command-table global-command-table)
+    ((page 'tab-page :prompt "Tab page"
+                     :gesture (:select
+                               :tester ((object)
+                                        (not (sheet-enabled-p (tab-page-pane object))))
+                               :documentation "Switch to this page"
+                               :pointer-documentation "Switch to this page"
+                               :echo nil)))
   (switch-to-page page))
 
-(define-presentation-to-command-translator switch-via-tab-button
-    (tab-page com-switch-to-tab-page clim:global-command-table
-              :gesture :select
-              :tester ((object)
-                       (not (sheet-enabled-p (tab-page-pane object))))
-              :documentation "Switch to this page"
-              :pointer-documentation "Switch to this page")
-    (object)
-  (list object))
-
-(define-command (com-remove-tab-page :command-table clim:global-command-table)
+(define-command (com-remove-tab-page :command-table global-command-table)
     ((page 'tab-page :prompt "Tab page"))
   (remove-page page))
 
