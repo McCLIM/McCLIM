@@ -157,6 +157,8 @@
                  :accessor frame-input-buffer
                  :documentation "The input buffer queue that, by default, will
                                  be shared by all input streams in the frame")
+   (command-queue :initform (make-instance 'concurrent-event-queue :port nil)
+                  :reader frame-command-queue)
    (documentation-state :accessor frame-documentation-state
                         :initform nil
                         :documentation "Used to keep of track of what
@@ -611,6 +613,12 @@ documentation produced by presentations.")
                 (format frame-query-io "~&Command aborted.~&")
                 (beep))))))))
 
+(defmethod read-frame-command :around
+    ((frame application-frame) &key (stream *standard-input*))
+  (declare (ignore stream))
+  (or (event-queue-read-no-hang (frame-command-queue frame))
+      (call-next-method)))
+
 (defmethod read-frame-command ((frame application-frame)
                                &key (stream *standard-input*))
   ;; The following is the correct interpretation according to the spec.  I
@@ -630,9 +638,21 @@ documentation produced by presentations.")
 
 (defmethod handle-event ((sheet top-level-sheet-mixin)
                          (event execute-command-event))
-  (declare (ignore sheet))
-  (execute-frame-command (execute-command-event-frame event)
-                         (execute-command-event-command event)))
+  (let* ((command (execute-command-event-command event))
+         (frame (execute-command-event-frame event))
+         (table (frame-command-table frame))
+         (ptype `(command :command-table ,table)))
+    (when (eq frame *application-frame*)
+      (throw-object-ptype command ptype :sheet sheet))
+    ;; We could have gotten here because:
+    ;;
+    ;; 1) a frame is not the *application-frame*, or
+    ;; 2) throw-object-ptype did not match the existing input context.
+    ;;
+    ;; In both cases executing the command is not immedietely possible, so we
+    ;; enqueue the command for EXECUTE-FRAME-COMMAND to pick it up during the
+    ;; next iteration. -- jd 2020-12-09
+    (event-queue-append (frame-command-queue frame) command)))
 
 (defmethod execute-frame-command ((frame application-frame) command)
   (check-type command cons)
