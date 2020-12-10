@@ -3,6 +3,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;;  (c) copyright 2017 Cyrus Harmon <ch-github@bobobeach.com>
+;;;  (c) copyright 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -23,23 +24,26 @@
 ;;; CLX drawing routines for bezier designs
 
 (defun bezier-region-to-coord-vec (region)
-  (let* ((poly (polygonalize region))
-         (points (polygon-points poly))
-         (coord-vec (make-array (* 2 (length points)) :fill-pointer 0)))
-    (map nil (lambda (point)
-               (multiple-value-bind (x y) (point-position point)
-                 (vector-push (round-coordinate x) coord-vec)
-                 (vector-push (round-coordinate y) coord-vec)))
-         points)
-    coord-vec))
+  ;; The curve is transformed into a polygon by recursive subdivision
+  ;; until a given precision is reached. If the entire curve is
+  ;; smaller than the permitted error, no polygon is produced.
+  (let ((poly (polygonalize region)))
+    (unless (eq poly +nowhere+)
+      (let* ((points (polygon-points poly))
+             (coord-vec (make-array (* 2 (length points)) :fill-pointer 0)))
+        (map nil (lambda (point)
+                   (multiple-value-bind (x y) (point-position point)
+                     (vector-push (round-coordinate x) coord-vec)
+                     (vector-push (round-coordinate y) coord-vec)))
+             points)
+        coord-vec))))
 
 (defun %clx-medium-draw-bezier-design (medium design &key filled)
   (let* ((tr (medium-native-transformation medium))
-         (region (transform-region tr design))
-         (coord-vec (bezier-region-to-coord-vec region)))
-    (with-clx-graphics (mirror line-style ink gc)
-        medium
-      (xlib:draw-lines mirror gc coord-vec :fill-p filled))))
+         (region (transform-region tr design)))
+    (alexandria:when-let ((coord-vec (bezier-region-to-coord-vec region)))
+      (with-clx-graphics (mirror line-style ink gc) medium
+        (xlib:draw-lines mirror gc coord-vec :fill-p filled)))))
 
 (defmethod medium-draw-bezier-design* ((medium clx-medium) (design bezier-curve))
   (%clx-medium-draw-bezier-design medium design))
