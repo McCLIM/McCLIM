@@ -607,6 +607,7 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 @c extension
 @include fun-clim-extensions-medium-miter-limit.texi
 @include fun-clim-extensions-line-style-effective-thickness.texi
+@include fun-clim-extensions-line-style-effective-dashes.texi
 
 @include fun-clim-setf-output-record-parent.texi
 

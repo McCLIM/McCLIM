@@ -1341,6 +1341,11 @@ Returns a SPACE-REQUIREMENT object."))
    "Returns the thickness in device units of a line,
 rendered on MEDIUM with the style LINE-STYLE."))
 
+(defgeneric line-style-effective-dashes (line-style medium)
+  (:documentation
+   "Return a dash length or a sequence of dash lengths device units
+for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
+
 ;;;
 
 (declfun draw-rectangle (sheet point1 point2

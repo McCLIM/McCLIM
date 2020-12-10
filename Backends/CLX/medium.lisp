@@ -94,34 +94,15 @@
      (prog1 :miter
        (warn "Unknown join style ~s, using :MITER." clim-shape)))))
 
-
-;;; XXX: this should be refactored into a reusable protocol in clim-backend
-;;; with specialization on medium. -- jd 2018-10-31
-(defun line-style-scale (line-style medium)
-  (let ((unit (line-style-unit line-style)))
-    (ecase unit
-      (:normal 1)
-      (:point (/ (graft-width (graft medium))
-                 (graft-width (graft medium) :units :inches)
-                 72))
-      (:coordinate (multiple-value-bind (x y)
-                       (transform-distance (medium-transformation medium) 0.71 0.71)
-                     (sqrt (+ (expt x 2) (expt y 2))))))))
-
-(defun line-style-effective-thickness (line-style medium)
-  (* (line-style-thickness line-style)
-     (line-style-scale line-style medium)))
-
-(defun line-style-effective-dashes (line-style medium)
-  (when-let ((dashes (line-style-dashes line-style)))
-    (let ((scale (line-style-scale line-style medium)))
-      ;; X limits individual dash lengths to the range [0,255].
-      (flet ((scale-and-clamp (length)
-               (min (* scale length) 255)))
-        (declare (dynamic-extent #'scale-and-clamp))
-        (if (eq dashes t)
-            (scale-and-clamp 3)
-            (map 'list #'scale-and-clamp dashes))))))
+(defmethod line-style-effective-dashes (line-style (medium clx-medium))
+  (when-let ((dashes (call-next-method)))
+    ;; X limits individual dash lengths to the range [0,255].
+    (flet ((clamp-to-255 (length)
+             (min length 255)))
+      (declare (dynamic-extent #'clamp-to-255))
+      (if (realp dashes)
+          (clamp-to-255 dashes)
+          (map 'list #'clamp-to-255 dashes)))))
 
 (defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
   (with-slots (gc) medium
