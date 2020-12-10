@@ -740,27 +740,16 @@ corresponding commands in `command-table' and invoke them using
 
 (defmethod process-gestures-or-command :around ((command-processor application-frame))
   (with-input-context
-      ('menu-item)
+      (`(command :command-table ,(esa-command-table command-processor)))
       (object)
-      (with-input-context
-          (`(command :command-table ,(esa-command-table command-processor)))
-          (object)
-          (call-next-method)
-        (command
-         (funcall (command-executor command-processor)
-                  command-processor object)))
-    (menu-item
-     (let ((command (command-menu-item-value object)))
-       (unless (listp command)
-         (setq command (list command)))
-       (when (member *unsupplied-argument-marker* command :test #'eq)
-         (setq command
-               (funcall
-                *partial-command-parser*
-                (esa-command-table command-processor)
-                *standard-input* command 0)))
-       (funcall (command-executor command-processor)
-                command-processor command)))))
+      (call-next-method)
+    (command
+     (funcall (command-executor command-processor)
+              command-processor
+              (climi::ensure-complete-command
+               object
+               (esa-command-table command-processor)
+               *standard-input*)))))
 
 (defmethod process-gestures-or-command :around ((command-processor command-processor))
   (handler-case (call-next-method)
