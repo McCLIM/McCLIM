@@ -173,10 +173,18 @@
                ,(make-key-acceptors stream-var keyword-args key-results))))
          (list* ,@required-arg-names ,key-results)))))
 
+(defun make-partial-parser-label (command-name command-table)
+  (let ((command-line-name (command-line-name-for-command
+                            command-name command-table :errorp nil)))
+    (format nil "You are being prompted for arguments to ~S"
+            command-line-name)))
+
+(defun print-partial-parser-still-missing (stream)
+  (format stream "~&Please supply all arguments.~%"))
+
 (defun make-partial-parser-fun (name required-args)
-  (with-gensyms (command-table stream label partial-command
-                 command-name command-line-name)
-    (let* ((required-arg-names (mapcar #'car required-args))
+  (with-gensyms (command-table stream partial-command command-name)
+    (let* ((required-arg-names (mapcar #'first required-args))
            (original-args (mapcar #'(lambda (arg)
                                       (gensym (format nil "~A-ORIGINAL"
                                                       (symbol-name arg))))
@@ -188,32 +196,25 @@
                (nil)
              (destructuring-bind (,command-name ,@original-args)
                  ,partial-command
-               (let* ((,command-line-name (command-line-name-for-command
-                                           ,command-name
-                                           ,command-table
-                                           :errorp nil))
-                      (,label (format nil
-                                      "You are being prompted for arguments to ~S"
-                                      ,command-line-name))
-                      ,@(mapcar #'list required-arg-names original-args))
-                 (accepting-values (,stream :select-first-query t
-                                            :align-prompts t
-                                            :label ,label)
-                   ,@(loop
-                       for var in required-arg-names
-                       for original-var in original-args
-                       for parameter in required-args
-                       for first-arg = t then nil
-                       append `((multiple-value-bind (,value ,ptype ,changedp)
-                                    ,(accept-form-for-argument-partial
-                                      stream parameter var original-var)
-                                  (declare (ignore ,ptype))
-                                  ,@(unless first-arg `((terpri ,stream)))
-                                  (when ,changedp
-                                    (setq ,var ,value)))))
+               (let* (,@(mapcar #'list required-arg-names original-args))
+                 (accepting-values
+                     (,stream :select-first-query t
+                              :align-prompts t
+                              :label (make-partial-parser-label
+                                      ,command-name ,command-table))
+                   ,@(loop for var in required-arg-names
+                           for original-var in original-args
+                           for parameter in required-args
+                           for first-arg = t then nil
+                           collect `(multiple-value-bind (,value ,ptype ,changedp)
+                                        ,(accept-form-for-argument-partial
+                                          stream parameter var original-var)
+                                      (declare (ignore ,ptype))
+                                      ,@(unless first-arg `((terpri ,stream)))
+                                      (when ,changedp
+                                        (setq ,var ,value))))
                    (when still-missing
-                     (format ,stream
-                             "~&Please supply all arguments.~%")))
+                     (print-partial-parser-still-missing ,stream)))
                  (setf ,partial-command (list ,command-name ,@required-arg-names))
                  (unless (partial-command-p ,partial-command)
                    (return ,partial-command))))))))))
