@@ -164,7 +164,8 @@
                              for (name ptype . options) = args
                              collect (if (eq arg gesture-arg)
                                          'object
-                                         (getf options :default)))))
+                                         (getf options :default
+                                               '*unsupplied-argument-marker*)))))
                  (multiple-value-bind (gesture translator-options)
                      (if (listp gesture)
                          (values (car gesture) (cdr gesture))

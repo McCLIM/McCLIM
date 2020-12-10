@@ -52,35 +52,35 @@
                                                       ,@args)
                                            args)))))))
 
-;;; In the partial command reader accepting-values dialog, default
+;;; In the partial command reader `accepting-values' dialog, default
 ;;; values come either from the input command arguments, if a value
 ;;; was supplied, or from the default option for the command argument.
 ;;;
 ;;; accept for the partial command reader.  Can this be refactored to
 ;;; share code with accept-form-for-argument? Probably not.
 ;;;
-;;; original-command-arg is value entered by the user, or
-;;; *unsupplied-argument-marker*. command-arg is the current value for the
-;;; argument, originally bound to original-command-arg and now possibly
-;;; changed by the user.
-(defun accept-form-for-argument-partial (stream ptype-arg command-arg
-                                         original-command-arg )
+;;; ORIGINAL-COMMAND-ARG is the value entered by the user, or
+;;; `*unsupplied-argument-marker*'. COMMAND-ARG is the current value for
+;;; the argument, originally bound to ORIGINAL-COMMAND-ARG and now
+;;; possibly changed by the user.
+(defun accept-form-for-argument-partial
+    (stream ptype-arg command-arg original-command-arg query-identifier)
   (let ((accept-keys '(:default :default-type :display-default
                        :prompt :documentation :insert-default)))
-    (destructuring-bind (name ptype &rest key-args)
-        ptype-arg
+    (destructuring-bind (name ptype &rest key-args) ptype-arg
       (declare (ignore name))
-      (let ((args (loop
-                    for (key val) on key-args by #'cddr
-                    if (eq key :default)
-                      append `(:default (if (eq ,command-arg
-                                                *unsupplied-argument-marker*)
-                                            ,val
-                                            ,command-arg))
-                    else if (member key accept-keys :test #'eq)
-                           append `(,key ,val))))
-        (setq args (append args `(:query-identifier ',(gensym "COMMAND-PROMPT-ID"))))
-        (if (member :default args :test #'eq)
+      (let* ((defaultp nil)
+             (args (loop for (key val) on key-args by #'cddr
+                         if (eq key :default)
+                           do (setf defaultp t)
+                           and append `(:default (if (eq ,command-arg
+                                                         *unsupplied-argument-marker*)
+                                                     ,val
+                                                     ,command-arg))
+                         else if (member key accept-keys :test #'eq)
+                           append `(,key ,val)))
+             (args (append args `(:query-identifier ',query-identifier))))
+        (if defaultp
             `(accept ,ptype :stream ,stream ,@args)
             `(if (eq ,original-command-arg *unsupplied-argument-marker*)
                  (accept ,ptype :stream ,stream ,@args)
@@ -188,8 +188,15 @@
            (original-args (mapcar #'(lambda (arg)
                                       (gensym (format nil "~A-ORIGINAL"
                                                       (symbol-name arg))))
-                                  required-arg-names)))
-      ;; We don't need fresh gensyms of these variables for each accept form.
+                                  required-arg-names))
+           (initial-query-form
+             `(cond ,@(loop for var in required-arg-names
+                            for original-var in original-args
+                            collect `((eq ,original-var
+                                          *unsupplied-argument-marker*)
+                                      ',var)))))
+      ;; We don't need fresh gensyms of these variables for each
+      ;; accept form.
       (with-gensyms (value ptype changedp)
         `(defun ,name (,command-table ,stream ,partial-command)
            (do ((still-missing nil t))
@@ -198,7 +205,7 @@
                  ,partial-command
                (let* (,@(mapcar #'list required-arg-names original-args))
                  (accepting-values
-                     (,stream :select-first-query t
+                     (,stream :initially-select-query-identifier ,initial-query-form
                               :align-prompts t
                               :label (make-partial-parser-label
                                       ,command-name ,command-table))
@@ -208,7 +215,7 @@
                            for first-arg = t then nil
                            collect `(multiple-value-bind (,value ,ptype ,changedp)
                                         ,(accept-form-for-argument-partial
-                                          stream parameter var original-var)
+                                          stream parameter var original-var var)
                                       (declare (ignore ,ptype))
                                       ,@(unless first-arg `((terpri ,stream)))
                                       (when ,changedp
