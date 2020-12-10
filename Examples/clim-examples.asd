@@ -61,6 +61,7 @@
                (:file "file-manager")
                (:file "presentation-translators-test")
                (:file "graph-formatting-test")
+               (:file "asynchronous-commands")
                (:file "demodemo")))
 
 (defsystem "clim-examples/superapp"
