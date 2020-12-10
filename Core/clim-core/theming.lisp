@@ -84,8 +84,9 @@
                       (pane-background gadget)))))
 
 (defgeneric effective-gadget-background (gadget)
-  (:method  ((gadget gadget))
-    (if (slot-value gadget 'armed)
+  (:method ((gadget gadget))
+    (if (and (gadget-active-p gadget)
+             (gadget-armed-p gadget))
         (gadget-highlight-background gadget)
         (pane-background gadget))))
 
