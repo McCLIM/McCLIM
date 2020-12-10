@@ -157,6 +157,26 @@
                  :accessor frame-input-buffer
                  :documentation "The input buffer queue that, by default, will
                                  be shared by all input streams in the frame")
+   ;; This slot is true during the execution of the FRAME-READ-COMMAND. It is
+   ;; used by the EXECUTE-FRAME-COMMAND to decide, whether the synchronous[1]
+   ;; command execution should be performed immedietely or enqueued in the
+   ;; event queue. This is to ensure advancement of the top level loop and
+   ;; redisplay of panes after the command execution.
+   ;;
+   ;; The frame-command-queue is used to schedule a command for the next
+   ;; iteration of the frame top level when the input context inside the call
+   ;; to FRAME-READ-COMMAND is different than the command (that may happen i.e
+   ;; when the frame has a temporarily amended command table or is waiting for
+   ;; an argument of the command that is currently parsed).
+   ;;
+   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in
+   ;; the frame's process.
+   ;;
+   ;; -- jd 2020-12-10
+   (reading-command-p :initform nil
+                      :accessor frame-reading-command-p)
+   (command-queue :initform (make-instance 'concurrent-event-queue :port nil)
+                  :reader frame-command-queue)
    (documentation-state :accessor frame-documentation-state
                         :initform nil
                         :documentation "Used to keep of track of what
@@ -557,8 +577,6 @@ documentation produced by presentations.")
 
 (defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
 
-(defgeneric execute-frame-command (frame command))
-
 (defmethod default-frame-top-level
     ((frame application-frame)
      &key (command-parser 'command-line-command-parser)
@@ -570,86 +588,108 @@ documentation produced by presentations.")
   (let ((needs-redisplay t)
         (first-time t))
     (loop
-       ;; The variables are rebound each time through the loop because the
-       ;; values of frame-standard-input et al. might be changed by a command.
-       ;;
-       ;; We rebind *QUERY-IO* ensuring variable is always a stream,
-       ;; but we use FRAME-QUERY-IO for our own actions and to decide
-       ;; whenever frame has the query IO stream associated with it..
-       (let* ((frame-query-io (frame-query-io frame))
-              (interactorp (typep frame-query-io 'interactor-pane))
-              (*standard-input*  (or (frame-standard-input frame)  *standard-input*))
-              (*standard-output* (or (frame-standard-output frame) *standard-output*))
-              (*query-io* (or frame-query-io *query-io*))
-              ;; during development, don't alter *error-output*
-              ;; (*error-output* (frame-error-output frame))
-              (*pointer-documentation-output* (frame-pointer-documentation-output frame))
-              (*command-parser* command-parser)
-              (*command-unparser* command-unparser)
-              (*partial-command-parser* partial-command-parser))
-         (restart-case
-             (flet ((execute-command ()
-                      (when-let ((command (read-frame-command frame :stream frame-query-io)))
-                        (setq needs-redisplay t)
-                        (execute-frame-command frame command))))
-               (when needs-redisplay
-                 (redisplay-frame-panes frame :force-p first-time)
-                 (setq first-time nil
-                       needs-redisplay nil))
-               (when interactorp
-                 (setf (cursor-visibility (stream-text-cursor frame-query-io)) nil)
-                 (when prompt
-                   (with-text-style (frame-query-io +default-prompt-style+)
-                     (if (stringp prompt)
-                         (write-string prompt frame-query-io)
-                         (funcall prompt frame-query-io frame))
-                     (force-output frame-query-io))))
-               (execute-command)
-               (when interactorp
-                 (fresh-line frame-query-io)))
-           (abort ()
-             :report "Return to application command loop."
-             (if interactorp
-                 (format frame-query-io "~&Command aborted.~&")
-                 (beep))))))))
+      ;; The variables are rebound each time through the loop because the
+      ;; values of frame-standard-input et al. might be changed by a command.
+      ;;
+      ;; We rebind *QUERY-IO* ensuring variable is always a stream,
+      ;; but we use FRAME-QUERY-IO for our own actions and to decide
+      ;; whenever frame has the query IO stream associated with it..
+      (let* ((frame-query-io (frame-query-io frame))
+             (interactorp (typep frame-query-io 'interactor-pane))
+             (*standard-input*  (or (frame-standard-input frame)  *standard-input*))
+             (*standard-output* (or (frame-standard-output frame) *standard-output*))
+             (*query-io* (or frame-query-io *query-io*))
+             ;; during development, don't alter *error-output*
+             ;; (*error-output* (frame-error-output frame))
+             (*pointer-documentation-output* (frame-pointer-documentation-output frame))
+             (*command-parser* command-parser)
+             (*command-unparser* command-unparser)
+             (*partial-command-parser* partial-command-parser))
+        (restart-case
+            (flet ((execute-command ()
+                     (when-let ((command (read-frame-command frame :stream frame-query-io)))
+                       (setq needs-redisplay t)
+                       (execute-frame-command frame command))))
+              (when needs-redisplay
+                (redisplay-frame-panes frame :force-p first-time)
+                (setq first-time nil
+                      needs-redisplay nil))
+              (when interactorp
+                (setf (cursor-visibility (stream-text-cursor frame-query-io)) nil)
+                (when prompt
+                  (with-text-style (frame-query-io +default-prompt-style+)
+                    (if (stringp prompt)
+                        (write-string prompt frame-query-io)
+                        (funcall prompt frame-query-io frame))
+                    (force-output frame-query-io))))
+              (execute-command)
+              (when interactorp
+                (fresh-line frame-query-io)))
+          (abort ()
+            :report "Return to application command loop."
+            (if interactorp
+                (format frame-query-io "~&Command aborted.~&")
+                (beep))))))))
+
+(defmethod read-frame-command :around
+    ((frame application-frame) &key (stream *standard-input*))
+  (declare (ignore stream))
+  (or (event-queue-read-no-hang (frame-command-queue frame))
+      (letf (((frame-reading-command-p frame) t))
+        (call-next-method))))
 
 (defmethod read-frame-command ((frame application-frame)
                                &key (stream *standard-input*))
-  ;; The following is the correct interpretation according to the spec.
-  ;; I think it is terribly counterintuitive and want to look into
-  ;; what existing CLIMs do before giving in to it.
-  ;; If we do things as the spec says, command accelerators will
-  ;; appear to not work, confusing new users.
-  #+NIL (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
+  ;; The following is the correct interpretation according to the spec.  I
+  ;; think it is terribly counterintuitive and want to look into what existing
+  ;; CLIMs do before giving in to it.  If we do things as the spec says,
+  ;; command accelerators will appear to not work, confusing new users.
+  #+(or)
+  (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
   (if stream
       (read-command (frame-command-table frame) :use-keystrokes t :stream stream)
       (simple-event-loop frame)))
 
 (define-event-class execute-command-event (window-manager-event)
   ((sheet :initarg :sheet :reader event-sheet)
+   (frame :initarg :frame :reader execute-command-event-frame)
    (command :initarg :command :reader execute-command-event-command)))
 
-(defmethod execute-frame-command ((frame application-frame) command)
-  ;; ### FIXME: I'd like a different method than checking for
-  ;; *application-frame* to decide, which process processes which
-  ;; frames command loop. Perhaps looking ath the process slot?
-  ;; --GB 2005-11-28
-  (check-type command cons)
-  (cond ((eq *application-frame* frame)
-         (restart-case
-             (apply (command-name command) (command-arguments command))
-           (try-again ()
-            :report (lambda (stream)
-                      (format stream "Try executing the command ~S again." (command-name command)))
-            (execute-frame-command frame command))))
-        (t
-         (let ((eq (sheet-event-queue (frame-top-level-sheet frame))))
-           (event-queue-append eq (make-instance 'execute-command-event
-                                                  :sheet frame
-                                                  :command command))))))
+(defmethod handle-event ((sheet top-level-sheet-mixin)
+                         (event execute-command-event))
+  (let* ((command (execute-command-event-command event))
+         (frame (execute-command-event-frame event))
+         (table (frame-command-table frame))
+         (ptype `(command :command-table ,table)))
+    (when (eq frame *application-frame*)
+      (throw-object-ptype command ptype :sheet sheet))
+    ;; We could have gotten here because:
+    ;;
+    ;; 1) a frame is not the *application-frame*, or
+    ;; 2) throw-object-ptype did not match the existing input context.
+    ;;
+    ;; In both cases executing the command is not immedietely possible, so we
+    ;; enqueue the command for EXECUTE-FRAME-COMMAND to pick it up during the
+    ;; next iteration. -- jd 2020-12-09
+    (event-queue-append (frame-command-queue frame) command)))
 
-(defmethod handle-event ((frame application-frame) (event execute-command-event))
-  (execute-frame-command frame (execute-command-event-command event)))
+(defmethod execute-frame-command ((frame application-frame) command)
+  (check-type command cons)
+  (if (and (eq (frame-process frame) (current-process))
+           (not (frame-reading-command-p frame)))
+      (let ((name (command-name command))
+            (args (command-arguments command)))
+        (restart-case (apply name args)
+          (try-again ()
+            :report (lambda (stream)
+                      (format stream "Try executing the command ~S again." name))
+            (execute-frame-command frame command))))
+      (let* ((sheet (frame-top-level-sheet frame))
+             (queue (sheet-event-queue sheet)))
+        (event-queue-append queue (make-instance 'execute-command-event
+                                                 :sheet sheet
+                                                 :frame frame
+                                                 :command command)))))
 
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
