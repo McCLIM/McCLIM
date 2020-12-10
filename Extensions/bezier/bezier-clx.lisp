@@ -1,4 +1,14 @@
-(defpackage :mcclim-bezier-clx
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2017 Cyrus Harmon <ch-github@bobobeach.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Glue code for rendering Bezier designs using the CLX medium.
+
+(defpackage #:mcclim-bezier-clx
   (:use #:clim #:clim-lisp #:mcclim-bezier)
   (:import-from #:clim-clx
                 #:round-coordinate
