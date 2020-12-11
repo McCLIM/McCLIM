@@ -328,12 +328,11 @@ documentation produced by presentations.")
           (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
-(defmethod (setf frame-command-table) :around (new-command-table frame)
-  (prog1 (call-next-method)
-    ;; Update the menu-bar only when its value was T. Otherwise it was either
-    ;; a manually specified command table or a verbatim menu. -- jd 2020-11-03
-    (when (eq t (slot-value frame 'menu-bar))
-      (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table))))
+(defmethod (setf frame-command-table) :after (new-command-table frame)
+  ;; Update the menu-bar only when its value was T. Otherwise it was either
+  ;; a manually specified command table or a verbatim menu. -- jd 2020-11-03
+  (when (eq t (slot-value frame 'menu-bar))
+    (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
