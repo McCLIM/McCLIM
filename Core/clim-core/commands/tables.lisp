@@ -241,16 +241,17 @@ designator) inherits menu items."
                           :key #'command-menu-item-name
                           :test #'equal)))))))
 
-(defun partial-command-from-name (command-name command-table)
-  (let ((parser (gethash command-name *command-parser-table*)))
-    (if (null parser)
-        (error 'command-not-present :command-table-name
-               (command-table-designator-as-name command-table))
-        (cons command-name
-              (mapcar #'(lambda (foo)
-                          (declare (ignore foo))
-                          *unsupplied-argument-marker*)
-                      (required-args parser))))))
+(defun partial-command-from-name
+    (command-name command-table &optional (errorp t))
+  (if-let ((parser (gethash command-name *command-parser-table*)))
+    (cons command-name
+          (mapcar #'(lambda (foo)
+                      (declare (ignore foo))
+                      *unsupplied-argument-marker*)
+                  (required-args parser)))
+    (when errorp
+      (error 'command-not-present :command-table-name
+             (command-table-designator-as-name command-table)))))
 
 
 ;;; Command table item accessors.
