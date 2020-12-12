@@ -444,11 +444,13 @@
 
 (define-presentation-translator menu-item-command-to-command
     (menu-item command global-command-table
-               :tester ((object)
-                        (and (typep object '%menu-item)
-                             (member (command-menu-item-type object)
-                                     '(:function :command))))
-               :tester-definitive t)
+     :tester ((object event frame)
+              (and (typep object '%menu-item)
+                   (member (command-menu-item-type object)
+                           '(:function :command))
+                   (let ((command (extract-menu-item-command object event)))
+                     (command-enabled (command-name command) frame))))
+     :tester-definitive t)
     (object event)
   (extract-menu-item-command object event))
 
