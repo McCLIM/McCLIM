@@ -195,7 +195,8 @@
         (draw-rectangle* pane x1 y1 x2 y2
                          :ink (effective-gadget-background pane)
                          :filled t)
-        (when (gadget-armed-p pane)
+        (when (and (gadget-active-p pane)
+                   (gadget-armed-p pane))
           (draw-bordered-rectangle* pane x1 y1 x2 y2
                                     :style :outset
                                     :border-width *3d-border-thickness*))
