@@ -201,16 +201,18 @@
 ;;; disarm-callback.
 
 (defmethod arm-gadget ((gadget basic-gadget))
-  (with-slots (armed) gadget
-    (unless armed
-      (setf armed t)
-      (armed-callback gadget (gadget-client gadget) (gadget-id gadget)))))
+  (when (gadget-active-p gadget)
+    (with-slots (armed) gadget
+      (unless armed
+        (setf armed t)
+        (armed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
 
 (defmethod disarm-gadget ((gadget basic-gadget))
-  (with-slots (armed) gadget
-    (when armed
-      (setf armed nil)
-      (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget)))))
+  (when (gadget-active-p gadget)
+    (with-slots (armed) gadget
+      (when armed
+        (setf armed nil)
+        (disarmed-callback gadget (gadget-client gadget) (gadget-id gadget))))))
 
 ;;;
 ;;; Activation
