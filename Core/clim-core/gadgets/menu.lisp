@@ -13,7 +13,7 @@
 (in-package #:clim-internals)
 
 (defclass menu-bar-mixin ()
-  ((command-table :initarg :command-table)))
+  ((command-table :initarg :command-table :reader command-table)))
 
 (defclass hmenu-pane (menu-bar-mixin hrack-pane) ())
 (defclass vmenu-pane (menu-bar-mixin vrack-pane) ())
@@ -32,7 +32,8 @@
     (items +fill+)))
 
 (defun make-menu-bar (command-table client class)
-  (make-pane class :contents (make-menu-buttons command-table client)))
+  (make-pane class :contents (make-menu-buttons command-table client)
+                   :command-table command-table))
 
 (defun update-menu-bar (menu-bar client command-table)
   (setf (%pane-contents menu-bar)
@@ -308,44 +309,27 @@
                     :label name :client client :text-style text-style
                     initargs)))
       (case type
-        (:command
-         (let ((command-name (if (consp value) (car value) value)))
-           (if (command-enabled command-name frame)
-               (make-sub-pane 'menu-button-leaf-pane
-                              :value-changed-callback
-                              (lambda (gadget val)
-                                (declare (ignore gadget val))
-                                (throw-object-ptype item 'menu-item))
-                              :armed-callback 'arm-menu-button-callback
-                              :disarmed-callback 'disarm-menu-button-callback)
-               (let ((pane (make-sub-pane 'menu-button-leaf-pane
-                                          :value-changed-callback
-                                          (lambda (gadget val)
-                                            (declare (ignore gadget val))
-                                            nil))))
-                 (deactivate-gadget pane)
-                 pane))))
-        (:function
-         (make-sub-pane 'menu-button-leaf-pane
-                        :value-changed-callback
-                        (lambda (gadget val)
-                          (declare (ignore gadget val))
-                          ;; FIXME: the spec requires us to pass a gesture to the
-                          ;; function, but value-changed-callback doesn't provide
-                          ;; one, so we pass NIL for now.
-                          ;; FIXME: We don't have a numeric argument, either.
-                          (let ((command (funcall value nil nil)))
-                            (throw-object-ptype command 'command)))
-                        :armed-callback 'arm-menu-button-callback
-                        :disarmed-callback 'disarm-menu-button-callback))
         (:divider
          (setf text-style
                (merge-text-styles text-style '(:sans-serif :roman :smaller)))
          (make-sub-pane 'menu-divider-leaf-pane))
+        ((:command :function)
+         (let* ((command (extract-menu-item-command item nil))
+                (command-name (alexandria:ensure-car command)))
+           (make-sub-pane
+            'menu-button-leaf-pane
+            :value-changed-callback
+            (lambda (gadget val)
+              (declare (ignore gadget val))
+              (throw-object-ptype item 'menu-item))
+            :armed-callback 'arm-menu-button-callback
+            :disarmed-callback 'disarm-menu-button-callback
+            :active (command-enabled command-name frame))))
         (:menu
-         (let* ((sub-pane (make-sub-pane 'menu-button-submenu-pane
-                                         :armed-callback 'arm-menu-button-callback
-                                         :disarmed-callback 'disarm-menu-button-callback))
+         (let* ((sub-pane (make-sub-pane
+                           'menu-button-submenu-pane
+                           :armed-callback 'arm-menu-button-callback
+                           :disarmed-callback 'disarm-menu-button-callback))
                 (rack (make-menu-bar value sub-pane 'vmenu-pane))
                 (border (make-pane 'raised-pane :contents (list rack)))
                 (active (remove-if-not (lambda (elt)

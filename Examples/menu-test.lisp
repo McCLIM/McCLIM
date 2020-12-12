@@ -68,7 +68,8 @@
 (make-command-table 'buffer-command-table
                     :errorp nil
                     :menu '(("Hello there" :menu kenobi-command-table)
-                            ("Hi there"    :command com-hi)))
+                            ("Hi there"    :command com-hi)
+                            ("Disabled"    :command com-disabled)))
 
 (defun get-kenobi (gesture numeric)
   (declare (ignore gesture numeric))
