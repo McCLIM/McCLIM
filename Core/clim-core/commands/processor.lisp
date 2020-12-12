@@ -444,10 +444,10 @@
 
 (define-presentation-translator menu-item-command-to-command
     (menu-item command global-command-table
-     :tester ((object)
-              (and (typep object '%menu-item)
-                   (member (command-menu-item-type object)
-                           '(:function :command))))
+               :tester ((object)
+                        (and (typep object '%menu-item)
+                             (member (command-menu-item-type object)
+                                     '(:function :command))))
                :tester-definitive t)
     (object event)
   (extract-menu-item-command object event))
