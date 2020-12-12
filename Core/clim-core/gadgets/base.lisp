@@ -227,6 +227,7 @@
 (defmethod deactivate-gadget ((gadget basic-gadget))
   (with-slots (active-p) gadget
     (when active-p
+      (disarm-gadget gadget)
       (setf active-p nil)
       (note-gadget-deactivated (gadget-client gadget) gadget))))
 
