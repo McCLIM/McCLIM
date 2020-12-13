@@ -88,9 +88,12 @@
                     (:pointer-motion
                      (window)
                      (when (typep window 'menu-button-pane)
-                       (if (gadget-armed-p window)
-                           (mapc #'disarm-gadget (menu-children window))
-                           (arm-gadget window))
+                       (cond ((gadget-armed-p window)
+                              (mapc #'disarm-gadget (menu-children window)))
+                             ((gadget-active-p window)
+                              (arm-gadget window))
+                             (t
+                              (arm-menu-button-callback window)))
                        (setf active-button window)))
                     (:keyboard
                      (event)
