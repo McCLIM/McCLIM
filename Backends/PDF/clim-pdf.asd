@@ -2,6 +2,7 @@
   :depends-on ("clim-basic" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
                "cl-pdf"
                "flexi-streams"
+               "clim-postscript"
                "clim-postscript-font")
   :serial t
   :components ((:file "package")
