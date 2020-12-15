@@ -358,35 +358,90 @@ current background message was set."))
     (window-clear pane)))
 
 
-;;;
-;;; CONSTRUCTORS
-;;;
-(defun make-clim-stream-pane (&rest options
-                              &key (type 'clim-stream-pane)
-                                   label
-                                   (label-alignment nil label-alignment-p)
-                                   (display-after-commands nil display-after-commands-p)
-                                   (scroll-bar :vertical)
-                                   (scroll-bars scroll-bar)
-                                   (borders t)
-                              &allow-other-keys)
+;;; Constructors
+
+(defconstant +stream-pane-wrapper-initargs+
+  '(:label :label-alignment :scroll-bar :scroll-bars :borders))
+
+(defun make-unwrapped-stream-pane (type user-space-requirements
+                                    &rest initargs
+                                    &key (display-after-commands nil display-after-commands-p)
+                                    &allow-other-keys)
   (when display-after-commands-p
     (check-type display-after-commands (member nil t :no-clear))
-    (when (member :display-time options)
-      (error "MAKE-CLIM-STREAM-PANE can not be called with both
-    :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
-  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders
-                                   :label :label-alignment :display-after-commands))
-    ;; If :scroll-bars isn't a cons the user space requirement options
-    ;; belong to the most external container of the stream
-    ;; (scroller-pane, label-pane or outline-pane). If :scroll-bars is
-    ;; a cons the user space requirement options belong to the clim
-    ;; stream and it is possible to set the space requirement of the
-    ;; scroller using the cdr of :scroll-bars as:
-    ;; :SCROLL-BARS '(:VERTICAL :WIDTH 300)
-    ;; -- admich 2020-10-13
-    (let* ((space-keys '(:width :height :max-width :max-height
-                         :min-width :min-height))
+    (when (member :display-time initargs)
+      (error "MAKE-CLIM-STREAM-PANE can not be called with both ~
+              :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
+  (with-keywords-removed (initargs (:display-after-commands))
+    (apply #'make-pane type (append initargs
+                                    (when display-after-commands-p
+                                      (list :display-time
+                                            (if (eq display-after-commands t)
+                                                :command-loop
+                                                display-after-commands)))
+                                    user-space-requirements))))
+
+(defun wrap-stream-pane (stream-pane user-space-requirements
+                         &key label
+                              (label-alignment nil label-alignment-p)
+                              (scroll-bar :vertical)
+                              (scroll-bars scroll-bar)
+                              (borders t))
+  (let* ((pane   stream-pane)
+         (stream pane))
+    (when scroll-bars
+      (setf pane (apply #'make-pane 'scroller-pane
+                        :contents (list (make-pane 'viewport-pane
+                                                   :contents (list pane)))
+                        (append
+                         ;; From the Franz manual if :scroll-bars is a
+                         ;; cons the car is treated as the non-cons
+                         ;; argument and the cdr is a list of keyword
+                         ;; argument pairs to be used as options of
+                         ;; the scroller-pane
+                         (if (consp scroll-bars)
+                             `(:scroll-bar ,@scroll-bars)
+                             `(:scroll-bar ,scroll-bars))
+                         (when (and user-space-requirements
+                                    (not (or label borders)))
+                           user-space-requirements)))))
+    (when label
+      (setf pane (apply #'make-pane 'label-pane
+                        :label label
+                        :contents (list pane)
+                        (append
+                         (when label-alignment-p
+                           (list :label-alignment label-alignment))
+                         (when (and user-space-requirements (not borders))
+                           user-space-requirements)))))
+    (when borders
+      (setf pane (apply #'make-pane 'outlined-pane
+                        :thickness (if (not (numberp borders))
+                                       1
+                                       borders)
+                        :contents (list pane)
+                        user-space-requirements)))
+    (values pane stream)))
+
+(defun make-clim-stream-pane (&rest options &key (type 'clim-stream-pane)
+                                                 label
+                                                 label-alignment
+                                                 (scroll-bar :vertical)
+                                                 (scroll-bars scroll-bar)
+                                                 (borders t)
+                              &allow-other-keys)
+  (with-keywords-removed (options (:type :label :label-alignment
+                                   :scroll-bar :scroll-bars :borders))
+    ;; If :scroll-bars isn't a cons the user space requirement options belong to
+    ;; the most external container of the stream (scroller-pane, label-pane or
+    ;; outline-pane). If :scroll-bars is a cons the user space requirement
+    ;; options belong to the clim stream and it is possible to set the space
+    ;; requirement of the scroller using the cdr of :scroll-bars as:
+    ;; :SCROLL-BARS '(:VERTICAL :WIDTH 300) -- admich 2020-10-13
+    (let* ((stream-sr-p (or (consp scroll-bars)
+                            (not (or scroll-bars label borders))))
+           (space-keys
+             '(:width :height :max-width :max-height :min-width :min-height))
            (user-sr nil)
            (pane-options nil))
       (loop for (key value) on options by #'cddr
@@ -396,54 +451,16 @@ current background message was set."))
             else
               nconc (list key value) into other-options
             end
-              finally (progn
-                        (setq user-sr space-options)
-                        (setq pane-options other-options)))
-      (let* ((pane (apply #'make-pane type (append pane-options
-                                                   (when display-after-commands-p
-                                                     (list :display-time
-                                                           (if (eq display-after-commands t)
-                                                               :command-loop
-                                                               display-after-commands)))
-                                                   (when (or (consp scroll-bars)
-                                                             (not (or scroll-bars
-                                                                      label
-                                                                      borders)))
-                                                     user-sr))))
-             (stream pane))
-        (when scroll-bars
-          (setq pane (apply #'make-pane 'scroller-pane
-                            :contents (list (make-pane 'viewport-pane
-                                                       :contents (list pane)))
-                            (append
-                             ;; From the Franz manual if :scroll-bars is a
-                             ;; cons the car is treated as the non-cons
-                             ;; argument and the cdr is a list of keyword
-                             ;; argument pairs to be used as options of
-                             ;; the scroller-pane
-                             (if (consp scroll-bars)
-                                 `(:scroll-bar ,@scroll-bars)
-                                 `(:scroll-bar ,scroll-bars))
-                             (unless (or (consp scroll-bars) label borders)
-                               user-sr)))))
-        (when label
-          (setq pane (apply #'make-pane 'label-pane
-                            :label label
-                            :contents (list pane)
-                            (append
-                             (when label-alignment-p
-                               (list :label-alignment label-alignment))
-                             (unless (or (consp scroll-bars) borders)
-                               user-sr)))))
-        (when borders
-          (setq pane (apply #'make-pane 'outlined-pane
-                            :thickness (if (not (numberp borders))
-                                           1
-                                           borders)
-                            :contents (list pane)
-                            (unless (consp scroll-bars)
-                              user-sr))))
-        (values pane stream)))))
+            finally (setf user-sr      space-options
+                          pane-options other-options))
+      (wrap-stream-pane
+       (apply #'make-unwrapped-stream-pane type
+              (when stream-sr-p user-sr)
+              pane-options)
+       (unless stream-sr-p user-sr)
+       :label label :label-alignment label-alignment
+       :scroll-bar scroll-bar :scroll-bars scroll-bars
+       :borders borders))))
 
 (macrolet
     ((define (name type default-scroll-bar)
