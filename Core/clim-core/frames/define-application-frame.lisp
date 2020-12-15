@@ -65,6 +65,10 @@
        (loop for (key value) on thing by #'cddr
              always (member key '(:left :top :right :bottom :width :height)))))
 
+(defun panes-or-layouts-specification-p (thing)
+  (and (alexandria:proper-list-p thing)
+       (every (alexandria:of-type '(cons symbol)) thing)))
+
 (defun parse-define-application-frame-options (options)
   ;; Note that options are always of the form (KEY . ARGUMENTS).
   ;; Depending on KEY, ARGUMENTS is expected to have one of two
@@ -77,8 +81,10 @@
   ;;    table is the expected type of this value, not of ARGUMENTS.
   (let ((infos '(;; CLIM
                  (:pane                  * :conflicts (:panes :layouts))
-                 (:panes                 * :conflicts (:pane))
-                 (:layouts               * :conflicts (:pane))
+                 (:panes                 * :type (satisfies panes-or-layouts-specification-p)
+                                           :conflicts (:pane))
+                 (:layouts               * :type (satisfies panes-or-layouts-specification-p)
+                                           :conflicts (:pane))
                  (:command-table         1 :type list)
                  (:command-definer       1 :type symbol)
                  (:menu-bar              1 :type (or symbol list))
@@ -113,6 +119,15 @@
                     (check-value (first arguments)))
                    (*
                     (check-value arguments)))))
+             (check-names (key description value)
+               (let* ((unique   (remove-duplicates value :key #'first :from-end t))
+                      (repeated (set-difference value unique :test #'eq)))
+                 (when-let ((first-repeated (first repeated)))
+                   (with-current-source-form (first-repeated)
+                     (error "~@<The ~A name ~S occurs ~
+                             multiple times in the ~S option.~@:>"
+                            description (first first-repeated) key)))
+                 value))
              (parse-option (key arguments)
                (when-let ((info (find key infos :key #'first)))
                  (destructuring-bind (name value-count &key conflicts type) info
@@ -125,8 +140,8 @@
                           (error "~@<The option ~S cannot be supplied ~
                                   multiple times.~@:>"
                                  key))
-                         ;; Canonicalize :pane, :panes and :layouts to
-                         ;; just :panes and :layouts.
+                         ;; Canonicalize `:pane', `:panes' and `:layouts' to
+                         ;; just `:panes' and `:layouts'.
                          ((eq key :pane)
                           (setf (getf all-values :pane)
                                 t
@@ -134,6 +149,13 @@
                                 `((single-pane ,@arguments))
                                 (getf all-values :layouts)
                                 `((:default single-pane))))
+                         ;; Detect duplicate names in `:panes' and `:layouts'.
+                         ((member key '(:panes :layouts))
+                          (setf (getf all-values key)
+                                (check-names key (if (eq key :panes) "pane" "layout")
+                                             (maybe-check-type
+                                              key arguments type value-count))))
+                         ;; Extract `:pretty-name' from `:default-initargs'.
                          ((eq key :default-initargs)
                           (destructuring-bind
                               (&key ((:pretty-name user-pretty-name) nil pretty-name-p)
