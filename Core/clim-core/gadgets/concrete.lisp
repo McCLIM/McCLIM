@@ -1583,10 +1583,11 @@ if INVOKE-CALLBACK is given."))
                       ((in-menu (event-sheet event) x y)
                        (handle-event (event-sheet event) event)))))))
         ;; Cleanup and exit
-        (when retain-value
-          (setf (gadget-value parent :invoke-callback t)
-                (gadget-value list-pane)))
-        (disown-frame manager menu-frame)))))
+        (unwind-protect
+             (when retain-value
+               (setf (gadget-value parent :invoke-callback t)
+                     (gadget-value list-pane)))
+          (disown-frame manager menu-frame))))))
 
 (defmethod handle-event ((pane generic-option-pane) (event pointer-button-press-event))
   (popup-list-box pane)
