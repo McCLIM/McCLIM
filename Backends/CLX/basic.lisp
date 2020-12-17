@@ -117,18 +117,19 @@
 
 ;;; Graft
 
-(defmethod make-graft ((port clx-basic-port) &key (orientation :default) (units :device))
-  (let* ((root (clx-port-window port))
-         (graft (make-instance 'clx-graft
-                               :port port
-                               :mirror (make-instance 'clx-mirror :window root)
-                               :orientation orientation :units units))
-         (screen (clx-port-screen port))
-         (width (xlib:screen-width screen))
-         (height (xlib:screen-height screen)))
-    (let ((region (make-bounding-rectangle 0 0 width height)))
-      (climi::%%set-sheet-region region graft))
-    graft))
+(defmethod make-graft ((port clx-basic-port) &key (orientation :default)
+                                                  (units       :device))
+  (let* ((screen (clx-port-screen port))
+         (root   (clx-port-window port))
+         (mirror (make-instance 'clx-mirror :window root))
+         (width  (xlib:screen-width screen))
+         (height (xlib:screen-height screen))
+         (region (make-bounding-rectangle 0 0 width height)))
+    (make-instance 'clx-graft :port        port
+                              :region      region
+                              :mirror      mirror
+                              :orientation orientation
+                              :units       units)))
 
 (defmethod graft ((port clx-basic-port))
   (first (port-grafts port)))
