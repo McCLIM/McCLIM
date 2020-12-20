@@ -161,7 +161,7 @@ globally bound to \cl{nil}.
 
 
 \Defun {read-gesture} {\key (stream \cl{*standard-input*})
-                            timeout peek-p 
+                            timeout peek-p
                             (input-wait-test \cl{*input-wait-test*})
                             (input-wait-handler \cl{*input-wait-handler*})
                             (pointer-button-press-handler \cl{*pointer-button-press-handler*})}
@@ -171,7 +171,7 @@ and all of the other keyword arguments.  These arguments are the same as for
 \cl{stream-read-gesture}.
 
 \Defgeneric {stream-read-gesture} {stream
-                                   \key timeout peek-p 
+                                   \key timeout peek-p
                                         (input-wait-test \cl{*input-wait-test*})
                                         (input-wait-handler \cl{*input-wait-handler*})
                                         (pointer-button-press-handler \cl{*pointer-button-press-handler*})}
@@ -276,8 +276,8 @@ This condition is signalled by \cl{read-gesture} whenever an keystroke
 accelerator gesture (one of the gestures in \cl{*accelerator-gestures*} is read
 from the user.  This condition will handle the \cl{:event} and the
 \cl{:numeric-argument} initargs, which are used to supply the event
-corresponding to the abort gesture and the accumulated numeric argument (which
-defaults to 1).
+corresponding to the acceleration gesture and the accumulated numeric argument
+(which defaults to 1).
 
 \Defgeneric {accelerator-gesture-event} {condition}
 
@@ -331,7 +331,7 @@ gesture that corresponds to a standard printing character, it may be enough to
 represent the gesture object as a character.
 
 
-\Defmacro {define-gesture-name} {name type gesture-spec \key (unique \cl{t})} 
+\Defmacro {define-gesture-name} {name type gesture-spec \key (unique \cl{t})}
 
 Defines a new gesture named by the symbol \arg{name}.  \arg{type} is the type of
 gesture being created, and must be one of the symbols described below.
@@ -733,7 +733,7 @@ pointer button currently being held down.
 \arg{multiple-window} is as for \cl{tracking-pointer}.
 
 
-\Defmacro {dragging-output} {(\optional stream 
+\Defmacro {dragging-output} {(\optional stream
                               \key repaint finish-on-release multiple-window)
                              \body body}
 
@@ -751,4 +751,3 @@ declarations as its first forms.
 
 \arg{repaint}, \arg{finish-on-release}, and \arg{multiple-window} are as for
 \cl{drag-output-record}.
-
