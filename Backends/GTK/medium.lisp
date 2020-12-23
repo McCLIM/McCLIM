@@ -8,6 +8,23 @@
            (let ((,mirror-sym ,mirror-copy-sym))
              ,@body))))))
 
+(defmacro with-medium-cairo-image ((image-sym medium) &body body)
+  (alexandria:once-only (medium)
+    (alexandria:with-gensyms (mirror-sym)
+      `(with-medium-mirror (,mirror-sym ,medium)
+         (let ((,image-sym (gtk-mirror/image ,mirror-sym)))
+           ,@body)))))
+
+(defmacro with-cairo-context ((context-sym medium) &body body)
+  (alexandria:once-only (medium)
+    (alexandria:with-gensyms (image-sym context)
+      `(with-medium-cairo-image (,image-sym ,medium)
+         (let ((,context (cairo:cairo-create ,image-sym)))
+           (unwind-protect
+                (let ((,context-sym ,context))
+                  ,@body)
+             (cairo:cairo-destroy ,context)))))))
+
 (defclass gtk-medium (font-rendering-medium-mixin basic-medium)
   ((buffering-output-p :accessor medium-buffering-output-p)))
 
@@ -167,15 +184,16 @@
   buffer-p)
 
 (defmethod medium-finish-output ((medium gtk-medium))
-  (break)
-  nil)
+  (with-medium-mirror (mirror medium)
+    (let ((widget (gtk-mirror/drawing-area mirror)))
+      (in-gtk-thread ()
+        (gtk:gtk-widget-queue-draw widget)))))
 
 (defmethod medium-force-output ((medium gtk-medium))
   nil)
 
 (defmethod medium-clear-area ((medium gtk-medium) left top right bottom)
   (declare (ignore left top right bottom))
-  (break)
   nil)
 
 (defmethod medium-beep ((medium gtk-medium))
@@ -185,25 +203,21 @@
   0)
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
-  (break)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr x1 y1)
       (climi::with-transformed-position (tr x2 y2)
-        (log:info "tr=~s (~s,~s)-(~s,~s)" tr x1 y1 x2 y2)
-        #+nil
-        (in-gtk-thread ()
-          (with-medium-renderer (medium :renderer renderer)
-            (let ((x1 (round-coordinate x1))
-                  (y1 (round-coordinate y1))
-                  (x2 (round-coordinate x2))
-                  (y2 (round-coordinate y2)))
-              (sdl2:render-draw-line renderer x1 y1 x2 y2))))))))
+        (with-cairo-context (cr medium)
+          (log:info "Drawing line")
+          (cairo:cairo-set-source-rgb cr 0 1 0)
+          (cairo:cairo-move-to cr x1 y1)
+          (cairo:cairo-line-to cr x2 y2)
+          (cairo:cairo-stroke cr))))))
 
 (defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
   (break))
 
 (defmethod medium-draw-rectangle* ((medium gtk-medium) left top right bottom filled)
-  (break))
+  nil)
 
 (defmethod medium-draw-rectangles* ((medium gtk-medium) position-seq filled)
   (declare (ignore position-seq filled))

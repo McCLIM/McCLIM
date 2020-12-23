@@ -7,8 +7,24 @@
 
 (defclass gtk-port (basic-port)
   ((id)
-   (pointer :accessor port-pointer :initform (make-instance 'gtk-pointer))
-   (window :initform nil :accessor gtk-port-window)))
+   (pointer         :accessor port-pointer
+                    :initform (make-instance 'gtk-pointer))
+   (window          :initform nil
+                    :accessor gtk-port-window)
+   (sheet-to-mirror :initform (make-hash-table :test 'eql)
+                    :reader gtk-port/sheet-to-mirror)))
+
+(defclass gtk-mirror ()
+  ((window       :initarg :window
+                 :accessor gtk-mirror/window)
+   (image        :initarg :image
+                 :initform (alexandria:required-argument :image)
+                 :accessor gtk-mirror/image)
+   (sheet        :initarg :sheet
+                 :initform (alexandria:required-argument :sheet)
+                 :reader gtk-mirror/sheet)
+   (drawing-area :initarg :drawing-area
+                 :accessor gtk-mirror/drawing-area)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'gtk-port 'identity))
@@ -19,13 +35,17 @@
 (setf (get :gtk :port-type) 'gtk-port)
 (setf (get :gtk :server-path-parser) 'parse-gtk-server-path)
 
+(defun gtk-main-no-traps ()
+  (sb-int:with-float-traps-masked (:divide-by-zero)
+    (gtk:gtk-main)))
+
 (defmethod initialize-instance :after ((port gtk-port) &rest initargs)
   (declare (ignore initargs))
   (setf (slot-value port 'id) (gensym "GTK-PORT-"))
   ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
-  (bordeaux-threads:make-thread #'gtk:gtk-main :name "GTK Event Thread"))
+  (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread"))
 
 (defmethod print-object ((object gtk-port) stream)
   (print-unreadable-object (object stream :identity t :type t)
@@ -44,33 +64,65 @@
   ())
 
 (defmethod climi::port-lookup-mirror ((port gtk-port) (sheet gtk-renderer-sheet))
-  (break))
+  (gethash sheet (gtk-port/sheet-to-mirror port)))
 
 (defmethod climi::port-register-mirror ((port gtk-port) (sheet gtk-renderer-sheet) mirror)
-  (break))
+  (setf (gethash sheet (gtk-port/sheet-to-mirror port)) mirror))
 
 (defmethod climi::port-unregister-mirror ((port gtk-port) (sheet gtk-renderer-sheet) mirror)
-  (break))
+  (remhash sheet (gtk-port/sheet-to-mirror port)))
+
+(defun draw-window-content (cr mirror)
+  (alexandria:when-let ((image (gtk-mirror/image mirror)))
+    (cairo:cairo-set-source-surface cr image 0 0)
+    (cairo:cairo-rectangle cr 0 0
+                           (cairo:cairo-image-surface-get-width image)
+                           (cairo:cairo-image-surface-get-height image))
+    (cairo:cairo-fill cr)))
+
+(defun make-backing-image (width height)
+  (let* ((image (cairo:cairo-image-surface-create :argb32 width height))
+         (cr (cairo:cairo-create image)))
+    (cairo:cairo-set-source-rgb cr 1 1 1)
+    (cairo:cairo-paint cr)
+    image))
 
 (defmethod realize-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))
   (log:info "Realising mirror: port=~s sheet=~s" port sheet)
   (let* ((q (compose-space sheet))
-         (win (in-gtk-thread ()
-                (let ((window (make-instance 'gtk:gtk-window
-                                             :type :toplevel
-                                             :default-width (climi::space-requirement-width q)
-                                             :default-height (climi::space-requirement-height q))))
-                  (gtk:gtk-widget-add-events window '(:all-events-mask))
-                  (gtk:gtk-widget-show-all window)
-                  window))))
-    (break)
-    (climi::port-register-mirror port sheet win)))
+         (width (climi::space-requirement-width q))
+         (height (climi::space-requirement-height q))
+         (image (make-backing-image width height))
+         (mirror (make-instance 'gtk-mirror :sheet sheet :image image)))
+    (multiple-value-bind (window drawing-area)
+        (in-gtk-thread ()
+          (let ((window (make-instance 'gtk:gtk-window
+                                       :type :toplevel
+                                       :default-width width
+                                       :default-height height)))
+            (gtk:gtk-widget-add-events window '(:all-events-mask))
+            (let ((drawing-area (make-instance 'gtk:gtk-drawing-area)))
+              (gobject:g-signal-connect drawing-area "draw"
+                                        (lambda (widget cr)
+                                          (declare (ignore widget))
+                                          (log:info "Drawing content")
+                                          (draw-window-content (gobject:pointer cr) mirror)
+                                          t))
+              (gtk:gtk-container-add window drawing-area)
+              (gtk:gtk-widget-show-all window)
+              (values window drawing-area))))
+      (setf (gtk-mirror/window mirror) window)
+      (setf (gtk-mirror/drawing-area mirror) drawing-area)
+      (climi::port-register-mirror port sheet mirror))))
 
 (defmethod destroy-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))
-  ())
+  (let ((mirror (climi::port-lookup-mirror port sheet)))
+    (in-gtk-thread ()
+      (gtk:gtk-widget-destroy (gtk-mirror/window mirror)))
+    (cairo:cairo-destroy (gtk-mirror/image mirror))))
 
 (defmethod mirror-transformation ((port gtk-port) mirror)
-  ())
+  nil)
 
 (defmethod port-enable-sheet ((port gtk-port) (mirror mirrored-sheet-mixin))
   nil)
