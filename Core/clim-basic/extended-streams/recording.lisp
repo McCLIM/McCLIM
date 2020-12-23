@@ -1606,7 +1606,7 @@ were added."
           (dy (- ny y1)))
       (multiple-value-prog1 (call-next-method)
         (setf #1=(graphics-state-transformation record)
-              (compose-translation-with-transformation #1# dx dy))))))
+              (compose-transformation-with-translation #1# dx dy))))))
 
 (defmethod replay-output-record
     ((record draw-text-output-record) stream
@@ -2175,13 +2175,14 @@ according to the flags RECORD and DRAW."
   (with-sheet-medium (medium stream)
     (multiple-value-bind (dx dy)
         (transform-position (medium-transformation medium) 0 0)
-      (letf (((medium-transformation medium) (compose-translation-with-transformation
-                                              (if first-quadrant
-                                                  (make-scaling-transformation 1 -1)
-                                                  +identity-transformation+)
-                                              dx (if first-quadrant
-                                                     (+ dy (or height 100))
-                                                     dy))))
+      (letf (((medium-transformation medium)
+              (compose-transformation-translation-with
+               (if first-quadrant
+                   (make-scaling-transformation 1 -1)
+                   +identity-transformation+)
+               dx (if first-quadrant
+                      (+ dy (or height 100))
+                      dy))))
         (funcall cont stream)))))
 
 ;;; ----------------------------------------------------------------------------

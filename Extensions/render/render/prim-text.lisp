@@ -35,7 +35,7 @@
   (loop
     with glyph-transformation = (multiple-value-bind (x0 y0)
                                     (transform-position transformation 0 0)
-                                  (compose-translation-with-transformation
+                                  (compose-with-transformation-translation
                                    transformation (- x0) (- y0)))
     for code across (climb:font-string-glyph-codes font string)
     for origin-x fixnum = (round x) then (+ origin-x (glyph-info-advance-width info))

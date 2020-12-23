@@ -112,3 +112,35 @@
         (is (= yy1 (min (coordinate y) (coordinate y2))))
         (is (= xx2 (max (coordinate x) (coordinate x2))))
         (is (= yy2 (max (coordinate y) (coordinate y2))))))))
+
+;;; compose-transformations works right-to-left
+;;; compose-A-with-B works left-to-right
+(test transforms.order-of-composition
+  (let ((scaling  (make-scaling-transformation* 2 2))
+        (rotation (make-rotation-transformation* pi))
+        (translation (make-translation-transformation 10 10)))
+    (multiple-value-bind (x y)
+        (transform-position (compose-transformations translation rotation) -10 -10)
+      (is (coordinate= x 20) "X=~s, should be 20." x)
+      (is (coordinate= y 20) "Y=~s, should be 20." y))
+    (loop for tr in (list scaling rotation)
+          do (is (transformation-equal
+                  (compose-transformations tr translation)
+                  (compose-translation-with-transformation tr 10 10)))
+             (is (transformation-equal
+                  (compose-transformations translation tr)
+                  (compose-transformation-with-translation tr 10 10))))
+    (loop for tr in (list translation scaling)
+          do (is (transformation-equal
+                  (compose-transformations tr rotation)
+                  (compose-rotation-with-transformation tr pi)))
+             (is (transformation-equal
+                  (compose-transformations rotation tr)
+                  (compose-transformation-with-rotation tr pi))))
+    (loop for tr in (list rotation translation)
+          do (is (transformation-equal
+                  (compose-transformations tr scaling)
+                  (compose-scaling-with-transformation tr 2 2)))
+             (is (transformation-equal
+                  (compose-transformations scaling tr)
+                  (compose-transformation-with-scaling tr 2 2))))))

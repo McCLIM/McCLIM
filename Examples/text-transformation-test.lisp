@@ -31,11 +31,12 @@
       (clim:draw-text* pane string 0 0 :transform-glyphs nil :ink +dark-red+)
 
       ;; Multiline
-      (with-drawing-options (pane :transformation (compose-translation-with-transformation
-                                                   (clim:make-rotation-transformation
-                                                    (- (/ pi 2)
-                                                       (/ pi 32)))
-                                                   (* 8 x-offset) (/ y-offset 2))
+      (with-drawing-options (pane :transformation
+                                  (compose-transformation-with-translation
+                                   (clim:make-rotation-transformation
+                                    (- (/ pi 2)
+                                       (/ pi 32)))
+                                   (* 8 x-offset) (/ y-offset 2))
                                   :text-style text-style)
         (clim:draw-point* pane 0 0 :ink +blue+ :line-thickness 10)
         ;; XXX: two ~%~% cause error (empty line)
@@ -45,10 +46,11 @@
         (clim:draw-line* pane 0 0 500 0))
 
       ;; Multiline with towards
-      (with-drawing-options (pane :transformation (compose-translation-with-transformation
-                                                   (clim:make-rotation-transformation
-                                                    (/ pi 32))
-                                                   0 (* 8 y-offset))
+      (with-drawing-options (pane :transformation
+                                  (compose-transformation-with-translation
+                                   (clim:make-rotation-transformation
+                                    (/ pi 32))
+                                   0 (* 8 y-offset))
                                   :text-style text-style)
         (let ((toward-x (* 8 x-offset))
               (toward-y (* -1 y-offset)))
@@ -93,29 +95,32 @@
                             :toward-x dx
                             :toward-y dy)))
         ;; Rotations
-        (with-drawing-options (pane :transformation (compose-translation-with-transformation
-                                                     (clim:make-scaling-transformation sx sy)
-                                                     (* 3 x-offset) (* v y-offset))
+        (with-drawing-options (pane :transformation
+                                    (compose-transformation-with-translation
+                                     (clim:make-scaling-transformation sx sy)
+                                     (* 3 x-offset) (* v y-offset))
                                     :text-style text-style)
           (clim:draw-point* pane 0 0 :ink +blue+ :line-thickness 10)
           (clim:draw-text* pane string 0 0 :transform-glyphs t :ink +dark-red+)
           (clim:draw-line* pane 0 0 50 0))
         ;; Scaling
-        (with-drawing-options (pane :transformation (compose-translation-with-transformation
-                                                     (make-rotation-transformation (* v (/ pi 6)))
-                                                     0 (* v y-offset))
+        (with-drawing-options (pane :transformation
+                                    (compose-transformation-with-translation
+                                     (make-rotation-transformation (* v (/ pi 6)))
+                                     0 (* v y-offset))
                                     :text-style text-style)
           (clim:draw-point* pane 0 0 :ink +blue+ :line-thickness 10)
           (clim:draw-text* pane string 0 0 :transform-glyphs t :ink +dark-red+)
           (clim:draw-line* pane 0 0 50 0))
         ;; Combination of previous rotation and scaling (grey) + towards (red)
         (with-drawing-options (pane
-                               :transformation (compose-translation-with-transformation
-                                                ;(clim:make-scaling-transformation sx sy)
-                                                (compose-transformations
-                                                 (clim:make-scaling-transformation sx sy)
-                                                  (make-rotation-transformation (* v (/ pi 6))))
-                                                (* 6 x-offset) (* v y-offset))
+                               :transformation
+                               (compose-transformation-with-translation
+                                        ;(clim:make-scaling-transformation sx sy)
+                                (compose-transformations
+                                 (clim:make-scaling-transformation sx sy)
+                                 (make-rotation-transformation (* v (/ pi 6))))
+                                (* 6 x-offset) (* v y-offset))
                                :text-style text-style)
           (let ((dx (car pair))
                 (dy (cdr pair)))
