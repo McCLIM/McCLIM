@@ -234,7 +234,7 @@
             (dy (- y old-y)))
         (unless (and (zerop dx) (zerop dy))
           (setf (sheet-transformation sheet)
-                (compose-translation-with-transformation
+                (compose-transformation-with-translation
                  transform (- x old-x) (- y old-y))))))))
 
 (defmethod resize-sheet ((sheet basic-sheet) width height)
@@ -248,7 +248,7 @@
       (%set-sheet-region-and-transformation
        sheet
        (make-bounding-rectangle 0 0 width height)
-       (compose-translation-with-transformation transform (- x old-x) (- y old-y))))))
+       (compose-transformation-with-translation transform (- x old-x) (- y old-y))))))
 
 (defmethod map-sheet-position-to-parent ((sheet basic-sheet) x y)
   (declare (ignore x y))

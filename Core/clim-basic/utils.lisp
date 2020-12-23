@@ -552,7 +552,7 @@ STREAM in the direction DIRECTION."
             (multiple-value-bind (dx dy)
                 (multiple-value-call
                     #'transform-distance
-                  (compose-transformation-with-scaling
+                  (compose-scaling-with-transformation
                    (sheet-delta-transformation stream graft)
                    (/ (graft-width graft :units unit)
                       (graft-width graft :units gunit))

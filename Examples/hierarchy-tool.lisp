@@ -349,7 +349,7 @@ new application."
     ((sheet pane) (x integer) (y integer))
   (let ((transform (sheet-transformation sheet)))
     (setf (sheet-transformation sheet)
-          (compose-translation-with-transformation
+          (compose-transformation-with-translation
            transform x y))))
 
 (define-hierarchy-command (com-resize-sheet :name t)

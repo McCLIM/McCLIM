@@ -339,7 +339,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
   (loop
      with glyph-transformation = (multiple-value-bind (x0 y0)
                                      (transform-position tr 0 0)
-                                   (compose-translation-with-transformation tr (- x0) (- y0)))
+                                   (compose-transformation-with-translation tr (- x0) (- y0)))
      ;; for rendering one glyph at a time
      with current-x = x
      with current-y = y

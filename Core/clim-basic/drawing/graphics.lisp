@@ -813,7 +813,7 @@
                (pixmap-y2 (ceiling sheet-y2))
                (pixmap-width (- pixmap-x2 pixmap-x1))
                (pixmap-height (- pixmap-y2 pixmap-y1))
-               (msheet-native (compose-transformation-with-translation
+               (msheet-native (compose-translation-with-transformation
                                msheet-transform
                                (- pixmap-x1)
                                (- pixmap-y1)))
