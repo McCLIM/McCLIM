@@ -419,28 +419,28 @@ real numbers, and default to 0."
                value)))
 
 (defun compose-translation-with-transformation (transformation dx dy)
-  (compose-transformations (make-translation-transformation dx dy)
-                           transformation))
+  (compose-transformations transformation
+			   (make-translation-transformation dx dy)))
 
 (defun compose-scaling-with-transformation (transformation sx sy &optional origin)
-  (compose-transformations (make-scaling-transformation sx sy origin)
-                           transformation))
+  (compose-transformations transformation
+			   (make-scaling-transformation sx sy origin)))
 
 (defun compose-rotation-with-transformation (transformation angle &optional origin)
-  (compose-transformations (make-rotation-transformation angle origin)
-                           transformation))
+  (compose-transformations transformation
+			   (make-rotation-transformation angle origin)))
 
 (defun compose-transformation-with-translation (transformation dx dy)
-  (compose-transformations transformation
-                           (make-translation-transformation dx dy)))
+  (compose-transformations (make-translation-transformation dx dy)
+			   transformation))
 
 (defun compose-transformation-with-scaling (transformation sx sy &optional origin)
-  (compose-transformations transformation
-                           (make-scaling-transformation sx sy origin)))
+  (compose-transformations (make-scaling-transformation sx sy origin)
+			   transformation))
 
 (defun compose-transformation-with-rotation (transformation angle &optional origin)
-  (compose-transformations transformation
-                           (make-rotation-transformation angle origin)))
+  (compose-transformations (make-rotation-transformation angle origin)
+			   transformation))
 
 (defmacro with-translation ((medium dx dy) &body body)
   `(with-drawing-options (,medium
