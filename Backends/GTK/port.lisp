@@ -15,16 +15,18 @@
                     :reader gtk-port/sheet-to-mirror)))
 
 (defclass gtk-mirror ()
-  ((window       :initarg :window
-                 :accessor gtk-mirror/window)
-   (image        :initarg :image
-                 :initform (alexandria:required-argument :image)
-                 :accessor gtk-mirror/image)
-   (sheet        :initarg :sheet
-                 :initform (alexandria:required-argument :sheet)
-                 :reader gtk-mirror/sheet)
-   (drawing-area :initarg :drawing-area
-                 :accessor gtk-mirror/drawing-area)))
+  ((window        :initarg :window
+                  :accessor gtk-mirror/window)
+   (image         :initarg :image
+                  :initform (alexandria:required-argument :image)
+                  :accessor gtk-mirror/image)
+   (sheet         :initarg :sheet
+                  :initform (alexandria:required-argument :sheet)
+                  :reader gtk-mirror/sheet)
+   (drawing-area  :initarg :drawing-area
+                  :accessor gtk-mirror/drawing-area)
+   (pango-context :initarg :pango-context
+                  :accessor gtk-mirror/pango-context)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'gtk-port 'identity))
@@ -59,7 +61,7 @@
 
 (defmethod port-set-mirror-region ((port gtk-port) sheet region)
   ())
-                                   
+
 (defmethod port-set-mirror-transformation ((port gtk-port) sheet transformation)
   ())
 
@@ -94,7 +96,7 @@
          (height (climi::space-requirement-height q))
          (image (make-backing-image width height))
          (mirror (make-instance 'gtk-mirror :sheet sheet :image image)))
-    (multiple-value-bind (window drawing-area)
+    (multiple-value-bind (window drawing-area pango-context)
         (in-gtk-thread ()
           (let ((window (make-instance 'gtk:gtk-window
                                        :type :toplevel
@@ -105,14 +107,15 @@
               (gobject:g-signal-connect drawing-area "draw"
                                         (lambda (widget cr)
                                           (declare (ignore widget))
-                                          (log:info "Drawing content")
                                           (draw-window-content (gobject:pointer cr) mirror)
                                           t))
               (gtk:gtk-container-add window drawing-area)
-              (gtk:gtk-widget-show-all window)
-              (values window drawing-area))))
+              (let ((pango-context (gtk:gtk-widget-create-pango-context drawing-area)))
+                (gtk:gtk-widget-show-all window)
+                (values window drawing-area pango-context)))))
       (setf (gtk-mirror/window mirror) window)
       (setf (gtk-mirror/drawing-area mirror) drawing-area)
+      (setf (gtk-mirror/pango-context mirror) pango-context)
       (climi::port-register-mirror port sheet mirror))))
 
 (defmethod destroy-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))
@@ -211,4 +214,4 @@
 
 (defmethod set-sheet-pointer-cursor ((port gtk-port) sheet cursor)
   (declare (ignore sheet cursor))
-  nil)        
+  nil)

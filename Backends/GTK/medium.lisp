@@ -15,14 +15,73 @@
          (let ((,image-sym (gtk-mirror/image ,mirror-sym)))
            ,@body)))))
 
+(defun region->clipping-values (region)
+  (with-bounding-rectangle* (min-x min-y max-x max-y) region
+    ;; We don't use here round-coordinate because clipping rectangle
+    ;; must cover the whole region. It is especially important when we
+    ;; draw arcs (ellipses without filling) which are not drawn if any
+    ;; part is outside the clipped area. -- jd 2019-06-17
+    (let ((clip-x (floor min-x))
+          (clip-y (floor min-y)))
+      (values clip-x
+              clip-y
+              (- (ceiling max-x) clip-x)
+              (- (ceiling max-y) clip-y)))))
+
+(defun clipping-region->rect-seq (clipping-region)
+  (typecase clipping-region
+    (area (multiple-value-list (region->clipping-values clipping-region)))
+    (t (loop
+         for region in (nreverse (mapcan
+                                  (lambda (v) (unless (eq v +nowhere+) (list v)))
+                                  (region-set-regions clipping-region
+                                                      :normalize :y-banding)))
+         nconcing (multiple-value-list (region->clipping-values region))))))
+
+(defun set-clipping-region (cr medium)
+  (cairo:cairo-reset-clip cr)
+  (let ((clipping-region (climi::medium-device-region medium)))
+    (typecase clipping-region
+      (climi::nowhere-region
+       (cairo:cairo-rectangle cr 0 0 1 1)
+       (cairo:cairo-clip cr))
+      (clim:standard-rectangle
+       (multiple-value-bind (x1 y1 width height)
+           (region->clipping-values clipping-region)
+         (cairo:cairo-rectangle cr x1 y1 width height)
+         (cairo:cairo-clip cr)))
+      (climi::standard-rectangle-set
+       (break) ; Check that this works
+       (loop
+         for (x y width height) in (clipping-region->rect-seq clipping-region)
+         do (cairo:cairo-rectangle cr x y width height)
+         finally (cairo:cairo-clip cr)))
+      (t
+       (break)))))
+
+(defun update-attrs (cr medium)
+  (set-clipping-region cr medium)
+  (multiple-value-bind (red green blue alpha)
+      (clime::color-rgba (medium-ink medium))
+    (cairo:cairo-set-source-rgba cr red green blue alpha)
+    (let ((line-style (medium-line-style medium)))
+      (cairo:cairo-set-line-width cr (line-style-thickness line-style))
+      (cairo:cairo-set-line-join cr (ecase (line-style-joint-shape line-style)
+                                      (:miter :miter)
+                                      (:round :round)
+                                      (:bevel :bevel)
+                                      (:none :miter))))))
+
 (defmacro with-cairo-context ((context-sym medium) &body body)
   (alexandria:once-only (medium)
     (alexandria:with-gensyms (image-sym context)
       `(with-medium-cairo-image (,image-sym ,medium)
          (let ((,context (cairo:cairo-create ,image-sym)))
            (unwind-protect
-                (let ((,context-sym ,context))
-                  ,@body)
+                (progn
+                  (update-attrs ,context ,medium)
+                  (let ((,context-sym ,context))
+                    ,@body))
              (cairo:cairo-destroy ,context)))))))
 
 (defclass gtk-medium (font-rendering-medium-mixin basic-medium)
@@ -139,11 +198,36 @@
 (defmethod text-style-width (text-style (medium gtk-medium))
   (text-style-character-width text-style medium #\m))
 
-(defmethod text-size
-    ((medium gtk-medium) string &key text-style (start 0) end)
+(defmethod text-size ((medium gtk-medium) string &key text-style (start 0) end)
   (setf string (etypecase string
 		 (character (string string))
 		 (string string)))
+  (let ((fixed-string (subseq string (or start 0) (or end (length string))))
+        (mirror (climi::port-lookup-mirror (port medium) (medium-sheet medium))))
+    (if mirror
+        (with-cairo-context (cr medium)
+          (let ((layout (pango:pango-cairo-create-layout cr)))
+            (pango:pango-layout-set-text layout fixed-string)
+            (multiple-value-bind (ink-rect logical-rect)
+                (pango:pango-layout-get-pixel-extents layout)
+              (log:info "a=~s b=~s" ink-rect logical-rect)
+              (values (pango:pango-rectangle-width logical-rect)
+                      (pango:pango-rectangle-height logical-rect)
+                      (pango:pango-rectangle-width ink-rect)
+                      0
+                      (- (pango:pango-rectangle-height logical-rect)
+                         (pango:pango-rectangle-y logical-rect))))))
+        ;; ELSE: No mirror, return default values
+        (values 100 50 100 50 30)))
+  #+nil
+  (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
+    (with-cairo-context (cr medium)
+      (let ((layout (pango:pango-cairo-create-layout cr)))
+        (pango:pango-layout-set-text layout fixed-string)
+        (let ((x (multiple-value-list (pango:pango-layout-get-pixel-extents layout))))
+          (log:info "x = ~s" x)
+          (break)))))
+  #+nil
   (let ((width 0)
 	(height (text-style-height text-style medium))
 	(x (- (or end (length string)) start))
@@ -172,8 +256,20 @@
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
-  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
-  nil)
+  (declare (ignore toward-x toward-y transform-glyphs))
+  (let ((merged-transform (sheet-device-transformation (medium-sheet medium))))
+    (when (characterp string)
+      (setq string (make-string 1 :initial-element string)))
+    (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
+      ;; missing stuff
+      (multiple-value-bind (transformed-x transformed-y)
+          (transform-position merged-transform x y)
+        (log:info "Drawing string ~s at (~s,~s)" fixed-string transformed-x transformed-y)
+        (with-cairo-context (cr medium)
+          (let ((layout (pango:pango-cairo-create-layout cr)))
+            (pango:pango-layout-set-text layout fixed-string)
+            (cairo:cairo-move-to cr x y)
+            (pango:pango-cairo-show-layout cr layout)))))))
 
 #+nil
 (defmethod medium-buffering-output-p ((medium gtk-medium))
@@ -207,17 +303,36 @@
     (climi::with-transformed-position (tr x1 y1)
       (climi::with-transformed-position (tr x2 y2)
         (with-cairo-context (cr medium)
-          (log:info "Drawing line")
-          (cairo:cairo-set-source-rgb cr 0 1 0)
           (cairo:cairo-move-to cr x1 y1)
           (cairo:cairo-line-to cr x2 y2)
           (cairo:cairo-stroke cr))))))
 
 (defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
-  (break))
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (with-cairo-context (cr medium)
+      (multiple-value-bind (x y)
+          (climi::transform-position tr (first coord-seq) (second coord-seq))
+        (cairo:cairo-move-to cr x y))
+      (loop
+        for (x y) on (cddr coord-seq) by #'cddr
+        do (multiple-value-bind (nx ny)
+               (climi::transform-position tr x y)
+             (cairo:cairo-line-to cr nx ny)))
+      (cairo:cairo-stroke cr))))
 
 (defmethod medium-draw-rectangle* ((medium gtk-medium) left top right bottom filled)
-  nil)
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (climi::with-transformed-position (tr left top)
+      (climi::with-transformed-position (tr right bottom)
+        (with-cairo-context (cr medium)
+          (when (< right left) (rotatef left right))
+          (when (< bottom top) (rotatef top bottom))
+          (let ((left   (round-coordinate left))
+                (top    (round-coordinate top))
+                (right  (round-coordinate right))
+                (bottom (round-coordinate bottom)))
+            (cairo:cairo-rectangle cr left top (- right left) (- bottom top))
+            (cairo:cairo-stroke cr)))))))
 
 (defmethod medium-draw-rectangles* ((medium gtk-medium) position-seq filled)
   (declare (ignore position-seq filled))
