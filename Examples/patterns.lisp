@@ -51,7 +51,7 @@
        ;; 50x50 checkboard indexed pattern with indexed rectangular-tile inks
        (make-pattern array x-designs)
        ;; 30x30 checkboard 4-indexed pattern rotated by pi/4 and translated
-       (transform-region (compose-translation-with-transformation
+       (transform-region (compose-transformation-with-translation
                           (make-rotation-transformation* (/ pi 4) 10.5 10.5)
                           12.5 12.5)
                          (make-pattern array2 4-designs))
