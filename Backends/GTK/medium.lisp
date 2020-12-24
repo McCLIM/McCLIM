@@ -300,6 +300,7 @@
   0)
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
+  (log:info "Drawing line")
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr x1 y1)
       (climi::with-transformed-position (tr x2 y2)

@@ -7,16 +7,20 @@
 
 (defclass gtk-port (basic-port)
   ((id)
-   (pointer            :accessor port-pointer
-                       :initform (make-instance 'gtk-pointer))
-   (window             :initform nil
-                       :accessor gtk-port-window)
-   (event-queue        :initform nil
-                       :accessor gtk-port/event-queue)
-   (event-queue-lock   :initform (bordeaux-threads:make-lock "GTK Event Queue Lock")
-                       :reader gtk-port/event-queue-lock)
-   (evet-queue-condvar :initform (bordeaux-threads:make-condition-variable :name "GTK Event Queue Condition Variable")
-                       :reader gtk-port/event-queue-condvar)))
+   (pointer             :accessor port-pointer
+                        :initform (make-instance 'gtk-pointer))
+   (window              :initform nil
+                        :accessor gtk-port-window)
+   (event-queue         :initform nil
+                        :accessor gtk-port/event-queue)
+   (event-queue-lock    :initform (bordeaux-threads:make-lock "GTK Port Event Queue Lock")
+                        :reader gtk-port/event-queue-lock)
+   (event-queue-condvar :initform (bordeaux-threads:make-condition-variable :name "GTK Port Event Queue Condition Variable")
+                        :reader gtk-port/event-queue-condvar)
+   (stopped-lock        :initform (bordeaux-threads:make-lock "GTK Port Stopped Lock")
+                        :reader gtk-port/stopped-lock)
+   (stop-request        :initform nil
+                        :accessor gtk-port/stop-request)))
 
 (defclass gtk-mirror ()
   ((window        :initarg :window
@@ -51,7 +55,8 @@
   ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
-  (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread"))
+  (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread")
+  (start-port-event-thread port))
 
 (defmethod print-object ((object gtk-port) stream)
   (print-unreadable-object (object stream :identity t :type t)
@@ -150,6 +155,8 @@
   nil)
 
 (defmethod destroy-port :before ((port gtk-port))
+  (bordeaux-threads:with-lock-held ((gtk-port/stopped-lock port))
+    (setf (gtk-port/stop-request port) t))
   (in-gtk-thread ()
     (gtk:gtk-main-quit)))
 
