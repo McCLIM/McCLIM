@@ -7,12 +7,16 @@
 
 (defclass gtk-port (basic-port)
   ((id)
-   (pointer         :accessor port-pointer
-                    :initform (make-instance 'gtk-pointer))
-   (window          :initform nil
-                    :accessor gtk-port-window)
-   (sheet-to-mirror :initform (make-hash-table :test 'eql)
-                    :reader gtk-port/sheet-to-mirror)))
+   (pointer            :accessor port-pointer
+                       :initform (make-instance 'gtk-pointer))
+   (window             :initform nil
+                       :accessor gtk-port-window)
+   (event-queue        :initform nil
+                       :accessor gtk-port/event-queue)
+   (event-queue-lock   :initform (bordeaux-threads:make-lock "GTK Event Queue Lock")
+                       :reader gtk-port/event-queue-lock)
+   (evet-queue-condvar :initform (bordeaux-threads:make-condition-variable :name "GTK Event Queue Condition Variable")
+                       :reader gtk-port/event-queue-condvar)))
 
 (defclass gtk-mirror ()
   ((window        :initarg :window
@@ -65,12 +69,16 @@
 (defmethod port-set-mirror-transformation ((port gtk-port) sheet transformation)
   ())
 
+#+nil
 (defmethod climi::port-lookup-mirror ((port gtk-port) (sheet gtk-renderer-sheet))
+  (log:info "LOOKING UP (port=~s) ~s to ~s" port sheet (gethash sheet (gtk-port/sheet-to-mirror port)))
   (gethash sheet (gtk-port/sheet-to-mirror port)))
 
+#+nil
 (defmethod climi::port-register-mirror ((port gtk-port) (sheet gtk-renderer-sheet) mirror)
   (setf (gethash sheet (gtk-port/sheet-to-mirror port)) mirror))
 
+#+nil
 (defmethod climi::port-unregister-mirror ((port gtk-port) (sheet gtk-renderer-sheet) mirror)
   (remhash sheet (gtk-port/sheet-to-mirror port)))
 
@@ -109,6 +117,14 @@
                                           (declare (ignore widget))
                                           (draw-window-content (gobject:pointer cr) mirror)
                                           t))
+              (gobject:g-signal-connect window "configure-event"
+                                        (lambda (widget event)
+                                          (process-configure-event port widget event sheet)
+                                          nil))
+              (gobject:g-signal-connect drawing-area "configure-event"
+                                        (lambda (widget event)
+                                          (declare (ignore widget))
+                                          (process-drawing-area-configure event mirror)))
               (gtk:gtk-container-add window drawing-area)
               (let ((pango-context (gtk:gtk-widget-create-pango-context drawing-area)))
                 (gtk:gtk-widget-show-all window)
@@ -136,21 +152,6 @@
 (defmethod destroy-port :before ((port gtk-port))
   (in-gtk-thread ()
     (gtk:gtk-main-quit)))
-
-(defmethod process-next-event ((port gtk-port) &key wait-function (timeout nil))
-  (cond ((maybe-funcall wait-function)
-         (values nil :wait-function))
-        ((not (null timeout))
-         (sleep timeout)
-         (if (maybe-funcall wait-function)
-             (values nil :wait-function)
-             (values nil :timeout)))
-        ((not (null wait-function))
-         (loop do (sleep 0.1)
-               until (funcall wait-function)
-               finally (return (values nil :wait-function))))
-        (t
-         (error "Game over. Listening for an event on GTK backend."))))
 
 (defmethod make-graft
     ((port gtk-port) &key (orientation :default) (units :device))

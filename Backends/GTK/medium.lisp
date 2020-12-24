@@ -4,6 +4,8 @@
   (alexandria:once-only (medium)
     (alexandria:with-gensyms (mirror-copy-sym)
       `(let ((,mirror-copy-sym (climi::port-lookup-mirror (port ,medium) (medium-sheet ,medium))))
+         (unless ,mirror-copy-sym
+           (break))
          (when ,mirror-copy-sym
            (let ((,mirror-sym ,mirror-copy-sym))
              ,@body))))))
@@ -210,7 +212,6 @@
             (pango:pango-layout-set-text layout fixed-string)
             (multiple-value-bind (ink-rect logical-rect)
                 (pango:pango-layout-get-pixel-extents layout)
-              (log:info "a=~s b=~s" ink-rect logical-rect)
               (values (pango:pango-rectangle-width logical-rect)
                       (pango:pango-rectangle-height logical-rect)
                       (pango:pango-rectangle-width ink-rect)

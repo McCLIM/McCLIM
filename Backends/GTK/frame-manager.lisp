@@ -12,7 +12,6 @@
   ())
 
 (defmethod find-concrete-pane-class ((fm gtk-frame-manager) pane-type &optional errorp)
-  (log:info "type: ~s, err: ~s" pane-type errorp)
   (if (eq pane-type 'climi::top-level-sheet-pane)
       (find-class 'gtk-top-level-sheet-pane)
       (call-next-method)))
