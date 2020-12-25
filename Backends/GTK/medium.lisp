@@ -1,6 +1,7 @@
 (in-package :clim-gtk)
 
 (defmacro with-medium-mirror ((mirror-sym medium) &body body)
+  (check-type mirror-sym symbol)
   (alexandria:once-only (medium)
     (alexandria:with-gensyms (mirror-copy-sym)
       `(let ((,mirror-copy-sym (climi::port-lookup-mirror (port ,medium) (medium-sheet ,medium))))
@@ -10,12 +11,29 @@
            (let ((,mirror-sym ,mirror-copy-sym))
              ,@body))))))
 
+(defun update-mirror-if-needed (mirror)
+  (let ((requested-width (gtk-mirror/requested-image-width mirror))
+        (requested-height (gtk-mirror/requested-image-height mirror)))
+    (when (and requested-width requested-height)
+      (cairo:cairo-surface-destroy (gtk-mirror/image mirror))
+      (setf (gtk-mirror/image mirror) (cairo:cairo-image-surface-create :argb32 requested-width requested-height))
+      (setf (gtk-mirror/requested-image-width mirror) nil)
+      (setf (gtk-mirror/requested-image-height mirror) nil))))
+
 (defmacro with-medium-cairo-image ((image-sym medium) &body body)
+  (check-type image-sym symbol)
   (alexandria:once-only (medium)
-    (alexandria:with-gensyms (mirror-sym)
+    (alexandria:with-gensyms (mirror-sym image)
       `(with-medium-mirror (,mirror-sym ,medium)
-         (let ((,image-sym (gtk-mirror/image ,mirror-sym)))
-           ,@body)))))
+         (let ((,image (bordeaux-threads:with-lock-held ((gtk-mirror/lock ,mirror-sym))
+                         (update-mirror-if-needed ,mirror-sym)
+                         (let ((,image (gtk-mirror/image ,mirror-sym)))
+                           (cairo:cairo-surface-reference ,image)
+                           ,image))))
+           (unwind-protect
+                (let ((,image-sym ,image))
+                  ,@body)
+             (cairo:cairo-surface-destroy (gtk-mirror/image ,mirror-sym))))))))
 
 (defun region->clipping-values (region)
   (with-bounding-rectangle* (min-x min-y max-x max-y) region
@@ -53,11 +71,11 @@
          (cairo:cairo-rectangle cr x1 y1 width height)
          (cairo:cairo-clip cr)))
       (climi::standard-rectangle-set
-       (break) ; Check that this works
-       (loop
-         for (x y width height) in (clipping-region->rect-seq clipping-region)
-         do (cairo:cairo-rectangle cr x y width height)
-         finally (cairo:cairo-clip cr)))
+       (let ((se (clipping-region->rect-seq clipping-region)))
+         (loop
+           for (x y width height) on se by (lambda (sequence) (nthcdr 4 sequence))
+           do (cairo:cairo-rectangle cr x y width height)
+           finally (cairo:cairo-clip cr))))
       (t
        (break)))))
 
@@ -74,14 +92,16 @@
                                       (:bevel :bevel)
                                       (:none :miter))))))
 
-(defmacro with-cairo-context ((context-sym medium) &body body)
-  (alexandria:once-only (medium)
+(defmacro with-cairo-context ((context-sym medium &key (update-style t)) &body body)
+  (check-type context-sym symbol)
+  (alexandria:once-only (medium update-style)
     (alexandria:with-gensyms (image-sym context)
       `(with-medium-cairo-image (,image-sym ,medium)
          (let ((,context (cairo:cairo-create ,image-sym)))
            (unwind-protect
                 (progn
-                  (update-attrs ,context ,medium)
+                  (when ,update-style
+                    (update-attrs ,context ,medium))
                   (let ((,context-sym ,context))
                     ,@body))
              (cairo:cairo-destroy ,context)))))))
@@ -130,56 +150,6 @@
 			       to-x to-y)
     (declare (ignore from-x from-y width height to-x to-y))
     nil))
-
-(defmethod medium-draw-point* ((medium gtk-medium) x y)
-  (declare (ignore x y))
-  nil)
-
-(defmethod medium-draw-points* ((medium gtk-medium) coord-seq)
-  (declare (ignore coord-seq))
-  nil)
-
-(defmethod medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
-  (declare (ignore x1 y1 x2 y2)) 
-  nil)
-
-;; FIXME: Invert the transformation and apply it here, as the :around
-;; methods on transform-coordinates-mixin will cause it to be applied
-;; twice, and we need to undo one of those. The
-;; transform-coordinates-mixin stuff needs to be eliminated.
-(defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (declare (ignore tr))
-    nil))
-
-(defmethod medium-draw-polygon* ((medium gtk-medium) coord-seq closed filled)
-  (declare (ignore coord-seq closed filled))
-  nil)
-
-(defmethod medium-draw-rectangle* ((medium gtk-medium) left top right bottom filled)
-  (declare (ignore left top right bottom filled))
-  nil)
-
-(defmethod medium-draw-rectangles* ((medium gtk-medium) position-seq filled)
-  (declare (ignore position-seq filled))
-  nil)
-
-(defmethod medium-draw-ellipse* ((medium gtk-medium) center-x center-y
-				 radius-1-dx radius-1-dy
-				 radius-2-dx radius-2-dy
-				 start-angle end-angle filled)
-  (declare (ignore center-x center-y
-		   radius-1-dx radius-1-dy
-		   radius-2-dx radius-2-dy
-		   start-angle end-angle filled))
-  nil)
-
-(defmethod medium-draw-circle* ((medium gtk-medium)
-				center-x center-y radius start-angle end-angle
-				filled)
-  (declare (ignore center-x center-y radius
-		   start-angle end-angle filled))
-  nil)
 
 (defmethod text-style-ascent (text-style (medium gtk-medium))
   (declare (ignore text-style))
@@ -265,7 +235,6 @@
       ;; missing stuff
       (multiple-value-bind (transformed-x transformed-y)
           (transform-position merged-transform x y)
-        (log:info "Drawing string ~s at (~s,~s)" fixed-string transformed-x transformed-y)
         (with-cairo-context (cr medium)
           (let ((layout (pango:pango-cairo-create-layout cr)))
             (pango:pango-layout-set-text layout fixed-string)
@@ -290,8 +259,13 @@
   nil)
 
 (defmethod medium-clear-area ((medium gtk-medium) left top right bottom)
-  (declare (ignore left top right bottom))
-  nil)
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (climi::with-transformed-position (tr top left)
+      (climi::with-transformed-position (tr right bottom)
+        (with-cairo-context (cr medium :update-style nil)
+          (cairo:cairo-set-source-rgba cr 1 1 1 1)
+          (cairo:cairo-rectangle cr left top right bottom)
+          (cairo:cairo-fill cr))))))
 
 (defmethod medium-beep ((medium gtk-medium))
   nil)
@@ -300,7 +274,6 @@
   0)
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
-  (log:info "Drawing line")
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr x1 y1)
       (climi::with-transformed-position (tr x2 y2)
@@ -312,14 +285,13 @@
 (defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (with-cairo-context (cr medium)
-      (multiple-value-bind (x y)
-          (climi::transform-position tr (first coord-seq) (second coord-seq))
-        (cairo:cairo-move-to cr x y))
-      (loop
-        for (x y) on (cddr coord-seq) by #'cddr
-        do (multiple-value-bind (nx ny)
-               (climi::transform-position tr x y)
-             (cairo:cairo-line-to cr nx ny)))
+      (iterate-over-4-blocks (x1 y1 x2 y2 coord-seq)
+        (multiple-value-bind (x y)
+            (climi::transform-position tr x1 y1)
+          (cairo:cairo-move-to cr x y))
+        (multiple-value-bind (x y)
+            (climi::transform-position tr x2 y2)
+          (cairo:cairo-line-to cr x y)))
       (cairo:cairo-stroke cr))))
 
 (defmethod medium-draw-rectangle* ((medium gtk-medium) left top right bottom filled)
@@ -334,10 +306,41 @@
                 (right  (round-coordinate right))
                 (bottom (round-coordinate bottom)))
             (cairo:cairo-rectangle cr left top (- right left) (- bottom top))
-            (cairo:cairo-stroke cr)))))))
+            (if filled
+                (cairo:cairo-fill cr)
+                (cairo:cairo-stroke cr))))))))
 
 (defmethod medium-draw-rectangles* ((medium gtk-medium) position-seq filled)
   (declare (ignore position-seq filled))
   (log:trace "not implemented")
   (break)
+  nil)
+
+(defmethod medium-draw-point* ((medium gtk-medium) x y)
+  (declare (ignore x y))
+  nil)
+
+(defmethod medium-draw-points* ((medium gtk-medium) coord-seq)
+  (declare (ignore coord-seq))
+  nil)
+
+(defmethod medium-draw-polygon* ((medium gtk-medium) coord-seq closed filled)
+  (declare (ignore coord-seq closed filled))
+  nil)
+
+(defmethod medium-draw-ellipse* ((medium gtk-medium) center-x center-y
+				 radius-1-dx radius-1-dy
+				 radius-2-dx radius-2-dy
+				 start-angle end-angle filled)
+  (declare (ignore center-x center-y
+		   radius-1-dx radius-1-dy
+		   radius-2-dx radius-2-dy
+		   start-angle end-angle filled))
+  nil)
+
+(defmethod medium-draw-circle* ((medium gtk-medium)
+				center-x center-y radius start-angle end-angle
+				filled)
+  (declare (ignore center-x center-y radius
+		   start-angle end-angle filled))
   nil)

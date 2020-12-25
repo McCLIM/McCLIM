@@ -42,16 +42,71 @@
             (condvar (bordeaux-threads:make-condition-variable))
             (result nil))
         (gtk:within-gtk-thread
-          (let ((*gtk-thread-p* t))
-            (let ((inner-result (multiple-value-list (funcall fn))))
-              (bordeaux-threads:with-lock-held (lock)
-                (setq result (cons :result inner-result))
-                (bordeaux-threads:condition-notify condvar)))))
+          (let ((new-result (block gtk-update
+                              (handler-bind ((error (lambda (condition)
+                                                      (log:error "Error in GTK thread: ~a" condition)
+                                                      (return-from gtk-update (list :error condition)))))
+                                (let ((*gtk-thread-p* t))
+                                  (let ((inner-result (multiple-value-list (funcall fn))))
+                                    (cons :result inner-result)))))))
+            (bordeaux-threads:with-lock-held (lock)
+              (setq result new-result)
+              (bordeaux-threads:condition-notify condvar))))
         (bordeaux-threads:with-lock-held (lock)
           (loop
             until result
             do (bordeaux-threads:condition-wait condvar lock)))
-        (apply #'values (cdr result)))))
+        (ecase (car result)
+          (:result (apply #'values (cdr result)))
+          (:error (error "Error in GTK thread: ~a" (cadr result)))))))
 
 (defmacro in-gtk-thread (() &body body)
   `(call-with-gtk-thread (lambda () ,@body)))
+
+(defmacro iterate-over-seq-pairs ((a-sym b-sym seq) first-pair &body body)
+  (check-type a-sym symbol)
+  (check-type b-sym symbol)
+  (alexandria:once-only (seq)
+    (alexandria:with-gensyms (a b array-index)
+      `(etypecase ,seq
+         (list (when ,seq
+                 (let ((,a-sym (first ,seq))
+                       (,b-sym (second ,seq)))
+                   ,first-pair)
+                 (loop
+                   for (,a ,b) on (cddr ,seq) by #'cddr
+                   do (let ((,a-sym ,a)
+                            (,b-sym ,b))
+                        ,@body))))
+         (array (when (plusp (length ,seq))
+                  (let ((,a-sym (aref ,seq 0))
+                        (,b-sym (aref ,seq 1)))
+                    ,first-pair)
+                  (loop
+                    for ,array-index from 2 below (length ,seq) by 2
+                    do (let ((,a-sym (aref ,seq ,array-index))
+                             (,b-sym (aref ,seq (1+ ,array-index))))
+                         ,@body))))))))
+
+(defmacro iterate-over-4-blocks ((a-sym b-sym c-sym d-sym seq) &body body)
+  (check-type a-sym symbol)
+  (check-type b-sym symbol)
+  (check-type c-sym symbol)
+  (check-type d-sym symbol)
+  (alexandria:once-only (seq)
+    (alexandria:with-gensyms (a b c d array-index sequence)
+      `(etypecase ,seq
+         (list (loop
+                 for (,a ,b ,c ,d) on ,seq by (lambda (,sequence) (nthcdr 4 ,sequence))
+                 do (let ((,a-sym ,a)
+                          (,b-sym ,b)
+                          (,c-sym ,c)
+                          (,d-sym ,d))
+                      ,@body)))
+         (array (loop
+                  for ,array-index from 0 below (length ,seq) by 4
+                  do (let ((,a-sym (aref ,seq ,array-index))
+                           (,b-sym (aref ,seq (+ ,array-index 1)))
+                           (,c-sym (aref ,seq (+ ,array-index 2)))
+                           (,d-sym (aref ,seq (+ ,array-index 3))))
+                       ,@body)))))))

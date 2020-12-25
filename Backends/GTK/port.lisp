@@ -6,35 +6,39 @@
    (y :initform 0)))
 
 (defclass gtk-port (basic-port)
-  ((id)
-   (pointer             :accessor port-pointer
-                        :initform (make-instance 'gtk-pointer))
-   (window              :initform nil
-                        :accessor gtk-port-window)
-   (event-queue         :initform nil
-                        :accessor gtk-port/event-queue)
-   (event-queue-lock    :initform (bordeaux-threads:make-lock "GTK Port Event Queue Lock")
-                        :reader gtk-port/event-queue-lock)
-   (event-queue-condvar :initform (bordeaux-threads:make-condition-variable :name "GTK Port Event Queue Condition Variable")
-                        :reader gtk-port/event-queue-condvar)
-   (stopped-lock        :initform (bordeaux-threads:make-lock "GTK Port Stopped Lock")
-                        :reader gtk-port/stopped-lock)
-   (stop-request        :initform nil
-                        :accessor gtk-port/stop-request)))
+  ((pointer      :accessor port-pointer
+                 :initform (make-instance 'gtk-pointer))
+   (window       :initform nil
+                 :accessor gtk-port-window)
+   (event-queue  :initform nil
+                 :accessor gtk-port/event-queue)
+   (lock         :initform (bordeaux-threads:make-lock "GTK Port Lock")
+                 :reader gtk-port/lock)
+   (condvar      :initform (bordeaux-threads:make-condition-variable :name "GTK Port Condition Variable")
+                 :reader gtk-port/condvar)
+   (stop-request :initform nil
+                 :accessor gtk-port/stop-request)))
 
 (defclass gtk-mirror ()
-  ((window        :initarg :window
-                  :accessor gtk-mirror/window)
-   (image         :initarg :image
-                  :initform (alexandria:required-argument :image)
-                  :accessor gtk-mirror/image)
-   (sheet         :initarg :sheet
-                  :initform (alexandria:required-argument :sheet)
-                  :reader gtk-mirror/sheet)
-   (drawing-area  :initarg :drawing-area
-                  :accessor gtk-mirror/drawing-area)
-   (pango-context :initarg :pango-context
-                  :accessor gtk-mirror/pango-context)))
+  ((window                 :initarg :window
+                           :accessor gtk-mirror/window)
+   (image                  :initarg :image
+                           :initform (alexandria:required-argument :image)
+                           :accessor gtk-mirror/image)
+   (requested-image-width  :initform nil
+                           :accessor gtk-mirror/requested-image-width)
+   (requested-image-height :initform nil
+                           :accessor gtk-mirror/requested-image-height)
+   (sheet                  :initarg :sheet
+                           :initform (alexandria:required-argument :sheet)
+                           :reader gtk-mirror/sheet)
+   (drawing-area           :initarg :drawing-area
+                           :accessor gtk-mirror/drawing-area)
+   (pango-context          :initarg :pango-context
+                           :accessor gtk-mirror/pango-context)
+   (lock                   :initform (bordeaux-threads:make-lock)
+                           :reader gtk-mirror/lock
+                           :documentation "This lock must be held while accessing the requested dimension")))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'gtk-port 'identity))
@@ -51,16 +55,11 @@
 
 (defmethod initialize-instance :after ((port gtk-port) &rest initargs)
   (declare (ignore initargs))
-  (setf (slot-value port 'id) (gensym "GTK-PORT-"))
   ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
   (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread")
   (start-port-event-thread port))
-
-(defmethod print-object ((object gtk-port) stream)
-  (print-unreadable-object (object stream :identity t :type t)
-    (format stream "~S ~S" :id (slot-value object 'id))))
 
 (defclass gtk-renderer-sheet (mirrored-sheet-mixin)
   ())
@@ -88,12 +87,16 @@
   (remhash sheet (gtk-port/sheet-to-mirror port)))
 
 (defun draw-window-content (cr mirror)
-  (alexandria:when-let ((image (gtk-mirror/image mirror)))
+  (let ((image (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
+                 (let ((v (gtk-mirror/image mirror)))
+                   (cairo:cairo-surface-reference v)
+                   v))))
     (cairo:cairo-set-source-surface cr image 0 0)
     (cairo:cairo-rectangle cr 0 0
                            (cairo:cairo-image-surface-get-width image)
                            (cairo:cairo-image-surface-get-height image))
-    (cairo:cairo-fill cr)))
+    (cairo:cairo-fill cr)
+    (cairo:cairo-surface-destroy image)))
 
 (defun make-backing-image (width height)
   (let* ((image (cairo:cairo-image-surface-create :argb32 width height))
@@ -115,21 +118,13 @@
                                        :type :toplevel
                                        :default-width width
                                        :default-height height)))
-            (gtk:gtk-widget-add-events window '(:all-events-mask))
             (let ((drawing-area (make-instance 'gtk:gtk-drawing-area)))
               (gobject:g-signal-connect drawing-area "draw"
                                         (lambda (widget cr)
                                           (declare (ignore widget))
                                           (draw-window-content (gobject:pointer cr) mirror)
-                                          t))
-              (gobject:g-signal-connect window "configure-event"
-                                        (lambda (widget event)
-                                          (process-configure-event port widget event sheet)
-                                          nil))
-              (gobject:g-signal-connect drawing-area "configure-event"
-                                        (lambda (widget event)
-                                          (declare (ignore widget))
-                                          (process-drawing-area-configure event mirror)))
+                                          gdk:+gdk-event-stop+))
+              (create-event-listeners window port sheet mirror)
               (gtk:gtk-container-add window drawing-area)
               (let ((pango-context (gtk:gtk-widget-create-pango-context drawing-area)))
                 (gtk:gtk-widget-show-all window)
@@ -143,7 +138,7 @@
   (let ((mirror (climi::port-lookup-mirror port sheet)))
     (in-gtk-thread ()
       (gtk:gtk-widget-destroy (gtk-mirror/window mirror)))
-    (cairo:cairo-destroy (gtk-mirror/image mirror))))
+    (cairo:cairo-surface-destroy (gtk-mirror/image mirror))))
 
 (defmethod mirror-transformation ((port gtk-port) mirror)
   nil)
@@ -155,13 +150,12 @@
   nil)
 
 (defmethod destroy-port :before ((port gtk-port))
-  (bordeaux-threads:with-lock-held ((gtk-port/stopped-lock port))
+  (bordeaux-threads:with-lock-held ((gtk-port/lock port))
     (setf (gtk-port/stop-request port) t))
   (in-gtk-thread ()
     (gtk:gtk-main-quit)))
 
-(defmethod make-graft
-    ((port gtk-port) &key (orientation :default) (units :device))
+(defmethod make-graft ((port gtk-port) &key (orientation :default) (units :device))
   (make-instance 'gtk-graft
                  :port port :mirror (gensym)
                  :orientation orientation :units units))
@@ -216,6 +210,7 @@
 (defmethod port-force-output ((port gtk-port))
   nil)
 
+#+nil
 (defmethod distribute-event :around ((port gtk-port) event)
   (declare (ignore event))
   nil)
