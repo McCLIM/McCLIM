@@ -64,7 +64,16 @@
                               (declare (ignore widget))
                               (process-destroy-event port sheet)
                               gdk:+gdk-event-propagate+))
-  #+nil
+  (gobject:g-signal-connect window "enter-notify-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-enter-notify-event port event sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "leave-notify-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-leave-notify-event port event sheet)
+                              gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "motion-notify-event"
                             (lambda (widget event)
                               (declare (ignore widget))
@@ -127,6 +136,31 @@
 (defun process-destroy-event (port sheet)
   (push-event-to-queue port (make-instance 'climi::window-destroy-event :sheet sheet)))
 
+(defun process-enter-notify-event (port event sheet)
+  (process-crossing-event (ecase (gdk:gdk-event-crossing-mode event)
+                            ((:normal :ungrab :gtk-ungrab) 'climi::pointer-ungrab-enter-event)
+                            ((:grab :gtk-grab) 'climi::pointer-grab-enter-event))
+                          port event sheet))
+
+(defun process-leave-notify-event (port event sheet)
+  (process-crossing-event (ecase (gdk:gdk-event-crossing-mode event)
+                            ((:normal :ungrab :gtk-ungrab) 'climi::pointer-ungrab-leave-event)
+                            ((:grab :gtk-grab) 'climi::pointer-grab-leave-event))
+                          port event sheet))
+
+(defun process-crossing-event (name port event sheet)
+  (push-event-to-queue port
+                       (make-instance name
+                                      :pointer 0
+                                      :button 0
+                                      :x (gdk:gdk-event-crossing-x event)
+                                      :y (gdk:gdk-event-crossing-y event)
+                                      :graft-x (gdk:gdk-event-crossing-x-root event)
+                                      :graft-y (gdk:gdk-event-crossing-y-root event)
+                                      :sheet sheet
+                                      :modifier-state 0
+                                      :timestamp (incf *event-ts*))))
+
 (defun convert-button-name (gdk-button-id)
   (case gdk-button-id
     (1 clim:+pointer-left-button+)
@@ -158,11 +192,6 @@
     (process-button-event 'pointer-button-release-event port event sheet))
 
 (defun process-button-event (name port event sheet)
-  (log:info "~s: (~s,~s) root (~s,~s) button ~s"
-            name
-            (gdk:gdk-event-button-x event) (gdk:gdk-event-button-y event)
-            (gdk:gdk-event-button-x-root event) (gdk:gdk-event-button-y-root event)
-            (convert-button-name (gdk:gdk-event-button-button event)))
   (push-event-to-queue port
                        (make-instance name
                                       :pointer 0

@@ -5,7 +5,7 @@
    (x :initform 0)
    (y :initform 0)))
 
-(defclass gtk-port (basic-port)
+(defclass gtk-port (climi::standard-port) #+nil(basic-port)
   ((pointer      :accessor port-pointer
                  :initform (make-instance 'gtk-pointer))
    (window       :initform nil
