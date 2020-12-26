@@ -191,6 +191,7 @@
               ;; the other hand, we pass events for TRACKED-SHEET (or
               ;; all events if MULTIPLE-WINDOW is true) to TRACK-EVENT.
               do (cond ((not (or multiple-window
+                                 (and (typep event 'keyboard-event) (keyboard-handler state))
                                  (eql tracked-sheet (event-sheet event))))
                         ;; Event is not intercepted.
                         (handle-event (event-sheet event) event))
