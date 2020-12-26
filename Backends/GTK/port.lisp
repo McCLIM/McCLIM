@@ -6,18 +6,20 @@
    (y :initform 0)))
 
 (defclass gtk-port (climi::standard-port) #+nil(basic-port)
-  ((pointer      :accessor port-pointer
-                 :initform (make-instance 'gtk-pointer))
-   (window       :initform nil
-                 :accessor gtk-port-window)
-   (event-queue  :initform nil
-                 :accessor gtk-port/event-queue)
-   (lock         :initform (bordeaux-threads:make-lock "GTK Port Lock")
-                 :reader gtk-port/lock)
-   (condvar      :initform (bordeaux-threads:make-condition-variable :name "GTK Port Condition Variable")
-                 :reader gtk-port/condvar)
-   (stop-request :initform nil
-                 :accessor gtk-port/stop-request)))
+  ((pointer        :accessor port-pointer
+                   :initform (make-instance 'gtk-pointer))
+   (window         :initform nil
+                   :accessor gtk-port-window)
+   (event-queue    :initform nil
+                   :accessor gtk-port/event-queue)
+   (gtk-lock       :initform (bordeaux-threads:make-lock "GTK Port Lock")
+                   :reader gtk-port/lock)
+   (condvar        :initform (bordeaux-threads:make-condition-variable :name "GTK Port Condition Variable")
+                   :reader gtk-port/condvar)
+   (stop-request   :initform nil
+                   :accessor gtk-port/stop-request)
+   (image-fallback :initarg image-fallback
+                   :reader gtk-port/image-fallback)))
 
 (defclass gtk-mirror ()
   ((window                 :initarg :window
@@ -49,15 +51,21 @@
 (setf (get :gtk :port-type) 'gtk-port)
 (setf (get :gtk :server-path-parser) 'parse-gtk-server-path)
 
-(defun gtk-main-no-traps ()
+(defun call-with-no-traps (fn)
+  #+sbcl
   (sb-int:with-float-traps-masked (:divide-by-zero)
-    (gtk:gtk-main)))
+    (funcall fn))
+  #-sbcl
+  (funcall fn))
+
+(defun gtk-main-no-traps ()
+  (call-with-no-traps #'gtk:gtk-main))
 
 (defmethod initialize-instance :after ((port gtk-port) &rest initargs)
   (declare (ignore initargs))
-  ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
+  (setf (slot-value port 'image-fallback) (cairo:cairo-image-surface-create :argb32 10 10))
   (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread")
   (start-port-event-thread port))
 
@@ -165,18 +173,6 @@
 
 (defmethod make-medium ((port gtk-port) sheet)
   (make-instance 'gtk-medium :sheet sheet))
-
-(defmethod text-style-mapping
-    ((port gtk-port) (text-style text-style) &optional character-set)
-  (declare (ignore port text-style character-set))
-  nil)
-
-(defmethod (setf text-style-mapping) (font-name
-                                      (port gtk-port)
-                                      (text-style text-style)
-                                      &optional character-set)
-  (declare (ignore font-name text-style character-set))
-  nil)
 
 (defmethod graft ((port gtk-port))
   (first (climi::port-grafts port)))

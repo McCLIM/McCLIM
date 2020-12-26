@@ -57,7 +57,7 @@
   (gobject:g-signal-connect window "map"
                             (lambda (widget)
                               (declare (ignore widget))
-                              (process-map-event port sheet)
+                              (process-map-event port window sheet)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "destroy"
                             (lambda (widget)
@@ -125,7 +125,7 @@
                                         :height height
                                         :timestamp (incf *event-ts*)))))
 
-(defun process-map-event (port sheet)
+(defun process-map-event (port window sheet)
   (push-event-to-queue port
                        (make-instance 'window-repaint-event
                                       :timestamp (incf *event-ts*)
