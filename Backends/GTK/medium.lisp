@@ -79,6 +79,19 @@
       (t
        (break)))))
 
+(defun apply-transformation-to-context (cr tr)
+  (unless (eq tr 'clim:+identity-transformation+)
+    (multiple-value-bind (mxx mxy myx myy tx ty)
+        (climi::get-transformation tr)
+      (cffi:with-foreign-object (matrix '(:struct cairo::cairo-matrix-t))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::xx) (coerce mxx 'double-float))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::xy) (coerce mxy 'double-float))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::yx) (coerce myx 'double-float))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::yy) (coerce myy 'double-float))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::x0) (coerce tx 'double-float))
+        (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::y0) (coerce ty 'double-float))
+        (cairo:cairo-set-matrix cr matrix)))))
+
 (defun update-attrs (cr medium)
   (set-clipping-region cr medium)
   (multiple-value-bind (red green blue alpha)
@@ -275,12 +288,11 @@
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (climi::with-transformed-position (tr x1 y1)
-      (climi::with-transformed-position (tr x2 y2)
-        (with-cairo-context (cr medium)
-          (cairo:cairo-move-to cr x1 y1)
-          (cairo:cairo-line-to cr x2 y2)
-          (cairo:cairo-stroke cr))))))
+    (with-cairo-context (cr medium)
+      (apply-transformation-to-context cr tr)
+      (cairo:cairo-move-to cr x1 y1)
+      (cairo:cairo-line-to cr x2 y2)
+      (cairo:cairo-stroke cr))))
 
 (defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
@@ -318,10 +330,12 @@
 
 (defmethod medium-draw-point* ((medium gtk-medium) x y)
   (declare (ignore x y))
+  (break)
   nil)
 
 (defmethod medium-draw-points* ((medium gtk-medium) coord-seq)
   (declare (ignore coord-seq))
+  (break)
   nil)
 
 (defmethod medium-draw-polygon* ((medium gtk-medium) coord-seq closed filled)
@@ -346,6 +360,7 @@
 		   radius-1-dx radius-1-dy
 		   radius-2-dx radius-2-dy
 		   start-angle end-angle filled))
+  (break)
   nil)
 
 (defmethod medium-draw-circle* ((medium gtk-medium)
@@ -353,4 +368,5 @@
 				filled)
   (declare (ignore center-x center-y radius
 		   start-angle end-angle filled))
+  (break)
   nil)
