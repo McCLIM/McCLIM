@@ -498,19 +498,16 @@ is a McCLIM extension.")
 
 ;;; Design decision: Recursive grabs are a no-op.
 
-(defgeneric port-grab-pointer (port pointer sheet &key multiple-window)
+(defgeneric port-grab-pointer (port pointer sheet)
   (:documentation "Grab the specified pointer.")
-  (:method ((port basic-port) pointer sheet &key multiple-window)
-    (declare (ignore pointer sheet multiple-window))
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignore pointer sheet))
     (warn "Port ~A has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet &key multiple-window)
+  (:method :around ((port basic-port) pointer sheet)
     (declare (ignore pointer))
     (unless (port-grabbed-sheet port)
       (when (call-next-method)
-        (setf (port-grabbed-sheet port)
-              (if multiple-window
-                  t
-                  sheet))))))
+        (setf (port-grabbed-sheet port) sheet)))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
   (:documentation "Ungrab the specified pointer.")
@@ -523,14 +520,13 @@ is a McCLIM extension.")
       (setf (port-grabbed-sheet port) nil)
       (call-next-method))))
 
-(defmacro with-pointer-grabbed ((port sheet &key pointer multiple-window)
+(defmacro with-pointer-grabbed ((port sheet &key pointer)
                                 &body body)
   (with-gensyms (the-port the-sheet the-pointer)
     `(let* ((,the-port ,port)
 	    (,the-sheet ,sheet)
 	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
-       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet
-                                   :multiple-window ,multiple-window))
+       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet))
            (warn "Port ~A failed to grab a pointer." ,the-port)
            (unwind-protect
                 (handler-bind

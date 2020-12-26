@@ -167,7 +167,7 @@
                          (transform-position (medium-transformation medium) x y))))))
              (do-it ()
                (with-pointer-grabbed ((port tracked-sheet) tracked-sheet
-                                      :pointer pointer :multiple-window multiple-window)
+                                      :pointer pointer)
                  ;; Synthesize a pointer motion event for the current pointer
                  ;; position so that appropriate handlers are called even if no
                  ;; event immediately follows the INVOKE-TRACKING-POINTER call.
