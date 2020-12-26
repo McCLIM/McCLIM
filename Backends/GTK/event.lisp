@@ -1,5 +1,16 @@
 (in-package :clim-gtk)
 
+(defun start-port-event-thread (port)
+  (bordeaux-threads:make-thread (lambda ()
+                                  (with-simple-restart (restart-event-loop "Restart the GTK port event loop")
+                                    (loop
+                                      for event = (read-event-from-queue-or-wait port)
+                                      until (bordeaux-threads:with-lock-held ((gtk-port/lock port))
+                                              (gtk-port/stop-request port))
+                                      when event
+                                        do (distribute-event port event))))
+                                :name "GTK Port Event Thread"))
+
 (defun push-event-to-queue (port event)
   (bordeaux-threads:with-lock-held ((gtk-port/lock port))
     (push event (gtk-port/event-queue port))
@@ -43,11 +54,31 @@
                             (lambda (widget event)
                               (process-configure-event port widget event sheet mirror)
                               gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "map"
+                            (lambda (widget)
+                              (declare (ignore widget))
+                              (process-map-event port sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "destroy"
+                            (lambda (widget)
+                              (declare (ignore widget))
+                              (process-destroy-event port sheet)
+                              gdk:+gdk-event-propagate+))
   #+nil
   (gobject:g-signal-connect window "motion-notify-event"
                             (lambda (widget event)
                               (declare (ignore widget))
                               (process-mouse-motion-event port event sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "button-press-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-button-press-event port event sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "button-release-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-button-release-event port event sheet)
                               gdk:+gdk-event-propagate+))
   (gtk:gtk-widget-add-events window '(:all-events-mask)))
 
@@ -82,12 +113,26 @@
                                         :x (gdk:gdk-event-configure-x event)
                                         :y (gdk:gdk-event-configure-y event)
                                         :width width
-                                        :height height)))
+                                        :height height
+                                        :timestamp (incf *event-ts*)))))
+
+(defun process-map-event (port sheet)
   (push-event-to-queue port
                        (make-instance 'window-repaint-event
                                       :timestamp (incf *event-ts*)
                                       :sheet sheet
-                                      :region clim:+everywhere+)))
+                                      :region clim:+everywhere+
+                                      :timestamp (incf *event-ts*))))
+
+(defun process-destroy-event (port sheet)
+  (push-event-to-queue port (make-instance 'climi::window-destroy-event :sheet sheet)))
+
+(defun convert-button-name (gdk-button-id)
+  (case gdk-button-id
+    (1 clim:+pointer-left-button+)
+    (2 clim:+pointer-middle-button+)
+    (3 clim:+pointer-right-button+)
+    ((t) clim:+pointer-left-button+)))
 
 (defun process-mouse-motion-event (port event sheet)
   (let ((x (gdk:gdk-event-motion-x event))
@@ -106,13 +151,26 @@
                                         :modifier-state 0
                                         :timestamp (incf *event-ts*)))))
 
-(defun start-port-event-thread (port)
-  (bordeaux-threads:make-thread (lambda ()
-                                  (with-simple-restart (restart-event-loop "Restart the GTK port event loop")
-                                    (loop
-                                      for event = (read-event-from-queue-or-wait port)
-                                      until (bordeaux-threads:with-lock-held ((gtk-port/lock port))
-                                              (gtk-port/stop-request port))
-                                      when event
-                                        do (distribute-event port event))))
-                                :name "GTK Port Event Thread"))
+(defun process-button-press-event (port event sheet)
+  (process-button-event 'pointer-button-press-event port event sheet))
+
+(defun process-button-release-event (port event sheet)
+    (process-button-event 'pointer-button-release-event port event sheet))
+
+(defun process-button-event (name port event sheet)
+  (log:info "~s: (~s,~s) root (~s,~s) button ~s"
+            name
+            (gdk:gdk-event-button-x event) (gdk:gdk-event-button-y event)
+            (gdk:gdk-event-button-x-root event) (gdk:gdk-event-button-y-root event)
+            (convert-button-name (gdk:gdk-event-button-button event)))
+  (push-event-to-queue port
+                       (make-instance name
+                                      :pointer 0
+                                      :button (convert-button-name (gdk:gdk-event-button-button event))
+                                      :x (gdk:gdk-event-button-x event)
+                                      :y (gdk:gdk-event-button-y event)
+                                      :graft-x (gdk:gdk-event-button-x-root event)
+                                      :graft-y (gdk:gdk-event-button-y-root event)
+                                      :sheet sheet
+                                      :modifier-state 0
+                                      :timestamp (incf *event-ts*))))

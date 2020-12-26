@@ -140,6 +140,9 @@
       (gtk:gtk-widget-destroy (gtk-mirror/window mirror)))
     (cairo:cairo-surface-destroy (gtk-mirror/image mirror))))
 
+(defmethod climi::port-lookup-mirror ((port gtk-port) (sheet null))
+  nil)
+
 (defmethod mirror-transformation ((port gtk-port) mirror)
   nil)
 

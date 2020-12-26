@@ -232,13 +232,13 @@
     (when (characterp string)
       (setq string (make-string 1 :initial-element string)))
     (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
-      ;; missing stuff
       (multiple-value-bind (transformed-x transformed-y)
           (transform-position merged-transform x y)
+        #+nil (log:info "displaying string at (~s,~s): ~s" transformed-x transformed-y fixed-string)
         (with-cairo-context (cr medium)
           (let ((layout (pango:pango-cairo-create-layout cr)))
             (pango:pango-layout-set-text layout fixed-string)
-            (cairo:cairo-move-to cr x y)
+            (cairo:cairo-move-to cr transformed-x transformed-y)
             (pango:pango-cairo-show-layout cr layout)))))))
 
 #+nil
@@ -325,8 +325,18 @@
   nil)
 
 (defmethod medium-draw-polygon* ((medium gtk-medium) coord-seq closed filled)
-  (declare (ignore coord-seq closed filled))
-  nil)
+  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+    (with-cairo-context (cr medium)
+      (iterate-over-seq-pairs (x y coord-seq)
+          (climi::with-transformed-position (tr x y)
+            (cairo:cairo-move-to cr x y))
+        (climi::with-transformed-position (tr x y)
+          (cairo:cairo-line-to cr x y)))
+      (when closed
+        (cairo:cairo-close-path cr))
+      (if filled
+          (cairo:cairo-fill cr)
+          (cairo:cairo-stroke cr)))))
 
 (defmethod medium-draw-ellipse* ((medium gtk-medium) center-x center-y
 				 radius-1-dx radius-1-dy
