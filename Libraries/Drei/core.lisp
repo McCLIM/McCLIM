@@ -1,15 +1,17 @@
-;;; -*- Mode: Lisp; Package: DREI-CORE -*-
-
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006,2007 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2007 Andy Hefner <ahefner@common-lisp.net>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Core functionality of Drei.
 
 (in-package #:drei-core)
 

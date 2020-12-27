@@ -1,6 +1,12 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; Copyright (c) 2005, Aleksandar Bakic (a_bakic@yahoo.com)
-;;; 
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; System definition for the automaton system.
 
 (defsystem "automaton"
   :components

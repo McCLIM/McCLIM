@@ -1,28 +1,16 @@
-;;; -*- Mode: Lisp; Package: AUTOMATON -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2005-2007 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
+;;;  (c) copyright 2005-2007 Aleksandar Bakic <a_bakic@yahoo.com>
 ;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
 ;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders M/oller
 ;;; - Some comments have been copied verbatim from the original code.
-
+;;;
 ;;; Regular expressions are built from the following abstract syntax:
-
+;;;
 ;;; regexp      ::=     unionexp
 ;;; unionexp    ::=     interexp | unionexp     (union)
 ;;;                   |         interexp
@@ -57,7 +45,7 @@
 ;;;                   |         <n-m>   (numerical interval)    [OPTIONAL]
 ;;; charexp     ::=     <Unicode character>     (a single non-reserved character)
 ;;;                   |         \ <Unicode character>   (a single character)
-
+;;;
 ;;; The productions marked [OPTIONAL] are only allowed if specified by
 ;;; the syntax flags passed to the string-regexp constructor. The
 ;;; reserved characters used in the (enabled) syntax must be escaped

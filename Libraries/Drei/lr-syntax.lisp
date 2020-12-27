@@ -1,29 +1,15 @@
-;; -*- Mode: Lisp; Package: DREI-LR-SYNTAX -*-
-
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-;;;  (c) copyright 2007 by
-;;;           John Q Splittist (splittist@gmail.com)
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;;  (c) copyright 2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2007 John Q Splittist <splittist@gmail.com>
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-;;; Base lexing and parsing functionality of
-;;; syntax modules for analysing languages
+;;; Base lexing and parsing functionality of syntax modules for
+;;; analyzing languages
 
 (in-package #:drei-lr-syntax)
 
