@@ -20,7 +20,7 @@
 
 ;;; Implementation of rectangle editing.
 
-(in-package :drei-core)
+(in-package #:drei-core)
 
 (defvar *killed-rectangle* nil
   "The killed rectangle as a list of lines.")
@@ -126,7 +126,7 @@ inhabited by it with the contents of `string'."
   "Yank the killed rectangle, positioning the upper left corner at
 current point."
   (let ((insert-column (column-number mark)))
-    (dolist (line rectangle) 
+    (dolist (line rectangle)
       (move-to-column mark insert-column t)
       (insert-sequence mark line)
       (unless (forward-line mark (syntax view) 1 nil)

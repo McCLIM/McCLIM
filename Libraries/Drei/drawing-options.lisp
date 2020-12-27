@@ -21,7 +21,7 @@
 ;;; A bunch of predefined drawing options, styles and faces to make
 ;;; syntax highlighting rules more elegant.
 
-(in-package :drei)
+(in-package #:drei)
 
 ;;; Some general styles.
 

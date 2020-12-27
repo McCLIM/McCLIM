@@ -31,7 +31,7 @@
 ;;; Commands that provide access to core DREI features, but are not
 ;;; strictly necessary.
 
-(in-package :drei-commands)
+(in-package #:drei-commands)
 
 (define-command (com-overwrite-mode :name t :command-table editing-table) ()
   "Toggle overwrite mode for the current mode.

@@ -22,10 +22,8 @@
 
 ;;; Functionality designed to aid development of Common Lisp code.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Compiler note hyperlinking
 
 (defun make-compiler-note (note-list)
@@ -49,7 +47,7 @@
    (location :initarg :location :initform nil :accessor location)
    (references :initarg :references :initform nil :accessor references)
    (short-message :initarg :short-message :initform nil :accessor short-message))
-  (:documentation "The base for all compiler-notes."))
+  (:documentation "The base for all compiler notes."))
 
 (defclass error-compiler-note (compiler-note) ())
 
@@ -61,8 +59,6 @@
 
 (defclass note-compiler-note (compiler-note) ())
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Code interrogation/form analysis
 
 (defgeneric parameter-match-p (parameter arg-indices &key &allow-other-keys)
@@ -325,7 +321,7 @@ the operator that has the argument list `arglist'."))
                               (arg-indices list))
   (let ((keyword-parameters (keyword-parameters lambda-list)))
     (when (and arg-indices
-	       (null (rest arg-indices))
+               (null (rest arg-indices))
                keyword-parameters
                (>= (caar arg-indices) (min-arg-index (first keyword-parameters))))
       (mapcar #'keyword-name keyword-parameters))))
@@ -625,8 +621,6 @@ to nil."
                                                                   (list this-operand-indices-sym)))))
                                      ,@body)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Form trait definitions
 
 (define-form-traits (make-instance 'class-name))
@@ -644,8 +638,6 @@ to nil."
     :no-smart-arglist t)
 (define-form-traits (define-application-frame t (&rest class-name)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Parameter hinting
 
 (defgeneric operator-for-display (operator)
@@ -747,11 +739,9 @@ retrieved for the operator, nothing will be displayed."
   (with-code-insight mark syntax (:operator operator
                                   :this-operand-indices this-operand-indices
                                   :operands operands)
-    (when (valid-operator-p operator) 
+    (when (valid-operator-p operator)
       (show-arglist-silent syntax operator this-operand-indices operands))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Symbol completion
 
 ;;; The following helper stuff is from Swank.
@@ -903,8 +893,6 @@ the function will return NIL."
                                    :completion-finder #'find-fuzzy-completions
                                    :complete-blank complete-blank))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Evaluation and compilation
 
 (defun eval-string (syntax string)
@@ -1172,7 +1160,7 @@ can be found, false otherwise."
               (t (values nil nil))))
       (values nil nil)))
 
-;; Cannot recognize the common define-FOO-command macros.
+;;; Cannot recognize the common define-FOO-command macros.
 (define-undefiner (define-command "command")
   ((syntax form)
    (multiple-value-bind (name success) (get-listed-name syntax form)

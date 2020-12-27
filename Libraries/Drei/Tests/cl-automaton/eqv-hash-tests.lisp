@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite eqv-hash-tests :description "The test suite for
 CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
@@ -39,8 +39,8 @@ CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (test htref.test-1              ; (eqv i1 i2), (= (hash i1) (hash i2))
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 1 :slot2 2))
-	(i2 (make-instance 'foo :slot1 1 :slot2 3)))
+        (i1 (make-instance 'foo :slot1 1 :slot2 2))
+        (i2 (make-instance 'foo :slot1 1 :slot2 3)))
     (setf (htref ght i1) i1)
     (setf (htref ght i2) i2)
     (is (= (cnt ght) 1))
@@ -49,8 +49,8 @@ CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (test htref.test-2        ; (not (eqv i1 i2)), (= (hash i1) (hash i2))
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 2))
-	(i2 (make-instance 'foo :slot1 3)))
+        (i1 (make-instance 'foo :slot1 2))
+        (i2 (make-instance 'foo :slot1 3)))
     (setf (htref ght i1) i1)
     (setf (htref ght i2) i2)
     (is (= (cnt ght) 2))
@@ -59,8 +59,8 @@ CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (test htref.test-3       ; (not (eqv i1 i2)), (/= (hash i1) (hash i2))
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 2))
-	(i2 (make-instance 'foo :slot1 4)))
+        (i1 (make-instance 'foo :slot1 2))
+        (i2 (make-instance 'foo :slot1 4)))
     (setf (htref ght i1) i1)
     (setf (htref ght i2) i2)
     (is (= (cnt ght) 2))
@@ -69,19 +69,19 @@ CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (test htref.test-4
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 1 :slot2 2))
-	(i2 (make-instance 'foo :slot1 1 :slot2 3)))
+        (i1 (make-instance 'foo :slot1 1 :slot2 2))
+        (i2 (make-instance 'foo :slot1 1 :slot2 3)))
     (setf (htref ght i1) i1)
     (is (= (cnt ght) 1))
     (is (eq (htref ght i2) i1))))
 
 (test htref.test-5
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 1 :slot2 2))
-	(i2 (make-instance 'foo :slot1 1 :slot2 3)))
+        (i1 (make-instance 'foo :slot1 1 :slot2 2))
+        (i2 (make-instance 'foo :slot1 1 :slot2 3)))
     (setf (htref ght i1) i1)
     (multiple-value-bind (v vp)
-	(htref ght i2)
+        (htref ght i2)
       (declare (ignore v))
       (is (= (cnt ght) 1))
       (is-true vp))))
@@ -98,20 +98,20 @@ CL-AUTOMATON eqv-hash related tests." :in automaton-tests)
 
 (test htref.test-7
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 2))
-	(i2 (make-instance 'foo :slot1 3)))
+        (i1 (make-instance 'foo :slot1 2))
+        (i2 (make-instance 'foo :slot1 3)))
     (is (eq (setf (htref ght i1) i2) i2))
     (is (= (cnt ght) 1))))
 
 (test htadd.test-1
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 2)))
+        (i1 (make-instance 'foo :slot1 2)))
     (is-true (htadd ght i1))
     (is-true (htref ght i1))))
 
 (test htadd.test-2
   (let ((ght (make-generalized-hash-table +foo-intention+))
-	(i1 (make-instance 'foo :slot1 2)))
+        (i1 (make-instance 'foo :slot1 2)))
     (multiple-value-bind (a b)
         (htref ght i1)
       (is-false a)

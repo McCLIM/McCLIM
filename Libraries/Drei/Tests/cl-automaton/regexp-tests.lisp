@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite regexp-tests :description "The test suite for
 CL-AUTOMATON regexp related tests." :in automaton-tests)

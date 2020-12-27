@@ -24,14 +24,12 @@
 
 ;;; Package definitions for the DREI editing component.
 
-(in-package :cl-user)
-
-(defpackage :drei-buffer
-  (:use :clim-lisp :flexichain :binseq :esa-utils)
+(cl:defpackage #:drei-buffer
+  (:use #:clim-lisp #:flexichain #:binseq #:esa-utils)
   ;; Kludge to remove symbol conflicts.
 
-  (:import-from :esa-io :buffer)
-  (:import-from :esa :esa-command-table)
+  (:import-from #:esa-io #:buffer)
+  (:import-from #:esa #:esa-command-table)
   (:export #:buffer #:standard-buffer
            #:mark #:left-sticky-mark #:right-sticky-mark
            #:standard-left-sticky-mark #:standard-right-sticky-mark
@@ -69,15 +67,15 @@
 package is quite low-level, not syntax-aware, not CLIM-aware and
 not user-oriented at all."))
 
-(defpackage :drei-undo
-  (:use :clim-lisp :drei-buffer :flexichain)
+(cl:defpackage #:drei-undo
+  (:use #:clim-lisp #:drei-buffer #:flexichain)
   (:export #:no-more-undo
            #:undo-tree #:standard-undo-tree
            #:undo-record #:standard-undo-record
            #:add-undo #:flip-undo-record #:undo #:redo))
 
-(defpackage :drei-kill-ring
-  (:use :clim-lisp :flexichain)
+(cl:defpackage #:drei-kill-ring
+  (:use #:clim-lisp #:flexichain)
   (:export #:kill-ring #:kill-ring-chain #:kill-ring-cursor
            #:empty-kill-ring
            #:kill-ring-length #:kill-ring-max-size
@@ -88,8 +86,8 @@ not user-oriented at all."))
            #:*kill-ring*)
   (:documentation "An implementation of a kill ring."))
 
-(defpackage :drei-base
-  (:use :clim-lisp :drei-buffer :drei-kill-ring :esa-buffer :esa-utils)
+(cl:defpackage #:drei-base
+  (:use #:clim-lisp #:drei-buffer #:drei-kill-ring #:esa-buffer #:esa-utils)
   (:export #:as-region
            #:as-full-region
            #:as-offsets
@@ -141,14 +139,14 @@ syntax-aware, and are thus limited in what they can do. They
 percieve the buffer as little more than a sequence of
 characters."))
 
-(defpackage :drei-abbrev
-  (:use :clim-lisp :clim :drei-buffer :drei-base)
+(cl:defpackage #:drei-abbrev
+  (:use #:clim-lisp #:clim #:drei-buffer #:drei-base)
   (:export #:abbrev-expander #:dictionary-abbrev-expander #:dictionary
            #:expand-abbrev #:abbrev-mixin #:possibly-expand-abbrev
            #:add-abbrev))
 
-(defpackage :drei-syntax
-  (:use :clim-lisp :clim :drei-buffer :drei-base :flexichain :esa-utils)
+(cl:defpackage #:drei-syntax
+  (:use #:clim-lisp #:clim #:drei-buffer #:drei-base #:flexichain #:esa-utils)
   (:export #:syntax #:syntax-command-tables #:updater-fns #:update-parse #:syntaxp
            #:define-syntax #:*default-syntax*
            #:syntax-command-table #:additional-command-tables #:define-syntax-command-table
@@ -185,15 +183,15 @@ characters."))
   can be used to implement higher-level operations on buffer
   contents."))
 
-(defpackage :drei
-  (:use :clim-lisp :clim-sys :clim :drei-buffer :drei-base :drei-abbrev
-        :drei-syntax :flexichain :drei-undo :esa-buffer :esa-io :esa
-        :esa-utils :drei-kill-ring)
-  (:import-from :climi :change-stream-space-requirements)
+(cl:defpackage #:drei
+  (:use #:clim-lisp #:clim-sys #:clim #:drei-buffer #:drei-base #:drei-abbrev
+        #:drei-syntax #:flexichain #:drei-undo #:esa-buffer #:esa-io #:esa
+        #:esa-utils #:drei-kill-ring)
+  (:import-from #:climi #:change-stream-space-requirements)
   (:export #:drei-buffer #:needs-saving
            #:filepath #:file-saved-p #:file-write-time
            #:read-only-p #:buffer-read-only
-           
+
            #:display-drei #:display-drei-pane #:display-drei-area #:full-redisplay
            #:offset-to-screen-position
            #:page-down #:page-up
@@ -209,7 +207,7 @@ characters."))
            #:delete-record
            #:compound-record
            #:with-undo #:clear-undo-history
-           
+
            #:drei-buffer
 
            ;; Signals and conditions.
@@ -220,20 +218,20 @@ characters."))
 
            ;; Views and their facilities.
            #:drei-view #:modified-p #:no-cursors
-           
+
            #:drei-buffer-view #:buffer #:top #:bot #:buffer-view-p
            #:lines #:single-line-mixin
            #:buffer-line #:start-mark #:end-mark #:line-length #:chunks
            #:line-containing-offset #:offset-in-line-p
            #:buffer-view-pump-state-for-offset
            #:buffer-view-stroke-pump
-           
+
            #:drei-syntax-view #:syntax #:syntax-view-p
            #:pump-state-for-offset-with-syntax
            #:stroke-pump-with-syntax
-           
+
            #:point-mark-view #:point-mark-view-p
-           
+
            #:textual-drei-syntax-view
            #:tab-space-count #:space-width #:tab-width #:use-tabs
            #:auto-fill-mode #:auto-fill-column
@@ -255,7 +253,7 @@ characters."))
            #:clear-redisplay-information
            #:clone-view
            #:make-syntax-for-view
-           
+
            ;; DREI command tables.
            #:comment-table #:deletion-table #:editing-table
            #:fill-table #:indent-table #:marking-table #:case-table
@@ -279,7 +277,7 @@ characters."))
            #:drawing-options-equal #:+default-drawing-options+
            #:stroke-start-offset #:stroke-end-offset
            #:stroke-drawing-options
-           
+
            #:pump-state-for-offset #:stroke-pump
            #:object-drawer #:*maximum-chunk-size*
 
@@ -318,7 +316,7 @@ characters."))
            #:mark-cursor #:active #:mark
            #:active-ink #:inactive-ink #:ink
 
-           
+
            #:in-focus-p
 
            ;; Info functions.
@@ -339,8 +337,8 @@ characters."))
            #:define-mode #:define-view-mode #:define-syntax-mode
            #:define-mode-toggle-commands))
 
-(defpackage :drei-motion
-  (:use :clim-lisp :drei-base :drei-buffer :drei-syntax)
+(cl:defpackage #:drei-motion
+  (:use #:clim-lisp #:drei-base #:drei-buffer #:drei-syntax)
   (:export #:forward-to-word-boundary #:backward-to-word-boundary
            #:define-motion-fns
            #:beep-limit-action #:revert-limit-action #:error-limit-action
@@ -413,15 +411,15 @@ defined by the syntax of the buffer, that the mark they are
 manipulating belong to. These functions are also directly used to
 implement the motion commands."))
 
-(defpackage :drei-editing
-  (:use :clim-lisp :drei-base :drei-buffer
-        :drei-syntax :drei-motion :drei :drei-kill-ring)
+(cl:defpackage #:drei-editing
+  (:use #:clim-lisp #:drei-base #:drei-buffer
+        #:drei-syntax #:drei-motion #:drei #:drei-kill-ring)
   (:export #:forward-delete-object
            #:backward-delete-object
            #:forward-kill-object
            #:backward-kill-object
            #:transpose-objects
-           
+
            ;; Lines
            #:forward-delete-line #:backward-delete-line
            #:forward-kill-line #:backward-kill-line
@@ -429,7 +427,7 @@ implement the motion commands."))
            #:forward-delete-line-start #:backward-delete-line-start
            #:forward-kill-line-start #:backward-kill-line-start
            #:transpose-line-starts
-           
+
            ;; Words
            #:forward-delete-word #:backward-delete-word
            #:forward-kill-word #:backward-kill-word
@@ -439,7 +437,7 @@ implement the motion commands."))
            #:forward-delete-page #:backward-delete-page
            #:forward-kill-page #:backward-kill-page
            #:transpose-pages
-           
+
            ;; Expressions
            #:forward-delete-expression #:backward-delete-expression
            #:forward-kill-expression #:backward-kill-expression
@@ -520,40 +518,40 @@ used to implement the editing commands."))
   (:documentation "Implementation of much syntax-aware, yet no
 syntax-specific, core functionality of Drei."))
 
-(defpackage :drei-fundamental-syntax
-  (:use :clim-lisp :clim :drei-buffer :drei-base 
-        :drei-syntax :flexichain :drei :drei-core :esa-utils)
+(cl:defpackage #:drei-fundamental-syntax
+  (:use #:clim-lisp #:clim #:drei-buffer #:drei-base
+        #:drei-syntax #:flexichain #:drei #:drei-core #:esa-utils)
   (:export #:fundamental-syntax)
   (:documentation "Implementation of the basic syntax module for
 editing plain text."))
 
-(defpackage :drei-lr-syntax
-  (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base
-        :drei-syntax :drei :drei-core :drei-fundamental-syntax
-        :esa-utils)
+(cl:defpackage #:drei-lr-syntax
+  (:use #:clim-lisp #:clim #:clim-extensions #:drei-buffer #:drei-base
+        #:drei-syntax #:drei #:drei-core #:drei-fundamental-syntax
+        #:esa-utils)
   (:export #:lr-syntax-mixin #:stack-top #:initial-state
-	   #:skip-inter #:lex #:define-lexer-state
-	   #:lexer-toplevel-state #:lexer-error-state
-	   #:parser-symbol #:parent #:children
-	   #:start-offset #:end-offset #:parser-state
-	   #:preceding-parse-tree
+           #:skip-inter #:lex #:define-lexer-state
+           #:lexer-toplevel-state #:lexer-error-state
+           #:parser-symbol #:parent #:children
+           #:start-offset #:end-offset #:parser-state
+           #:preceding-parse-tree
            #:literal-object-mixin
-	   #:define-parser-state
-	   #:lexeme #:nonterminal
-	   #:action #:new-state #:done
-	   #:reduce-fixed-number #:reduce-until-type #:reduce-all 
-	   #:error-state #:error-reduce-state
+           #:define-parser-state
+           #:lexeme #:nonterminal
+           #:action #:new-state #:done
+           #:reduce-fixed-number #:reduce-until-type #:reduce-all
+           #:error-state #:error-reduce-state
            #:do-parse-symbols-forward
            #:parser-symbol-containing-offset
            #:define-syntax-highlighting-rules
            #:syntax-highlighting-rules)
   (:documentation "Underlying LR parsing functionality."))
 
-(defpackage :drei-lisp-syntax
-  (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
-        :drei-syntax :drei-fundamental-syntax :flexichain :drei
-        :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
-	:drei-lr-syntax :drei-kill-ring)
+(cl:defpackage #:drei-lisp-syntax
+  (:use #:clim-lisp #:clim #:clim-extensions #:drei-buffer #:drei-base
+        #:drei-syntax #:drei-fundamental-syntax #:flexichain #:drei
+        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core #:esa-io
+        #:drei-lr-syntax #:drei-kill-ring)
   (:export #:lisp-syntax #:lisp-table
            #:lisp-string
            #:edit-definition
@@ -659,21 +657,21 @@ editing plain text."))
   (:documentation "Implementation of the syntax module used for
 editing Common Lisp code."))
 
-(defpackage :drei-commands
-  (:use :clim-lisp :drei-base :drei-buffer
-        :drei-syntax :drei-motion :drei :drei-kill-ring
-        :drei-editing :clim :drei-abbrev :esa :esa-buffer :esa-io
-        :esa-utils :drei-core :drei-undo)
+(cl:defpackage #:drei-commands
+  (:use #:clim-lisp #:drei-base #:drei-buffer
+        #:drei-syntax #:drei-motion #:drei #:drei-kill-ring
+        #:drei-editing #:clim #:drei-abbrev #:esa #:esa-buffer #:esa-io
+        #:esa-utils #:drei-core #:drei-undo)
   (:export #:define-motion-commands
            #:define-deletion-commands
            #:define-editing-commands)
   (:documentation "Command definitions that are not tied to
 specific syntaxes."))
 
-(defpackage :drei-user
-  (:use :clim-lisp :clim :clim-extensions :drei-buffer :drei-base 
-        :drei-syntax :drei-fundamental-syntax :flexichain :drei
-        :drei-motion :drei-editing :esa-utils :esa :drei-core :esa-io
-        :drei-commands)
+(cl:defpackage #:drei-user
+  (:use #:clim-lisp #:clim #:clim-extensions #:drei-buffer #:drei-base
+        #:drei-syntax #:drei-fundamental-syntax #:flexichain #:drei
+        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core #:esa-io
+        #:drei-commands)
   (:documentation "The package intended for user-made
 customizations and extensions."))

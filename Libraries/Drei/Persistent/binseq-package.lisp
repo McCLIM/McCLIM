@@ -18,8 +18,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage :binseq
-  (:use :common-lisp)
+(cl:defpackage #:binseq
+  (:use #:common-lisp)
   (:export
    #:binseq-p
    #:list-binseq

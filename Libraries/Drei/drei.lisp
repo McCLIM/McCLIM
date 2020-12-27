@@ -57,10 +57,8 @@
 ;;;
 ;;; * Drei Erhbar Emacs Ist
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Convenience stuff.
 
 (defgeneric drei-instance-of (object)
@@ -115,8 +113,6 @@ instances."))
   "Return the syntax of the current buffer."
   (syntax (current-view)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Isearch
 
 (defclass isearch-state ()
@@ -126,8 +122,6 @@ instances."))
    (search-success-p :initarg :search-success-p :accessor search-success-p)
    (targets :initarg :targets :accessor targets )))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Query replace
 
 (defclass query-replace-state ()
@@ -136,8 +130,6 @@ instances."))
    (targets :initarg :targets :accessor targets)
    (occurences :initform 0 :accessor occurrences)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei command tables.
 
 ;;; Commenting.
@@ -229,8 +221,6 @@ and specialise a method for it."
           (when (use-editor-commands-p (current-view))
             '(editor-table))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The basic Drei class.
 
 (defclass drei ()
@@ -378,7 +368,7 @@ the Drei instance."
 (defmethod command-for-unbound-gestures ((drei drei) gestures)
   (command-for-unbound-gestures (view drei) gestures))
 
-;; Main redisplay entry point.
+;;; Main redisplay entry point.
 (defgeneric display-drei (drei &key redisplay-minibuffer)
   (:documentation "`Drei' must be an object of type `drei' and
 `frame' must be a CLIM frame containing the editor pane of
@@ -411,8 +401,6 @@ error of type `no-available-minibuffer'."
   (unless *minibuffer*
     (no-available-minibuffer drei-instance)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Some standard building block machinery.
 
 (defgeneric handle-drei-condition (drei condition)

@@ -23,14 +23,12 @@
 ;;; ASDF system definition for Drei's test suite. We use the excellent
 ;;; FiveAM test framework.
 
-(in-package :common-lisp-user)
-
-(defpackage :drei-tests
-  (:use :clim-lisp :it.bese.fiveam :drei-buffer :drei-base :drei-motion
-        :drei-editing :automaton :eqv-hash :drei-core :drei-kill-ring
-        :drei-syntax :drei :esa :esa-utils :clim :drei-lisp-syntax :drei-undo)
-  (:shadowing-import-from :it.bese.fiveam #:test)
-  (:shadowing-import-from :automaton #:run)
-  (:shadowing-import-from :drei-lisp-syntax #:form)
+(cl:defpackage #:drei-tests
+  (:use #:clim-lisp #:it.bese.fiveam #:drei-buffer #:drei-base #:drei-motion
+        #:drei-editing #:automaton #:eqv-hash #:drei-core #:drei-kill-ring
+        #:drei-syntax #:drei #:esa #:esa-utils #:clim #:drei-lisp-syntax #:drei-undo)
+  (:shadowing-import-from #:it.bese.fiveam #:test)
+  (:shadowing-import-from #:automaton #:run)
+  (:shadowing-import-from #:drei-lisp-syntax #:form)
   (:export #:run-tests
            #:*run-self-compilation-test*))

@@ -19,7 +19,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite motion-tests :description "The test suite for
 DREI-MOTION related tests." :in drei-tests)
@@ -244,7 +244,7 @@ Preferably a bit faster."))
                (beginning-of-buffer m0r)
                (is-true (,forward m0r syntax 2 nil))
                (is (= (offset m0r) ,forward-begin-offset2))
-                 
+
                (is-true (,forward m1l syntax ,unit-count nil))
                (is (= (offset m1l) ,goal-forward-offset))
                (is-true (,forward m1r syntax ,unit-count nil))
@@ -268,7 +268,7 @@ Preferably a bit faster."))
               (is (= (offset m0l) 0))
               (is-false (,backward m0r syntax 2 nil))
               (is (= (offset m0r) 0))
-                 
+
               (is-true (,backward m1l syntax ,unit-count nil))
               (is (= (offset m1l) ,goal-backward-offset))
               (is-true (,backward m1r syntax ,unit-count nil))

@@ -22,10 +22,8 @@
 ;;; Drei "modes", loosely equivalent to Emacs minor modes. They modify
 ;;; aspects of the behavior of a view or syntax.
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The general mode protocol and macros.
 
 (defvar *global-modes* '()

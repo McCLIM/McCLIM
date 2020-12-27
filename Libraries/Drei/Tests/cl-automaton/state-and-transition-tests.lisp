@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite state-and-transition-tests :description "The test
 suite for CL-AUTOMATON state-and-transition related tests." :in automaton-tests)
@@ -77,15 +77,15 @@ suite for CL-AUTOMATON state-and-transition related tests." :in automaton-tests)
 
 (test sstep.test-1
   (let* ((s (make-instance 'automaton::state))
-	 (tr (make-instance 'automaton::transition
-			    :minc (char-code #\a) :maxc (char-code #\b) :to s)))
+         (tr (make-instance 'automaton::transition
+                            :minc (char-code #\a) :maxc (char-code #\b) :to s)))
     (htadd (automaton::transitions s) tr)
     (is (eq (automaton::sstep s #\a) s))))
 
 (test sstep.test-2
   (let* ((s (make-instance 'automaton::state))
-	 (tr (make-instance 'automaton::transition
-			    :minc (char-code #\a) :maxc (char-code #\b) :to s)))
+         (tr (make-instance 'automaton::transition
+                            :minc (char-code #\a) :maxc (char-code #\b) :to s)))
     (htadd (automaton::transitions s) tr)
     (is-false (automaton::sstep s #\c))))
 

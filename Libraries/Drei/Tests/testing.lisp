@@ -20,10 +20,10 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
-;; Define some stuff to ease the pain of writing repetitive test
-;; cases. Also provide global test-suite and test-running entry point.
+;;; Define some stuff to ease the pain of writing repetitive test
+;;; cases. Also provide global test-suite and test-running entry point.
 
 (defclass delegating-standard-buffer (delegating-buffer) ()
   (:default-initargs :implementation (make-instance 'standard-buffer)))

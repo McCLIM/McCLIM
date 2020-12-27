@@ -22,7 +22,7 @@
 
 ;;; Derived from dk.brics.automaton v1.8.1, (c) 2001-2005 by Anders M/oller
 
-(in-package :automaton)
+(in-package #:automaton)
 
 (defconstant +min-char-code+ 0)
 (defconstant +max-char-code+ (1- char-code-limit))
@@ -42,25 +42,25 @@
   (multiple-value-bind (se se-p)
       (gethash (cons s1 s2) *state-ht*) ; TODO: consider (cons s2 s1), too
     (if se-p
-	se
-	(setf (gethash (cons s1 s2) *state-ht*) t ; bound recursion temporarily
-	      (gethash (cons s1 s2) *state-ht*)
-	      (and (eq (accept s1) (accept s2))
-		   (transitions-equal (transitions s1) (transitions s2)))))))
+        se
+        (setf (gethash (cons s1 s2) *state-ht*) t ; bound recursion temporarily
+              (gethash (cons s1 s2) *state-ht*)
+              (and (eq (accept s1) (accept s2))
+                   (transitions-equal (transitions s1) (transitions s2)))))))
 
 (declaim (special *to-first*))
 (defun transitions-equal (ts1 ts2) ; for testing, assuming minimization
   (let* ((*to-first* nil)
-	 (tss1 (sort (with-ht-collect (t1 nil) ts1 t1) #'transition<))
-	 (tss2 (sort (with-ht-collect (t2 nil) ts2 t2) #'transition<)))
+         (tss1 (sort (with-ht-collect (t1 nil) ts1 t1) #'transition<))
+         (tss2 (sort (with-ht-collect (t2 nil) ts2 t2) #'transition<)))
     (flet ((%transition-equal (t1 t2)
-	     (with-slots ((minc1 minc) (maxc1 maxc) (to1 to)) t1
-	       (with-slots ((minc2 minc) (maxc2 maxc) (to2 to)) t2
-		 (and
-		  (= minc1 minc2) (= maxc1 maxc2) (state-equal to1 to2))))))
+             (with-slots ((minc1 minc) (maxc1 maxc) (to1 to)) t1
+               (with-slots ((minc2 minc) (maxc2 maxc) (to2 to)) t2
+                 (and
+                  (= minc1 minc2) (= maxc1 maxc2) (state-equal to1 to2))))))
       (and (= (length tss1) (length tss2))
-	   (loop for t1 in tss1 and t2 in tss2
-	      always (%transition-equal t1 t2))))))
+           (loop for t1 in tss1 and t2 in tss2
+              always (%transition-equal t1 t2))))))
 
 (defclass state-pair ()
   ((s :initarg :s :accessor s :type (or null state))
@@ -79,7 +79,7 @@
   (declare (ignorable initargs))
   (with-slots (transitions id next-id) s
     (setf transitions (make-generalized-hash-table +equalp-key-situation+)
-	  id (incf next-id))))
+          id (incf next-id))))
 
 (defmethod initialize-instance :after ((tr transition) &rest initargs)
   (declare (ignorable initargs))
@@ -96,7 +96,7 @@
     (assert to nil "TO required")))
 
 (defmethod eqv ((sp1 state-pair) (sp2 state-pair)
-		(s (eql +equalp-key-situation+)))
+                (s (eql +equalp-key-situation+)))
   (and (eq (s1 sp1) (s1 sp2)) (eq (s2 sp1) (s2 sp2))))
 
 (defmethod hash ((sp state-pair) (s (eql +equalp-key-situation+)))
@@ -105,7 +105,7 @@
     (mod (+ (sxhash (s1 sp)) (sxhash (s2 sp))) most-positive-fixnum)))
 
 (defmethod eqv ((tr1 transition) (tr2 transition)
-		(s (eql +equalp-key-situation+)))
+                (s (eql +equalp-key-situation+)))
   "Returns true if transitions TR1 and TR2 have equal interval and
 same (eq) destination state."
   (with-slots ((minc1 minc) (maxc1 maxc) (to1 to)) tr1
@@ -125,43 +125,43 @@ same (eq) destination state."
     (make-instance 'transition :minc minc :maxc maxc :to to)))
 
 (defmethod eqv ((ss1 state-set) (ss2 state-set)
-		(s (eql +equalp-key-situation+)))
+                (s (eql +equalp-key-situation+)))
   "Returns true if state-set objects SS1 and SS2 contain the same (eql)
 state objects."
   (and (= (hash-table-count (ht ss1)) (hash-table-count (ht ss2)))
        (loop for st being the hash-keys of (ht ss1)
-	  always (gethash st (ht ss2)))))
+          always (gethash st (ht ss2)))))
 
 (defmethod hash ((ss state-set) (s (eql +equalp-key-situation+)))
   "Returns the hash code for state-set SS."
   (the fixnum
     (mod (loop for st being the hash-keys of (ht ss)
-	    sum (sxhash st))
-	 most-positive-fixnum)))
+            sum (sxhash st))
+         most-positive-fixnum)))
 
 (defvar *escape-unicode-chars* nil) ; true may be useful in Slime
 
 (defun escaped-char (c)
   (if (or (not *escape-unicode-chars*)
-	  (and (<= #x21 c #x7e) (/= c (char-code #\\))))
+          (and (<= #x21 c #x7e) (/= c (char-code #\\))))
       (code-char c)
       (format nil "\\u~4,'0O" c)))
 
 (defmethod print-object ((st state) s)
   (with-slots (accept transitions num) st
     (format s "~@<state ~A [~A]: ~2I~_~@<~{~W~^ ~_~}~:>~:>"
-	    num
-	    (if accept "accept" "reject")
-	    (with-ht-collect (tr nil) transitions tr)))
+            num
+            (if accept "accept" "reject")
+            (with-ht-collect (tr nil) transitions tr)))
   st)
 
 (defmethod print-object ((tr transition) s)
   (with-slots (minc maxc to) tr
     (format s "~@<~A~:[~*~;-~A~] -> ~A~:>"
-	    (escaped-char minc)
-	    (/= minc maxc)
-	    (escaped-char maxc)
-	    (num to))
+            (escaped-char minc)
+            (/= minc maxc)
+            (escaped-char maxc)
+            (num to))
     tr))
 
 (defun transition< (tr1 tr2)
@@ -175,13 +175,13 @@ interval comparison is done first, followed by the NUM comparisons."
   (with-slots ((minc1 minc) (maxc1 maxc) (to1 to)) tr1
     (with-slots ((minc2 minc) (maxc2 maxc) (to2 to)) tr2
       (let ((to< (< (num to1) (num to2)))
-	    (to= (= (num to1) (num to2)))
-	    (min-rmax< (or (< minc1 minc2)
-			   (and (= minc1 minc2) (> maxc1 maxc2))))
-	    (min-rmax= (and (= minc1 minc2) (= maxc1 maxc2))))
-	(if *to-first*
-	    (or to< (and to= min-rmax<))
-	    (or min-rmax< (and min-rmax= to<)))))))
+            (to= (= (num to1) (num to2)))
+            (min-rmax< (or (< minc1 minc2)
+                           (and (= minc1 minc2) (> maxc1 maxc2))))
+            (min-rmax= (and (= minc1 minc2) (= maxc1 maxc2))))
+        (if *to-first*
+            (or to< (and to= min-rmax<))
+            (or min-rmax< (and min-rmax= to<)))))))
 
 (defun reset-transitions (s)
   (setf (transitions s) (make-generalized-hash-table +equalp-key-situation+)))
@@ -206,13 +206,13 @@ does S."
   "Returns a vector of all transitions of S, sorted using TRANSITION<
 and *TO-FIRST*."
   (let ((v (make-array `(,(cnt (transitions s)))
-		       :element-type '(or null transition)
+                       :element-type '(or null transition)
                        :initial-element nil))
-	(i -1))
+        (i -1))
     (sort
      (progn
        (with-ht (tr nil) (transitions s)
-	 (setf (aref v (incf i)) tr))
+         (setf (aref v (incf i)) tr))
        v)
      #'transition<)))
 

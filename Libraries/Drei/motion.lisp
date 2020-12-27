@@ -66,25 +66,22 @@
 ;;; definition from the buffer protocol and just ignore the syntax
 ;;; argument). There are no FORWARD-ONE-OBJECT or BACKWARD-ONE-OBJECT
 ;;; functions.
-
 
-(in-package :drei-motion)
+(in-package #:drei-motion)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Functions to move mark around based on the syntax:
 
 (defun forward-to-word-boundary (mark syntax)
   "Move the mark forward to the beginning of the next word."
   (loop until (end-of-buffer-p mark)
-	until (word-constituentp syntax (object-after mark))
-	do (incf (offset mark))))
+        until (word-constituentp syntax (object-after mark))
+        do (incf (offset mark))))
 
 (defun backward-to-word-boundary (mark syntax)
   "Move the mark backward to the end of the previous word."
   (loop until (beginning-of-buffer-p mark)
-	until (word-constituentp syntax (object-before mark))
-	do (decf (offset mark))))
+        until (word-constituentp syntax (object-before mark))
+        do (decf (offset mark))))
 
 (defun beep-limit-action (mark original-offset remaining unit syntax)
   "This limit action will beep at the user."
@@ -208,10 +205,6 @@ being called until either `motor' succeeds or `fiddler' fails."
                       (make-limit-action loser))))
     #'move))
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Line start motion
 
 (defgeneric forward-one-line-start (mark syntax)
@@ -234,8 +227,6 @@ being called until either `motor' succeeds or `fiddler' fails."
 
 (define-motion-fns line-start)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Line end motion
 
 (defgeneric forward-one-line-end (mark syntax)
@@ -258,8 +249,6 @@ being called until either `motor' succeeds or `fiddler' fails."
 
 (define-motion-fns line-end)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Word motion
 
 (defgeneric forward-one-word (mark syntax)
@@ -288,8 +277,6 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (define-motion-fns word)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Line motion
 
 (defgeneric forward-one-line (mark syntax)
@@ -322,15 +309,15 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (define-motion-fns line)
 
-;; Faster version for special mark... I don't know whether it's ever
-;; going to be used, but it was in the old motion code.
+;;; Faster version for special mark... I don't know whether it's ever
+;;; going to be used, but it was in the old motion code.
 (defmethod backward-line ((mark p-line-mark-mixin) syntax
                           &optional (count 1)
                           (limit-action
                            #'error-limit-action))
   (let* ((column (column-number mark))
          (line (line-number mark))
-	 (goto-line (- line count)))
+         (goto-line (- line count)))
     (handler-case
         (setf (offset mark)
               (+ column
@@ -340,8 +327,6 @@ Return T if successful, or NIL if the buffer limit was reached."))
                  (offset mark) (- count line)
                  "line" syntax)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Page motion
 
 (defgeneric forward-one-page (mark syntax)
@@ -376,10 +361,6 @@ reached."))
 
 (define-motion-fns page)
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Expression motion
 
 (defgeneric forward-one-expression (mark syntax)
@@ -390,7 +371,7 @@ Return T if successful, or NIL if the buffer limit or the end of the
 
 (defmethod forward-one-expression (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric backward-one-expression (mark syntax)
   (:documentation
@@ -400,7 +381,7 @@ Return T if successful, or NIL if the buffer limit or the start of the
 
 (defmethod backward-one-expression (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric forward-one-definition (mark syntax)
   (:documentation
@@ -410,7 +391,7 @@ reached."))
 
 (defmethod forward-one-definition (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric backward-one-definition (mark syntax)
   (:documentation
@@ -420,7 +401,7 @@ reached."))
 
 (defmethod backward-one-definition (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric forward-one-up (mark syntax)
   (:documentation
@@ -429,7 +410,7 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-up (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric backward-one-up (mark syntax)
   (:documentation
@@ -438,7 +419,7 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-up (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric forward-one-down (mark syntax)
   (:documentation
@@ -447,7 +428,7 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod forward-one-down (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (defgeneric backward-one-down (mark syntax)
   (:documentation
@@ -456,15 +437,13 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (defmethod backward-one-down (mark syntax)
   (declare (ignore mark syntax))
-  (error 'NO-SUCH-OPERATION))
+  (error 'no-such-operation))
 
 (define-motion-fns expression)
 (define-motion-fns definition)
 (define-motion-fns up :plural "nesting levels up")
 (define-motion-fns down :plural "nesting levels down")
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Paragraph motion
 
 (defgeneric backward-one-paragraph (mark syntax)
@@ -495,8 +474,6 @@ Return T if successful, or NIL if the buffer limit was reached."))
 
 (define-motion-fns paragraph)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; List motion
 
 (defgeneric backward-one-list (mark syntax)
@@ -515,8 +492,6 @@ Return T if successful, or NIL if the buffer limit was reached.")
 
 (define-motion-fns list)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Sentence motion
 
 (defgeneric backward-one-sentence (mark syntax)
@@ -543,10 +518,8 @@ Return T if successful, or NIL if the buffer limit was reached.")
                 forward-expression-or-up
                 backward-expression-or-up))
 
-(setf (fdefinition 'FORWARD-EXPRESSION-OR-UP)
+(setf (fdefinition 'forward-expression-or-up)
       (make-diligent-motor #'forward-expression #'forward-up))
 
-(setf (fdefinition 'BACKWARD-EXPRESSION-OR-UP)
+(setf (fdefinition 'backward-expression-or-up)
       (make-diligent-motor #'backward-expression #'backward-up))
-
-

@@ -1,7 +1,7 @@
 ;;; -*- mode: lisp -*-
-;;; 
+;;;
 ;;; (c) copyright 2005 by Aleksandar Bakic (a_bakic@yahoo.com)
-;;; 
+;;;
 
 ;;; This library is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU Library General Public
@@ -20,7 +20,7 @@
 
 ;;; Part of the Undo protocol that works with persistent buffers
 
-(in-package :drei-undo)
+(in-package #:drei-undo)
 
 (defclass p-undo-mixin ()
   ((tree :initform (make-instance 'standard-undo-tree) :reader undo-tree)
@@ -33,9 +33,9 @@
 (defun save-p-undo-record (buffer)
   (unless (performing-undo buffer)
     (push (make-instance
-	   'p-undo-record
-	   :buffer buffer
-	   :contents (slot-value buffer 'drei-buffer::contents))
+           'p-undo-record
+           :buffer buffer
+           :contents (slot-value buffer 'drei-buffer::contents))
      (undo-accumulate buffer))))
 
 (defmethod insert-buffer-object :before ((buffer p-undo-mixin) offset object)
@@ -61,5 +61,5 @@
      (drei-buffer::cursors buffer)
      #'(lambda (c) (flexichain::weak-pointer-value c))
      #'(lambda (wpc)
-	 (setf (cursor-pos wpc)
-	       (max 0 (min (cursor-pos wpc) (1- (size buffer)))))))))
+         (setf (cursor-pos wpc)
+               (max 0 (min (cursor-pos wpc) (1- (size buffer)))))))))

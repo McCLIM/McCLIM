@@ -24,7 +24,7 @@
 ;;; expand-abbrev.  That function takes a word to be expanded and an
 ;;; instance of the class abbrev-expander and returns either NIL
 ;;; (meaning there was no expansion for this word) or another string
-;;; which is the expansion of the word.  
+;;; which is the expansion of the word.
 ;;;
 ;;; We define a particular sublcass of abbrev-expander which just
 ;;; contains a dictionary (an alist) of <word,expansion> pairs and
@@ -32,19 +32,19 @@
 ;;; the word.  Client code would typically create other subclasses of
 ;;; abbrev-expander that can do more sophisticated abbrev expansion.
 
-(in-package :drei-abbrev)
+(in-package #:drei-abbrev)
 
-;;; the protocol class for all abbrev expanders. 
+;;; the protocol class for all abbrev expanders.
 (defclass abbrev-expander () ()
   (:documentation "The protocol class for all abbreviation expanders"))
 
 (defgeneric expand-abbrev (word abbrev-expander)
-  (:documentation "Given a word and an abbrev expander, return the 
+  (:documentation "Given a word and an abbrev expander, return the
 expanded abbrev, or NIL if no expansion exists"))
 
 (defclass dictionary-abbrev-expander (abbrev-expander)
   ((dictionary :initform '() :accessor dictionary
-	       :documentation "A dictionary of abbreviations."))
+               :documentation "A dictionary of abbreviations."))
   (:documentation "A protocol class specified for dictionary abbreviation expanders."))
 
 (defgeneric add-abbrev (word expansion dictionary-abbrev-expander)
@@ -64,28 +64,28 @@ expanded version of the abbrevation is returned."
   (let ((expansion (cdr (assoc word (dictionary expander) :test #'string-equal))))
     (when expansion
       (cond ((string-upper-case-p word) (string-upcase expansion))
-	    ((upper-case-p (aref word 0)) (string-capitalize expansion))
-	    (t expansion)))))
+            ((upper-case-p (aref word 0)) (string-capitalize expansion))
+            (t expansion)))))
 
 (defun possibly-expand-abbrev (mark)
   "Replaces a bit of abbreviated text with its fully expanded counterpart."
   (let ((buffer (buffer mark)))
     (when (and (not (beginning-of-buffer-p mark))
-	       (constituentp (object-before mark)))
+               (constituentp (object-before mark)))
       (let ((offset1 (offset mark))
-	    (offset2 (offset mark)))
-	(loop until (zerop offset1)
-	      while (constituentp (buffer-object buffer (1- offset1)))
-	      do (decf offset1))
-	(let ((expansion (expand-abbrev (coerce (buffer-sequence buffer offset1 offset2)
-						'string)
-					(abbrev-expander (implementation buffer)))))
-	  (when expansion
-	    (delete-buffer-range buffer offset1 (- offset2 offset1))
-	    (insert-buffer-sequence buffer offset1 expansion)))))))
+            (offset2 (offset mark)))
+        (loop until (zerop offset1)
+              while (constituentp (buffer-object buffer (1- offset1)))
+              do (decf offset1))
+        (let ((expansion (expand-abbrev (coerce (buffer-sequence buffer offset1 offset2)
+                                                'string)
+                                        (abbrev-expander (implementation buffer)))))
+          (when expansion
+            (delete-buffer-range buffer offset1 (- offset2 offset1))
+            (insert-buffer-sequence buffer offset1 expansion)))))))
 
 (defclass abbrev-mixin ()
   ((expander :initform (make-instance 'dictionary-abbrev-expander)
-	     :initarg :expander :accessor abbrev-expander))
+             :initarg :expander :accessor abbrev-expander))
   (:documentation "A mixin class which adds abbreviation expansion facilities to
 a buffer via the accessor \"abbrev-expander\""))

@@ -26,10 +26,8 @@
 ;;; highlighting. The special buffer classes used by views are also
 ;;; defined in this file.
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Conditions.
 
 (define-condition user-condition-mixin ()
@@ -39,8 +37,6 @@ command loop and their report displayed to the user in the
 minibuffer, instead of being propagated further (and possibly
 invoking the debugger)."))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Tabify
 
 (defvar *use-tabs-for-indentation* nil
@@ -109,14 +105,12 @@ on `stream' in device units (most likely pixels).")
   (:documentation "Set the TAB-STOPS of view at the character column offsets
 in `column-list'.")
   (:method (column-list (tabify tabify-mixin))
-    (setf (tab-stops tabify) 
+    (setf (tab-stops tabify)
           (and column-list
                (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
-                             column-list) 
+                             column-list)
                      #'<)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Undo
 
 (defgeneric undo-tree (buffer)
@@ -191,12 +185,12 @@ undo tree."))
 
 (defclass change-record (simple-undo-record)
   ((objects :initarg :objects
-            :documentation "The sequence of objects that are to 
-replace the records that are currently in the buffer at the 
-offset whenever flip-undo-record is called on an instance of 
+            :documentation "The sequence of objects that are to
+replace the records that are currently in the buffer at the
+offset whenever flip-undo-record is called on an instance of
 change-record"))
-  (:documentation "Whenever objects are modified, a 
-`change-record' containing a mark is created and added to the 
+  (:documentation "Whenever objects are modified, a
+`change-record' containing a mark is created and added to the
 undo tree."))
 
 (defclass compound-record (drei-undo-record)
@@ -343,8 +337,6 @@ preventing the undoing to before the state of whatever
 (defmethod clear-undo-history ((buffer delegating-buffer))
   (clear-undo-history (implementation buffer)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Readonly
 
 (defclass read-only-mixin ()
@@ -386,8 +378,6 @@ is made to alter a buffer which has been set read only."))
 (defmethod (setf read-only-p) (flag (buffer delegating-buffer))
   (setf (read-only-p (implementation buffer)) flag))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Single-line buffer.
 
 (defclass single-line-mixin ()
@@ -417,8 +407,6 @@ single-line buffer."))
   (when (single-line-p buffer)
     (error 'buffer-single-line :buffer buffer)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The Drei buffer.
 
 (defclass extended-standard-buffer (single-line-mixin
@@ -467,8 +455,6 @@ single-line buffer."))
   ;; state would set it to false.
   (setf (needs-saving buffer) t))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; View classes.
 
 (defclass drei-view (tabify-mixin subscriptable-name-mixin)
@@ -585,8 +571,6 @@ page up."))
   (:documentation "Scroll `view', which is displayed on `pane', a
 page up."))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Buffer view
 
 (defclass drei-buffer-view (drei-view)
@@ -897,8 +881,6 @@ must be a `drei-buffer-view'."
     (with-accessors ((lines lines)) view
       (element* lines (index-of-line-containing-offset view offset)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Syntax views
 
 (defclass drei-syntax-view (drei-buffer-view)
@@ -993,7 +975,7 @@ buffer."))
 
 (defun needs-resynchronization (view)
   "Return true if the view of the buffer of `view' is
-potentially out of date. Return false otherwise."  
+potentially out of date. Return false otherwise."
   (not (= (prefix-size view) (suffix-size view)
           (buffer-size view) (size (buffer view)))))
 

@@ -28,7 +28,7 @@
 
 ;;; Commands specific to the Lisp syntax for Drei.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
 ;;; This command table is used when Drei runs as a pane.
 (make-command-table 'pane-lisp-table
@@ -37,7 +37,7 @@
 (defmethod additional-command-tables append ((drei drei-pane) (command-table lisp-table))
   '(pane-lisp-table))
 
-;; Movement commands.
+;;; Movement commands.
 (drei-commands:define-motion-commands expression lisp-table)
 (drei-commands:define-motion-commands definition lisp-table)
 (drei-commands:define-motion-commands up lisp-table
@@ -51,14 +51,14 @@
 (drei-commands:define-editing-commands expression lisp-table)
 (drei-commands:define-deletion-commands expression lisp-table)
 
-(define-command (com-fill-paragraph :name t :command-table lisp-table) 
+(define-command (com-fill-paragraph :name t :command-table lisp-table)
     ()
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
   (let* ((token (form-around (current-syntax) (offset (point))))
          (fill-column (auto-fill-column (current-view))))
     (when (form-string-p token)
-      (with-accessors ((offset1 start-offset) 
+      (with-accessors ((offset1 start-offset)
                        (offset2 end-offset)) token
         (fill-region (make-buffer-mark (current-buffer) offset1 :right)
                      (make-buffer-mark (current-buffer) offset2 :right)
@@ -108,7 +108,7 @@ argument hints in the minibuffer."
 (define-command (com-complete-symbol :name t :command-table lisp-table)
     ()
   "Attempt to complete the symbol at mark. If successful, move point
-to end of symbol.  
+to end of symbol.
 
 If more than one completion is available, a list of possible
 completions will be displayed. If there is no symbol at mark, all
@@ -200,8 +200,6 @@ confirmation before anything is actually done."
             (display-message "Couldn't turn \"~A\" into valid operator: ~A"
                              (form-string (current-syntax) (form e)) (problem e)))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Gesture bindings
 
 (set-key 'com-fill-paragraph
@@ -285,12 +283,12 @@ confirmation before anything is actually done."
          '((#\c :control) (#\e :control)))
 
 (set-key `(com-backward-kill-expression ,*numeric-argument-marker*)
-	 'lisp-table
-	 '((#\Backspace :control :meta)))
+         'lisp-table
+         '((#\Backspace :control :meta)))
 
 (set-key `(com-kill-expression ,*numeric-argument-marker*)
-	 'lisp-table
-	 '((#\Rubout :control :meta)))
+         'lisp-table
+         '((#\Rubout :control :meta)))
 
 (set-key 'com-remove-definition
          'lisp-table

@@ -22,12 +22,12 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-;;; Base lexing and parsing functionality of 
+;;; Base lexing and parsing functionality of
 ;;; syntax modules for analysing languages
 
-(in-package :drei-lr-syntax)
+(in-package #:drei-lr-syntax)
 
-(defclass lr-syntax-mixin () 
+(defclass lr-syntax-mixin ()
      ((stack-top :initform nil
                  :accessor stack-top)
       (potentially-valid-trees)
@@ -43,9 +43,7 @@
   (with-accessors ((buffer buffer) (scan scan)) syntax
     (setf scan (make-buffer-mark buffer 0 :left))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; lexer
+;;; Lexer
 
 (defgeneric skip-inter (syntax state scan)
   (:documentation "advance scan until the beginning of a new
@@ -57,12 +55,12 @@
 (defmethod lex :around (syntax state scan)
   (when (skip-inter syntax state scan)
     (let* ((start-offset (offset scan))
-	   (lexeme (call-next-method))
-	   (new-size (- (offset scan) start-offset)))
+           (lexeme (call-next-method))
+           (new-size (- (offset scan) start-offset)))
       (with-slots (start-mark size) lexeme
-	 (setf (offset scan) start-offset)
-	 (setf start-mark scan
-	       size new-size))
+         (setf (offset scan) start-offset)
+         (setf start-mark scan
+               size new-size))
       lexeme)))
 
 (defclass lexer-state ()
@@ -123,7 +121,7 @@ literal (non-character) objects in the buffer."))
 (defmacro define-parser-state (name superclasses &body body)
   `(progn
      (defclass ,name ,superclasses
-	  ,@body)
+          ,@body)
      (defvar ,name (make-instance ',name))))
 
 (defclass lexeme (parser-symbol) ())
@@ -134,42 +132,42 @@ literal (non-character) objects in the buffer."))
   (declare (ignore args))
   (with-slots (children start-mark size) parser-symbol
      (loop for child in children
-	   do (setf (parent child) parser-symbol))
+           do (setf (parent child) parser-symbol))
      (let ((start (find-if-not #'null children :key #'start-offset))
-	   (end (find-if-not #'null children :key #'end-offset :from-end t)))
+           (end (find-if-not #'null children :key #'end-offset :from-end t)))
        (when start
-	 (setf start-mark (slot-value start 'start-mark)
-	       size (- (end-offset end) (start-offset start)))))))
+         (setf start-mark (slot-value start 'start-mark)
+               size (- (end-offset end) (start-offset start)))))))
 
 (defun pop-one (syntax)
   (with-slots (stack-top current-state) syntax
      (with-slots (preceding-parse-tree parser-state) stack-top
-	(prog1 stack-top
-	       (setf current-state parser-state
-		     stack-top preceding-parse-tree)))))
+        (prog1 stack-top
+               (setf current-state parser-state
+                     stack-top preceding-parse-tree)))))
 
 (defun pop-number (syntax how-many)
   (loop with result = '()
-	repeat how-many
-	do (push (pop-one syntax) result)
-	finally (return result)))
+        repeat how-many
+        do (push (pop-one syntax) result)
+        finally (return result)))
 
 (defmacro reduce-fixed-number (symbol nb-children)
   `(let ((result (make-instance ',symbol :children (pop-number syntax ,nb-children))))
      (when (zerop ,nb-children)
        (with-slots (scan) syntax
-	  (with-slots (start-mark size) result
-	     (setf start-mark (clone-mark scan :right)
-		   size 0))))
+          (with-slots (start-mark size) result
+             (setf start-mark (clone-mark scan :right)
+                   size 0))))
      result))
 
 (defun pop-until-type (syntax type)
   (with-slots (stack-top) syntax
      (loop with result = '()
-	   for child = stack-top
-	   do (push (pop-one syntax) result)
-	   until (typep child type)
-	   finally (return result))))
+           for child = stack-top
+           do (push (pop-one syntax) result)
+           until (typep child type)
+           finally (return result))))
 
 (defmacro reduce-until-type (symbol type &optional end-of-buffer)
   `(let ((result (make-instance ',symbol
@@ -187,25 +185,23 @@ literal (non-character) objects in the buffer."))
 (defun pop-all (syntax)
   (with-slots (stack-top) syntax
      (loop with result = '()
-	   until (null stack-top)
-	   do (push (pop-one syntax) result)
-	   finally (return result))))
+           until (null stack-top)
+           do (push (pop-one syntax) result)
+           finally (return result))))
 
 (defmacro reduce-all (symbol)
   `(let ((result (make-instance ',symbol :children (pop-all syntax))))
      (when (null (children result))
        (with-slots (scan) syntax
-	  (with-slots (start-mark size) result
-	     (setf start-mark (clone-mark scan :right)
-		   size 0))))
+          (with-slots (start-mark size) result
+             (setf start-mark (clone-mark scan :right)
+                   size 0))))
      result))
 
 (define-parser-state error-state (lexer-error-state parser-state) ())
 (define-parser-state error-reduce-state (lexer-toplevel-state parser-state) ())
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; parser step
+;;; Parser step
 
 (defgeneric parser-step (syntax))
 
@@ -213,12 +209,12 @@ literal (non-character) objects in the buffer."))
   (with-slots (lookahead-lexeme stack-top current-state scan) syntax
      (setf lookahead-lexeme (lex syntax current-state (clone-mark scan :right)))
      (let* ((new-parser-symbol (action syntax current-state lookahead-lexeme))
-	    (new-state (new-state syntax current-state new-parser-symbol)))
+            (new-state (new-state syntax current-state new-parser-symbol)))
        (with-slots (parser-state parser-symbol preceding-parse-tree children) new-parser-symbol
-	  (setf parser-state current-state
-		current-state new-state
-		preceding-parse-tree stack-top
-		stack-top new-parser-symbol)))
+          (setf parser-state current-state
+                current-state new-state
+                preceding-parse-tree stack-top
+                stack-top new-parser-symbol)))
      (setf (offset scan) (end-offset stack-top))))
 
 (defun prev-tree (tree)
@@ -232,37 +228,37 @@ literal (non-character) objects in the buffer."))
   (if (null (parent tree))
       nil
       (let* ((parent (parent tree))
-	     (siblings (children parent)))
-	(cond ((null parent) nil)
-	      ((eq tree (car (last siblings))) parent)
-	      (t (loop with new-tree = (cadr (member tree siblings :test #'eq))
-		       until (null (children new-tree))
-		       do (setf new-tree (car (children new-tree)))
-		       finally (return new-tree)))))))
+             (siblings (children parent)))
+        (cond ((null parent) nil)
+              ((eq tree (car (last siblings))) parent)
+              (t (loop with new-tree = (cadr (member tree siblings :test #'eq))
+                       until (null (children new-tree))
+                       do (setf new-tree (car (children new-tree)))
+                       finally (return new-tree)))))))
 
 (defun find-last-valid-lexeme (parse-tree offset)
   (cond ((or (null parse-tree) (null (start-offset parse-tree))) nil)
-	((> (start-offset parse-tree) offset)
-	 (find-last-valid-lexeme (preceding-parse-tree parse-tree) offset))
-	((not (typep parse-tree 'lexeme))
-	 (find-last-valid-lexeme (car (last (children parse-tree))) offset))
-	((>= (end-offset parse-tree) offset)
-	 (find-last-valid-lexeme (preceding-parse-tree parse-tree) offset))
-	(t parse-tree)))
+        ((> (start-offset parse-tree) offset)
+         (find-last-valid-lexeme (preceding-parse-tree parse-tree) offset))
+        ((not (typep parse-tree 'lexeme))
+         (find-last-valid-lexeme (car (last (children parse-tree))) offset))
+        ((>= (end-offset parse-tree) offset)
+         (find-last-valid-lexeme (preceding-parse-tree parse-tree) offset))
+        (t parse-tree)))
 
 (defun find-first-potentially-valid-lexeme (parse-trees offset)
   (cond ((null parse-trees) nil)
-	((or (null (start-offset (car parse-trees)))
-	     (< (end-offset (car parse-trees)) offset))
-	 (find-first-potentially-valid-lexeme (cdr parse-trees) offset))
-	((not (typep (car parse-trees) 'lexeme))
-	 (find-first-potentially-valid-lexeme (children (car parse-trees)) offset))
-	((<= (start-offset (car parse-trees)) offset)
-	 (loop with tree = (next-tree (car parse-trees))
-	       until (or (null tree) (> (start-offset tree) offset))
-	       do (setf tree (next-tree tree))
-	       finally (return tree)))
-	(t (car parse-trees))))
+        ((or (null (start-offset (car parse-trees)))
+             (< (end-offset (car parse-trees)) offset))
+         (find-first-potentially-valid-lexeme (cdr parse-trees) offset))
+        ((not (typep (car parse-trees) 'lexeme))
+         (find-first-potentially-valid-lexeme (children (car parse-trees)) offset))
+        ((<= (start-offset (car parse-trees)) offset)
+         (loop with tree = (next-tree (car parse-trees))
+               until (or (null tree) (> (start-offset tree) offset))
+               do (setf tree (next-tree tree))
+               finally (return tree)))
+        (t (car parse-trees))))
 
 (defun parse-tree-equal (tree1 tree2)
   (and (eq (class-of tree1) (class-of tree2))
@@ -298,8 +294,6 @@ literal (non-character) objects in the buffer."))
                 do (setf potentially-valid-trees
                          (next-tree potentially-valid-trees)))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Utility functions
 
 (defun invoke-do-parse-symbols-forward (start-offset nearby-symbol fn)
@@ -358,15 +352,13 @@ stack-top of `syntax'."
     (or (check-children (children (stack-top syntax)))
         (stack-top syntax))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; update syntax
+;;; Update syntax
 
 (defmethod update-syntax values-max-min ((syntax lr-syntax-mixin) prefix-size suffix-size
                                          &optional (begin 0) (end (size (buffer syntax))))
   (declare (ignore begin end))
   (let* ((low-mark-offset prefix-size)
-	 (high-mark-offset (- (size (buffer syntax)) suffix-size)))
+         (high-mark-offset (- (size (buffer syntax)) suffix-size)))
     (when (<= low-mark-offset high-mark-offset)
       (catch 'done
         (with-slots (current-state stack-top scan potentially-valid-trees
@@ -386,8 +378,6 @@ stack-top of `syntax'."
           (loop do (parse-patch syntax)))))
     (values 0 (size (buffer syntax)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; General redisplay for LR syntaxes, subclasses of `lr-syntax-mixin'
 ;;; should be able to easily define some syntax rules, and need not
 ;;; bother with all this complexity.

@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite editing-tests :description "The test suite for
 DREI-EDITING related tests." :in drei-tests)
@@ -91,7 +91,7 @@ DREI-EDITING related tests." :in drei-tests)
                                   ,initial-offset ,initial-contents
                                   ,after-contents
                                   ',kill-ring-end-contents)))
-      `(progn 
+      `(progn
          (test ,forward-delete
            (with-drei-environment (:initial-contents ,initial-contents)
              (with-buffer-action-test-functions
@@ -245,7 +245,7 @@ And it should be fixed.
 
 This is the last paragraph." ("I am testing paragraphs.
 
-Paragraphs are seperated by double newlines."))) 
+Paragraphs are seperated by double newlines.")))
                        (("I am testing paragraphs.
 
 Paragraphs are seperated by double newlines.
@@ -332,7 +332,7 @@ This is the last paragraph.")
                ,initial-offset ,stickto ,initial-contents
                ,after-contents
                ',kill-ring-end-contents)))
-      `(progn 
+      `(progn
          (test ,transpose
            (with-buffer-action-test-functions
              ,(make-transposition-test-function-case transpose 0 at-beginning-contents nil)

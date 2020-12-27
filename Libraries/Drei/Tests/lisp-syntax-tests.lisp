@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite lisp-syntax-tests :description "The test suite for
 tests related to the Lisp syntax module. The parser is not

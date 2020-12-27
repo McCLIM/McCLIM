@@ -2,8 +2,7 @@
 ;;; Copyright (c) 2005, Aleksandar Bakic (a_bakic@yahoo.com)
 ;;; 
 
-(defsystem #:automaton
-  :depends-on ()
+(defsystem "automaton"
   :components
   ((:file "automaton-package")
    (:file "eqv-hash" :depends-on ("automaton-package"))

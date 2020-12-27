@@ -30,7 +30,7 @@
 ;;; directly implemented in terms of the buffer protocol, but that are
 ;;; not, strictly speaking, part of that protocol.
 
-(in-package :drei-base)
+(in-package #:drei-base)
 
 (defgeneric invoke-as-region (mark1 mark2 continuation)
   (:documentation "Invoke `continuation' with two arguments
@@ -146,9 +146,9 @@ The body is executed for each element, with object being the current object
   (unless column
     (setf column (column-number mark)))
   (let* ((line (line-number mark))
-	 (goto-line (max 0 (- line count))))
+         (goto-line (max 0 (- line count))))
     (setf (offset mark)
-	  (+ column (buffer-line-offset (buffer mark) goto-line)))))
+          (+ column (buffer-line-offset (buffer mark) goto-line)))))
 
 (defgeneric next-line (mark &optional column count)
   (:documentation "Move a mark down `count' lines conserving
@@ -175,7 +175,7 @@ The body is executed for each element, with object being the current object
          (goto-line (min (number-of-lines (buffer mark))
                          (+ line count))))
     (setf (offset mark)
-	  (+ column (buffer-line-offset (buffer mark) goto-line)))))
+          (+ column (buffer-line-offset (buffer mark) goto-line)))))
 
 (defgeneric open-line (mark &optional count)
   (:documentation "Create a new line in a buffer after the mark."))
@@ -313,7 +313,7 @@ one of the marks"))
 (defmethod number-of-lines-in-region ((mark1 mark) (mark2 mark))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (buffer-number-of-lines-in-region (buffer mark1) offset1 offset2))))
 
@@ -440,7 +440,7 @@ containing `start-offset'."
     (delete-region mark-or-offset1 mark-or-offset2)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Character case
 
 (defun buffer-region-case (buffer offset1 offset2)
@@ -467,7 +467,7 @@ containing `start-offset'."
           (t nil))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Search
 
 (defun buffer-looking-at (buffer offset vector &key (test #'eql))
@@ -517,9 +517,9 @@ returns nil. If the first value is non-nil, the second value is the
 offset after the matched contents."
   (if (automaton::singleton a)
       (let ((result (buffer-search-forward
-		     buffer offset (automaton::singleton a))))
-	(when result
-	  (values result (+ result (length (automaton::singleton a))))))
+                     buffer offset (automaton::singleton a))))
+        (when result
+          (values result (+ result (length (automaton::singleton a))))))
       (loop for i from offset below (size buffer) do
            (let ((j (non-greedy-match-forward a buffer i)))
              (when j (return (values i j))))
@@ -529,8 +529,8 @@ offset after the matched contents."
   "Reverses and determinizes A, then returns it."
   (if (automaton::singleton a)
       (progn
-	(setf (automaton::singleton a) (reverse (automaton::singleton a)))
-	a)
+        (setf (automaton::singleton a) (reverse (automaton::singleton a)))
+        a)
       (automaton::determinize2
        a
        (make-instance 'automaton::state-set :ht (automaton::areverse a)))))
@@ -553,9 +553,9 @@ otherwise, returns nil. If the first value is non-nil, the second
 value is the offset after the matched contents."
   (if (automaton::singleton a)
       (let ((result (buffer-search-backward
-		     buffer offset (nreverse (automaton::singleton a)))))
-	(when result
-	  (values result (+ result (length (automaton::singleton a))))))
+                     buffer offset (nreverse (automaton::singleton a)))))
+        (when result
+          (values result (+ result (length (automaton::singleton a))))))
       (loop for i downfrom (min offset (1- (size buffer))) to 0 do
            (let ((j (non-greedy-match-backward a buffer i)))
              (when j (return (values j (1+ i)))))
@@ -564,14 +564,14 @@ value is the offset after the matched contents."
 (defun search-forward (mark vector &key (test #'eql))
   "move MARK forward after the first occurence of VECTOR after MARK"
   (let ((offset (buffer-search-forward
-		 (buffer mark) (offset mark) vector :test test)))
+                 (buffer mark) (offset mark) vector :test test)))
     (when offset
       (setf (offset mark) (+ offset (length vector))))))
 
 (defun search-backward (mark vector &key (test #'eql))
   "move MARK backward before the first occurence of VECTOR before MARK"
   (let ((offset (buffer-search-backward
-		 (buffer mark) (offset mark) vector :test test)))
+                 (buffer mark) (offset mark) vector :test test)))
     (when offset
       (setf (offset mark) offset))))
 
@@ -582,19 +582,19 @@ after MARK"
             (automaton::regexp-automaton
              (automaton::string-regexp re)))))
     (multiple-value-bind (i j)
-	(buffer-re-search-forward a (buffer mark) (offset mark))
+        (buffer-re-search-forward a (buffer mark) (offset mark))
       (when i
-	(setf (offset mark) j)
-	(values mark i)))))
+        (setf (offset mark) j)
+        (values mark i)))))
 
 (defun re-search-backward (mark re)
   "move MARK backward before the first occurence of string matching RE
 before MARK"
   (let ((a (reversed-deterministic-automaton
-	    (automaton::regexp-automaton
-	     (automaton::string-regexp re)))))
+            (automaton::regexp-automaton
+             (automaton::string-regexp re)))))
     (multiple-value-bind (i j)
-	(buffer-re-search-backward a (buffer mark) (1- (offset mark)))
+        (buffer-re-search-backward a (buffer mark) (1- (offset mark)))
       (declare (ignorable j))
       (when i
         (setf (offset mark) i)
@@ -604,14 +604,14 @@ before MARK"
   "return the largest offset of BUFFER <= (- OFFSET (length WORD))
 containing WORD as a word or NIL if no such offset exists"
   (let ((wlen (length word))
-	(blen (size buffer)))
+        (blen (size buffer)))
     (loop
        for i downfrom (- offset wlen) to 0
        for j = (+ i wlen)
        when (and (or (zerop i) (buffer-whitespacep (buffer-object buffer (1- i))))
-		 (buffer-looking-at buffer i word :test test)
-		 (not (and (< (+ i wlen) blen)
-			   (constituentp (buffer-object buffer (+ i wlen))))))
+                 (buffer-looking-at buffer i word :test test)
+                 (not (and (< (+ i wlen) blen)
+                           (constituentp (buffer-object buffer (+ i wlen))))))
        return i
        finally (return nil))))
 
@@ -624,26 +624,26 @@ containing WORD as a word or NIL if no such offset exists"
   "Return the smallest offset of BUFFER >= OFFSET containing WORD as a
 word or NIL if no such offset exists"
   (let ((wlen (length word))
-	(blen (size buffer)))
+        (blen (size buffer)))
     (loop
        for i upfrom offset to (- blen (max wlen 1))
        for j = (+ i wlen)
        when (and (or (zerop i) (buffer-whitespacep (buffer-object buffer (1- i))))
-		 (buffer-looking-at buffer i word :test test)
-		 (not (and (< j blen)
-			   (constituentp (buffer-object buffer j)))))
+                 (buffer-looking-at buffer i word :test test)
+                 (not (and (< j blen)
+                           (constituentp (buffer-object buffer j)))))
        ;; should this be (+ i wlen)? jqs 2006-05-14
        return i
        finally (return nil))))
 
 (defun search-word-forward (mark word)
   (let ((wlen (length word))
-	(offset (buffer-search-word-forward (buffer mark) (offset mark) word)))
+        (offset (buffer-search-word-forward (buffer mark) (offset mark) word)))
     (when offset
       (setf (offset mark) (+ offset wlen)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Character case
 
 ;;; I'd rather have update-buffer-range methods spec. on buffer for this,
@@ -661,7 +661,7 @@ buffers. It is acceptable to pass an offset in place of one of the marks."))
 (defmethod downcase-region ((mark1 mark) (mark2 mark))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (downcase-buffer-region (buffer mark1) offset1 offset2))))
 
@@ -688,7 +688,7 @@ buffers. It is acceptable to pass an offset in place of one of the marks."))
 (defmethod upcase-region ((mark1 mark) (mark2 mark))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (upcase-buffer-region (buffer mark1) offset1 offset2))))
 
@@ -721,7 +721,7 @@ It is acceptable to pass an offset in place of one of the marks."))
 (defmethod capitalize-region ((mark1 mark) (mark2 mark))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (capitalize-buffer-region (buffer mark1) offset1 offset2))))
 
@@ -736,7 +736,7 @@ It is acceptable to pass an offset in place of one of the marks."))
       (capitalize-buffer-region (buffer mark1) offset1 offset2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Tabify
 
 (defun tabify-buffer-region (buffer offset1 offset2 tab-width)
@@ -764,7 +764,7 @@ in the region delimited by mark1 and mark2."))
 (defmethod tabify-region ((mark1 mark) (mark2 mark) tab-width)
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (tabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
@@ -799,7 +799,7 @@ delimited by mark1 and mark2."))
 (defmethod untabify-region ((mark1 mark) (mark2 mark) tab-width)
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (as-region (offset1 offset2)
       (untabify-buffer-region (buffer mark1) offset1 offset2 tab-width))))
 
@@ -885,35 +885,35 @@ modifying which class `mark' is an instance of."))
 
 (defmethod clone-mark ((mark narrowed-standard-left-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :left))
-	 (make-instance 'narrowed-standard-left-sticky-mark
+         (make-instance 'narrowed-standard-left-sticky-mark
           :buffer (buffer mark) :offset (offset mark)
           :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	((eq stick-to :right)
-	 (make-instance 'narrowed-standard-right-sticky-mark
+        ((eq stick-to :right)
+         (make-instance 'narrowed-standard-right-sticky-mark
           :buffer (buffer mark) :offset (offset mark)
           :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod clone-mark ((mark narrowed-standard-right-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :right))
-	 (make-instance 'narrowed-standard-right-sticky-mark
+         (make-instance 'narrowed-standard-right-sticky-mark
           :buffer (buffer mark) :offset (offset mark)
           :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	((eq stick-to :left)
-	 (make-instance 'narrowed-standard-left-sticky-mark
+        ((eq stick-to :left)
+         (make-instance 'narrowed-standard-left-sticky-mark
           :buffer (buffer mark) :offset (offset mark)
           :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod (setf offset) :before (new-offset (mark narrowed-mark-mixin))
   (assert (<= (offset (low-border-mark mark)) new-offset) ()
-	  (make-condition 'motion-before-beginning :offset new-offset))
+          (make-condition 'motion-before-beginning :offset new-offset))
   (assert (<= new-offset (offset (high-border-mark mark))) ()
-	  (make-condition 'motion-after-end :offset new-offset)))
+          (make-condition 'motion-after-end :offset new-offset)))
 
 (defmethod beginning-of-buffer-p ((mark narrowed-mark-mixin))
   (mark= mark (low-border-mark mark)))
@@ -967,16 +967,16 @@ modifying which class `mark' is an instance of."))
 
 (defmethod clone-mark ((mark narrowed-delegating-left-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :left))
-	 (make-instance 'narrowed-delegating-left-sticky-mark
+         (make-instance 'narrowed-delegating-left-sticky-mark
           :implementation (clone-mark (implementation mark) :left)
           :buffer (buffer mark) :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	((eq stick-to :right)
-	 (make-instance 'narrowed-delegating-right-sticky-mark
+        ((eq stick-to :right)
+         (make-instance 'narrowed-delegating-right-sticky-mark
           :implementation (clone-mark (implementation mark) :right)
           :buffer (buffer mark) :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod clone-mark ((mark narrowed-delegating-right-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :right))
@@ -984,12 +984,12 @@ modifying which class `mark' is an instance of."))
           :implementation (clone-mark (implementation mark) :right)
           :buffer (buffer mark) :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	((eq stick-to :left)
-	 (make-instance 'narrowed-delegating-left-sticky-mark
+        ((eq stick-to :left)
+         (make-instance 'narrowed-delegating-left-sticky-mark
           :implementation (clone-mark (implementation mark) :left)
           :buffer (buffer mark) :low-mark (low-border-mark mark)
           :high-mark (high-border-mark mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod narrow-mark ((mark delegating-left-sticky-mark)
                         (low-mark left-sticky-mark)

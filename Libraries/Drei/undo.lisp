@@ -56,8 +56,8 @@ moved (and no calls to `flip-undo-record' are made)."))
 (define-condition no-more-undo (simple-error)
   ()
   (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (format stream "No more undo")))
+             (declare (ignore condition))
+             (format stream "No more undo")))
   (:documentation "A condition of this type is signaled whenever
 an attempt is made to call undo when the application is in its
 initial state."))
@@ -79,7 +79,7 @@ specific to the application."))
 (defmethod initialize-instance :after ((tree standard-undo-tree) &rest args)
   (declare (ignore args))
   (setf (current-record tree) tree
-	(leaf-record tree) tree))
+        (leaf-record tree) tree))
 
 (defclass undo-record () ()
   (:documentation "The base class for all undo records."))
@@ -101,26 +101,26 @@ belongs.")
 (defmethod add-undo ((record standard-undo-record) (tree standard-undo-tree))
   (push record (children (current-record tree)))
   (setf (undo-tree record) tree
-	(parent record) (current-record tree)
-	(depth record) (1+ (depth (current-record tree)))
-	(current-record tree) record
-	(leaf-record  tree) record
-	(redo-path tree) '()))
+        (parent record) (current-record tree)
+        (depth record) (1+ (depth (current-record tree)))
+        (current-record tree) record
+        (leaf-record  tree) record
+        (redo-path tree) '()))
 
 (defmethod undo ((tree standard-undo-tree) &optional (n 1))
   (assert (<= n (depth (current-record tree)))
-	  ()
-	  (make-condition 'no-more-undo))
+          ()
+          (make-condition 'no-more-undo))
   (loop repeat n
-	do (flip-undo-record (current-record tree))
-	   (push (current-record tree) (redo-path tree))
-	   (setf (current-record tree) (parent (current-record tree)))))
+        do (flip-undo-record (current-record tree))
+           (push (current-record tree) (redo-path tree))
+           (setf (current-record tree) (parent (current-record tree)))))
 
 (defmethod redo ((tree standard-undo-tree) &optional (n 1))
   (assert (<= n (- (depth (leaf-record tree))
-		   (depth (current-record tree))))
-	  ()
-	  (make-condition 'no-more-undo))
+                   (depth (current-record tree))))
+          ()
+          (make-condition 'no-more-undo))
   (loop repeat n
-	do (setf (current-record tree) (pop (redo-path tree)))
-	   (flip-undo-record (current-record tree))))
+        do (setf (current-record tree) (pop (redo-path tree)))
+           (flip-undo-record (current-record tree))))

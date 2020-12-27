@@ -27,10 +27,8 @@
 ;;; Declarations and definitions of the generic functions and helper
 ;;; utilities needed for the Drei redisplay engine
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Display of Drei instances.
 ;;;
 ;;; The basic Drei redisplay functions:
@@ -85,8 +83,6 @@ is *guaranteed* to not return NIL or T.")
              (letf (((stream-default-view stream) view))
                (call-next-method)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The standard redisplay implementation for buffer views.
 
 (defstruct face
@@ -458,9 +454,9 @@ dimensions."
   (let ((dimensions (stroke-dimensions stroke)))
     (setf (stroke-dirty stroke) (and (stroke-dirty stroke) (not drawn))
           (stroke-modified stroke) nil
-	  (stroke-parts stroke) parts
+          (stroke-parts stroke) parts
           (stroke-widths stroke) widths
-	  (x1 dimensions) x1
+          (x1 dimensions) x1
           (y1 dimensions) y1
           (x2 dimensions) x2
           (y2 dimensions) y2
@@ -474,11 +470,11 @@ with a char-code of less than #o200, \"\\[octal code]\" for those above
 NOTE: Assumes an ASCII/Unicode character encoding."
   (let ((code (char-code object)))
     (cond ((eql object #\Tab)
-	   object)
-	  ((< code #o200)
-	   (format nil "^~C" (code-char (+ code (char-code #\@)))))
-	  (t
-	   (format nil "\\~O" code)))))
+           object)
+          ((< code #o200)
+           (format nil "^~C" (code-char (+ code (char-code #\@)))))
+          (t
+           (format nil "\\~O" code)))))
 
 (defun analyse-stroke-string (string)
   "Return a list of parts of `string', where each part is a continuous
@@ -486,18 +482,18 @@ run of graphic characters or a single non-graphic character. Each element
 in the list is of the form START, END, and one of NIL (meaning a run
 of graphic characters) or an object representing the non-graphic char."
   (loop with len = (length string)
-	for left = 0 then (+ right 1)
-	for right = (or (position-if-not #'graphic-char-p string :start left)
-			len)
-	unless (= left right)
-	  collect (list left right)
-	  into parts
-	until (>= right len)
-	collect (list right 
-		      (+ right 1) 
-		      (non-graphic-char-rep (aref string right)))
-	  into parts
-	finally (return parts)))
+        for left = 0 then (+ right 1)
+        for right = (or (position-if-not #'graphic-char-p string :start left)
+                        len)
+        unless (= left right)
+          collect (list left right)
+          into parts
+        until (>= right len)
+        collect (list right
+                      (+ right 1)
+                      (non-graphic-char-rep (aref string right)))
+          into parts
+        finally (return parts)))
 
 (defun calculate-stroke-width (stroke-string text-style stream x-position)
   "Calculate the width information of `stroke-string' when
@@ -512,8 +508,8 @@ of the stroke."
      for (start end object) in parts
      do (cond ((eql object #\Tab)
                (incf width
-		     (next-tab-stop stream (stream-default-view stream)
-				    (+ width x-position)))
+                     (next-tab-stop stream (stream-default-view stream)
+                                    (+ width x-position)))
                (vector-push-extend width widths))
               (object
                (multiple-value-bind (w)
@@ -547,8 +543,8 @@ any actual output takes place."
                    (end-offset stroke-end-offset)
                    (dimensions stroke-dimensions)
                    (drawing-options stroke-drawing-options)
-		   (widths stroke-widths)
-		   (parts stroke-parts)) stroke
+                   (widths stroke-widths)
+                   (parts stroke-parts)) stroke
     (let* ((stroke-string (in-place-buffer-substring
                            (buffer view) (cache-string view)
                            start-offset end-offset))
@@ -563,9 +559,9 @@ any actual output takes place."
            (text-style-descent (text-style-descent roman-text-style (sheet-medium stream))))
       (with-accessors ((x1 x1) (x2 x2) (center center)) dimensions
         (multiple-value-bind (width stroke-parts part-widths)
-	    (if (stroke-modified stroke)
-		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
-		(values (- x2 x1) parts widths))
+            (if (stroke-modified stroke)
+                (calculate-stroke-width stroke-string merged-text-style stream cursor-x)
+                (values (- x2 x1) parts widths))
           (when draw
             (loop
               for (start end object) in stroke-parts
@@ -585,10 +581,10 @@ any actual output takes place."
                                     :text-style merged-text-style
                                     :ink (face-ink (drawing-options-face drawing-options))
                                     :align-y :baseline)))))
-	  (record-stroke stroke stroke-parts part-widths
+          (record-stroke stroke stroke-parts part-widths
                          cursor-x (- cursor-y text-style-ascent)
-			 (+ width cursor-x) (+ cursor-y text-style-descent)
-			 draw text-style-ascent))))))
+                         (+ width cursor-x) (+ cursor-y text-style-descent)
+                         draw text-style-ascent))))))
 
 (defun update-stroke-dimensions (stream view stroke cursor-x cursor-y)
   "Calculate the dimensions of `stroke' on `stream'
@@ -752,8 +748,8 @@ region, which will be presented with its appropriate presentation
 type (found via `presentation-type-of') to generate output."
   (let (output-record
         baseline
-	(widths (make-array 2 :initial-contents (list 0 0)))
-	(parts (list 0 1)))
+        (widths (make-array 2 :initial-contents (list 0 0)))
+        (parts (list 0 1)))
     #'(lambda (stream view stroke cursor-x cursor-y
                default-drawing-fn draw)
         (declare (ignore default-drawing-fn))
@@ -774,7 +770,7 @@ type (found via `presentation-type-of') to generate output."
                     (values (+ cursor-x 0.1) (- cursor-y baseline)))
               (when draw
                 (replay output-record stream))
-	      (setf (aref widths 1) width)
+              (setf (aref widths 1) width)
               (record-stroke stroke parts widths
                              cursor-x (- cursor-y baseline)
                              (+ width cursor-x) cursor-y
@@ -817,7 +813,7 @@ type (found via `presentation-type-of') to generate output."
 
 (defstruct (pump-state
              (:constructor make-pump-state
-                           (line-index offset chunk-index))) 
+                           (line-index offset chunk-index)))
   "A pump state object used by the `drei-buffer-view'. `Line' is
 the line object `offset' is in, and `line-index' is the index of
 `line' in the list of lines maintained by the view that created
@@ -930,17 +926,17 @@ strokes. `Offset' is the offset of the next stroke to be pumped."
 `stroke', relative to the starting position of `stroke'. `Offset'
 is an absolute offset into the buffer of `view',"
   (let ((string (in-place-buffer-substring
-		 (buffer view) (cache-string view)
-		 (stroke-start-offset stroke) offset)))
+                 (buffer view) (cache-string view)
+                 (stroke-start-offset stroke) offset)))
     (loop with pos = (- offset (stroke-start-offset stroke))
-	  for width across (stroke-widths stroke)
-	  for next upfrom 1
-	  for (start end object) in (stroke-parts stroke)
-	  when (and object (= pos end))
-	    do (return (aref (stroke-widths stroke) next))
-	  when (<= start pos end)
-	    do (return (+ width
-			  (text-size stream string
+          for width across (stroke-widths stroke)
+          for next upfrom 1
+          for (start end object) in (stroke-parts stroke)
+          when (and object (= pos end))
+            do (return (aref (stroke-widths stroke) next))
+          when (<= start pos end)
+            do (return (+ width
+                          (text-size stream string
                                      :start start
                                      :end pos
                                      :text-style (merge-text-styles
@@ -1105,8 +1101,6 @@ calculated by `drei-bounding-rectangle*'."
     (declare (ignore y1))
     (- x2 x1)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei area redisplay.
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
@@ -1151,8 +1145,6 @@ calculated by `drei-bounding-rectangle*'."
                              (max 0 (- y2 viewport-height))))))))
     (finish-output stream)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei pane redisplay.
 
 (defgeneric handle-redisplay (pane view region)

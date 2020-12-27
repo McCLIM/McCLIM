@@ -24,7 +24,7 @@
 ;;; DREI-KILL-RING package implementing the kill ring functionality of
 ;;; Drei.
 
-(in-package :drei-tests)
+(in-package #:drei-tests)
 
 (def-suite kill-ring-tests :description "The test suite for DREI-KILL-RING
 related tests." :in drei-tests)
@@ -46,31 +46,31 @@ related tests." :in drei-tests)
 
 (test kill-ring-standard-push
   (with-drei-environment ()
-   (let* ((random-size (max 3 (random 20)))
-          (instance (make-instance 'kill-ring :max-size random-size)))
-     (kill-ring-standard-push instance #(#\A))
-     (kill-ring-standard-push instance #(#\B))
-     (kill-ring-standard-push instance #(#\C))
-     (is (= (kill-ring-length instance) 3)))
-   (let* ((random-size (1+ (random 20)))
-          (instance (make-instance 'kill-ring :max-size random-size)))
-     (signals type-error
-       (kill-ring-standard-push instance nil)))
-   (let* ((instance (make-instance 'kill-ring :max-size 3)))
-     (kill-ring-standard-push instance #(#\A))
-     (kill-ring-standard-push instance #(#\B))
-     (kill-ring-standard-push instance #(#\C))
-     (kill-ring-standard-push instance #(#\D))
-     (kill-ring-standard-push instance #(#\E))
-     (is (equal (coerce (kill-ring-yank instance) 'string)
-                "E"))
-     (rotate-yank-position instance)
-     (is (equal (coerce (kill-ring-yank instance) 'string)
-                "D"))
+    (let* ((random-size (max 3 (random 20)))
+           (instance (make-instance 'kill-ring :max-size random-size)))
+      (kill-ring-standard-push instance #(#\A))
+      (kill-ring-standard-push instance #(#\B))
+      (kill-ring-standard-push instance #(#\C))
+      (is (= (kill-ring-length instance) 3)))
+    (let* ((random-size (1+ (random 20)))
+           (instance (make-instance 'kill-ring :max-size random-size)))
+      (signals type-error
+        (kill-ring-standard-push instance nil)))
+    (let* ((instance (make-instance 'kill-ring :max-size 3)))
+      (kill-ring-standard-push instance #(#\A))
+      (kill-ring-standard-push instance #(#\B))
+      (kill-ring-standard-push instance #(#\C))
+      (kill-ring-standard-push instance #(#\D))
+      (kill-ring-standard-push instance #(#\E))
+      (is (equal (coerce (kill-ring-yank instance) 'string)
+                 "E"))
+      (rotate-yank-position instance)
+      (is (equal (coerce (kill-ring-yank instance) 'string)
+                 "D"))
 
-     (rotate-yank-position instance)
-     (is (equal (coerce (kill-ring-yank instance) 'string)
-                "C")))))
+      (rotate-yank-position instance)
+      (is (equal (coerce (kill-ring-yank instance) 'string)
+                 "C")))))
 
 (test kill-ring-concatenating-push
   (with-drei-environment ()

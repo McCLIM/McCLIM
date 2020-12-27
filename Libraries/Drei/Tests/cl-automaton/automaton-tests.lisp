@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite automaton-tests :description "The test suite for
 CL-AUTOMATON related tests." :in drei-tests)
@@ -30,19 +30,19 @@ CL-AUTOMATON related tests." :in drei-tests)
 (defmacro automaton-test (name &body body)
   (let ((name-string (symbol-name name)))
     (flet ((%dts (prefixes)
-	     (loop for v1 in prefixes nconc
-		  (loop for v2 in '(t nil) collect
-		       `(test ,(intern
+             (loop for v1 in prefixes nconc
+                  (loop for v2 in '(t nil) collect
+                       `(test ,(intern
                                 (concatenate
                                  'string
                                  (symbol-name v1)
                                  (if v2 "" "-LIGHT")
                                  "."
                                  name-string))
-			  (let ((automaton::*minimization*
-				 ',(intern (symbol-name v1) :automaton))
-				(automaton::*minimize-always* ,v2))
-			    ,@body))))))
+                          (let ((automaton::*minimization*
+                                 ',(intern (symbol-name v1) :automaton))
+                                (automaton::*minimize-always* ,v2))
+                            ,@body))))))
       `(progn ,@(%dts '(hopcroft huffman brzozowski))))))
 
 (automaton-test regexp-automaton.1

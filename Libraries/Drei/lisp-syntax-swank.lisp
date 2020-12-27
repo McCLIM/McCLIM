@@ -23,12 +23,12 @@
 ;;; An implementation of some of the editor-centric functionality of
 ;;; the Lisp syntax using calls to Swank functions.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
 (defclass swank-local-image ()
   ())
 
-;; We need these modules loaded.
+;;; We need these modules loaded.
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; Oh my! This is so we "gracefully" handle older Swanks that do not
   ;; have `swank-require'. We just hope they have the symbols we need
@@ -36,8 +36,8 @@
   (ignore-errors (swank::swank-require :swank-c-p-c)
                  (swank::swank-require :swank-arglists)))
 
-;; If this file is loaded, make local Swank the default way of
-;; interacting with the image.
+;;; If this file is loaded, make local Swank the default way of
+;;; interacting with the image.
 
 (defmethod shared-initialize :after
     ((obj lisp-syntax) slot-names &key)

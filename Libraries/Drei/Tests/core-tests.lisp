@@ -20,7 +20,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite core-tests :description "The test suite for
 DREI-CORE related tests." :in drei-tests)
@@ -40,12 +40,12 @@ DREI-CORE related tests." :in drei-tests)
     (possibly-fill-line)
     (is (string= (buffer-contents)
                  "Very long line, this should be filled, if auto-fill is on."))
-    
+
     (setf (auto-fill-mode (current-view)) t)
     (possibly-fill-line)
     (is (string= (buffer-contents)
                  "Very long line, this should be filled, if auto-fill is on."))
-    
+
     (setf (auto-fill-column (current-view)) 20)
     (possibly-fill-line)
     (is (string= (buffer-contents)
@@ -310,7 +310,7 @@ if everything works"))))
 
 (test fill-region
   (flet ((fill-it (fill-column)
-           (fill-region (point) (mark) 
+           (fill-region (point) (mark)
                         (lambda (mark)
                           (proper-line-indentation (current-view) mark))
                         fill-column

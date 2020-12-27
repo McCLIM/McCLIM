@@ -18,8 +18,8 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(defpackage #:eqv-hash
-  (:use :cl)
+(cl:defpackage #:eqv-hash
+  (:use #:cl)
   (:export
    #:hash
    #:eqv
@@ -48,9 +48,10 @@
    #:htpresent
    #:with-ht
    #:with-ht-collect))
-(defpackage #:automaton
+
+(cl:defpackage #:automaton
   (:nicknames #:cl-automaton)
-  (:use :cl #:eqv-hash)
+  (:use #:cl #:eqv-hash)
   (:export
    #:string-regexp #:regexp-automaton
    #:run #:run-to-first-match #:run-to-first-unmatch

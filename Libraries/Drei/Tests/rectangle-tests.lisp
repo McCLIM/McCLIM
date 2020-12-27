@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite rectangle-tests :description "The test suite for
 rectangle-editing related tests." :in drei-tests)
@@ -124,7 +124,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -178,7 +178,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -230,7 +230,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -281,7 +281,7 @@ Line number four"))
 Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -334,7 +334,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -389,7 +389,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))

@@ -23,10 +23,8 @@
 ;;; A syntax module for analysing Common Lisp using an LR based
 ;;; parser.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Convenience functions and macros.
 
 (defun usable-package (package-designator)
@@ -39,16 +37,12 @@
      (end-of-file ()
        (esa:display-message "Unbalanced parentheses in form."))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The command table.
 
 (define-syntax-command-table lisp-table
     :errorp nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; the syntax object
+;;; The syntax object
 
 (declaim (special |initial-state |))    ; defined (class and var) further below
 
@@ -151,8 +145,6 @@ anything itself (for example if it is not a Lisp syntax)."
 (defconstant +keyword-package+ (find-package :keyword)
   "The KEYWORD package.")
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Swank interface functions.
 
 (defgeneric eval-string-for-drei (image string package)
@@ -635,17 +627,13 @@ along with any default values) that can be used in a
                 do (fo))
              (make-instance 'error-lexeme)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; nonterminals
+;;; Nonterminals
 
 (defclass line-comment (lisp-nonterminal) ())
 (defclass long-comment (lisp-nonterminal) ())
 (defclass error-symbol (lisp-nonterminal) ())
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; parser
+;;; Parser
 
 (defmacro define-lisp-action ((state lexeme) &body body)
   `(defmethod action ((syntax lisp-syntax) (state ,state) (lexeme ,lexeme))
@@ -673,14 +661,14 @@ along with any default values) that can be used in a
 (define-new-lisp-state (t error-symbol) error-reduce-state)
 
 
-;;;;;;;;;;;;;;;; Top-level
+;;; Top-level
 
 #| rules
    form* ->
    form* -> form* form
 |#
 
-;;; parse trees
+;;; Parse trees
 (defclass form* (lisp-nonterminal) ())
 
 (define-parser-state |form* | (lexer-toplevel-state parser-state) ())
@@ -689,7 +677,7 @@ along with any default values) that can be used in a
 
 (define-new-lisp-state (|initial-state | form) |initial-state |)
 (define-new-lisp-state (|initial-state | comment) |initial-state |)
-;; skip over unmatched right parentheses
+;;; skip over unmatched right parentheses
 (define-new-lisp-state (|initial-state | unmatched-right-parenthesis-lexeme) |initial-state |)
 
 (define-lisp-action (|initial-state | (eql nil))
@@ -700,13 +688,13 @@ along with any default values) that can be used in a
 (define-lisp-action (|form* | (eql nil))
   (throw 'done nil))
 
-;;;;;;;;;;;;;;;; List
+;;; List
 
 #| rules
    form -> ( form* )
 |#
 
-;;; parse trees
+;;; Parse trees
 (defclass list-form (form) ())
 (defclass complete-list-form (list-form complete-form-mixin) ())
 (defclass incomplete-list-form (list-form incomplete-form-mixin) ())
@@ -727,11 +715,11 @@ along with any default values) that can be used in a
 (define-lisp-action (|( form* | (eql nil))
   (reduce-until-type incomplete-list-form left-parenthesis-lexeme t))
 
-;;;;;;;;;;;;;;;; Cons cell
-;; Also (foo bar baz . quux) constructs.
-;; (foo bar . baz quux) flagged as an error (too aggressively?).
+;;; Cons cell
+;;; Also (foo bar baz . quux) constructs.
+;;; (foo bar . baz quux) flagged as an error (too aggressively?).
 
-;;; parse trees
+;;; Parse trees
 (defclass cons-cell-form (form) ())
 (defclass complete-cons-cell-form (cons-cell-form complete-list-form) ())
 (defclass incomplete-cons-cell-form (cons-cell-form incomplete-list-form) ())
@@ -763,9 +751,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|( form* dot-lexeme form | (eql nil))
   (reduce-until-type incomplete-cons-cell-form left-parenthesis-lexeme t))
 
-;;;;;;;;;;;;;;;; Simple Vector
+;;; Simple Vector
 
-;;; parse trees
+;;; Parse trees
 (defclass simple-vector-form (list-form) ())
 (defclass complete-simple-vector-form (complete-list-form simple-vector-form) ())
 (defclass incomplete-simple-vector-form (incomplete-list-form simple-vector-form) ())
@@ -786,9 +774,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#( form* | (eql nil))
   (reduce-until-type incomplete-simple-vector-form simple-vector-start-lexeme t))
 
-;;;;;;;;;;;;;;;; String
+;;; String
 
-;;; parse trees
+;;; Parse trees
 (defclass string-form (form) ())
 (defclass complete-string-form (string-form complete-form-mixin) ())
 (defclass incomplete-string-form (string-form incomplete-form-mixin) ())
@@ -809,9 +797,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|" word* | (eql nil))
   (reduce-until-type incomplete-string-form string-start-lexeme t))
 
-;;;;;;;;;;;;;;;; Line comment
+;;; Line comment
 
-;;; parse trees
+;;; Parse trees
 (defclass line-comment-form (comment) ())
 
 (define-parser-state |; word* | (lexer-line-comment-state parser-state) ())
@@ -826,9 +814,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|; word* NL | t)
   (reduce-until-type line-comment-form line-comment-start-lexeme))
 
-;;;;;;;;;;;;;;;; Long comment
+;;; Long comment
 
-;;; parse trees
+;;; Parse trees
 (defclass long-comment-form (comment) ())
 (defclass complete-long-comment-form (long-comment-form complete-form-mixin) ())
 (defclass incomplete-long-comment-form (long-comment-form incomplete-form-mixin) ())
@@ -851,9 +839,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#\| word* | (eql nil))
   (reduce-until-type incomplete-long-comment-form long-comment-start-lexeme t))
 
-;;;;;;;;;;;;;;;; Token (number or symbol)
+;;; Token (number or symbol)
 
-;;; parse trees
+;;; Parse trees
 (defclass token-form (form token-mixin) ())
 (defclass complete-token-form (token-form complete-form-mixin)
   ((%keyword-symbol-p :accessor keyword-symbol-p)
@@ -882,9 +870,9 @@ along with any default values) that can be used in a
 (define-lisp-action (| m-e-start text* | (eql nil))
   (reduce-until-type incomplete-token-form multiple-escape-start-lexeme t))
 
-;;;;;;;;;;;;;;;; Quote
+;;; Quote
 
-;;; parse trees
+;;; Parse trees
 (defclass quote-form (form) ())
 (defclass complete-quote-form (quote-form complete-form-mixin) ())
 (defclass incomplete-quote-form (quote-form incomplete-form-mixin) ())
@@ -912,9 +900,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|' | (eql nil))
   (reduce-until-type incomplete-quote-form quote-lexeme t))
 
-;;;;;;;;;;;;;;;; Backquote
+;;; Backquote
 
-;;; parse trees
+;;; Parse trees
 (defclass backquote-form (form) ())
 (defclass complete-backquote-form (backquote-form complete-form-mixin) ())
 (defclass incomplete-backquote-form (backquote-form incomplete-form-mixin) ())
@@ -938,9 +926,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|` | (eql nil))
   (reduce-until-type incomplete-backquote-form backquote-lexeme t))
 
-;;;;;;;;;;;;;;;; Comma
+;;; Comma
 
-;;; parse trees
+;;; Parse trees
 (defclass comma-form (form complete-form-mixin) ())
 (defclass comma-at-form (form complete-form-mixin) ())
 (defclass comma-dot-form (form complete-form-mixin) ())
@@ -970,9 +958,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|,. form | t)
   (reduce-until-type comma-dot-form comma-dot-lexeme))
 
-;;;;;;;;;;;;;;;; Function
+;;; Function
 
-;;; parse trees
+;;; Parse trees
 (defclass function-form (form) ())
 (defclass complete-function-form (function-form complete-form-mixin) ())
 (defclass incomplete-function-form (function-form incomplete-form-mixin) ())
@@ -992,9 +980,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#' | (eql nil))
   (reduce-until-type incomplete-function-form function-lexeme t))
 
-;;;;;;;;;;;;;;;; Reader conditionals
+;;; Reader conditionals
 
-;;; parse trees
+;;; Parse trees
 (defclass reader-conditional-form (form)
   ((%conditional-true-p :accessor conditional-true-p)))
 (defclass reader-conditional-positive-form (reader-conditional-form) ())
@@ -1024,9 +1012,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#- form form | t)
   (reduce-until-type reader-conditional-negative-form reader-conditional-negative-lexeme))
 
-;;;;;;;;;;;;;;;; uninterned symbol
+;;; Uninterned symbol
 
-;;; parse trees
+;;; Parse trees
 (defclass uninterned-symbol-form (complete-token-form) ())
 
 (define-parser-state |#: | (form-may-follow) ())
@@ -1039,9 +1027,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#: form | t)
   (reduce-fixed-number uninterned-symbol-form 2))
 
-;;;;;;;;;;;;;;;; readtime evaluation
+;;; readtime evaluation
 
-;;; parse trees
+;;; Parse trees
 (defclass readtime-evaluation-form (form complete-form-mixin) ())
 
 (define-parser-state |#. | (form-may-follow) ())
@@ -1055,9 +1043,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#. form | t)
   (reduce-until-type readtime-evaluation-form readtime-evaluation-lexeme))
 
-;;;;;;;;;;;;;;;; sharpsign equals
+;;; Sharpsign equals
 
-;;; parse trees
+;;; Parse trees
 (defclass sharpsign-equals-form (form complete-form-mixin) ())
 
 (define-parser-state |#= | (form-may-follow) ())
@@ -1071,9 +1059,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#= form | t)
   (reduce-until-type sharpsign-equals-form sharpsign-equals-lexeme))
 
-;;;;;;;;;;;;;;;; array
+;;; Array
 
-;;; parse trees
+;;; Parse trees
 (defclass array-form (form complete-form-mixin) ())
 
 (define-parser-state |#A | (form-may-follow) ())
@@ -1087,9 +1075,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#A form | t)
   (reduce-until-type array-form array-start-lexeme))
 
-;;;;;;;;;;;;;;;; structure
+;;; Structure
 
-;;; parse trees
+;;; Parse trees
 (defclass structure-form (list-form) ())
 (defclass complete-structure-form (complete-list-form) ())
 (defclass incomplete-structure-form (incomplete-list-form) ())
@@ -1110,12 +1098,12 @@ along with any default values) that can be used in a
   (reduce-until-type incomplete-structure-form structure-start-lexeme t))
 
 
-;;;;;;;;;;;;;;;; pathname
-
+;;; Pathname
+;;;
 ;;; NB: #P need not be followed by a string,
 ;;;  as it could be followed by a #. construct instead (or some other reader macro)
 
-;;; parse trees
+;;; Parse trees
 (defclass pathname-form (form) ())
 (defclass complete-pathname-form (pathname-form complete-form-mixin) ())
 (defclass incomplete-pathname-form (pathname-form incomplete-form-mixin) ())
@@ -1137,9 +1125,9 @@ along with any default values) that can be used in a
 (define-lisp-action (|#P | (eql nil))
   (reduce-until-type incomplete-pathname-form pathname-start-lexeme t))
 
-;;;;;;;;;;;;;;;; undefined reader macro
+;;; Undefined reader macro
 
-;;; parse trees
+;;; Parse trees
 (defclass undefined-reader-macro-form (form complete-form-mixin) ())
 
 (define-parser-state |#<other> | (form-may-follow) ())
@@ -1152,9 +1140,7 @@ along with any default values) that can be used in a
 (define-lisp-action (|#<other> form | t)
   (reduce-fixed-number undefined-reader-macro-form 2))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; update syntax
+;;; Update syntax
 
 (defun package-at-mark (syntax mark-or-offset)
   "Get the specified Lisp package for the syntax. First, an
@@ -1283,9 +1269,7 @@ list. If no such package is specified, return \"CLIM-USER\"."
                (need-to-update-package-list-p prefix-size suffix-size syntax)))
     (update-package-list syntax)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; accessing parser forms
+;;; Accessing parser forms
 
 (defun first-noncomment (list)
   "Returns the first non-comment in list."
@@ -1397,8 +1381,6 @@ token. Returns nil if none can be found.")
              (form-operator-p syntax pre-token))
             (t nil)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Useful functions for selecting forms based on the mark.
 
 (defun expression-at-mark (syntax mark-or-offset)
@@ -1481,8 +1463,6 @@ the form that `token' quotes, peeling away all quote forms."
     (or (form-around syntax offset)
         (form-before syntax offset))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Querying forms for data
 
 (defmacro define-form-predicate (name (&rest t-classes) &optional documentation)
@@ -1528,7 +1508,7 @@ the form that `token' quotes, peeling away all quote forms."
 (defmethod eval-feature-conditional (conditional-form (syntax lisp-syntax))
   nil)
 
-;; Adapted from slime.el
+;;; Adapted from slime.el
 
 (defmethod eval-feature-conditional ((conditional token-mixin) (syntax lisp-syntax))
   (let* ((string (form-string syntax conditional))
@@ -1556,8 +1536,6 @@ the form that `token' quotes, peeling away all quote forms."
                     (funcall #'(lambda (f l) (not (apply f l)))
                              #'eval-fc conditionals)))))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Asking about parse state at some point
 
 (defun in-type-p-in-children (children offset type)
@@ -1783,8 +1761,6 @@ there is no enclosing list. True of the list has no children."
   "Return the comment at `mark-or-offset'."
   (in-type-p syntax mark-or-offset 'comment))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Useful functions for modifying forms based on the mark.
 
 (defgeneric replace-symbol-at-mark (syntax mark string)
@@ -1804,9 +1780,7 @@ and move `mark' to after `string'. If there is no symbol at
                                           (mark left-sticky-mark) (string string))
   (forward-object mark (length string)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; display
+;;; Display
 
 (defun cache-symbol-info (syntax symbol-form)
   "Cache information about the symbol `symbol-form' represents,
@@ -1953,9 +1927,7 @@ syntax.")
             (list (cons start-offset (1+ start-offset))
                   (cons (1- end-offset) end-offset))))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; exploit the parse
+;;; Exploit the parse
 
 (defun form-before-in-children (syntax children offset)
   (update-parse syntax)
@@ -2316,12 +2288,13 @@ successful, or NIL if the buffer limit was reached."))
                          (get-usable-image syntax)
                          (form-to-object syntax form :read t))))))
 
-;;; shamelessly replacing SWANK code
-;; We first work through the string removing the characters and noting
-;; which ones are escaped. We then replace each character with the
-;; appropriate case version, according to the readtable.
-;; Finally, we extract the package and symbol names.
-;; Being in an editor, we are waaay more lenient than the reader.
+;;; Shamelessly replacing SWANK code
+;;;
+;;; We first work through the string removing the characters and noting
+;;; which ones are escaped. We then replace each character with the
+;;; appropriate case version, according to the readtable.
+;;; Finally, we extract the package and symbol names.
+;;; Being in an editor, we are waaay more lenient than the reader.
 
 (defun parse-escapes (string)
   "Return a string and a list of escaped character positions.
@@ -3180,8 +3153,6 @@ be a readable representation of some object.")
       (and (string= symbol1 symbol2)
            (equal package1 package2)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Lambda-list handling.
 ;;;
 ;;; Just the infrastructure. The fun processing and analysis stuff is
@@ -3209,9 +3180,9 @@ be a readable representation of some object.")
   (case (first operator)
     ('cl:lambda (parse-lambda-list (cleanup-arglist (second operator))))))
 
-;; SBCL, and some other implementations I would guess, provides us
-;; with an arglist that is too simple, confusing the code
-;; analysers. We fix that here.
+;;; SBCL, and some other implementations I would guess, provides us
+;;; with an arglist that is too simple, confusing the code
+;;; analysers. We fix that here.
 (defmethod arglist-for-form ((syntax lisp-syntax)
                              (operator (eql 'clim-lisp:defclass))
                              &optional arguments)
@@ -3249,8 +3220,8 @@ including implementation-specific lambda list keywords."
      else
      collect arg))
 
-;; Arglist classes. Some arglist elements are not represented (&env,
-;; &aux), because they are not interesting.
+;;; Arglist classes. Some arglist elements are not represented (&env,
+;;; &aux), because they are not interesting.
 
 (defclass lambda-list ()
   ((%original-lambda-list :initarg :original-lambda-list
@@ -3984,9 +3955,7 @@ lambda list parameter objects to symbols or lists."))
              (when allow-other-keys
                (list '&allow-other-keys))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; indentation
+;;; Indentation
 
 (defgeneric indent-form (syntax tree path))
 
@@ -4150,9 +4119,9 @@ lambda list parameter objects to symbols or lists."))
       ;; inside a subexpression
       (indent-form syntax (elt-noncomment (children tree) (car path)) (cdr path))))
 
-;; TODO: `define-simple-indentor' is not flexible enough for the
-;; indentation rules of `progn' and `multiple-value-bind' (and a few
-;; others). TODO: Write a more powerful `define-indentor'.
+;;; TODO: `define-simple-indentor' is not flexible enough for the
+;;; indentation rules of `progn' and `multiple-value-bind' (and a few
+;;; others). TODO: Write a more powerful `define-indentor'.
 
 (defmethod compute-list-indentation ((syntax lisp-syntax) (symbol (eql 'progn)) tree path)
   (if (null (cdr path))
@@ -4421,8 +4390,6 @@ lambda list parameter objects to symbols or lists."))
         (+ (real-column-number mark tab-width)
            offset)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Commenting
 
 (defmethod syntax-line-comment-string ((syntax lisp-syntax))

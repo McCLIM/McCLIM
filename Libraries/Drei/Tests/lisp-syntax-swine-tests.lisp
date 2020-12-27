@@ -18,7 +18,7 @@
 ;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (in-suite lisp-syntax-tests)
 
@@ -30,7 +30,7 @@ list keywords."
           lambda-list-keywords)
   (is-false (drei-lisp-syntax::lambda-list-keyword-p '&keyword)))
 
-;; This is to make FiveAM give useful output when tests fail.
+;;; This is to make FiveAM give useful output when tests fail.
 (defmacro testing-find-affected-parameters (&body body)
   `(macrolet ((test-find-affected-parameters (lambda-list arg-indices expected-result)
                 `(flet ((affected-parameters (lambda-list arg-indices)

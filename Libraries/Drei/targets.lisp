@@ -24,7 +24,7 @@
 ;;; single sequence. This is meant to support Climacs' Group-facility,
 ;;; I'm not sure what else it could be used for.
 
-(in-package :drei-core)
+(in-package #:drei-core)
 
 (defclass target-specification ()
   ((%drei :reader drei-instance-of
@@ -75,7 +75,7 @@ if `preceding-targets-p' is false."))
   ()
   (:report (lambda (condition stream)
              (declare (ignore condition))
-	     (format stream "No more targets available for iteration")))
+             (format stream "No more targets available for iteration")))
   (:documentation "Signal that there are no more targets
 available for iteration, either forward or backwards in the
 sequence of targets."))

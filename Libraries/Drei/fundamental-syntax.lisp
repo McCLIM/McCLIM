@@ -20,17 +20,13 @@
 
 ;;; Syntax for unknown buffer contents.  Parse contents into lines.
 
-(in-package :drei-fundamental-syntax)
+(in-package #:drei-fundamental-syntax)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Every syntax must have a command table.
 
 (define-syntax-command-table fundamental-table
     :errorp nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The syntax object and misc stuff.
 
 (define-syntax fundamental-syntax (syntax)
@@ -40,9 +36,7 @@
 
 (setf *default-syntax* 'fundamental-syntax)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; update syntax
+;;; Update syntax
 
 (defmethod update-syntax values-max-min ((syntax fundamental-syntax) prefix-size suffix-size
                                          &optional begin end)
@@ -50,9 +44,7 @@
   ;; We do nothing. Technically, Fundamental syntax always parses the
   ;; entire buffer, though.
   (values 0 (size (buffer syntax))))
-		
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
+
 ;;; Redisplay
 ;;;
 ;;; Just uses the default buffer-view redisplay behavior.
@@ -66,10 +58,8 @@
                                     pump-state)
   (buffer-view-stroke-pump view stroke pump-state))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; exploit the parse
+;;; Exploit the parse
 
-;; do this better
+;;; do this better
 (defmethod syntax-line-indentation ((syntax fundamental-syntax) mark tab-width)
   0)
