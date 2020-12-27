@@ -125,7 +125,7 @@ false, so that no undo information is added as a result of an
 undo operation."))
 
 (defclass undo-mixin ()
-  ((tree :initform (make-instance 'standard-undo-tree)
+  ((tree :initform (make-instance 'drei-undo:standard-undo-tree)
          :reader undo-tree
          :documentation "Returns the undo-tree of the buffer.")
    (undo-accumulate :initform '()
@@ -141,7 +141,7 @@ inherit from. It contains an undo tree, an undo accumulator and a
 flag specifyng whether or not it is currently performing
 undo. The undo tree and undo accumulators are initially empty."))
 
-(defclass drei-undo-record (standard-undo-record)
+(defclass drei-undo-record (drei-undo:standard-undo-record)
   ((buffer :initarg :buffer
            :documentation "The buffer to which the record
 belongs."))
@@ -254,22 +254,23 @@ all."
          (dolist (,buffer ,get-buffers-exp)
            (cond ((null (undo-accumulate ,buffer)) nil)
                  ((null (cdr (undo-accumulate ,buffer)))
-                  (add-undo (car (undo-accumulate ,buffer))
-                            (undo-tree ,buffer)))
+                  (drei-undo:add-undo (car (undo-accumulate ,buffer))
+                                      (undo-tree ,buffer)))
                  (t
-                  (add-undo (make-instance 'compound-record
-                                           :buffer ,buffer
-                                           :records (undo-accumulate ,buffer))
-                            (undo-tree ,buffer)))))))))
+                  (drei-undo:add-undo
+                   (make-instance 'compound-record
+                                  :buffer ,buffer
+                                  :records (undo-accumulate ,buffer))
+                   (undo-tree ,buffer)))))))))
 
-(defmethod flip-undo-record :around ((record drei-undo-record))
+(defmethod drei-undo:flip-undo-record :around ((record drei-undo-record))
   (with-slots (buffer) record
     (let ((performing-undo (performing-undo buffer)))
       (setf (performing-undo buffer) t)
       (unwind-protect (call-next-method)
         (setf (performing-undo buffer) performing-undo)))))
 
-(defmethod flip-undo-record ((record insert-record))
+(defmethod drei-undo:flip-undo-record ((record insert-record))
   (with-slots (buffer offset objects) record
     (let ((%buffer buffer)
           (%offset offset)
@@ -278,7 +279,7 @@ all."
                     :length (length %objects))
       (insert-buffer-sequence %buffer %offset %objects))))
 
-(defmethod flip-undo-record ((record delete-record))
+(defmethod drei-undo:flip-undo-record ((record delete-record))
   (with-slots (buffer offset length) record
     (let ((%buffer buffer)
           (%offset offset)
@@ -287,14 +288,14 @@ all."
                     :objects (buffer-sequence %buffer %offset (+ %offset %length)))
       (delete-buffer-range %buffer %offset %length))))
 
-(defmethod flip-undo-record ((record change-record))
+(defmethod drei-undo:flip-undo-record ((record change-record))
   (with-slots (buffer offset objects) record
     (loop for i from 0 below (length objects)
           do (rotatef (aref objects i) (buffer-object buffer (+ i offset))))))
 
-(defmethod flip-undo-record ((record compound-record))
+(defmethod drei-undo:flip-undo-record ((record compound-record))
   (with-slots (records) record
-    (mapc #'flip-undo-record records)
+    (mapc #'drei-undo:flip-undo-record records)
     (setf records (nreverse records))))
 
 (defgeneric clear-undo-history (undo-maintainer)
@@ -304,7 +305,7 @@ preventing the undoing to before the state of whatever
 
 (defmethod clear-undo-history ((undo-maintainer undo-mixin))
   (setf (slot-value undo-maintainer 'tree)
-        (make-instance 'standard-undo-tree)
+        (make-instance 'drei-undo:standard-undo-tree)
         (undo-accumulate undo-maintainer) '()))
 
 ;;; undo-mixin delegation (here because of the package)

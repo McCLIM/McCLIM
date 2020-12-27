@@ -491,8 +491,8 @@ The default is 5. A number less than 5 will be replaced by 5."
 ;;; Undo/redo
 
 (define-command (com-undo :name t :command-table editing-table) ()
-  (handler-case (undo (undo-tree (current-buffer)))
-    (no-more-undo () (beep) (display-message "No more undo"))))
+  (handler-case (drei-undo:undo (undo-tree (current-buffer)))
+    (drei-undo:no-more-undo () (beep) (display-message "No more undo"))))
 
 (set-key 'com-undo
          'editing-table
@@ -503,8 +503,8 @@ The default is 5. A number less than 5 will be replaced by 5."
          '((#\x :control) (#\u)))
 
 (define-command (com-redo :name t :command-table editing-table) ()
-  (handler-case (redo (undo-tree (current-buffer)))
-    (no-more-undo () (beep) (display-message "No more redo"))))
+  (handler-case (drei-undo:redo (undo-tree (current-buffer)))
+    (drei-undo:no-more-undo () (beep) (display-message "No more redo"))))
 
 (set-key 'com-redo
          'editing-table

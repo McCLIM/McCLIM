@@ -171,7 +171,7 @@ characters."))
 
 (cl:defpackage #:drei
   (:use #:clim-lisp #:clim-sys #:clim #:drei-buffer #:drei-base #:drei-abbrev
-        #:drei-syntax #:flexichain #:drei-undo #:esa-buffer #:esa-io #:esa
+        #:drei-syntax #:flexichain #:esa-buffer #:esa-io #:esa
         #:esa-utils #:drei-kill-ring)
   (:import-from #:climi #:change-stream-space-requirements)
   (:export #:drei-buffer #:needs-saving
@@ -459,7 +459,7 @@ used to implement the editing commands."))
   (:use :clim-lisp :drei-base :drei-buffer
         :drei-syntax :drei-motion :drei :drei-kill-ring
         :drei-editing :clim :drei-abbrev :esa :esa-buffer :esa-io
-        :esa-utils :drei-undo)
+        :esa-utils)
   (:export #:proper-line-indentation
            #:goto-position
            #:goto-line
@@ -647,7 +647,7 @@ editing Common Lisp code."))
   (:use #:clim-lisp #:drei-base #:drei-buffer
         #:drei-syntax #:drei-motion #:drei #:drei-kill-ring
         #:drei-editing #:clim #:drei-abbrev #:esa #:esa-buffer #:esa-io
-        #:esa-utils #:drei-core #:drei-undo)
+        #:esa-utils #:drei-core)
   (:export #:define-motion-commands
            #:define-deletion-commands
            #:define-editing-commands)
