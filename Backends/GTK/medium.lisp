@@ -92,18 +92,39 @@
         (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::y0) (coerce ty 'double-float))
         (cairo:cairo-set-matrix cr matrix)))))
 
+(defgeneric context-apply-ink (cr ink))
+
+(defun apply-colour-from-ink (cr ink)
+  (check-type ink clim:color)
+  (multiple-value-bind (red green blue alpha)
+       (clime::color-rgba ink)
+    (cairo:cairo-set-source-rgba cr red green blue alpha)))
+
+(defun resolve-indirect-ink (ink)
+  (etypecase ink
+    (clim:color ink)
+    (clime:indirect-ink (clime:indirect-ink-ink ink))))
+
+(defmethod context-apply-ink (cr (ink clim:color))
+  (apply-colour-from-ink cr ink))
+
+(defmethod context-apply-ink (cr (ink climi::standard-flipping-ink))
+  (apply-colour-from-ink cr (resolve-indirect-ink (slot-value ink 'climi::design1)))
+  (cairo:cairo-set-operator cr :out))
+
+(defmethod context-apply-ink (cr (ink clime:indirect-ink))
+  (context-apply-ink cr (clime:indirect-ink-ink ink)))
+
 (defun update-attrs (cr medium)
   (set-clipping-region cr medium)
-  (multiple-value-bind (red green blue alpha)
-      (clime::color-rgba (medium-ink medium))
-    (cairo:cairo-set-source-rgba cr red green blue alpha)
-    (let ((line-style (medium-line-style medium)))
-      (cairo:cairo-set-line-width cr (line-style-thickness line-style))
-      (cairo:cairo-set-line-join cr (ecase (line-style-joint-shape line-style)
-                                      (:miter :miter)
-                                      (:round :round)
-                                      (:bevel :bevel)
-                                      (:none :miter))))))
+  (context-apply-ink cr (medium-ink medium))
+  (let ((line-style (medium-line-style medium)))
+    (cairo:cairo-set-line-width cr (line-style-thickness line-style))
+    (cairo:cairo-set-line-join cr (ecase (line-style-joint-shape line-style)
+                                    (:miter :miter)
+                                    (:round :round)
+                                    (:bevel :bevel)
+                                    (:none :miter)))))
 
 (defmacro with-cairo-context ((context-sym medium &key (update-style t)) &body body)
   (check-type context-sym symbol)
