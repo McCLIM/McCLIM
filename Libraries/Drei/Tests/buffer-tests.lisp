@@ -43,10 +43,10 @@ that they are initialized properly."
          (low3 (clone-mark high :left))
          (high3 (clone-mark low :right)))
     ;; They must be of the same class...
-    (is (class-of low) (class-of low2))
-    (is (class-of low2) (class-of low3))
-    (is (class-of high) (class-of high2))
-    (is (class-of high2) (class-of high3))
+    (is (eq (class-of low) (class-of low2)))
+    (is (eq (class-of low2) (class-of low3)))
+    (is (eq (class-of high) (class-of high2)))
+    (is (not (eq (class-of high2) (class-of high3))))
     ;; And have the same offset.
     (is (= (offset low) (offset low2) (offset low3)))
     (is (= (offset high) (offset high2) (offset high3) 0))))
