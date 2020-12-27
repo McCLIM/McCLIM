@@ -82,13 +82,8 @@ when it is inactive."))
 Drei buffer. The most important role for instances of subclasses
 of this class is to visually represent the position of point."))
 
-(defgeneric active (cursor)
-  (:documentation "Whether the cursor is active or
-not. An active cursor is drawn using the active ink, and an
-inactive is drawn using the inactive ink. Typically, a cursor
-will be active when the associated Drei view has focus.")
-  (:method ((cursor drei-cursor))
-    (active (view cursor))))
+(defmethod active ((thing drei-cursor))
+  (active (view thing)))
 
 (defgeneric ink (cursor)
   (:documentation "Return the ink object that should be used for

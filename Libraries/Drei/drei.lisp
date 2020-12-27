@@ -44,60 +44,6 @@
 
 (in-package #:drei)
 
-;;; Convenience stuff.
-
-(defgeneric drei-instance-of (object)
-  (:documentation "Return the Drei instance of `object'. For an
-editor frame, this would be the active editor instance. If
-`object' itself is a Drei instance, this function should just
-return `object'."))
-
-(defun drei-instance (&optional (object *esa-instance*))
-  "Return the Drei instance of `object'. If `object' is not
-provided, the currently running Drei instance will be returned."
-  (drei-instance-of object))
-
-(defun (setf drei-instance) (new-instance &optional (object *esa-instance*))
-  (setf (drei-instance-of object) new-instance))
-
-(defun current-view (&optional (object (drei-instance)))
-  "Return the view of the provided object. If no object is
-provided, the currently running Drei instance will be used."
-  (view object))
-
-(defun (setf current-view) (new-view &optional (object (drei-instance)))
-  (setf (view object) new-view))
-
-(defun point (&optional (object (current-view)))
-  "Return the point of the provided object. If no object is
-provided, the current view will be used."
-  (point-of object))
-
-(defun (setf point) (new-point object)
-  (setf (point-of object) new-point))
-
-(defgeneric point-of (object)
-  (:documentation "Return the mark object that is the point of
-`object'. Some objects have their own points, for example Drei
-buffer-views and buffers."))
-
-(defun mark (&optional (object (current-view)))
-  "Return the mark of the provided object. If no object is
-provided, the current view will be used."
-  (mark-of object))
-
-(defun (setf mark) (new-mark object)
-  (setf (mark-of object) new-mark))
-
-(defgeneric mark-of (object)
-  (:documentation "Return the mark object that is the mark of
-`object'. Some objects have their own points, for example Drei
-instances."))
-
-(defun current-syntax ()
-  "Return the syntax of the current buffer."
-  (syntax (current-view)))
-
 ;;; Isearch
 
 (defclass isearch-state ()
