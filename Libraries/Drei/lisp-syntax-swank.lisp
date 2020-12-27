@@ -85,9 +85,9 @@ anything itself (for example if it is not a Lisp syntax)."
 
 (defmethod get-class-keyword-parameters ((image swank-local-image) class)
   (declare (ignore image))
-  (loop for arg in (swank::extra-keywords/make-instance 'make-instance class)
-     collect (list (list (swank::keyword-arg.keyword arg) (swank::keyword-arg.arg-name arg))
-                   (swank::keyword-arg.default-arg arg))))
+  (loop for arg in (swank::extra-keywords/make-instance 'make-instance (list class))
+        collect (list (list (swank::keyword-arg.keyword arg) (swank::keyword-arg.arg-name arg))
+                      (swank::keyword-arg.default-arg arg))))
 
 (defmethod arglist ((image swank-local-image) (symbol symbol))
   (declare (ignore image))
