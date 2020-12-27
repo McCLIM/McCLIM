@@ -43,6 +43,7 @@ self-compilation test, of course).")
                       (get-object (&rest args)
                         (apply #'form-to-object (current-syntax)
                                (get-form) args)))
+               (declare (ignorable #'get-form #'get-object))
                (update-parse (current-syntax))
                ,@body)))))))
 
