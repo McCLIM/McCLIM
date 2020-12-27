@@ -313,6 +313,9 @@ buffer using `presentation-replace-input'."
                                            (stream-scan-pointer ,stream-var))))
        ,@body)))
 
+(define-condition rescan-condition (condition)
+  ())
+
 (defun input-editing-rescan-loop (editing-stream continuation)
   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
     (loop (block rescan
