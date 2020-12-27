@@ -220,12 +220,12 @@ is a McCLIM extension.")
 ;;; Function is responsible for making a copy of an immutable event
 ;;; and adjusting its coordinates to be in the target-sheet
 ;;; coordinates. Optionally it may change event's class.
-(defun dispatch-event-copy (target-sheet event &optional new-class
-                            &aux (sheet (event-sheet event)))
+(defun adjust-event (target-sheet event &optional new-class
+                   &aux (sheet (event-sheet event)))
   (if (and (eql target-sheet sheet)
            (or (null new-class)
                (eql new-class (class-of event))))
-      (dispatch-event sheet event)
+      event
       (let* ((event-class (if (null new-class)
                               (class-of event)
                               (find-class new-class)))
@@ -235,7 +235,11 @@ is a McCLIM extension.")
             (setf (slot-value new-event 'sheet-x) x
                   (slot-value new-event 'sheet-y) y)))
         (setf (slot-value new-event 'sheet) target-sheet)
-        (dispatch-event target-sheet new-event))))
+        new-event)))
+
+(defun dispatch-event-copy (target-sheet event &optional new-class
+                            &aux (sheet (event-sheet event)))
+  (dispatch-event target-sheet (adjust-event target-sheet event new-class)))
 
 ;;; Synthesizing and dispatching boundary events
 ;;;
