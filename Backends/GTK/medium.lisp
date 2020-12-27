@@ -54,8 +54,7 @@
     (t (loop
          for region in (nreverse (mapcan
                                   (lambda (v) (unless (eq v +nowhere+) (list v)))
-                                  (region-set-regions clipping-region
-                                                      :normalize :y-banding)))
+                                  (region-set-regions clipping-region :normalize :y-banding)))
          nconcing (multiple-value-list (region->clipping-values region))))))
 
 (defun set-clipping-region (cr medium)
@@ -110,7 +109,7 @@
 
 (defmethod context-apply-ink (cr (ink climi::standard-flipping-ink))
   (apply-colour-from-ink cr (resolve-indirect-ink (slot-value ink 'climi::design1)))
-  (cairo:cairo-set-operator cr :out))
+  (cairo:cairo-set-operator cr :xor))
 
 (defmethod context-apply-ink (cr (ink clime:indirect-ink))
   (context-apply-ink cr (clime:indirect-ink-ink ink)))
