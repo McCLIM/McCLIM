@@ -978,7 +978,7 @@ vectors."
                           &body forms-decls) ; with-output-to-string
   (declare (ignore var string element-type forms-decls)))
 
-(defmacro lisp-syntax-m2 (&key ((:a (a b c &key d))))
+(defmacro lisp-syntax-m2 (&key ((:a (a b c &key d)) '(nil nil nil)))
   (declare (ignore a b c d)))
 
 (defclass lisp-syntax-c1 ()
