@@ -375,9 +375,8 @@ which must be an adjustable vector of characters with a fill
 pointer. All objects in the buffer range must be
 characters. Returns `string'."
   (loop for offset from offset1 below offset2
-     for i upfrom 0
-     do (vector-push-extend (buffer-object buffer offset) string)
-     finally (return string)))
+        do (vector-push-extend (buffer-object buffer offset) string)
+        finally (return string)))
 
 (defun fill-string-from-buffer (buffer string offset1 offset2)
   "Copy from `offset1' to `offset2' in `buffer' to `string',
@@ -386,11 +385,10 @@ pointer. Once the buffer region has been copied to `string', or a
 non-character object has been encountered in the buffer, the
 number of characters copied to `string' will be returned."
   (loop for offset from offset1 below offset2
-     for i upfrom 0
-     if (characterp (buffer-object buffer offset))
-     do (vector-push-extend (buffer-object buffer offset) string)
-     else do (loop-finish)
-     finally (return i)))
+        for object = (buffer-object buffer offset)
+        while (characterp object)
+        count 1
+        do (vector-push-extend object string)))
 
 (defun buffer-find-nonchar (buffer start-offset max-offset)
   "Search through `buffer' from `start-offset', returning the
