@@ -205,10 +205,14 @@ presentation types."
       t))
 
 (defun make-presentation-type-name (name)
-  (intern (format nil "(presentation-type ~A::~A)"
-                  (package-name (symbol-package name))
-                  (symbol-name name))
-          :clim-internals))
+  (if-let ((package (symbol-package name)))
+    (intern (format nil "(presentation-type ~A::~A)"
+                    (package-name package)
+                    (symbol-name name))
+            :clim-internals)
+    (intern (format nil "(presentation-type #:~A)"
+                    (symbol-name name))
+            :clim-internals)))
 
 (defun transform-parameters-lambda-list (ll)
   "Change the destructuring  lambda list so that any optional or key variable
