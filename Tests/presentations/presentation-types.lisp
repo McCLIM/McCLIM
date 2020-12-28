@@ -240,3 +240,38 @@
     (expect '()        'simple-presentation-type)
     (expect '()        'presentation-type-with-parameters)
     (expect '(baz fez) 'presentation-type-with-options)))
+
+(test presentations.forward-referenced-class
+  (flet ((make-defclass-lambda (name super)
+           (compile nil `(lambda ()
+                           (defclass ,name (,super) ()))))
+         (make-defptype-lambda (name super)
+           (compile nil `(lambda ()
+                           (define-presentation-type ,name ()
+                             :inherit-from ',super)))))
+    (flet ((do-test (root-type leaf-type)
+             (let ((root (gensym))
+                   (leaf (gensym)))
+               ;; Undefined types do not have prototypes.
+               (signals error (climi::prototype-or-error root))
+               (signals error (climi::prototype-or-error leaf))
+               ;; We may define a type with a forward-referenced supertype.
+               (finishes
+                 (funcall (ecase leaf-type
+                            (:class (make-defclass-lambda leaf root))
+                            (:ptype (make-defptype-lambda leaf root)))))
+               ;; However it can't be finalized due to a forward reference.
+               (signals error (climi::prototype-or-error leaf))
+               ;; Define the forward-referenced super.
+               (finishes
+                 (funcall (ecase root-type
+                            (:class (make-defclass-lambda root t))
+                            (:ptype (make-defptype-lambda root t)))))
+               (finishes (climi::prototype-or-error root))
+               (finishes (climi::prototype-or-error leaf)))))
+      (do-test :class :ptype)
+      (do-test :ptype :ptype)
+      ;; Anything fancy going on here?
+      #+ (or) (do-test :class :class)
+      ;; Standard classes does not inherit from the presentation-type classes.
+      #+ (or) (do-test :ptype :class))))
