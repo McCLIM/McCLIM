@@ -8,8 +8,6 @@
 (defclass gtk-port (climi::standard-port) #+nil(basic-port)
   ((pointer        :accessor port-pointer
                    :initform (make-instance 'gtk-pointer))
-   (window         :initform nil
-                   :accessor gtk-port-window)
    (event-queue    :initform nil
                    :accessor gtk-port/event-queue)
    (gtk-lock       :initform (bordeaux-threads:make-lock "GTK Port Lock")
