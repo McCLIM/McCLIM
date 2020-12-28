@@ -1148,7 +1148,8 @@ calculated by `drei-bounding-rectangle*'."
                                  (region-contains-position-p viewport-region x1 y1))))
               (scroll-extent stream
                              (max 0 (- x2 viewport-width))
-                             (max 0 (- y2 viewport-height))))))))))
+                             (max 0 (- y2 viewport-height))))))))
+    (finish-output stream)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
