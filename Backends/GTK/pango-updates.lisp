@@ -44,16 +44,15 @@
 
 (export 'pango-layout-get-baseline)
 
+
 (defcfun ("pango_font_description_new" pango-font-description-new)
     (g-boxed-foreign pango-font-description))
 
 (export 'pango-font-description-new)
 
-#+nil
 (defcfun ("pango_font_description_free" pango-font-description-free) :void
   (desc :pointer))
 
-#+nil
 (export 'pango-font-description-free)
 
 (defcfun ("pango_font_description_set_family" pango-font-description-set-family) :void
@@ -90,3 +89,84 @@
   (size :double))
 
 (export 'pango-font-description-set-absolute-size)
+
+;; Returning a pointer here, since if I use g-boxed-foreign, the GC hook will try to free it
+(defcfun ("pango_cairo_font_map_get_default" pango-cairo-font-map-get-default) :pointer)
+
+(export 'pango-cairo-font-map-get-default)
+
+(defcfun ("pango_font_map_load_font" pango-font-map-load-font) :pointer
+  (font-map :pointer)
+  (context (g-object pango-context))
+  (desc (g-boxed-foreign pango-font-description)))
+
+(export 'pango-font-map-load-font)
+
+(export 'pango-shape)
+
+(defcfun ("pango_glyph_string_new" pango-glyph-string-new) :pointer)
+
+(export 'pango-glyph-string-new)
+
+(defcfun ("pango_glyph_string_free" pango-glyph-string-free) :void
+  (glyph-string :pointer))
+
+(export 'pango-glyph-string-free)
+
+(defcfun ("g_ptr_array_new" g-ptr-array-new) :pointer)
+
+(define-g-boxed-cstruct pango-analysis "PangoAnalysis"
+  (shape-engint :pointer)
+  (lang-engine :pointer)
+  (font :pointer)
+  (level :unsigned-char)
+  (gravity :unsigned-char)
+  (language :pointer)
+  (extra-attrs :pointer))
+
+(define-g-boxed-cstruct pango-item "PangoItem"
+  (offset :int :initform 0)
+  (length :int :initform 0)
+  (num-chars :int :initform 0)
+  (analysis (:struct pango-analysis-cstruct)))
+
+(export (boxed-related-symbols 'pango-item))
+
+(defcfun ("pango_item_free" pango-item-free) :void
+  (item :pointer))
+
+(defcfun ("pango_itemize" %pango-itemize)
+    (g-list (g-boxed-foreign pango-item))
+  (context (g-object pango-context))
+  (text (:pointer :char))
+  (start-index :int)
+  (length :int)
+  (attrs (g-boxed-foreign pango-attr-list))
+  (cached-iter :pointer))
+
+(defun pango-itemize (context text attrs)
+  (cffi:with-foreign-string ((ptr buf-len) text :null-terminated-p nil)
+    (%pango-itemize context ptr 0 buf-len attrs (cffi:null-pointer))))
+
+(export 'pango-itemize)
+
+(defcfun ("pango_shape" %pango-shape) :void
+  (text (:pointer :char))
+  (length :int)
+  (analysis (:pointer (:struct pango-analysis-cstruct)))
+  (glyph-string :pointer))
+
+(defun pango-shape (text analysis glyph-string)
+  (cffi:with-foreign-string ((ptr buf-len) text :null-terminated-p nil)
+    (cffi:with-foreign-objects ((analysis-buf '(:struct pango-analysis-cstruct)))
+      (setf (cffi:mem-ref analysis-buf '(:struct pango-analysis-cstruct)) analysis)
+      (%pango-shape ptr buf-len analysis-buf glyph-string))))
+
+(export 'pango-shape)
+
+(defcfun ("pango_cairo_show_glyph_string" pango-cairo-show-glyph-string) :void
+  (cr (:pointer (:struct cairo-t)))
+  (font :pointer)
+  (glyph-string :pointer))
+
+(export 'pango-cairo-show-glyph-string)

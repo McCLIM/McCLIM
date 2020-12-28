@@ -191,18 +191,23 @@
 (defmethod pointer-position ((pointer gtk-pointer))
   (values (slot-value pointer 'x) (slot-value pointer 'y)))
 
+#+nil
 (defmethod pointer-button-state ((pointer gtk-pointer))
   nil)
 
+#+nil
 (defmethod port-modifier-state ((port gtk-port))
   nil)
 
+#+nil
 (defmethod synthesize-pointer-motion-event ((pointer gtk-pointer))
   nil)
 
+#+nil
 (defmethod (setf port-keyboard-input-focus) (focus (port gtk-port))
   focus)
 
+#+nil
 (defmethod port-keyboard-input-focus ((port gtk-port))
   nil)
 
@@ -214,6 +219,7 @@
   (declare (ignore event))
   nil)
 
+#+nil
 (defmethod set-sheet-pointer-cursor ((port gtk-port) sheet cursor)
   (declare (ignore sheet cursor))
   nil)

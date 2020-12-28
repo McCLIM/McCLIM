@@ -139,6 +139,17 @@
                     ,@body))
              (cairo:cairo-destroy ,context)))))))
 
+(defun call-with-fallback-cairo-context (port fn)
+  (let* ((image (gtk-port/image-fallback port))
+         (context (cairo:cairo-create image)))
+    (unwind-protect
+         (funcall fn context)
+      (cairo:cairo-destroy context))))
+
+(defmacro with-fallback-cairo-context ((context-sym port) &body body)
+  (alexandria:once-only (port)
+    `(call-with-fallback-cairo-context ,port (lambda (,context-sym) ,@body))))
+
 (defun call-with-cairo-context-measure (medium fn)
   (let ((image (alexandria:if-let ((mirror (climi::port-lookup-mirror (port medium) (medium-sheet medium))))
                  (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
@@ -165,7 +176,10 @@
   ((buffering-output-p :accessor medium-buffering-output-p)))
 
 (defclass gtk-medium-font ()
-  ((font-description :initarg :font-description
+  ((port             :initarg :port
+                     :initform (alexandria:required-argument :port)
+                     :reader gtk-medium-font/port)
+   (font-description :initarg :font-description
                      :reader gtk-medium-font/font-description)))
 
 (defun set-current-font (layout font)
@@ -203,7 +217,7 @@
       (when size
         (let ((size-num (coerce (* (climb:normalize-font-size size) pango:+pango-scale+) 'double-float)))
           (pango:pango-font-description-set-absolute-size desc size-num)))
-      (make-instance 'gtk-medium-font :font-description desc))))
+      (make-instance 'gtk-medium-font :port port :font-description desc))))
 
 (defmethod (setf text-style-mapping) (font-name
                                       (port gtk-port)
@@ -211,25 +225,6 @@
                                       &optional character-set)
   (declare (ignore font-name text-style character-set))
   (error "Can't set mapping"))
-
-(defmethod (setf medium-text-style) :before (text-style (medium gtk-medium))
-  (declare (ignore text-style))
-  nil)
-
-(defmethod (setf medium-line-style) :before (line-style (medium gtk-medium))
-  (declare (ignore line-style))
-  nil)
-
-(defmethod (setf medium-clipping-region) :after (region (medium gtk-medium))
-  (declare (ignore region))
-  nil)
-
-(defmethod medium-copy-area ((from-drawable gtk-medium)
-			     from-x from-y width height
-                             (to-drawable gtk-medium)
-			     to-x to-y)
-  (declare (ignore from-x from-y width height to-x to-y))
-  nil)
 
 #+nil ; FIXME: PIXMAP class
 (progn
@@ -254,74 +249,103 @@
     (declare (ignore from-x from-y width height to-x to-y))
     nil))
 
+#+nil
 (defmethod text-style-ascent (text-style (medium gtk-medium))
   (declare (ignore text-style))
-  1)
+  20)
 
+#+nil
 (defmethod text-style-descent (text-style (medium gtk-medium))
   (declare (ignore text-style))
-  1)
+  5)
 
+#+nil
 (defmethod text-style-height (text-style (medium gtk-medium))
   (+ (text-style-ascent text-style medium)
      (text-style-descent text-style medium)))
 
+#+nil
 (defmethod text-style-character-width (text-style (medium gtk-medium) char)
   (declare (ignore text-style char))
-  1)
+  10)
 
+#+nil
 (defmethod text-style-width (text-style (medium gtk-medium))
   (text-style-character-width text-style medium #\m))
+
+(defun measure-text-bounds-from-font (cr string font)
+  (let ((layout (pango:pango-cairo-create-layout cr)))
+    (set-current-font layout font)
+    (pango:pango-layout-set-text layout string)
+    (multiple-value-bind (ink-rect logical-rect)
+        (pango:pango-layout-get-pixel-extents layout)
+      (let ((baseline (/ (pango:pango-layout-get-baseline layout) pango:+pango-scale+)))
+        (values ink-rect logical-rect baseline)))))
+
+(defun measure-text-bounds (medium string text-style)
+  (with-cairo-context-measure (cr medium)
+    (let ((font (clim:text-style-mapping (port medium) (or text-style (clim:medium-text-style medium)))))
+      (measure-text-bounds-from-font cr string font))))
+
+(defmethod climb:font-ascent ((font gtk-medium-font))
+  (with-fallback-cairo-context (cr (gtk-medium-font/port font))
+    (multiple-value-bind (ink-rect logical-rect baseline)
+        (measure-text-bounds-from-font cr "A" font)
+      (declare (ignore ink-rect logical-rect))
+      baseline)))
+
+(defmethod climb:font-descent ((font gtk-medium-font))
+  (with-fallback-cairo-context (cr (gtk-medium-font/port font))
+    (multiple-value-bind (ink-rect logical-rect baseline)
+        (measure-text-bounds-from-font cr "g" font)
+      (declare (ignore ink-rect))
+      (- (pango:pango-rectangle-height logical-rect) baseline))))
+
+(defmethod climb:font-character-width ((font gtk-medium-font) character)
+  (with-fallback-cairo-context (cr (gtk-medium-font/port font))
+    (multiple-value-bind (ink-rect logical-rect baseline)
+        (measure-text-bounds-from-font cr (string character) font)
+      (declare (ignore logical-rect baseline))
+      (pango:pango-rectangle-width ink-rect))))
 
 (defmethod text-size ((medium gtk-medium) string &key text-style (start 0) end)
   (setf string (etypecase string
 		 (character (string string))
 		 (string string)))
   (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
-    (with-cairo-context-measure (cr medium)
-      (let ((layout (pango:pango-cairo-create-layout cr)))
-        (set-current-font layout (clim:text-style-mapping (port medium) (or text-style (clim:medium-text-style medium))))
-        (pango:pango-layout-set-text layout fixed-string)
-        (multiple-value-bind (ink-rect logical-rect)
-            (pango:pango-layout-get-pixel-extents layout)
-          (let ((baseline (/ (pango:pango-layout-get-baseline layout) pango:+pango-scale+)))
-            (values (pango:pango-rectangle-width logical-rect)
-                    (pango:pango-rectangle-height logical-rect)
-                    (pango:pango-rectangle-width ink-rect)
-                    0
-                    baseline))))))
-  #+nil
-  (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
-    (with-cairo-context (cr medium)
-      (let ((layout (pango:pango-cairo-create-layout cr)))
-        (pango:pango-layout-set-text layout fixed-string)
-        (let ((x (multiple-value-list (pango:pango-layout-get-pixel-extents layout))))
-          (log:info "x = ~s" x)
-          (break)))))
-  #+nil
-  (let ((width 0)
-	(height (text-style-height text-style medium))
-	(x (- (or end (length string)) start))
-	(y 0)
-	(baseline (text-style-ascent text-style medium)))
-    (do ((pos (position #\Newline string :start start :end end)
-	      (position #\Newline string :start (1+ pos) :end end)))
-	((null pos) (values width height x y baseline))
-      (let ((start start)
-	    (end pos))
-	(setf x (- end start))
-	(setf y (+ y (text-style-height text-style medium)))
-	(setf width (max width x))
-	(setf height (+ height (text-style-height text-style medium)))
-	(setf baseline (+ baseline (text-style-height text-style medium)))))))
+    (multiple-value-bind (ink-rect logical-rect baseline)
+        (measure-text-bounds medium fixed-string text-style)
+      (values (pango:pango-rectangle-width logical-rect)
+              (pango:pango-rectangle-height logical-rect)
+              (pango:pango-rectangle-width ink-rect)
+              0
+              baseline))))
 
 (defmethod climb:text-bounding-rectangle*
     ((medium gtk-medium) string &key text-style (start 0) end align-x align-y direction)
   (declare (ignore align-x align-y direction))
-  (multiple-value-bind (width height x y baseline)
-      (text-size medium string :text-style text-style :start start :end end)
-    (declare (ignore baseline))
-    (values x y (+ x width) (+ y height))))
+  (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
+    (multiple-value-bind (ink-rect logical-rect)
+        (measure-text-bounds medium fixed-string text-style)
+      (declare (ignore ink-rect))
+      (let ((x (pango:pango-rectangle-x logical-rect))
+            (y (pango:pango-rectangle-y logical-rect)))
+       (values x
+               y
+               (+ x (pango:pango-rectangle-width logical-rect))
+               (+ y (pango:pango-rectangle-height logical-rect)))))))
+
+(defmethod (setf medium-text-style) :before (text-style (medium gtk-medium))
+  (declare (ignore text-style))
+  nil)
+
+(defmethod (setf medium-line-style) :before (line-style (medium gtk-medium))
+  (declare (ignore line-style))
+  nil)
+
+(defmethod (setf medium-clipping-region) :after (region (medium gtk-medium))
+  (declare (ignore region))
+  nil)
 
 (defmethod medium-draw-text* ((medium gtk-medium) string x y
                               start end
@@ -354,6 +378,13 @@
 (defmethod (setf medium-buffering-output-p) (buffer-p (medium gtk-medium))
   buffer-p)
 
+(defmethod medium-copy-area ((from-drawable gtk-medium)
+			     from-x from-y width height
+                             (to-drawable gtk-medium)
+			     to-x to-y)
+  (declare (ignore from-x from-y width height to-x to-y))
+  nil)
+
 (defmethod medium-finish-output ((medium gtk-medium))
   (with-medium-mirror (mirror medium)
     (let ((widget (gtk-mirror/drawing-area mirror)))
@@ -379,6 +410,9 @@
   0)
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
+  #+nil
+  (when (eql y2 300)
+    (break))
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr x1 y1)
       (climi::with-transformed-position (tr x2 y2)

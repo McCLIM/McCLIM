@@ -57,7 +57,7 @@
   (gobject:g-signal-connect window "map"
                             (lambda (widget)
                               (declare (ignore widget))
-                              (process-map-event port window sheet)
+                              (process-map-event port sheet)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "destroy"
                             (lambda (widget)
@@ -73,6 +73,16 @@
                             (lambda (widget event)
                               (declare (ignore widget))
                               (process-leave-notify-event port event sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "key-press-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-key-press-event port event sheet)
+                              gdk:+gdk-event-propagate+))
+  (gobject:g-signal-connect window "key-release-event"
+                            (lambda (widget event)
+                              (declare (ignore widget))
+                              (process-key-release-event port event sheet)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "motion-notify-event"
                             (lambda (widget event)
@@ -125,7 +135,7 @@
                                         :height height
                                         :timestamp (incf *event-ts*)))))
 
-(defun process-map-event (port window sheet)
+(defun process-map-event (port sheet)
   (push-event-to-queue port
                        (make-instance 'window-repaint-event
                                       :timestamp (incf *event-ts*)
@@ -160,6 +170,26 @@
                                       :sheet sheet
                                       :modifier-state 0
                                       :timestamp (incf *event-ts*))))
+
+(defun process-generic-key-event (name port event sheet)
+  (log:info "key event: ~s: ~s" name (gdk:gdk-event-key-string event))
+  (let ((clim-event (make-instance name
+                                   :key-name :|a| ;;keysym-name
+                                   :key-character #\a ;;(gdk:gdk-event-key-string event)
+                                   :x 0
+                                   :y 0
+                                   :graft-x 0
+                                   :graft-y 0
+                                   :sheet sheet
+                                   :modifier-state 0
+                                   :timestamp (incf *event-ts*))))
+    (push-event-to-queue port clim-event)))
+
+(defun process-key-press-event (port event sheet)
+  (process-generic-key-event 'key-press-event port event sheet))
+
+(defun process-key-release-event (port event sheet)
+  (process-generic-key-event 'key-release-event port event sheet))
 
 (defun convert-button-name (gdk-button-id)
   (case gdk-button-id
