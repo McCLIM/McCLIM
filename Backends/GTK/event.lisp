@@ -49,7 +49,7 @@
           (bordeaux-threads:condition-notify condvar)
           event)))))
 
-(defun create-event-listeners (window port sheet mirror)
+(defun create-event-listeners (window port sheet mirror input-context)
   (gobject:g-signal-connect window "configure-event"
                             (lambda (widget event)
                               (process-configure-event port widget event sheet mirror)
@@ -77,12 +77,12 @@
   (gobject:g-signal-connect window "key-press-event"
                             (lambda (widget event)
                               (declare (ignore widget))
-                              (process-key-press-event port event sheet)
+                              (process-key-press-event port event sheet mirror)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "key-release-event"
                             (lambda (widget event)
                               (declare (ignore widget))
-                              (process-key-release-event port event sheet)
+                              (process-key-release-event port event sheet mirror)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "motion-notify-event"
                             (lambda (widget event)
@@ -99,6 +99,14 @@
                               (declare (ignore widget))
                               (process-button-release-event port event sheet)
                               gdk:+gdk-event-propagate+))
+
+  (gobject:g-signal-connect input-context "commit"
+                            (lambda (context string)
+                              (log:info "Got input: ~s ~s" context string)))
+  (gobject:g-signal-connect input-context "preedit-start"
+                            (lambda (context user-data)
+                              (log:info "Got preedit: ~s ~s" context user-data)))
+
   (gtk:gtk-widget-add-events window '(:all-events-mask)))
 
 (defmethod process-next-event ((port gtk-port) &key wait-function (timeout nil))
@@ -171,25 +179,40 @@
                                       :modifier-state 0
                                       :timestamp (incf *event-ts*))))
 
+(defun keyboard-event-to-sym (event)
+  (let ((keyval (gdk:gdk-event-key-keyval event)))
+    (clim-xcommon:keysym-to-keysym-name keyval)))
+
 (defun process-generic-key-event (name port event sheet)
-  (log:info "key event: ~s: ~s" name (gdk:gdk-event-key-string event))
-  (let ((clim-event (make-instance name
-                                   :key-name :|a| ;;keysym-name
-                                   :key-character #\a ;;(gdk:gdk-event-key-string event)
-                                   :x 0
-                                   :y 0
-                                   :graft-x 0
-                                   :graft-y 0
-                                   :sheet sheet
-                                   :modifier-state 0
-                                   :timestamp (incf *event-ts*))))
+  (log:info "key event: ~s: string=~s code=~s" name (gdk:gdk-event-key-string event) (gdk:gdk-event-key-hardware-keycode event))
+  (let* ((key-string (gdk:gdk-event-key-string event))
+         (keysym-name (keyboard-event-to-sym event))
+         (length (length key-string))
+         (character (cond
+                      ((zerop length) nil)
+                      ((= length 1) (aref key-string 0))
+                      (t key-string)))
+         (clim-event (make-instance name
+                                    :key-name keysym-name ;;keysym-name
+                                    :key-character character
+                                    :x 0
+                                    :y 0
+                                    :graft-x 0
+                                    :graft-y 0
+                                    :sheet sheet
+                                    :modifier-state 0
+                                    :timestamp (incf *event-ts*))))
     (push-event-to-queue port clim-event)))
 
-(defun process-key-press-event (port event sheet)
-  (process-generic-key-event 'key-press-event port event sheet))
+(defun process-key-press-event (port event sheet mirror)
+  (declare (ignore mirror))
+  (progn ;;unless (gtk:gtk-im-context-filter-keypress (gtk-mirror/input-context mirror) event)
+    (process-generic-key-event 'key-press-event port event sheet)))
 
-(defun process-key-release-event (port event sheet)
-  (process-generic-key-event 'key-release-event port event sheet))
+(defun process-key-release-event (port event sheet mirror)
+  (declare (ignore mirror))
+  (progn ;;unless (gtk:gtk-im-context-filter-keypress (gtk-mirror/input-context mirror) event)
+    (process-generic-key-event 'key-release-event port event sheet)))
 
 (defun convert-button-name (gdk-button-id)
   (case gdk-button-id

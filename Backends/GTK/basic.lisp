@@ -45,6 +45,7 @@
           (let ((new-result (block gtk-update
                               (handler-bind ((error (lambda (condition)
                                                       (log:error "Error in GTK thread: ~a" condition)
+                                                      (break)
                                                       (return-from gtk-update (list :error condition)))))
                                 (let ((*gtk-thread-p* t))
                                   (let ((inner-result (multiple-value-list (funcall fn))))

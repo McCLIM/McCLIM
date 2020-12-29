@@ -6,17 +6,17 @@
     (alexandria:with-gensyms (mirror-copy-sym)
       `(let ((,mirror-copy-sym (climi::port-lookup-mirror (port ,medium) (medium-sheet ,medium))))
          (unless ,mirror-copy-sym
-           (break))
+           (log:warn "Trying to use null mirror"))
          (when ,mirror-copy-sym
            (let ((,mirror-sym ,mirror-copy-sym))
              ,@body))))))
 
-(defun update-mirror-if-needed (mirror)
+(defun update-mirror-if-needed (medium mirror)
   (let ((requested-width (gtk-mirror/requested-image-width mirror))
         (requested-height (gtk-mirror/requested-image-height mirror)))
     (when (and requested-width requested-height)
       (cairo:cairo-surface-destroy (gtk-mirror/image mirror))
-      (setf (gtk-mirror/image mirror) (cairo:cairo-image-surface-create :argb32 requested-width requested-height))
+      (setf (gtk-mirror/image mirror) (make-backing-image (medium-background medium) requested-width requested-height))
       (setf (gtk-mirror/requested-image-width mirror) nil)
       (setf (gtk-mirror/requested-image-height mirror) nil))))
 
@@ -26,7 +26,7 @@
     (alexandria:with-gensyms (mirror-sym image)
       `(with-medium-mirror (,mirror-sym ,medium)
          (let ((,image (bordeaux-threads:with-lock-held ((gtk-mirror/lock ,mirror-sym))
-                         (update-mirror-if-needed ,mirror-sym)
+                         (update-mirror-if-needed ,medium ,mirror-sym)
                          (let ((,image (gtk-mirror/image ,mirror-sym)))
                            (cairo:cairo-surface-reference ,image)
                            ,image))))
@@ -109,7 +109,7 @@
 
 (defmethod context-apply-ink (cr (ink climi::standard-flipping-ink))
   (apply-colour-from-ink cr (resolve-indirect-ink (slot-value ink 'climi::design1)))
-  (cairo:cairo-set-operator cr :xor))
+  (cairo:cairo-set-operator cr :over))
 
 (defmethod context-apply-ink (cr (ink clime:indirect-ink))
   (context-apply-ink cr (clime:indirect-ink-ink ink)))
@@ -125,19 +125,24 @@
                                     (:bevel :bevel)
                                     (:none :miter)))))
 
-(defmacro with-cairo-context ((context-sym medium &key (update-style t)) &body body)
+(defun call-with-cairo-context (medium update-style transform fn)
+  (with-medium-cairo-image (image medium)
+    (let ((context (cairo:cairo-create image)))
+      (unwind-protect
+           (progn
+             (when update-style
+               (update-attrs context medium))
+             (cond
+               ((eq transform t) (apply-transformation-to-context context (sheet-native-transformation (medium-sheet medium))))
+               (transform (apply-transformation-to-context context transform)))
+             (funcall fn context))
+        (cairo:cairo-destroy context)))))
+
+(defmacro with-cairo-context ((context-sym medium &key (update-style t) (transform nil)) &body body)
   (check-type context-sym symbol)
-  (alexandria:once-only (medium update-style)
-    (alexandria:with-gensyms (image-sym context)
-      `(with-medium-cairo-image (,image-sym ,medium)
-         (let ((,context (cairo:cairo-create ,image-sym)))
-           (unwind-protect
-                (progn
-                  (when ,update-style
-                    (update-attrs ,context ,medium))
-                  (let ((,context-sym ,context))
-                    ,@body))
-             (cairo:cairo-destroy ,context)))))))
+  (alexandria:once-only (medium update-style transform)
+    `(call-with-cairo-context ,medium ,update-style ,transform
+                              (lambda (,context-sym) ,@body))))
 
 (defun call-with-fallback-cairo-context (port fn)
   (let* ((image (gtk-port/image-fallback port))
@@ -291,22 +296,22 @@
   (with-fallback-cairo-context (cr (gtk-medium-font/port font))
     (multiple-value-bind (ink-rect logical-rect baseline)
         (measure-text-bounds-from-font cr "A" font)
-      (declare (ignore ink-rect logical-rect))
-      baseline)))
+      (declare (ignore ink-rect))
+      (- baseline (pango:pango-rectangle-y logical-rect)))))
 
 (defmethod climb:font-descent ((font gtk-medium-font))
   (with-fallback-cairo-context (cr (gtk-medium-font/port font))
     (multiple-value-bind (ink-rect logical-rect baseline)
         (measure-text-bounds-from-font cr "g" font)
       (declare (ignore ink-rect))
-      (- (pango:pango-rectangle-height logical-rect) baseline))))
+      (- (+ (pango:pango-rectangle-y logical-rect) (pango:pango-rectangle-height logical-rect)) baseline))))
 
 (defmethod climb:font-character-width ((font gtk-medium-font) character)
   (with-fallback-cairo-context (cr (gtk-medium-font/port font))
     (multiple-value-bind (ink-rect logical-rect baseline)
         (measure-text-bounds-from-font cr (string character) font)
-      (declare (ignore logical-rect baseline))
-      (pango:pango-rectangle-width ink-rect))))
+      (declare (ignore ink-rect baseline))
+      (pango:pango-rectangle-width logical-rect))))
 
 (defmethod text-size ((medium gtk-medium) string &key text-style (start 0) end)
   (setf string (etypecase string
@@ -325,15 +330,17 @@
     ((medium gtk-medium) string &key text-style (start 0) end align-x align-y direction)
   (declare (ignore align-x align-y direction))
   (let ((fixed-string (subseq string (or start 0) (or end (length string)))))
-    (multiple-value-bind (ink-rect logical-rect)
+    (multiple-value-bind (ink-rect logical-rect baseline)
         (measure-text-bounds medium fixed-string text-style)
       (declare (ignore ink-rect))
       (let ((x (pango:pango-rectangle-x logical-rect))
-            (y (pango:pango-rectangle-y logical-rect)))
+            (y (pango:pango-rectangle-y logical-rect))
+            (width (pango:pango-rectangle-width logical-rect))
+            (height (pango:pango-rectangle-height logical-rect)))
        (values x
-               y
-               (+ x (pango:pango-rectangle-width logical-rect))
-               (+ y (pango:pango-rectangle-height logical-rect)))))))
+               (- y baseline)
+               (+ x width)
+               (- height baseline))))))
 
 (defmethod (setf medium-text-style) :before (text-style (medium gtk-medium))
   (declare (ignore text-style))
@@ -399,7 +406,7 @@
     (climi::with-transformed-position (tr top left)
       (climi::with-transformed-position (tr right bottom)
         (with-cairo-context (cr medium :update-style nil)
-          (cairo:cairo-set-source-rgba cr 1 1 1 1)
+          (apply-colour-from-ink cr (medium-background medium))
           (cairo:cairo-rectangle cr left top right bottom)
           (cairo:cairo-fill cr))))))
 
@@ -479,16 +486,30 @@
           (cairo:cairo-fill cr)
           (cairo:cairo-stroke cr)))))
 
-(defmethod medium-draw-ellipse* ((medium gtk-medium) center-x center-y
+(defmethod medium-draw-ellipse* ((medium gtk-medium) centre-x centre-y
 				 radius-1-dx radius-1-dy
 				 radius-2-dx radius-2-dy
 				 start-angle end-angle filled)
-  (declare (ignore center-x center-y
-		   radius-1-dx radius-1-dy
-		   radius-2-dx radius-2-dy
-		   start-angle end-angle filled))
-  (break)
-  nil)
+  (with-cairo-context (cr medium :transform t)
+    (let ((ellipse (make-ellipse* centre-x centre-y
+                                  radius-1-dx radius-1-dy
+				  radius-2-dx radius-2-dy
+                                  :start-angle start-angle
+                                  :end-angle end-angle)))
+      (multiple-value-bind (new-centre-x new-centre-y horizontal-size vertical-size angle)
+          (climi::ellipse-simplified-representation ellipse)
+        (log:info "h=~s v=~s d=~s" horizontal-size vertical-size angle)
+        (cairo:cairo-save cr)
+        (cairo:cairo-translate cr new-centre-x new-centre-y)
+        (cairo:cairo-rotate cr (/ pi 4))
+        (cairo:cairo-scale cr horizontal-size vertical-size)
+        (cairo:cairo-arc cr 0 0 1 (or start-angle 0) (or end-angle (* pi 2)))
+        (when (and filled (< (mod start-angle (* pi 2)) (mod end-angle (* pi 2))))
+          (cairo:cairo-line-to cr 0 0))
+        (cairo:cairo-restore cr)
+        (if filled
+            (cairo:cairo-fill cr)
+            (cairo:cairo-stroke cr))))))
 
 (defmethod medium-draw-circle* ((medium gtk-medium)
 				center-x center-y radius start-angle end-angle

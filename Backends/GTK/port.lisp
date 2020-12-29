@@ -38,7 +38,9 @@
                            :accessor gtk-mirror/pango-context)
    (lock                   :initform (bordeaux-threads:make-lock)
                            :reader gtk-mirror/lock
-                           :documentation "This lock must be held while accessing the requested dimension")))
+                           :documentation "This lock must be held while accessing the requested dimension")
+   (input-context          :initarg :input-context
+                           :accessor gtk-mirror/input-context)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'gtk-port 'identity))
@@ -104,10 +106,10 @@
     (cairo:cairo-fill cr)
     (cairo:cairo-surface-destroy image)))
 
-(defun make-backing-image (width height)
-  (let* ((image (cairo:cairo-image-surface-create :argb32 width height))
+(defun make-backing-image (ink width height)
+  (let* ((image (cairo:cairo-image-surface-create :argb32 (round-coordinate width) (round-coordinate height)))
          (cr (cairo:cairo-create image)))
-    (cairo:cairo-set-source-rgb cr 1 1 1)
+    (apply-colour-from-ink cr ink)
     (cairo:cairo-paint cr)
     image))
 
@@ -116,26 +118,29 @@
   (let* ((q (compose-space sheet))
          (width (climi::space-requirement-width q))
          (height (climi::space-requirement-height q))
-         (image (make-backing-image width height))
+         (image (make-backing-image (medium-background (sheet-medium sheet)) width height))
          (mirror (make-instance 'gtk-mirror :sheet sheet :image image)))
-    (multiple-value-bind (window drawing-area pango-context)
+    (multiple-value-bind (window input-context drawing-area pango-context)
         (in-gtk-thread ()
           (let ((window (make-instance 'gtk:gtk-window
                                        :type :toplevel
-                                       :default-width width
-                                       :default-height height)))
-            (let ((drawing-area (make-instance 'gtk:gtk-drawing-area)))
+                                       :default-width (round-coordinate width)
+                                       :default-height (round-coordinate height))))
+            (let ((drawing-area (make-instance 'gtk:gtk-drawing-area))
+                  (input-context (make-instance 'gtk:gtk-im-context-simple)))
               (gobject:g-signal-connect drawing-area "draw"
                                         (lambda (widget cr)
                                           (declare (ignore widget))
                                           (draw-window-content (gobject:pointer cr) mirror)
                                           gdk:+gdk-event-stop+))
-              (create-event-listeners window port sheet mirror)
+              (create-event-listeners window port sheet mirror input-context)
               (gtk:gtk-container-add window drawing-area)
               (let ((pango-context (gtk:gtk-widget-create-pango-context drawing-area)))
+                (gtk:gtk-im-context-set-client-window input-context window)
                 (gtk:gtk-widget-show-all window)
-                (values window drawing-area pango-context)))))
+                (values window input-context drawing-area pango-context)))))
       (setf (gtk-mirror/window mirror) window)
+      (setf (gtk-mirror/input-context mirror) input-context)
       (setf (gtk-mirror/drawing-area mirror) drawing-area)
       (setf (gtk-mirror/pango-context mirror) pango-context)
       (climi::port-register-mirror port sheet mirror))))
