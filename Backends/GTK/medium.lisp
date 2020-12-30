@@ -78,7 +78,7 @@
       (t
        (break)))))
 
-(defun apply-transformation-to-context (cr tr)
+(defun call-with-computed-transformation (tr fn)
   (unless (eq tr 'clim:+identity-transformation+)
     (multiple-value-bind (mxx mxy myx myy tx ty)
         (climi::get-transformation tr)
@@ -89,7 +89,7 @@
         (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::yy) (coerce myy 'double-float))
         (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::x0) (coerce tx 'double-float))
         (setf (cffi:foreign-slot-value matrix '(:struct cairo::cairo-matrix-t) 'cairo::y0) (coerce ty 'double-float))
-        (cairo:cairo-set-matrix cr matrix)))))
+        (funcall fn matrix)))))
 
 (defgeneric context-apply-ink (cr ink))
 
@@ -114,6 +114,51 @@
 (defmethod context-apply-ink (cr (ink clime:indirect-ink))
   (context-apply-ink cr (clime:indirect-ink-ink ink)))
 
+(defmethod context-apply-ink (cr (ink clime:transformed-design))
+  (let ((transformation (clime:transformed-design-transformation ink)))
+    (apply-pattern cr (clime:transformed-design-design ink) transformation)))
+
+(defmethod context-apply-ink (cr (pattern clime:pattern))
+  (apply-pattern cr pattern nil))
+
+(defmethod context-apply-ink :around (cr pattern)
+  (handler-bind ((error (lambda (condition)
+                          (log:info "Got error: ~a" condition)
+                          (break))))
+    (call-next-method)))
+
+(defun apply-pattern (cr pattern transform)
+  (let* ((width (truncate (clim:pattern-width pattern)))
+         (height (truncate (clim:pattern-height pattern)))
+         (data (climi::pattern-array pattern)))
+    (assert (and (= height (array-dimension data 0))
+                 (= width (array-dimension data 1))))
+    #+nil
+    (cffi:with-foreign-array (native-buf (make-array (* height width)
+                                                     :element-type (array-element-type data)
+                                                     :displaced-to data)
+                                         `(:array :uint32 ,(* height width)))
+      (let ((image (cairo:cairo-image-surface-create-for-data native-buf :argb32 width height (* width 4))))
+        (cairo:cairo-set-source-surface cr image 0 0)))
+    (let ((image (cairo:cairo-image-surface-create :argb32 width height)))
+      (loop
+        with image-data = (cairo:cairo-image-surface-get-data image)
+        with stride-in-words = (let ((v (/ (cairo:cairo-image-surface-get-stride image) 4)))
+                                 (assert (integerp v))
+                                 v)
+        for y of-type fixnum from 0 below height
+        do (loop
+             for x of-type fixnum from 0 below width
+             do (setf (cffi:mem-aref image-data :uint32 (+ (* y stride-in-words) x))
+                      (logior (aref data y x) #xff000000))))
+      (cairo:cairo-surface-mark-dirty image)
+      (let ((cairo-pattern (cairo:cairo-pattern-create-for-surface image)))
+        (when transform
+          (call-with-computed-transformation transform
+                                             (lambda (matrix)
+                                               (cairo:cairo-pattern-set-matrix cairo-pattern matrix))))
+        (cairo:cairo-set-source cr cairo-pattern)))))
+
 (defun update-attrs (cr medium)
   (set-clipping-region cr medium)
   (context-apply-ink cr (medium-ink medium))
@@ -133,8 +178,14 @@
              (when update-style
                (update-attrs context medium))
              (cond
-               ((eq transform t) (apply-transformation-to-context context (sheet-native-transformation (medium-sheet medium))))
-               (transform (apply-transformation-to-context context transform)))
+               ((eq transform t)
+                (call-with-computed-transformation (sheet-native-transformation (medium-sheet medium))
+                                                   (lambda (matrix)
+                                                     (cairo:cairo-set-matrix context matrix))))
+               (transform
+                (call-with-computed-transformation transform
+                                                   (lambda (matrix)
+                                                     (cairo:cairo-set-matrix context matrix)))))
              (funcall fn context))
         (cairo:cairo-destroy context)))))
 
@@ -417,16 +468,10 @@
   0)
 
 (defmethod clim:medium-draw-line* ((medium gtk-medium) x1 y1 x2 y2)
-  #+nil
-  (when (eql y2 300)
-    (break))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
-    (climi::with-transformed-position (tr x1 y1)
-      (climi::with-transformed-position (tr x2 y2)
-        (with-cairo-context (cr medium)
-          (cairo:cairo-move-to cr x1 y1)
-          (cairo:cairo-line-to cr x2 y2)
-          (cairo:cairo-stroke cr))))))
+  (with-cairo-context (cr medium :transform t)
+    (cairo:cairo-move-to cr x1 y1)
+    (cairo:cairo-line-to cr x2 y2)
+    (cairo:cairo-stroke cr)))
 
 (defmethod medium-draw-lines* ((medium gtk-medium) coord-seq)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))

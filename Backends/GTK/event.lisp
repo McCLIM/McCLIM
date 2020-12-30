@@ -184,7 +184,6 @@
     (clim-xcommon:keysym-to-keysym-name keyval)))
 
 (defun process-generic-key-event (name port event sheet)
-  (log:info "key event: ~s: string=~s code=~s" name (gdk:gdk-event-key-string event) (gdk:gdk-event-key-hardware-keycode event))
   (let* ((key-string (gdk:gdk-event-key-string event))
          (keysym-name (keyboard-event-to-sym event))
          (length (length key-string))
