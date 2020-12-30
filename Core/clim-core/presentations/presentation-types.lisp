@@ -96,7 +96,7 @@ method lambda list"))
 ;;; of a presentation-type-class; in this way we can avoid weirdness
 ;;; with T being a subtype of standard-object!
 
-(defclass presentation-type ()
+(defclass presentation-type-info ()
   ((type-name :accessor type-name :initarg :type-name
               :documentation "The name assigned to the presentation
 type, as opposed to the name constructed for the class")
@@ -126,19 +126,19 @@ altered for use in destructuring bind")
                        :documentation "A function which expands the typespec
 fully, including defaulting parameters and options.")))
 
-(defmethod initialize-instance :after ((obj presentation-type) &key)
+(defmethod initialize-instance :after ((obj presentation-type-info) &key)
   (unless (slot-boundp obj 'ptype-specializer)
     (setf (slot-value obj 'ptype-specializer)
           (make-presentation-type-name (slot-value obj 'type-name)))))
 
-(defclass presentation-type-class (presentation-type standard-class)
+(defclass presentation-type-class (presentation-type-info standard-class)
   ())
 
 (defmethod c2mop:validate-superclass ((class presentation-type-class)
                                       (super standard-class))
   t)
 
-(defclass clos-presentation-type (presentation-type)
+(defclass clos-presentation-type (presentation-type-info)
   ((clos-class :accessor clos-class :initarg :clos-class
                :documentation "Holds the class object of the CLOS class of this presentation type")))
 
@@ -486,7 +486,7 @@ filled in."
 ;;; An instance of PRESENTATION-TYPE may be created at compilation time by the
 ;;; function RECORD-PRESENTATION-TYPE. This class is a superclass of both
 ;;; PRESENTATION-TYPE-CLASS (metaclass) and CLOS-PRESENTATION-TYPE (class).
-(defmethod get-ptype-metaclass ((type presentation-type))
+(defmethod get-ptype-metaclass ((type presentation-type-info))
   (find-class 'standard-class))
 
 (defmethod get-ptype-metaclass ((type presentation-type-class))
@@ -526,7 +526,7 @@ filled in."
 
 (defun class-presentation-type-name (class &optional environment)
   (declare (ignore environment))
-  (cond ((typep class 'presentation-type)
+  (cond ((typep class 'presentation-type-info)
          (type-name class))
         (t (class-name class))))
 
@@ -572,7 +572,7 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type presentation-type-class))
   (mapcan #'(lambda (class)
               (typecase class
-                (presentation-type
+                (presentation-type-info
                  (list class))
                 (standard-class
                  (if-let ((clos-ptype (find-presentation-type (class-name class) nil)))
@@ -642,7 +642,7 @@ supertypes of TYPE that are presentation types"))
                    (apply #'make-instance 'clos-presentation-type
                           :clos-class (find-class 'standard-class)
                           ptype-class-args)
-                   (apply #'make-instance 'presentation-type
+                   (apply #'make-instance 'presentation-type-info
                           ptype-class-args))
                (let ((clos-meta (find-class name nil)))
                  (if-let ((closp (typep clos-meta 'standard-class)))
@@ -753,13 +753,13 @@ suitable for SUPER-NAME"))
 
 (defun presentation-type-parameters (type-name &optional env)
   (let ((maybe-type (get-ptype type-name env)))
-    (if (and maybe-type (typep maybe-type 'presentation-type))
+    (if (and maybe-type (typep maybe-type 'presentation-type-info))
         (parameters maybe-type)
         '())))
 
 (defun presentation-type-options (type-name &optional env)
   (let ((maybe-type (get-ptype type-name env)))
-    (if (and maybe-type (typep maybe-type 'presentation-type))
+    (if (and maybe-type (typep maybe-type 'presentation-type-info))
         (options maybe-type)
         '())))
 
@@ -769,7 +769,7 @@ suitable for SUPER-NAME"))
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
       (warn "~S is not a presentation type name." type-name))
-    (if (typep ptype 'presentation-type)
+    (if (typep ptype 'presentation-type-info)
         (let* ((params-ll (parameters-lambda-list ptype))
                (params (gensym "PARAMS"))
                (type-var (gensym "TYPE-VAR"))
@@ -792,7 +792,7 @@ suitable for SUPER-NAME"))
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
       (warn "~S is not a presentation type name." type-name))
-    (if (typep ptype 'presentation-type)
+    (if (typep ptype 'presentation-type-info)
         (let* ((options-ll (options-lambda-list ptype))
                (options (gensym "OPTIONS"))
                (type-var (gensym "TYPE-VAR"))
