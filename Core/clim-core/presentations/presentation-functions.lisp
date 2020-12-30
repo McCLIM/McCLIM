@@ -68,8 +68,7 @@
               (not (typep ptype-class 'presentation-type-class)))
           (values methods success)
           (values (remove-if #'(lambda (method)
-                                 (eq (car (c2mop:method-specializers
-                                           method))
+                                 (eq (car (c2mop:method-specializers method))
                                      *standard-object-class*))
                              methods)
                   t)))))
@@ -210,6 +209,16 @@
   (if (symbolp type-key)
       't
       (type-name (class-of type-key))))
+
+(defmacro destructure-type-arg
+    ((type-var type-spec type-name) type-arg &body body)
+  `(destructuring-bind (,type-var ,type-spec) ,type-arg
+     (let ((,type-var ,type-var)
+           (,type-spec ,type-spec)
+           (,type-name (if (atom ,type-spec)
+                           ,type-spec
+                           (presentation-type-of (second ,type-spec)))))
+       ,@body)))
 
 (defun bind-parameters-and-options (gf lambda-list body
                                     type-key-arg type-var type-spec type-name)

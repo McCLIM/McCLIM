@@ -86,16 +86,6 @@ method lambda list"))
       type
       (error "~s is not a valid presentation method specializer." type)))
 
-(defmacro destructure-type-arg
-    ((type-var type-spec type-name) type-arg &body body)
-  `(destructuring-bind (,type-var ,type-spec) ,type-arg
-     (let ((,type-var ,type-var)
-           (,type-spec ,type-spec)
-           (,type-name (if (atom ,type-spec)
-                           ,type-spec
-                           (presentation-type-of (second ,type-spec)))))
-       ,@body)))
-
 ;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
 ;;; type during presentation method dispatch. We don't prevent these
