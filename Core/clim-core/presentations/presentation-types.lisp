@@ -526,12 +526,9 @@ filled in."
 ;;; external functions
 (defun find-presentation-type-class (name &optional (errorp t) environment)
   (declare (ignore environment))
-  (let ((metaclass (get-ptype-metaclass name)))
-    (cond (metaclass
-           metaclass)
-          (errorp
-           (error "~S is not the name of a presentation type" name))
-          (t nil))))
+  (or (get-ptype-metaclass name)
+      (when errorp
+        (error "~S is not the name of a presentation type" name))))
 
 (defun class-presentation-type-name (class &optional environment)
   (declare (ignore environment))
