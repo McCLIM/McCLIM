@@ -138,11 +138,11 @@ fully, including defaulting parameters and options.")))
                                       (super standard-class))
   t)
 
-(defclass clos-presentation-type (presentation-type-info)
-  ((clos-class :accessor clos-class :initarg :clos-class
-               :documentation "Holds the class object of the CLOS class of this presentation type")))
+(defclass presentation-type-proxy (presentation-type-info)
+  ((proxy-class :accessor proxy-class :initarg :proxy-class
+                :documentation "Holds the proxied class object of this presentation type")))
 
-(defmethod initialize-instance :after ((obj clos-presentation-type)
+(defmethod initialize-instance :after ((obj presentation-type-proxy)
                                        &key (ptype-specializer
                                              nil
                                              ptype-specializer-p))
@@ -485,15 +485,15 @@ filled in."
 
 ;;; An instance of PRESENTATION-TYPE may be created at compilation time by the
 ;;; function RECORD-PRESENTATION-TYPE. This class is a superclass of both
-;;; PRESENTATION-TYPE-CLASS (metaclass) and CLOS-PRESENTATION-TYPE (class).
+;;; PRESENTATION-TYPE-CLASS (metaclass) and PRESENTATION-TYPE-PROXY (class).
 (defmethod get-ptype-metaclass ((type presentation-type-info))
   (find-class 'standard-class))
 
 (defmethod get-ptype-metaclass ((type presentation-type-class))
   type)
 
-(defmethod get-ptype-metaclass ((type clos-presentation-type))
-  (clos-class type))
+(defmethod get-ptype-metaclass ((type presentation-type-proxy))
+  (get-ptype-metaclass (proxy-class type)))
 
 (defmethod get-ptype-metaclass ((type (eql *builtin-t-class*)))
   type)
@@ -582,8 +582,8 @@ supertypes of TYPE that are presentation types"))
                  nil)))
           (c2mop:class-direct-superclasses type)))
 
-(defmethod presentation-ptype-supers ((type clos-presentation-type))
-  (presentation-ptype-supers (clos-class type)))
+(defmethod presentation-ptype-supers ((type presentation-type-proxy))
+  (presentation-ptype-supers (proxy-class type)))
 
 ;;; External function
 
@@ -639,15 +639,15 @@ supertypes of TYPE that are presentation types"))
          (ptype-meta
            (if compile-time-p
                (if (compile-time-clos-p name)
-                   (apply #'make-instance 'clos-presentation-type
-                          :clos-class (find-class 'standard-class)
+                   (apply #'make-instance 'presentation-type-proxy
+                          :proxy-class (find-class 'standard-class)
                           ptype-class-args)
                    (apply #'make-instance 'presentation-type-info
                           ptype-class-args))
                (let ((clos-meta (find-class name nil)))
                  (if-let ((closp (typep clos-meta 'standard-class)))
-                   (apply #'make-instance 'clos-presentation-type
-                          :clos-class clos-meta
+                   (apply #'make-instance 'presentation-type-proxy
+                          :proxy-class clos-meta
                           ptype-class-args)
                    (let ((directs
                            (loop for super in supers
