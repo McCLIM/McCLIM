@@ -151,6 +151,23 @@ fully, including defaulting parameters and options.")))
     (setf (slot-value obj 'ptype-specializer)
           (slot-value obj 'type-name))))
 
+;;; This class is defined to allow forward referencing undefined presentation
+;;; types in the inherit-from option. If there is no existing presentation
+;;; type metaclass, we create a forward referenced class with the name as
+;;; specified in supers. If later on a class of that name is defined, then it
+;;; becomes a standard class and we deal with it as usual - however when a
+;;; presentation type of that name is defined before that, we change the class
+;;; name and change its metaclass to presentation-type-class. -- jd 2020-12-31
+(defclass forward-referenced-pclass (c2mop:forward-referenced-class)
+  ())
+
+(defun find-presentation-type-class* (name)
+  (or (find-presentation-type-class name nil)
+      (c2mop:ensure-class name
+                          :name name
+                          :metaclass 'forward-referenced-pclass
+                          :direct-superclasses nil)))
+
 (defmethod history ((ptype standard-class))
   "Default for CLOS types that are not defined explicitly as
 presentation types."
@@ -645,20 +662,24 @@ supertypes of TYPE that are presentation types"))
                    (apply #'make-instance 'presentation-type-info
                           ptype-class-args))
                (let ((clos-meta (find-class name nil)))
-                 (if-let ((closp (typep clos-meta 'standard-class)))
-                   (apply #'make-instance 'presentation-type-proxy
-                          :proxy-class clos-meta
-                          ptype-class-args)
-                   (let ((directs
-                           (loop for super in supers
-                                 unless (eq super t)
-                                   collect (or (get-ptype-metaclass super)
-                                               super))))
-                     (apply #'c2mop:ensure-class fake-name
-                            :name fake-name
-                            :metaclass 'presentation-type-class
-                            :direct-superclasses directs
-                            ptype-class-args)))))))
+                 (if (typep clos-meta 'standard-class)
+                     (apply #'make-instance 'presentation-type-proxy
+                            :proxy-class clos-meta
+                            ptype-class-args)
+                     (let ((directs
+                             (loop for super in supers
+                                   unless (eq super t)
+                                     collect
+                                     (find-presentation-type-class* super))))
+                       (when (typep clos-meta 'forward-referenced-pclass)
+                         (setf (find-class name) nil
+                               (find-class fake-name) clos-meta
+                               (class-name clos-meta) fake-name))
+                       (apply #'c2mop:ensure-class fake-name
+                              :name fake-name
+                              :metaclass 'presentation-type-class
+                              :direct-superclasses directs
+                              ptype-class-args)))))))
     (setf (gethash name *presentation-type-table*) ptype-meta)
     ptype-meta))
 
