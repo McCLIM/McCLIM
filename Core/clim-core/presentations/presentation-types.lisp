@@ -513,6 +513,10 @@ filled in."
           (and (typep meta 'standard-class)
                meta)))))
 
+(defun presentation-type-class-p (type)
+  "Returns T for presentation types that are not associated with a class."
+  (typep type 'presentation-type-class))
+
 ;;; external functions
 (defun find-presentation-type-class (name &optional (errorp t) environment)
   (declare (ignore environment))
@@ -553,6 +557,12 @@ supertypes of TYPE that are presentation types"))
 
 (defmethod presentation-ptype-supers ((type (eql *builtin-t-class*)))
   nil)
+
+(defmethod presentation-ptype-supers ((type standard-class))
+  (mapcan #'(lambda (class)
+              (let ((ptype (find-presentation-type (class-name class) nil)))
+                (and ptype (list ptype))))
+          (c2mop:class-direct-superclasses type)))
 
 (defmethod presentation-ptype-supers ((type symbol))
   (if-let ((ptype (find-presentation-type type nil)))
