@@ -86,16 +86,6 @@ method lambda list"))
       type
       (error "~s is not a valid presentation method specializer." type)))
 
-(defmacro destructure-type-arg
-    ((type-var type-spec type-name) type-arg &body body)
-  `(destructuring-bind (,type-var ,type-spec) ,type-arg
-     (let ((,type-var ,type-var)
-           (,type-spec ,type-spec)
-           (,type-name (if (atom ,type-spec)
-                           ,type-spec
-                           (presentation-type-of (second ,type-spec)))))
-       ,@body)))
-
 ;;; Metaclass for presentation types.  For presentation types not associated
 ;;; with CLOS classes, objects with this metaclass are used as a proxy for the
 ;;; type during presentation method dispatch. We don't prevent these
@@ -106,7 +96,7 @@ method lambda list"))
 ;;; of a presentation-type-class; in this way we can avoid weirdness
 ;;; with T being a subtype of standard-object!
 
-(defclass presentation-type ()
+(defclass presentation-type-info ()
   ((type-name :accessor type-name :initarg :type-name
               :documentation "The name assigned to the presentation
 type, as opposed to the name constructed for the class")
@@ -136,23 +126,23 @@ altered for use in destructuring bind")
                        :documentation "A function which expands the typespec
 fully, including defaulting parameters and options.")))
 
-(defmethod initialize-instance :after ((obj presentation-type) &key)
+(defmethod initialize-instance :after ((obj presentation-type-info) &key)
   (unless (slot-boundp obj 'ptype-specializer)
     (setf (slot-value obj 'ptype-specializer)
           (make-presentation-type-name (slot-value obj 'type-name)))))
 
-(defclass presentation-type-class (presentation-type standard-class)
+(defclass presentation-type-class (presentation-type-info standard-class)
   ())
 
 (defmethod c2mop:validate-superclass ((class presentation-type-class)
                                       (super standard-class))
   t)
 
-(defclass clos-presentation-type (presentation-type)
-  ((clos-class :accessor clos-class :initarg :clos-class
-               :documentation "Holds the class object of the CLOS class of this presentation type")))
+(defclass presentation-type-proxy (presentation-type-info)
+  ((proxy-class :accessor proxy-class :initarg :proxy-class
+                :documentation "Holds the proxied class object of this presentation type")))
 
-(defmethod initialize-instance :after ((obj clos-presentation-type)
+(defmethod initialize-instance :after ((obj presentation-type-proxy)
                                        &key (ptype-specializer
                                              nil
                                              ptype-specializer-p))
@@ -160,6 +150,23 @@ fully, including defaulting parameters and options.")))
   (unless ptype-specializer-p
     (setf (slot-value obj 'ptype-specializer)
           (slot-value obj 'type-name))))
+
+;;; This class is defined to allow forward referencing undefined presentation
+;;; types in the inherit-from option. If there is no existing presentation
+;;; type metaclass, we create a forward referenced class with the name as
+;;; specified in supers. If later on a class of that name is defined, then it
+;;; becomes a standard class and we deal with it as usual - however when a
+;;; presentation type of that name is defined before that, we change the class
+;;; name and change its metaclass to presentation-type-class. -- jd 2020-12-31
+(defclass forward-referenced-pclass (c2mop:forward-referenced-class)
+  ())
+
+(defun find-presentation-type-class* (name)
+  (or (find-presentation-type-class name nil)
+      (c2mop:ensure-class name
+                          :name name
+                          :metaclass 'forward-referenced-pclass
+                          :direct-superclasses nil)))
 
 (defmethod history ((ptype standard-class))
   "Default for CLOS types that are not defined explicitly as
@@ -495,15 +502,15 @@ filled in."
 
 ;;; An instance of PRESENTATION-TYPE may be created at compilation time by the
 ;;; function RECORD-PRESENTATION-TYPE. This class is a superclass of both
-;;; PRESENTATION-TYPE-CLASS (metaclass) and CLOS-PRESENTATION-TYPE (class).
-(defmethod get-ptype-metaclass ((type presentation-type))
+;;; PRESENTATION-TYPE-CLASS (metaclass) and PRESENTATION-TYPE-PROXY (class).
+(defmethod get-ptype-metaclass ((type presentation-type-info))
   (find-class 'standard-class))
 
 (defmethod get-ptype-metaclass ((type presentation-type-class))
   type)
 
-(defmethod get-ptype-metaclass ((type clos-presentation-type))
-  (clos-class type))
+(defmethod get-ptype-metaclass ((type presentation-type-proxy))
+  (get-ptype-metaclass (proxy-class type)))
 
 (defmethod get-ptype-metaclass ((type (eql *builtin-t-class*)))
   type)
@@ -523,6 +530,10 @@ filled in."
           (and (typep meta 'standard-class)
                meta)))))
 
+(defun presentation-type-class-p (type)
+  "Returns T for presentation types that are not associated with a class."
+  (typep type 'presentation-type-class))
+
 ;;; external functions
 (defun find-presentation-type-class (name &optional (errorp t) environment)
   (declare (ignore environment))
@@ -532,7 +543,7 @@ filled in."
 
 (defun class-presentation-type-name (class &optional environment)
   (declare (ignore environment))
-  (cond ((typep class 'presentation-type)
+  (cond ((typep class 'presentation-type-info)
          (type-name class))
         (t (class-name class))))
 
@@ -564,6 +575,12 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type (eql *builtin-t-class*)))
   nil)
 
+(defmethod presentation-ptype-supers ((type standard-class))
+  (mapcan #'(lambda (class)
+              (let ((ptype (find-presentation-type (class-name class) nil)))
+                (and ptype (list ptype))))
+          (c2mop:class-direct-superclasses type)))
+
 (defmethod presentation-ptype-supers ((type symbol))
   (if-let ((ptype (find-presentation-type type nil)))
     (presentation-ptype-supers ptype)
@@ -572,7 +589,7 @@ supertypes of TYPE that are presentation types"))
 (defmethod presentation-ptype-supers ((type presentation-type-class))
   (mapcan #'(lambda (class)
               (typecase class
-                (presentation-type
+                (presentation-type-info
                  (list class))
                 (standard-class
                  (if-let ((clos-ptype (find-presentation-type (class-name class) nil)))
@@ -582,8 +599,8 @@ supertypes of TYPE that are presentation types"))
                  nil)))
           (c2mop:class-direct-superclasses type)))
 
-(defmethod presentation-ptype-supers ((type clos-presentation-type))
-  (presentation-ptype-supers (clos-class type)))
+(defmethod presentation-ptype-supers ((type presentation-type-proxy))
+  (presentation-ptype-supers (proxy-class type)))
 
 ;;; External function
 
@@ -639,26 +656,30 @@ supertypes of TYPE that are presentation types"))
          (ptype-meta
            (if compile-time-p
                (if (compile-time-clos-p name)
-                   (apply #'make-instance 'clos-presentation-type
-                          :clos-class (find-class 'standard-class)
+                   (apply #'make-instance 'presentation-type-proxy
+                          :proxy-class (find-class 'standard-class)
                           ptype-class-args)
-                   (apply #'make-instance 'presentation-type
+                   (apply #'make-instance 'presentation-type-info
                           ptype-class-args))
                (let ((clos-meta (find-class name nil)))
-                 (if-let ((closp (typep clos-meta 'standard-class)))
-                   (apply #'make-instance 'clos-presentation-type
-                          :clos-class clos-meta
-                          ptype-class-args)
-                   (let ((directs
-                           (loop for super in supers
-                                 unless (eq super t)
-                                   collect (or (get-ptype-metaclass super)
-                                               super))))
-                     (apply #'c2mop:ensure-class fake-name
-                            :name fake-name
-                            :metaclass 'presentation-type-class
-                            :direct-superclasses directs
-                            ptype-class-args)))))))
+                 (if (typep clos-meta 'standard-class)
+                     (apply #'make-instance 'presentation-type-proxy
+                            :proxy-class clos-meta
+                            ptype-class-args)
+                     (let ((directs
+                             (loop for super in supers
+                                   unless (eq super t)
+                                     collect
+                                     (find-presentation-type-class* super))))
+                       (when (typep clos-meta 'forward-referenced-pclass)
+                         (setf (find-class name) nil
+                               (find-class fake-name) clos-meta
+                               (class-name clos-meta) fake-name))
+                       (apply #'c2mop:ensure-class fake-name
+                              :name fake-name
+                              :metaclass 'presentation-type-class
+                              :direct-superclasses directs
+                              ptype-class-args)))))))
     (setf (gethash name *presentation-type-table*) ptype-meta)
     ptype-meta))
 
@@ -753,13 +774,13 @@ suitable for SUPER-NAME"))
 
 (defun presentation-type-parameters (type-name &optional env)
   (let ((maybe-type (get-ptype type-name env)))
-    (if (and maybe-type (typep maybe-type 'presentation-type))
+    (if (and maybe-type (typep maybe-type 'presentation-type-info))
         (parameters maybe-type)
         '())))
 
 (defun presentation-type-options (type-name &optional env)
   (let ((maybe-type (get-ptype type-name env)))
-    (if (and maybe-type (typep maybe-type 'presentation-type))
+    (if (and maybe-type (typep maybe-type 'presentation-type-info))
         (options maybe-type)
         '())))
 
@@ -769,7 +790,7 @@ suitable for SUPER-NAME"))
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
       (warn "~S is not a presentation type name." type-name))
-    (if (typep ptype 'presentation-type)
+    (if (typep ptype 'presentation-type-info)
         (let* ((params-ll (parameters-lambda-list ptype))
                (params (gensym "PARAMS"))
                (type-var (gensym "TYPE-VAR"))
@@ -792,7 +813,7 @@ suitable for SUPER-NAME"))
   (let ((ptype (get-ptype type-name)))
     (unless (or ptype (compile-time-clos-p type-name))
       (warn "~S is not a presentation type name." type-name))
-    (if (typep ptype 'presentation-type)
+    (if (typep ptype 'presentation-type-info)
         (let* ((options-ll (options-lambda-list ptype))
                (options (gensym "OPTIONS"))
                (type-var (gensym "TYPE-VAR"))

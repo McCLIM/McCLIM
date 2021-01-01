@@ -270,20 +270,6 @@
     (object (type empty) stream (view textual-view) &key &allow-other-keys)
   (declare (ignore object stream)))
 
-;;; A presentation type for empty input at the command line; something for
-;;; read-command to supply as a default.  The command is defined in
-;;; builtin-commands.lisp.
-
-(define-presentation-type null-command ()
-  :inherit-from '(command :command-table global-command-table))
-
-(define-presentation-method presentation-typep (object (type null-command))
-  (and (consp object) (eq (car object) 'com-null-command)))
-
-(define-presentation-method present
-    (object (type null-command) stream (view textual-view) &key)
-  (declare (ignore object stream view)))
-
 
 ;;;  27.6.1 Command Presentation Types
 
@@ -398,6 +384,21 @@
             (simple-parse-error "Empty command"))
         (command
          (values (maybe-replace-input (handle-command object) options) type))))))
+
+;;; A presentation type for empty input at the command line; something for
+;;; read-command to supply as a default.  The command is defined in
+;;; builtin-commands.lisp.
+
+(define-presentation-type null-command ()
+  :inherit-from '(command :command-table global-command-table))
+
+(define-presentation-method presentation-typep (object (type null-command))
+  (and (consp object) (eq (car object) 'com-null-command)))
+
+(define-presentation-method present
+    (object (type null-command) stream (view textual-view) &key)
+  (declare (ignore object stream view)))
+
 
 (define-presentation-type command-or-form
     (&key (command-table (frame-command-table *application-frame*)))
