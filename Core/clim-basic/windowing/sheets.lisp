@@ -695,11 +695,9 @@ might be different from the sheet's native region."
 
 (defmethod (setf sheet-enabled-p) :after
     (new-value (sheet mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)
-    ;; We do this only if the sheet actually has a mirror.
-    (if new-value
-        (port-enable-sheet (port sheet) sheet)
-        (port-disable-sheet (port sheet) sheet))))
+  (if new-value
+      (port-enable-sheet (port sheet) sheet)
+      (port-disable-sheet (port sheet) sheet)))
 
 (defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
   (port-set-mirror-name (port sheet) sheet new-name))

@@ -104,10 +104,12 @@
   (make-translation-transformation (xlib:drawable-x mirror)
                                    (xlib:drawable-y mirror)))
 
-(defmethod port-enable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:map-window (sheet-direct-mirror mirror))
-  (xlib:display-force-output (clx-port-display port)))
+(defmethod port-enable-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (xlib:map-window mirror)
+    (xlib:display-force-output (clx-port-display port))))
 
-(defmethod port-disable-sheet ((port clx-basic-port) (mirror mirrored-sheet-mixin))
-  (xlib:unmap-window (sheet-direct-mirror mirror))
-  (xlib:display-force-output (clx-port-display port)))
+(defmethod port-disable-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (xlib:unmap-window mirror)
+    (xlib:display-force-output (clx-port-display port))))
