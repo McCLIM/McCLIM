@@ -1,0 +1,5 @@
+@anchor{Generic-Function clim-extensions:shrink-sheet}
+@deffn {Generic Function} {@symbol{shrink-sheet,clim-extensions}} sheet
+Calling this method on a top-level sheet should disable the sheet and
+minimize the window associated with the sheet.
+@end deffn
