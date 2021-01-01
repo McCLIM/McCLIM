@@ -130,10 +130,6 @@
               :initform t
               :accessor sheet-enabled-p)))
 
-;;; Native region is volatile, and is only computed at the first
-;;; request when it's equal to nil.
-;;;
-
 (defmethod sheet-parent ((sheet basic-sheet))
   nil)
 
@@ -397,6 +393,8 @@
               +identity-transformation+)))
     native-transformation))
 
+;;; Native region is volatile, and is only computed at the first
+;;; request when it's equal to nil.
 (defmethod sheet-native-region ((sheet basic-sheet))
   (with-slots (native-region) sheet
     (unless native-region

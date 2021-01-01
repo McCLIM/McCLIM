@@ -2028,6 +2028,8 @@
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:window-manager-focus-event
+   #:window-map-event
+   #:window-unmap-event
    #:with-port
    #:invoke-with-port
    #:find-concrete-pane-class

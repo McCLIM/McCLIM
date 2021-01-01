@@ -179,3 +179,9 @@ returned or error is signaled depending on the argument ERRORP.")
   (setf (medium-foreground medium) (pane-foreground pane)
         (medium-background medium) (pane-background pane)
         (medium-text-style medium) (pane-text-style pane)))
+
+(defmethod handle-event ((sheet basic-pane) (event window-map-event))
+  (setf (sheet-enabled-p sheet) t))
+
+(defmethod handle-event ((sheet basic-pane) (event window-unmap-event))
+  (setf (sheet-enabled-p sheet) nil))
