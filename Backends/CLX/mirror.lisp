@@ -113,3 +113,8 @@
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (xlib:unmap-window mirror)
     (xlib:display-force-output (clx-port-display port))))
+
+(defmethod port-shrink-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (xlib:iconify-window mirror (clx-port-screen port))
+    (xlib:display-force-output (clx-port-display port))))
