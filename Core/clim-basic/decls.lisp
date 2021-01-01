@@ -376,8 +376,9 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric graft-units (graft))
 (defgeneric graft-width (graft &key units))
 (defgeneric graft-height (graft &key units))
-(declfun graft-pixels-per-millimeter (graft))
-(declfun graft-pixels-per-inch (graft))
+(defgeneric graft-pixel-aspect-ratio (graft))
+(declfun graft-pixels-per-millimeter (graft &key orientation))
+(declfun graft-pixels-per-inch (graft &key orientation))
 
 ;;; Not in the spec, clearly needed.
 (defgeneric make-graft (port &key orientation units))

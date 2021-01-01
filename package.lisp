@@ -2031,6 +2031,7 @@
    #:with-port
    #:invoke-with-port
    #:find-concrete-pane-class
+   #:graft-pixel-aspect-ratio
    ;; Text-style
    #:text-style-character-width
    #:text-bounding-rectangle*
