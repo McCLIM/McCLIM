@@ -45,25 +45,25 @@
     (format stream "~S ~S" :id (slot-value object 'id))))
 
 (defmethod port-set-mirror-region ((port null-port) sheet region)
-  ())
+  nil)
                                    
 (defmethod port-set-mirror-transformation
     ((port null-port) sheet transformation)
-  ())
+  nil)
 
 (defmethod realize-mirror ((port null-port) (sheet mirrored-sheet-mixin))
   nil)
 
 (defmethod destroy-mirror ((port null-port) (sheet mirrored-sheet-mixin))
-  ())
-
-(defmethod mirror-transformation ((port null-port) mirror)
-  ())
-
-(defmethod port-enable-sheet ((port null-port) (mirror mirrored-sheet-mixin))
   nil)
 
-(defmethod port-disable-sheet ((port null-port) (mirror mirrored-sheet-mixin))
+(defmethod mirror-transformation ((port null-port) mirror)
+  nil)
+
+(defmethod port-enable-sheet ((port null-port) (sheet mirrored-sheet-mixin))
+  nil)
+
+(defmethod port-disable-sheet ((port null-port) (sheet mirrored-sheet-mixin))
   nil)
 
 (defmethod destroy-port :before ((port null-port))
