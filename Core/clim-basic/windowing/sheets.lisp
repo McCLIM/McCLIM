@@ -85,6 +85,23 @@
   (:method (sheet) nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; conditions
+
+(define-condition sheet-is-not-child (error) ())
+(define-condition sheet-ordering-underspecified (error) ())
+(define-condition sheet-is-not-ancestor (error) ())
+(define-condition sheet-already-has-parent (error) ())
+(define-condition sheet-is-ancestor (error) ())
+
+(define-condition sheet-supports-only-one-child (error)
+  ((sheet :initarg :sheet)))
+
+(defmethod print-object ((object sheet-supports-only-one-child) stream)
+  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
+          (slot-value object 'sheet)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
 ;;;; sheet protocol class
 
@@ -134,8 +151,6 @@
   (when (sheet-grafted-p sheet)
     (note-sheet-grafted child)))
 
-(define-condition sheet-is-not-child (error) ())
-
 (defmethod sheet-disown-child :before
     ((sheet basic-sheet) (child sheet) &key (errorp t))
   (when (and (not (member child (sheet-children sheet))) errorp)
@@ -168,7 +183,6 @@
 (defmethod bury-sheet ((sheet basic-sheet))
   (error 'sheet-is-not-child))
 
-(define-condition sheet-ordering-underspecified (error) ())
 
 (defmethod reorder-sheets ((sheet basic-sheet) new-ordering)
   (when (set-difference (sheet-children sheet) new-ordering)
@@ -310,8 +324,6 @@
 				  (sheet-delta-transformation
 				   (sheet-parent sheet) ancestor)))
 	(t +identity-transformation+)))
-
-(define-condition sheet-is-not-ancestor (error) ())
 
 (defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor sheet))
   (cond ((eq sheet ancestor) +identity-transformation+)
@@ -476,9 +488,6 @@
 (defclass sheet-parent-mixin ()
   ((parent :initform nil :accessor sheet-parent)))
 
-(define-condition sheet-already-has-parent (error) ())
-(define-condition sheet-is-ancestor (error) ())
-
 (defmethod sheet-adopt-child :before (sheet (child sheet-parent-mixin))
   (when (and (sheet-parent child) (not (eq sheet (sheet-parent child))))
     (error 'sheet-already-has-parent))
@@ -549,13 +558,6 @@
 
 (defmethod sheet-children ((sheet sheet-single-child-mixin))
   (and (sheet-child sheet) (list (sheet-child sheet))))
-
-(define-condition sheet-supports-only-one-child (error)
-  ((sheet :initarg :sheet)))
-
-(defmethod print-object ((object sheet-supports-only-one-child) stream)
-  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
-          (slot-value object 'sheet)))
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
 				      (child sheet-parent-mixin))
