@@ -1,9 +1,12 @@
-;;; hyperclim.el --- Browse a HTML conversion of the CLIM2
-;;; specification inside emacs.
+;;; hyperclim.el --- Browse CLIM2 specification inside Emacs.
 
-;; This code is in the public domain.
+;;; Commentary:
+;;;
+;;; This code is in the public domain.
+;;;
+;;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
 
-;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
+;;; Code:
 
 (require 'cl-lib nil t)
 (require 'cl-lib "lib/cl-lib")
@@ -12,14 +15,14 @@
 
 ;;; Override base URL of CLIM specification, set this if you want
 ;;; to use one of the above from your local disk.
-(setq clim-url-base-override nil)
+(defvar clim-url-base-override nil)
 
 ;;; Selection of CLIM spec according to preference -- uncomment one of
 ;;; the lines below
 ;; MikeMac conversion of the CLIM specification
 ;(setq clim-dataset 'clim-mikemac-spec)
 ;; Gilbert Baumann conversion of the CLIM specification
-(setq clim-dataset 'clim-gilberth-spec)
+(defvar clim-dataset 'clim-gilberth-spec)
 
 ;;; Internal bits
 
@@ -29,10 +32,10 @@
   (symbol-value clim-dataset))
 
 (defun clim-get-symbol-table ()
-  (rest (clim-get-dataset)))
+  (cl-rest (clim-get-dataset)))
 
 (defun clim-get-url-base ()
-  (first (clim-get-dataset)))
+  (cl-first (clim-get-dataset)))
 
 (defun clim-remove-package-name (string)
   (if (string-match-p "^:.*" string)
@@ -57,21 +60,21 @@
 ;;    Also, you can use a prefix arg to force prompting.
 
 (defun clim-lookup (p)
+  "Look up the symbol P or symbol under point."
   (interactive "p")
   (let ((symbol-name (thing-at-point 'symbol)))
     (unless (and (= 1 p) (stringp symbol-name))
-      (setq symbol-name (let ((symbols (mapcar #'car (rest clim-gilberth-spec))))
+      (setq symbol-name (let ((symbols (mapcar #'car (cl-rest clim-gilberth-spec))))
                           (completing-read "Symbol name: " symbols nil t symbol-name 'clim-history))))
     (let ((url (clim-find-symbol-url (downcase symbol-name))))
       (if url
           (browse-url url)
           (message "Symbol %s not found." symbol-name)))))
 
-
 ;;; CLIM spec datasets
 
-;; Gilbert Baumann one
-(setq clim-gilberth-spec
+;;; Gilbert Baumann one
+(defvar clim-gilberth-spec
  '("http://bauhh.dyndns.org:8000/clim-spec/"
    ("+yellow+" . "13-3.html#_700") ("+white+" . "13-3.html#_702")
    ("+transparent-ink+" . "13-4.html#_710")
@@ -1243,3 +1246,6 @@
    ("abort-gesture-event" . "22-2.html#_1089")
    ("abort-gesture" . "22-2.html#_1088")
    ("*abort-gestures*" . "22-2.html#_1087")))
+
+(provide 'hyperclim)
+;;; hyperclim.el ends here
