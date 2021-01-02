@@ -1247,5 +1247,32 @@
    ("abort-gesture" . "22-2.html#_1088")
    ("*abort-gestures*" . "22-2.html#_1087")))
 
+;;; Font lock highlighting for CLIM-specified symbols
+
+(defface font-lock-clim-specified-face
+  '((t . (:underline "gray40")))
+  "Face for symbols specified in the CLIM specification."
+  :group 'slime)
+
+(defun hyperclim-add-specification-keywords ()
+  "Add highlighting for CLIM-specified symbols."
+  (let ((keywords '()))
+    (dolist (entry (cl-rest clim-gilberth-spec))
+      (let ((symbol (car entry)))
+        (unless (cl-member symbol '("t" "nil"
+                                    "integer" "number" "keyword" "symbol" "string" "member"
+                                    "null" "not" "and" "or"
+                                    "active" "state") ; concepts, not exported symbols
+                           :test #'string=)
+          (let ((regex (format "\\_<\\(%s\\)\\_>" (regexp-quote symbol))))
+            (push `(,regex 1 'font-lock-clim-specified-face)
+                  keywords)))))
+    (font-lock-add-keywords nil keywords)))
+
+(add-hook 'lisp-mode-hook
+          (lambda ()
+            (when (string-match-p "/mcclim/" (buffer-file-name))
+              (hyperclim-add-specification-keywords))))
+
 (provide 'hyperclim)
 ;;; hyperclim.el ends here
