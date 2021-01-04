@@ -240,7 +240,6 @@
   (values x y))
 
 ;;; output any buffered stuff before input
-
 (defmethod stream-read-gesture :before ((stream clim-stream-pane)
                                         &key timeout peek-p
                                           input-wait-test
@@ -248,14 +247,7 @@
                                           pointer-button-press-handler)
   (declare (ignore timeout peek-p input-wait-test input-wait-handler
                    pointer-button-press-handler))
-  (force-output stream)
-  ;; make the output visible
-  (let ((w (bounding-rectangle-max-x (stream-output-history stream)))
-        (h (bounding-rectangle-max-y (stream-output-history stream))))
-    (unless (region-contains-region-p (sheet-region stream)
-                                      (make-rectangle* 0 0 w h))
-      (change-space-requirements stream)
-      (redisplay-frame-pane *application-frame* stream))))
+  (force-output stream))
 
 (defmethod redisplay-frame-pane ((frame application-frame)
                                  (pane symbol)
