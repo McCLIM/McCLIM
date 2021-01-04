@@ -733,10 +733,40 @@ unspecified. "))
 (defgeneric make-design-from-output-record (record))
 
 
+;;;; 17.3 The Table and Item List Formatting Protocols
+
+(defgeneric map-over-table-elements (function table-record type)
+  (:documentation "Applies FUNCTION to all the rows or columns of
+TABLE-RECORD that are of type TYPE. TYPE is one of :ROW, :COLUMN or
+:ROW-OR-COLUMN. FUNCTION is a function of one argument. The function
+skips intervening non-table output record structures."))
+
+(defgeneric map-over-block-cells (function block)
+  (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
+
+(defgeneric map-over-row-cells (function row-record)
+  (:documentation "Applies FUNCTION to all the cells in the row
+ROW-RECORD, skipping intervening non-table output record structures.
+FUNCTION is a function of one argument, an output record corresponding
+to a table cell within the row."))
+
+(defgeneric map-over-column-cells (function column-record)
+  (:documentation "Applies FUNCTION to all the cells in the column
+COLUMN-RECORD, skipping intervening non-table output record
+structures. FUNCTION is a function of one argument, an output record
+corresponding to a table cell within the column."))
+
+(defgeneric map-over-item-list-cells (function item-list-record))
+
+(defgeneric adjust-table-cells (table-record stream))
+(defgeneric adjust-multiple-columns (table-record stream))
+(defgeneric adjust-item-list-cells (item-list-record stream))
+
+
 ;;;; 21.2
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
-            &key fixed-position all-new parent-cache))
+     &key fixed-position all-new parent-cache))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol
