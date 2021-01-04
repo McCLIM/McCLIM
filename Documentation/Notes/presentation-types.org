@@ -1,0 +1,517 @@
+#+title: Presentation types in McCLIM
+#+author: Daniel 'jackdaniel' Kochmański
+#+date: [2020-07-04 sob]
+
+* Introduction
+
+Presentation types are integral part of CLIM. They are used to
+implement typed I/O. The concept originates from the paper
+[[https://dspace.mit.edu/bitstream/handle/1721.1/41161/AI_WP_219.pdf?sequence=4][Presentation Based User Interfaces (1981)]] and is further adapted to
+Common Lisp realities in the paper ~A Presentation Manager Based on
+Application Semantics (1989)~. The concept was implemented on Genera
+in ~Dynamic Windows~ framework and then became integral part of the
+[[http://bauhh.dyndns.org:8000/clim-spec/index.html][CLIM specification]][fn:1].
+
+More information, however not binding for McCLIM which implements CLIM
+II, is available in user guides available from CLIM vendors [[https://franz.com/support/documentation/current/doc/clim-ug.pdf][Franz]] and
+[[http://www.lispworks.com/documentation/lww42/CLIM-W/html/climguide.htm][LispWorks]]. There is also a mailing list [[https://mailman.common-lisp.net/pipermail/mcclim-devel/][mcclim-devel]] (less organized)
+and McCLIM [[https://github.com/McCLIM/McCLIM/issues/][bug tracker]]. 
+
+Regarding implementations of CLIM and the presentation system, there
+are two independent projects which source is available for inspection:
+
+- https://github.com/franzinc/clim2 :: descendent of Symbolics CLIM (1990)
+- https://github.com/McCLIM/McCLIM  :: clean-slate implementation (2000)
+
+This document focuses on presentation types and how they are used for
+the presentation generic function dispatch and how they relate to
+objects which are presented[fn:2]. It is written from a perspective of
+McCLIM codebase unless explicitly noted. The Symbolics descendant will
+be referred as CLIM-TOS.
+
+* Presentation type categories
+
+Presentation types may be categorized as follows:
+
+- class presentation types (attached to a standard-class[fn:3])
+- class presentation types (attached to a standard-class, parametrized)
+- basic presentation types (not attached to a standard-class)
+
+Additionally there are presentation types which need special handling:
+
+- T (supertype of all ptypes), NIL (subtype of all ptypes)
+- sequence presentation types (sequence, sequence-enumerated)
+- one-of/some-of presentation types (completion, subset-completion)
+- meta presentation types (or, and)
+
+* Presentation methods
+
+It is worth noting, that currently there is no "legitimate" way to
+define new presentation generic functions, because the first
+argument[fn:4] of the function must be named by a symbol in
+~clim-internals~ package.
+
+- present :: constructs a presentation from an object and a ptype
+- accept  :: accepts a presentation based on its type
+- describe-presentation-type :: textually describes the ptype
+- presentation-type-specifier-p :: validates parameters and options
+- presentation-typep :: returns T when object matches the ptype
+- presentation-subytpep :: relation between two ptypes
+- map-over-presentation-type-supertypes :: maps over superclasses
+- accept-present-default :: accepting-values calls this to show value
+- presentation-type-history :: returns (not specified) history object
+- presentation-default-preprocessor :: coerces object to the ptype
+- presentation-refined-position-test :: used for pointer selection
+- highlight-presentation :: as name suggests, highlights the object
+
+Some presentation methods have the ordinary function counterpart which
+may be called without using ~funcall-presentation-generic-function~.
+That serves as a trampoline, but the ordinary function may introduce
+also some additional semantics.
+
+Default behavior of the presentation generic function may be specified
+with a macro ~define-default-presentation-method~ and specializations
+are defined with ~define-presentation-method~. Each presentation
+generic function has an argument named ~type~ which has a special
+meaning during the pgf dispatch.
+
+When defining a presentation method with ~define-presentation-method~
+programmer specializes the argument ~type~ with the presentation type
+name. The macro makes this argument *not* specialized in the actual
+CLOS method and moves this specialization to the hidden type-key or
+type-class argument on which the actual dispatch is performed. Value
+of the argument type in the method body is a presentation type
+specifier, i.e ~((integer 0 15) :base 16)~.
+
+#+BEGIN_EXAMPLE
+> (clim:define-presentation-generic-function foo foo (climi::type-key type))
+> (clim:define-default-presentation-method foo (type) `(default ,type))
+> (clim:define-presentation-method foo ((type integer)) type)
+> (clim:funcall-presentation-generic-function foo '((integer 0 15) :base 16))
+((INTEGER 0 15) :BASE 16)
+> (clim:funcall-presentation-generic-function foo '(real 0 15))
+(DEFAULT (REAL 0 15))
+#+END_EXAMPLE
+
+* Presentation type inheritance
+
+Presentation types may inherit from each other. After [[http://bauhh.dyndns.org:8000/clim-spec/23-1.html][23.1]]:
+
+#+BEGIN_QUOTE
+The set of presentation types forms a type lattice, an extension of the Common
+Lisp CLOS type lattice. When a new presentation type is defined as a subtype
+of another presentation type it inherits all the attributes of the supertype
+except those explicitly overridden in the definition.
+#+END_QUOTE
+
+From the fact that a type lattice is an extension of CLOS type lattice we
+conclude that it is hierarchical (that is hinted in multiple other places).
+There are few exceptions from this rule:
+
+- "one-of" type ~completion~ and "some-of" type ~subset-completion~
+- meta types ~or~ and ~and~[fn:5]
+- the universal subtype ~nil~[fn:6]
+
+A new presentation type can't inherit from these presentation types. When the
+object is of a particular presentation type, it is also of a type of all its
+supers. When the presentation type is defined, the value of the argument
+~:inherit-from~ must one or more basic/class presentation types. Multiple
+inheritance is specified with ~and~, but this does *not* mean that the
+presentation type inherits from the meta presentation type ~and~. In the
+following example the inherit-form must be (and defaults to) ~(and a b c)~,
+otherwise the class presentation type would not match the standard class
+itself:
+
+#+BEGIN_SRC lisp
+  (defclass foo (a b c) ())
+  (define-presentation-type foo () :inherit-from '(and a b c))
+#+END_SRC
+
+The presentation type ~t~ is specified as an universal supertype of all CLIM
+presentation types. The protocol for this presentation type is implemented
+manually in McCLIM - it doesn't have any parameters and options. Its relation
+to other presentation types is special-cased in function predicates. The
+presentation type inheritance looks as following:
+
+#+BEGIN_EXAMPLE
+  T --+-- clos presentation types --+-- [standard classes]* ---+
+      |                             |                          |
+      |                             +-- [parametrized]* -------+
+      |                                                        |
+      +-- basic presentation types -+-- [subtypes]* -----------+
+      |                             |                          |
+      |                             +-- COMPLETION ------------+
+      |                             |                          |
+      |                             +-- SUBSET-COMPLETION -----+
+      |                                                        |
+      +-- "meta" presentation types --- (OR, AND) -------------+-- NIL
+#+END_EXAMPLE
+
+NIL is the universal subtype of all presentation types, it is the only point
+where these all subtypes of T meet again.  Programmer may create new class
+presentation types and basic presentation types, while "other" presentation
+types can't be inherited from[fn:12].
+
+- when the presentation type inherits from t, it is a basic presentation type
+- otherwise it is a class presentation type
+
+When the argument ~:inherit-from~ is not supplied, it defaults to the
+~standard-object~ unless the presentation type name coincides with a standard
+class name, then it defaults to that class ancestors (specified with ~and~).
+Since the presentation type ~T~ does not implement the presentation method for
+~presentation-typep~ it is obligatory for new presentation types inheriting
+from T to implement that method, otherwise an error will be signaled.
+
+* Correspondence between lisp objects and presentation types
+
+As noted before, the class presentation type is attached to a ~standard-class~
+and the basic presentation type is not. The function ~presentation-type-of~ is
+specified to return the most specific presentation type of which ~object~ is a
+member.
+
+- for built-in objects the correspondence is manually estabilished
+- for standard objects returns a matching clos presentation type[fn:7]
+- for unknown objects returns a presentation type ~expression~
+
+This function is not specified as a generic function and should not be
+extended. Otherwise a correspondence between presentation types and
+standard classes may be broken leading to undefined consequences. The
+function is also used internally by McCLIM[fn:8].
+
+The function ~presentation-typep~ is a predicate which decide whether
+an object is a member of the presentation type. Specification of both
+functions implies, that the following should be always true:
+
+#+BEGIN_SRC lisp
+  (presentation-typep object (presentation-type-of object))
+#+END_SRC
+
+The presentation type ~expression~ is a wildcard basic presentation
+type, that is any Lisp object is its member.  That clearly shows, that
+presentations doesn't need to have anything in common with presented
+objects. For example:
+
+#+BEGIN_SRC lisp
+  (deftype iso-time () `fixnum)
+  (define-presentation-type iso-time () :inherit-from 'expression)
+#+END_SRC
+
+Note, that if the ~iso-time~ were a standard class, then the
+presentation type should have a different name to avoid associating it
+with the class[fn:9].
+
+In the Franz CLIM Guide ([[https://franz.com/support/documentation/current/doc/clim-ug.pdf#G10.400][8.6.2]]) it is mentioned, that if the class
+presentation type doesn't have parameters, then there is no need for
+defining the presentation type to use it. That is indeed how McCLIM
+imprements presentation types. This is because for the class
+presentation types without parameters there is no need for a separate
+predicate which determines the object membership, so there is no need
+for implementing presentation methods ~presentation-type-of~ and
+~presentation-typep~. This is additionally reinforced by the
+specification of the presentation method ~presentation-typep~:
+
+#+BEGIN_QUOTE
+The presentation-typep method is called when the presentation-typep
+function requires type-specific knowledge. If the type name in the
+presentation type type is a CLOS class or names a CLOS class, the
+method is called only if object is a member of the class and type
+contains parameters, and the method simply tests whether object is a
+member of the subtype specified by the parameters. For non-class
+types, the method is always called.
+#+END_QUOTE
+
+When the presentation type is not attached to the class or when it has
+parameters, it must implement the ~presentation-typep~ method to allow
+determining membership for arbitrary object (because that can't be
+determined based on the class hierarchy!).
+
+Another clue is contained in the specification of the macro
+~define-presentation-type~ ([[http://bauhh.dyndns.org:8000/clim-spec/23-3.html#_1148][23.3.1]]), that both ~presentation-typep~
+and ~presentation-subtypep~ are used to *refine* tests for type
+inclusion, not to replace them.
+
+#+BEGIN_QUOTE
+For example, the parameters are used by presentation-typep and
+presentation-subtypep methods to refine their tests for type
+inclusion.
+#+END_QUOTE
+
+This part is also very relevant to signaling the error when
+appropriate methods are not defined:
+
+#+BEGIN_QUOTE
+If a presentation type has parameters, it must define presentation
+methods for presentation-typep and presentation-subtypep that handle
+the parameters, or inherit appropriate presentation methods.
+#+END_QUOTE
+
+The old McCLIM behavior was not adhering to this specification, because it
+called the ~presentation-typep~ presentation method always when parameters
+were present (even when the object was not a member of the corresponding
+standard class).
+
+Moreover, ~presentation-typep~ default method returned true (by a mistake, but
+still), what lead to a lot of invalid code with presentations inheriting from
+~t~ which were in fact equivalent to presentations inheriting from
+~expression~. Moreover, presentations with parameters inheriting from standard
+classes, returned truth for objects which did not belong to the class.
+
+That was clearly bogus from the specification perspective. Changing the
+behavior to conform to the specification makes the presentation type
+abstraction more intuitive and consistent. Changing this behavior doesn't come
+without a cost. ~presentation-typep~ and ~presentation-subtypep~ are called by
+presentation translators and acceptors. With invalid semantics of said
+operators things seemingly worked, however they were broken in many subtle
+ways which sometimes put the programmer in the debugger - code which relies on
+these invalid semantics will require modifications, otherwise it won't work.
+
+An instance of the presentation is created by a function ~present~ or in a
+macro ~with-output-as-presentation~. In both cases the programmer is expected
+to supply the object and the presentation type. Timothy Moore (designer of the
+current McCLIM presentation implementation) writes:
+
+#+BEGIN_QUOTE
+I believe that the user (programmer) has the freedom to pair any object with
+any presentation type in a presentation; if that breaks other code, then
+that's his problem. If an application needs a strong guarantee that the user
+(user) enters a valid object for a presentation type then the accept method
+should check that before returning.
+#+END_QUOTE
+
+I disagree with this permissive interpretation. There are no convincing
+benefits of using presentation type which doesn't conform to the object, and
+there are a few reasons why this is a bad idea:
+
+- we already have non-clos based presentation types, so it is enough to just
+  inherit from the ptype ~expression~
+
+- that breaks a direct pharsing in the spec, where it is said that the object
+  is of the presentation type (that is, we are conformingly allowed to check
+  that, and in other words a program which does not meet these conditions is
+  not conforming)
+
+- like in compilers, being strict with validating input allows to detect
+  errors early, instead of letting them subtly break program later on (case in
+  point, changing this behavior in McCLIM shown a few mistakes, i.e in the
+  ~presentation-typep~ of a ~command~
+
+- having valid object in the presentation allows other presentation methods to
+  assume a correct type, instead of rechecking the same thing over and over
+  again, or signaling unexpected errors i.e due to adding ~(+ 3 "foobar")~,
+  where the presentation type is integer
+
+The only potential argument would be that it may be costful from the
+performance perspective, but that would require evidence.
+
+Permissive pairing or objects and types encourages invalid code and puts an
+additional burden on the programmer: they need to validate the presentation
+type of t he object in /every/ method which deals with objects, otherwise it
+is possible to land in the debugger out of the blue. When the presentation
+method is specialized on the presentation type ~integer~ it is the least
+surprising to have the object of the type integer. Otherwise the method:
+
+#+BEGIN_SRC lisp
+(define-presentation-method foo (object (type integer))
+  (< object 14))
+#+END_SRC
+
+is invalid, because object is not guaranteed to be a number. That applies to
+all presentation methods dealing with objects, most notably ~accept~ and
+~presentation-typep~, which are called from code implementing typed input.
+
+Not without a merit is the fact, that ~accept~ is is permissive, while
+translators rely on a strict implementation. McCLIM abstractions doesn't have
+a consistent interpretation with this regard.
+
+* Examples
+
+1. There is no need to define a presentation type for a class, it is
+already possible to use it as a presentation type.
+
+#+BEGIN_SRC lisp
+  (defclass foo () ())
+  (clim:find-presentation-type-class 'foo)
+  ;; #<STANDARD-CLASS COMMON-LISP-USER::FOO>
+#+END_SRC
+
+
+
+2. It is possible to define a presentation type for existing standard
+class to parametrize it.
+
+#+BEGIN_SRC lisp
+  (defclass person () ((age :initarg :age :accessor age)))
+  (clim:define-presentation-type person (from upto))
+  (clim:define-presentation-type-abbreviation minor  () `(person nil 17))
+  (clim:define-presentation-type-abbreviation adult  () `(person 18  99))
+  (clim:define-presentation-type-abbreviation senior () `(person 99 nil))
+  (clim:define-presentation-method clim:presentation-typep (object (type person))
+    (let ((age (age object)))
+      (and (or (null from) (>= age from))
+           (or (null upto) (<= age upto)))))
+
+  (clim:presentation-typep (make-instance 'person :age 15)
+                           (clim:expand-presentation-type-abbreviation 'minor))
+  ;; -> T T
+  (clim:presentation-typep (make-instance 'person :age 15)
+                           (clim:expand-presentation-type-abbreviation 'adult))
+  ;; -> NIL T
+  (clim:presentation-typep (make-instance 'person :age 15)
+                           (clim:expand-presentation-type-abbreviation 'senior))
+  ;; -> NIL T
+#+END_SRC
+
+The presentation type of an instance of person is ~standard-object~!
+
+#+BEGIN_SRC lisp
+  (presentation-type-of (make-instance 'person :age 15)) ; -> standard-object
+  (present (make-instance 'person :age 33))
+#+END_SRC
+
+That is because the presentation type ~person~ has required parameters. If it
+the expected behavior and while not intuitive at first, it makes sense,
+because:
+
+#+BEGIN_SRC lisp
+  (subtypep 'person 'standard-object) ; -> t t
+#+END_SRC
+
+And the macro ~with-input-context~ for the accepted type ~(person 18 99)~ will
+test whether the accepted type is a presentation-subtypep to the
+presentation's type. In our case:
+
+#+BEGIN_SRC lisp
+;; (accept 'adult) ; accept will first check class, then the exact type
+(clim:presentation-subtypep '(person 10 20) 'standard-object) ; -> t   t
+;; (clim:presentation-subtypep '(person 10 20) person)        ; -> nil t
+#+END_SRC
+
+
+That's the initial test, which later needs to be narrowed by calling
+~(presentation-typep object '(preson 10 20))~[fn:11].
+
+3. /XXX doesn't work/ It is possible to inherit from a class.
+
+#+BEGIN_SRC lisp
+(defclass foo () ())
+(clim:define-presentation-type qux () :inherit-from 'foo)
+#+END_SRC
+
+It doesn't work because we are very sloppy with how we traverse the
+presentation supertypes. We only check whether qux has a class with
+~(find-class 'qux nil)~ instead of checking also its supertypes. It is
+McCLIM's bug.
+
+4. /XXX doesn't work/ It is possible to inherit from multiple
+presentation types[fn:10].
+
+#+BEGIN_SRC lisp
+(defclass foo () ())
+(defclass bar () ())
+(clim:define-presentation-type bar (a) :inherit-from 'clim:expression)
+(clim:define-presentation-type lex () :inherit-from 'clim:expression)
+(clim:define-presentation-type qux () :inherit-from '(and foo (bar 14) lex))
+#+END_SRC
+
+In this case the object presented with the presentation type ~qux~ must be an
+instance of the class ~foo~ and of the class ~bar~, and must qualify as ~(bar
+14)~ and as ~lex~ by means of calling the presentation method
+~presentation-typep~.
+
+5. It is possible to create presentation type orthogonal to a class
+hierarchy.
+
+#+BEGIN_SRC lisp
+(defclass qux () ())
+(defclass bar () ())
+(clim:define-presentation-type foo () :inherit-from 'clim:expression)
+(clim:define-presentation-method clim:presentation-typep (object (type foo))
+  (or (typep object 'qux)
+      (typep object 'bar)))
+#+END_SRC
+
+The presentation type ~foo~ is not a subclass nor a subtype of either ~qux~ or
+~bar~, it is a subtype of the presentation type ~clim:expression~. It narrows
+its members to instances of the class ~qux~ and the class ~bar~.
+
+6. Presentation types are hierarchical.
+
+#+BEGIN_SRC lisp
+(defmacro exp (type) `(expand-presentation-type-abbreviation ',type))
+
+(clim:define-presentation-type foo () :inherit-from '(integer 1 15))
+(clim:define-presentation-type-abbreviation bar ()  '(integer 1 15))
+
+(clim:presentation-subtypep '(integer 4 8) '(integer 1 15))      ;-> T   T
+(clim:presentation-subtypep '(integer 4 8)  (exp foo))           ;-> NIL T
+(clim:presentation-subtypep '(integer 4 8)  (exp bar))           ;-> T   T
+(clim:presentation-subtypep  (exp foo)     '(integer 1 15))      ;-> T   T
+(clim:presentation-subtypep  (exp bar)     '(integer 1 15))      ;-> T   T
+(clim:presentation-subtypep '(integer 1 15) (exp foo))           ;-> NIL T
+(clim:presentation-subtypep '(integer 1 15) (exp bar))           ;-> T   T
+(clim:presentation-subtypep  (exp foo)      (exp bar))           ;-> T   T
+(clim:presentation-subtypep  (exp bar)      (exp foo))           ;-> NIL T
+#+END_SRC
+
+* Footnotes
+
+[fn:12] These types must be special-cased in the presentation-subtypep
+function. Inheriting from them would break the hierarchical model of the
+presentation type inheritance and would make things much less comprehensible
+(or even - impossible to implement).
+
+[fn:11] Currently this is done correctly in presentation translators and in
+the function ~accept-using-read~. McCLIM should check that in all ~accept~
+calls.
+
+This issue is orthogonal to checking whether the presentation object and type
+match, because we may call ~(present *person-10-20* 'standard-object)~ and it
+is rightfully a valid input for the input context ~(person 10 20)~, while it
+is not valid for the input context ~(person 8 15)~.
+
+[fn:10] CLIM-TOS allows inheriting with ~and~ only from unparametrized
+classes. McCLIM allows inheriting also from presentation types and classes
+with and without parameters. It is very cleverly done.  Currently such
+presentation types are not very useful because of other (than inheritance)
+problems, which full scope of necessary changes and regression tests is yet to
+be determined.
+
+[fn:9] If they had the same name however, ~:inherit-from~ argument wouldn't
+match the class supertype and that should signal an error. McCLIM currently
+quietly accepts that.
+
+[fn:8] The function is implemented as a generic function and to prevent such
+problems that implementation should be changed to a non-generic function as
+specified. Alternatively we could allow extending this function, but assert
+~(presentation-typep object (presentation-type-of object))~, and specify that
+this condition must be met, otherwise the consequences are undefined.
+
+[fn:7] When the presentation type doesn't exist it returns the object's class
+name (and if nil, the class itself). When it does, but the presentation type
+has required parameters, ~standard-object~ is returned because it is not
+possible to decide whether the object is a member of the presentation type.
+
+[fn:6] The universal supertype ~t~ is not an exception - all presentation
+types inherit from it, so it is a root of the presentation type hierarchy.
+
+[fn:5] The presentation type ~and~ allows "predicates" ~satisfies~ and ~not~
+as its parameters, i.e ~(and integer (satisfies oddp))~.
+
+[fn:4] McCLIM doesn't distinguish between symbols ~type-key~ and ~type-class~,
+but they have a different meaning when it comes to the presentation generic
+function dispatch (and each presentation method have specified which it
+is). CLIM-TOS takes that into account. AFAIK that is not explicitly explained
+in the specification and that issue needs to be addressed.
+
+[fn:3] There is inconsistency between PRESENTATION-TYPE-OF and the rest of the
+system. The function returns the class name of the structure-class instances
+too. This probably needs to be addressed.
+
+[fn:2] It is written to help finding the best solution for a problem raised in
+the [[https://github.com/McCLIM/McCLIM/pull/1026][pull request]] to McCLIM which proposes more strict enforcing of the
+presentation type implementation and the presentation object belonging to the
+presentation type used.
+
+[fn:1] The specification is also available in McCLIM repository with a few
+modifications. We try to improve it to remove typos and ambigous parts from
+it.
