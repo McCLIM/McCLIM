@@ -500,7 +500,7 @@ skips intervening non-table output record structures."))
                        :row-or-column)
                       ;; It's empty
                       (return-from make-table-array (values nil 0 0))))
-         (rows (make-array 1
+         (rows (make-array (if row-based 1 0)
                            :adjustable t
                            :fill-pointer (if row-based
                                              0
