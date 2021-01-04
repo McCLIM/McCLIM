@@ -25,7 +25,7 @@ symbol)."
         (tracking-pointer (stream :pointer pointer
                                   :multiple-window multiple-window)
           (:pointer-motion (x y)
-            (when ox (funcall drawer x y :erase))
+            (when ox (funcall drawer ox oy :erase))
             (funcall drawer x y :draw)
             (setf ox x oy y))
           (:pointer-button-press (x y)
