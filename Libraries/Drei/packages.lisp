@@ -12,9 +12,6 @@
 
 (cl:defpackage #:drei-buffer
   (:use #:clim-lisp #:flexichain #:binseq #:esa-utils)
-  ;; Kludge to remove symbol conflicts.
-
-  (:import-from #:esa-io #:buffer)
   (:import-from #:esa #:esa-command-table)
   (:export #:buffer #:standard-buffer
            #:mark #:left-sticky-mark #:right-sticky-mark
@@ -171,7 +168,7 @@ characters."))
 
 (cl:defpackage #:drei
   (:use #:clim-lisp #:clim-sys #:clim #:drei-buffer #:drei-base #:drei-abbrev
-        #:drei-syntax #:flexichain #:esa-buffer #:esa-io #:esa
+        #:drei-syntax #:flexichain #:esa-buffer #:esa
         #:esa-utils #:drei-kill-ring)
   (:import-from #:climi #:change-stream-space-requirements)
   (:export #:drei-buffer #:needs-saving
@@ -458,7 +455,7 @@ used to implement the editing commands."))
 (defpackage :drei-core
   (:use :clim-lisp :drei-base :drei-buffer
         :drei-syntax :drei-motion :drei :drei-kill-ring
-        :drei-editing :clim :drei-abbrev :esa :esa-buffer :esa-io
+        :drei-editing :clim :drei-abbrev :esa :esa-buffer
         :esa-utils)
   (:export #:proper-line-indentation
            #:goto-position
@@ -536,7 +533,7 @@ editing plain text."))
 (cl:defpackage #:drei-lisp-syntax
   (:use #:clim-lisp #:clim #:clim-extensions #:drei-buffer #:drei-base
         #:drei-syntax #:drei-fundamental-syntax #:flexichain #:drei
-        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core #:esa-io
+        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core
         #:drei-lr-syntax #:drei-kill-ring)
   (:export #:lisp-syntax #:lisp-table
            #:lisp-string
@@ -646,7 +643,7 @@ editing Common Lisp code."))
 (cl:defpackage #:drei-commands
   (:use #:clim-lisp #:drei-base #:drei-buffer
         #:drei-syntax #:drei-motion #:drei #:drei-kill-ring
-        #:drei-editing #:clim #:drei-abbrev #:esa #:esa-buffer #:esa-io
+        #:drei-editing #:clim #:drei-abbrev #:esa #:esa-buffer
         #:esa-utils #:drei-core)
   (:export #:define-motion-commands
            #:define-deletion-commands
@@ -657,7 +654,7 @@ specific syntaxes."))
 (cl:defpackage #:drei-user
   (:use #:clim-lisp #:clim #:clim-extensions #:drei-buffer #:drei-base
         #:drei-syntax #:drei-fundamental-syntax #:flexichain #:drei
-        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core #:esa-io
+        #:drei-motion #:drei-editing #:esa-utils #:esa #:drei-core
         #:drei-commands)
   (:documentation "The package intended for user-made
 customizations and extensions."))
