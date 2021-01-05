@@ -103,7 +103,6 @@
 (defmethod graft ((port clx-fb-port))
   (first (port-grafts port)))
 
-
 (defmethod port-force-output ((port clx-fb-port))
   (maphash-values (lambda (image)
                     (when (typep image 'clx-fb-mirror)

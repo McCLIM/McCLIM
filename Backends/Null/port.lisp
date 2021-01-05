@@ -69,9 +69,6 @@
 (defmethod port-shrink-sheet ((port null-port) (mirror mirrored-sheet-mixin))
   nil)
 
-(defmethod port-puffup-sheet ((port null-port) (mirror mirrored-sheet-mixin))
-  nil)
-
 (defmethod destroy-port :before ((port null-port))
   nil)
 
