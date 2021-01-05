@@ -148,8 +148,7 @@ infinite recursion on (setf sheet-*).")
                                                  (%effective-mirror-region ancestor)))
         (%sheet-mirror-region* sheet))))
 
-(defun update-mirror-geometry
-    (sheet &aux (old-native-transformation (%%sheet-native-transformation sheet)))
+(defun update-mirror-geometry (sheet)
   "This function reflects the current sheet region and sheet transformation
 to the mirror. It also sets up the native transformation. This function is
 supposed to be called whenever one of the following happens:
@@ -189,7 +188,8 @@ very hard)."
     ;; mx1 .. my2 are is now the wanted mirror region in the
     ;; parent coordinate system.
     (with-bounding-rectangle* (mx1 my1 mx2 my2) sheet-region-in-native-parent
-      (let* ((parent-mirror-region (%sheet-mirror-region* (sheet-mirrored-ancestor parent)))
+      (let* ((old-native-transformation (%%sheet-native-transformation sheet))
+             (parent-mirror-region (%sheet-mirror-region* (sheet-mirrored-ancestor parent)))
              ;; pw, ph is the width/height of the mirror containing our sheet
              (pw (bounding-rectangle-width parent-mirror-region))
              (ph (bounding-rectangle-height parent-mirror-region)))
@@ -270,13 +270,7 @@ very hard)."
           (cond ((and (> (round (- x2 x1)) 0)
                       (> (round (- y2 y1)) 0))
                  ;; finally reflect the change to the host window system
-                 (setf (%sheet-mirror-region sheet) MR)
-                 (setf (%sheet-mirror-transformation sheet) MT)
-                 (when (and (sheet-direct-mirror sheet)
-                            (not (eql *configuration-event-p* sheet)))
-                   (let ((port (port sheet)))
-                     (port-set-mirror-region port sheet MR)
-                     (port-set-mirror-transformation port sheet MT)))
+                 (%set-mirror-geometry sheet :mt mt :mr mr)
                  ;; update the native transformation if necessary.
                  (unless (and old-native-transformation
                               (transformation-equal native-transformation
