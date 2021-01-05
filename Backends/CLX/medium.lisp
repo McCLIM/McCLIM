@@ -925,9 +925,6 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
 
-(defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
-  (funcall continuation))
-
 ;;;  This hack is really ugly. There really should be a better way to
 ;;;  handle this.
 (defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
