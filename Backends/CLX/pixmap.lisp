@@ -3,11 +3,11 @@
 ;;; Pixmap
 
 (defmethod allocate-pixmap ((medium clx-medium) width height)
-  (when-let ((window (medium-drawable medium)))
+  (when-let ((drawable (medium-drawable medium)))
     (xlib:create-pixmap :width (ceiling width)
                         :height (ceiling height)
-                        :depth (xlib:drawable-depth window)
-                        :drawable window)))
+                        :depth (xlib:drawable-depth drawable)
+                        :drawable drawable)))
 
 (defmethod deallocate-pixmap ((pixmap xlib:pixmap))
   (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
@@ -43,7 +43,7 @@
                         (round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
-                             (to-drawable xlib:pixmap) to-x to-y)
+                             (to-drawable xlib:drawable) to-x to-y)
   (with-transformed-position
       ((medium-native-transformation from-drawable) from-x from-y)
     (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
@@ -58,7 +58,7 @@
                       (round-coordinate to-y))
       (xlib:free-gcontext gcontext))))
 
-(defmethod medium-copy-area ((from-drawable xlib:pixmap) from-x from-y width height
+(defmethod medium-copy-area ((from-drawable xlib:drawable) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (with-transformed-position ((medium-native-transformation to-drawable) to-x to-y)
     (xlib:copy-area from-drawable
@@ -68,8 +68,8 @@
                     (medium-drawable to-drawable)
                     (round-coordinate to-x) (round-coordinate to-y))))
 
-(defmethod medium-copy-area ((from-drawable xlib:pixmap) from-x from-y width height
-                             (to-drawable xlib:pixmap) to-x to-y)
+(defmethod medium-copy-area ((from-drawable xlib:drawable) from-x from-y width height
+                             (to-drawable xlib:drawable) to-x to-y)
   (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
     (xlib:copy-area from-drawable
                     gcontext
