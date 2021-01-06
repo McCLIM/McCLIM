@@ -2013,8 +2013,6 @@
    #:make-graft
    #:medium-draw-circle*
    #:mirror-transformation
-   #:port-allocate-pixmap
-   #:port-deallocate-pixmap
    #:port-disable-sheet
    #:port-enable-sheet
    #:port-shrink-sheet
@@ -2109,6 +2107,11 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
+   ;; transformations
+   #:medium-device-transformation
+   #:medium-device-region
+   #:medium-native-transformation
+   #:medium-native-region
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-circle*

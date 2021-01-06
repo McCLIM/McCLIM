@@ -24,14 +24,12 @@
 
 ;;; implementation
 
-(defun %make-image (mirror sheet)
+(defun %make-image (mirror width height)
   (check-type mirror image-mirror-mixin)
+  (setf width (ceiling width))
+  (setf height (ceiling height))
   (with-slots (image) mirror
-    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-        (sheet-region sheet)
-      (let ((width (ceiling (- max-x min-x)))
-            (height (ceiling (- max-y min-y))))
-        (%create-mirror-image mirror (1+ width) (1+ height))))))
+    (%create-mirror-image mirror (1+ width) (1+ height))))
 
 (defun %set-image-region (mirror region)
   (check-type mirror image-mirror-mixin)

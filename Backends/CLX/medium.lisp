@@ -48,8 +48,8 @@
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (basic-medium
-                      climb:multiline-text-medium-mixin
-                      climb:font-rendering-medium-mixin)
+                      multiline-text-medium-mixin
+                      font-rendering-medium-mixin)
   ((gc :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
@@ -180,8 +180,8 @@
        (xlib:draw-rectangle mask mask-gc x1 y1 width height t)))
     (clim:standard-polygon
      (let ((coord-seq (climi::expand-point-seq (polygon-points clipping-region))))
-       (with-transformed-positions((sheet-native-transformation (medium-sheet medium))
-                                   coord-seq)
+       (with-transformed-positions
+           ((medium-native-transformation medium) coord-seq)
          (setq coord-seq (map 'vector #'round-coordinate coord-seq))
          (xlib:draw-lines mask mask-gc
                           (concatenate 'vector
@@ -308,9 +308,10 @@ translated, so they begin at different position than [0,0])."))
       (let ((fn (text-style-mapping port (medium-text-style medium))))
         (when (typep fn 'xlib:font)
           (setf (xlib:gcontext-font gc) fn)))
-      (unless (eq last-medium-device-region (medium-device-region medium))
-        (setf last-medium-device-region (medium-device-region medium))
-        (%set-gc-clipping-region medium gc))
+      (let ((device-region (medium-device-region medium)))
+        (unless (eq last-medium-device-region device-region)
+          (setf last-medium-device-region device-region)
+          (%set-gc-clipping-region medium gc)))
       gc)))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink climi::uniform-compositum))
@@ -367,9 +368,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink clime:pattern))
   (multiple-value-bind (mx my)
-      ;; For unmirrored sheet we need to apply the native transformation.
-      ;; May be it is the wrong place to do it.
-      (transform-position (sheet-native-transformation (medium-sheet medium)) 0 0)
+      (transform-position (medium-native-transformation medium) 0 0)
     (let ((gc-x (round-coordinate mx))
           (gc-y (round-coordinate my))
           (gc (design-gcontext medium ink)))
@@ -383,7 +382,7 @@ translated, so they begin at different position than [0,0])."))
                             &aux (ink (clime:effective-transformed-design ink)))
   (with-bounding-rectangle* (x1 y1 x2 y2) ink
     (declare (ignore x2 y2))
-    (with-transformed-position ((sheet-native-transformation (medium-sheet medium)) x1 y1)
+    (with-transformed-position ((medium-native-transformation medium) x1 y1)
       (let ((gc-x (round-coordinate x1))
             (gc-y (round-coordinate y1))
             (gc (design-gcontext medium ink)))
@@ -539,72 +538,12 @@ translated, so they begin at different position than [0,0])."))
                              ,@body))
            (mapc #'funcall ^cleanup))))))
 
-
-;;; Pixmaps
-;;; width and height arguments should be integers, but we'll leave the calls
-;;; to round in for now.
-
-(defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
-                             (to-drawable clx-medium) to-x to-y)
-  (let* ((from-sheet (medium-sheet from-drawable))
-         (from-transformation (sheet-native-transformation from-sheet))
-         (to-sheet (medium-sheet to-drawable))
-         (to-transformation (sheet-native-transformation to-sheet)))
-    (with-transformed-position (from-transformation from-x from-y)
-      (with-transformed-position (to-transformation to-x to-y)
-        (multiple-value-bind (width height)
-            (transform-distance (medium-transformation from-drawable)
-                                width height)
-          (xlib:copy-area (medium-drawable from-drawable)
-                          ;; why using the context of from-drawable?
-                          (medium-gcontext from-drawable +background-ink+)
-                          (round-coordinate from-x) (round-coordinate from-y)
-                          (round width) (round height)
-                          (medium-drawable to-drawable)
-                          (round-coordinate to-x) (round-coordinate to-y)))))))
-
-(defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
-                             (to-drawable pixmap) to-x to-y)
-  (let* ((from-sheet (medium-sheet from-drawable))
-         (from-transformation (sheet-native-transformation from-sheet)))
-    (with-transformed-position (from-transformation from-x from-y)
-      (climi::with-pixmap-medium (to-medium to-drawable)
-        (xlib:copy-area (medium-drawable from-drawable)
-                        ;; we can not use from-drawable
-                        (medium-gcontext to-medium +background-ink+)
-                        (round-coordinate from-x) (round-coordinate from-y)
-                        (round width) (round height)
-                        (pixmap-mirror to-drawable)
-                        (round-coordinate to-x) (round-coordinate to-y))))))
-
-(defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
-                             (to-drawable clx-medium) to-x to-y)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet to-drawable))
-                              to-x to-y)
-    (xlib:copy-area (pixmap-mirror from-drawable)
-                    (medium-gcontext to-drawable +background-ink+)
-                    (round-coordinate from-x) (round-coordinate from-y)
-                    (round width) (round height)
-                    (medium-drawable to-drawable)
-                    (round-coordinate to-x) (round-coordinate to-y))))
-
-(defmethod medium-copy-area ((from-drawable pixmap) from-x from-y width height
-                             (to-drawable pixmap) to-x to-y)
-  (xlib:copy-area (pixmap-mirror from-drawable)
-                  (medium-gcontext (sheet-medium (slot-value to-drawable 'sheet))
-                                   +background-ink+)
-                  (round-coordinate from-x) (round-coordinate from-y)
-                  (round width) (round height)
-                  (pixmap-mirror to-drawable)
-                  (round-coordinate to-x) (round-coordinate to-y)))
 
 
 ;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
-  (with-transformed-position ((sheet-native-transformation
-                               (medium-sheet medium))
-                              x y)
+  (with-transformed-position ((medium-native-transformation medium) x y)
     (with-clx-graphics () medium
       (let ((diameter (line-style-effective-thickness line-style medium)))
         (if (< diameter 2)
@@ -625,9 +564,8 @@ translated, so they begin at different position than [0,0])."))
 
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
-  (with-transformed-positions ((sheet-native-transformation
-                                (medium-sheet medium))
-                               coord-seq)
+  (with-transformed-positions
+      ((medium-native-transformation medium) coord-seq)
     (with-clx-graphics () medium
       (let ((diameter (line-style-effective-thickness line-style medium)))
         (if (< diameter 2)
@@ -649,7 +587,7 @@ translated, so they begin at different position than [0,0])."))
                                    0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (with-clx-graphics () medium
@@ -678,9 +616,8 @@ translated, so they begin at different position than [0,0])."))
   ;; . cons less
   ;; . clip
   (assert (evenp (length coord-seq)))
-  (with-transformed-positions ((sheet-native-transformation
-                                (medium-sheet medium))
-                               coord-seq)
+  (with-transformed-positions
+      ((medium-native-transformation medium) coord-seq)
     (setq coord-seq (map 'vector #'round-coordinate coord-seq))
     (with-clx-graphics () medium
       (xlib:draw-lines mirror gc
@@ -702,7 +639,7 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
                                    &aux (ink (medium-ink medium)))
   (declare (ignore ink))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (with-clx-graphics () medium
@@ -723,9 +660,8 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (let ((length (length position-seq)))
     (assert (zerop (mod length 4)))
-    (with-transformed-positions ((sheet-native-transformation
-                                  (medium-sheet medium))
-                                 position-seq)
+    (with-transformed-positions
+        ((medium-native-transformation medium) position-seq)
       (with-clx-graphics () medium
         (let ((points (make-array length))
               (index  0))
@@ -745,8 +681,8 @@ translated, so they begin at different position than [0,0])."))
                               radius-1-dx radius-1-dy
                               radius-2-dx radius-2-dy
                               start-angle end-angle filled)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
-                                  center-x center-y)
+  (with-transformed-position
+      ((medium-native-transformation medium) center-x center-y)
     (let ((ellipse (make-ellipse* center-x center-y
                                   radius-1-dx radius-1-dy
                                   radius-2-dx radius-2-dy
@@ -812,8 +748,8 @@ translated, so they begin at different position than [0,0])."))
                                  radius-2-dx radius-2-dy
                                  start-angle end-angle filled)
   (if (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
-      (with-transformed-position ((sheet-native-transformation (medium-sheet medium))
-                                  center-x center-y)
+      (with-transformed-position
+          ((medium-native-transformation medium) center-x center-y)
         (let* ((arc-angle (- end-angle start-angle))
                (arc-angle (if (< arc-angle 0)
                               (+ (* pi 2) arc-angle)
@@ -839,9 +775,8 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-draw-circle* ((medium clx-medium)
                                 center-x center-y radius start-angle end-angle
                                 filled)
-  (with-transformed-position ((sheet-native-transformation (medium-sheet
-                                                            medium))
-                              center-x center-y)
+  (with-transformed-position
+      ((medium-native-transformation medium) center-x center-y)
     (let* ((arc-angle (- end-angle start-angle))
            (arc-angle (if (< arc-angle 0)
                           (+ (* pi 2) arc-angle)
@@ -922,7 +857,7 @@ translated, so they begin at different position than [0,0])."))
                               align-x align-y
                               toward-x toward-y transform-glyphs)
   (declare (ignore toward-x toward-y transform-glyphs))
-  (let ((merged-transform (sheet-device-transformation (medium-sheet medium))))
+  (let ((merged-transform (medium-device-transformation medium)))
     (with-clx-graphics () medium
       (when (characterp string)
         (setq string (make-string 1 :initial-element string)))
@@ -964,7 +899,7 @@ translated, so they begin at different position than [0,0])."))
   (xlib:display-force-output (clx-port-display (port medium))))
 
 (defmethod medium-clear-area ((medium clx-medium) left top right bottom)
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (medium-native-transformation medium)))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (let ((min-x (round-coordinate (min left right)))
@@ -989,9 +924,6 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
-
-(defmethod climi::medium-invoke-with-possible-double-buffering (frame pane (medium clx-medium) continuation)
-  (funcall continuation))
 
 ;;;  This hack is really ugly. There really should be a better way to
 ;;;  handle this.

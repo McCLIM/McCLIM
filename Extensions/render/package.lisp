@@ -47,13 +47,7 @@
                 #:when-let*)
   (:import-from #:clim-internals
                 #:standard-color
-                #:standard-flipping-ink
-                ;; backend
-                #:realize-mirror
-                #:mirrored-pixmap
-                #:port-lookup-sheet
-                #:pixmap-medium
-                #:pixmap-mirror)
+                #:standard-flipping-ink)
   (:import-from #:mcclim-truetype
                 #:glyph-info
                 #:font-glyph-info
@@ -72,4 +66,8 @@
                 #:truetype-face)
   (:import-from #:clim-backend
                 #:port-set-mirror-region
-                #:port-set-mirror-transformation))
+                #:port-set-mirror-transformation
+                #:medium-native-transformation
+                #:medium-device-transformation
+                #:medium-native-region
+                #:medium-device-region))

@@ -294,12 +294,11 @@
 
 (defmethod handle-repaint ((pane logic-cube-pane) region)
   (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
-    (climi::with-double-buffering ((pane x0 y0 x1 y1) (wtf-wtf-wtf))
-      (declare (ignore wtf-wtf-wtf))
-      (draw-rectangle* pane x0 y0 x1 y1 :filled t :ink (background-color pane))
-      (invoke-in-lc-space pane #'draw-logic-cube)
-      (when (decorator pane)
-        (funcall (decorator pane))))))
+    ;; FIXME double buffering
+    (draw-rectangle* pane x0 y0 x1 y1 :filled t :ink (background-color pane))
+    (invoke-in-lc-space pane #'draw-logic-cube)
+    (when (decorator pane)
+      (funcall (decorator pane)))))
 
 ;;; Locating the face under the pointer:
 

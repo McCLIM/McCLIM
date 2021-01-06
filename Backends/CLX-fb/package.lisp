@@ -19,7 +19,6 @@
   (:import-from #:alexandria
                 #:when-let #:when-let* #:maphash-keys #:maphash-values)
   (:import-from #:climi
-                #:port-register-mirror
                 #:port-grafts
                 ;;
                 #:pixmap
@@ -30,8 +29,7 @@
                 #:height                ; used to access a slot
                 #:width                 ; ditto
                 ;;
-                #:make-medium
-                #:pixmap-mirror)
+                #:make-medium)
   (:import-from #:mcclim-render-internals
                 #:render-medium-mixin
                 #:render-port-mixin

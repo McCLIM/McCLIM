@@ -33,10 +33,10 @@
 
 (defmethod clim:medium-copy-area ((from-drawable clx-render-medium) from-x from-y
                                   width height
-                                  (to-drawable pixmap) to-x to-y)
+                                  (to-drawable xlib:pixmap) to-x to-y)
   (call-next-method))
 
-(defmethod clim:medium-copy-area ((from-drawable pixmap) from-x from-y
+(defmethod clim:medium-copy-area ((from-drawable xlib:pixmap) from-x from-y
                                   width height
                                   (to-drawable clx-render-medium) to-x to-y)
   (call-next-method))
@@ -71,7 +71,7 @@
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
   (declare (ignore filled))
-  (let ((tr (sheet-native-transformation (medium-sheet medium))))
+  (let ((tr (climb:medium-native-transformation medium)))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (let ((x1 (round-coordinate x1))

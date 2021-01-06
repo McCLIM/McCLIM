@@ -96,9 +96,6 @@
 	   :accessor port-grafts)
    (frame-managers :initform nil
 		   :reader frame-managers)
-   (sheet->mirror :initform (make-hash-table :test #'eq))
-   (mirror->sheet :initform (make-hash-table :test #'eq))
-   (pixmap->mirror :initform (make-hash-table :test #'eq))
    (event-process
     :initform nil
     :initarg  :event-process
@@ -161,36 +158,26 @@ is a McCLIM extension.")
 
 ;;; Mirrors
 
-(defmethod port-lookup-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
-  (gethash sheet (slot-value port 'sheet->mirror)))
-
-(defmethod port-lookup-mirror ((port basic-port) (sheet basic-sheet))
-  (port-lookup-mirror port (sheet-mirrored-ancestor sheet)))
-
-(defgeneric port-lookup-sheet (port mirror))
-
-(defmethod port-lookup-sheet ((port basic-port) mirror)
-  (gethash mirror (slot-value port 'mirror->sheet)))
-
-(defmethod port-register-mirror
-    ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
-  (setf (gethash sheet (slot-value port 'sheet->mirror)) mirror)
-  (setf (gethash mirror (slot-value port 'mirror->sheet)) sheet)
-  nil)
-
-(defgeneric port-unregister-mirror (port sheet mirror))
-
-(defmethod port-unregister-mirror
-    ((port basic-port) (sheet mirrored-sheet-mixin) mirror)
-  (remhash sheet (slot-value port 'sheet->mirror))
-  (remhash mirror (slot-value port 'mirror->sheet))
-  nil)
-
 (defmethod realize-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to realize the mirror of a generic mirrored-sheet"))
 
+(defmethod realize-mirror :before
+    ((port basic-port) (sheet basic-sheet))
+  (check-type sheet mirrored-sheet-mixin))
+
+(defmethod realize-mirror :around
+    ((port basic-port) (sheet mirrored-sheet-mixin))
+  (or (sheet-direct-mirror sheet)
+      (setf (%sheet-direct-mirror sheet) (call-next-method))))
+
 (defmethod destroy-mirror ((port basic-port) (sheet mirrored-sheet-mixin))
   (error "Don't know how to destroy the mirror of a generic mirrored-sheet"))
+
+(defmethod destroy-mirror :around
+    ((port basic-port) (sheet mirrored-sheet-mixin))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (call-next-method)
+    (setf (%sheet-direct-mirror sheet) nil)))
 
 (defmethod mirror-transformation ((port basic-port) mirror)
   (declare (ignore mirror))
@@ -505,36 +492,6 @@ is a McCLIM extension.")
 			   (return-from find-graft graft)))
 		   port)
   (make-graft port :orientation orientation :units units))
-
-;;; Pixmap
-
-(defmethod port-lookup-mirror ((port basic-port) (pixmap pixmap))
-  (gethash pixmap (slot-value port 'pixmap->mirror)))
-
-(defmethod port-register-mirror ((port basic-port) (pixmap pixmap) mirror)
-  (setf (gethash pixmap (slot-value port 'pixmap->mirror)) mirror)
-  nil)
-
-(defmethod port-unregister-mirror ((port basic-port) (pixmap pixmap) mirror)
-  (remhash pixmap (slot-value port 'pixmap->mirror))
-  nil)
-
-(defmethod realize-mirror ((port basic-port) (pixmap mirrored-pixmap))
-  (declare (ignorable port pixmap))
-  (error "Don't know how to realize the mirror on a generic port"))
-
-(defmethod destroy-mirror ((port basic-port) (pixmap mirrored-pixmap))
-  (declare (ignorable port pixmap))
-  (error "Don't know how to destroy the mirror on a generic port"))
-
-(defmethod port-allocate-pixmap ((port basic-port) sheet width height)
-  (declare (ignore sheet width height))
-  (error "ALLOCATE-PIXMAP is not implemented for generic PORTs"))
-
-(defmethod port-deallocate-pixmap ((port basic-port) pixmap)
-  (declare (ignore pixmap))
-  (error "DEALLOCATE-PIXMAP is not implemented for generic PORTs"))
-
 
 (defgeneric port-force-output (port)
   (:documentation "Flush the output buffer of PORT, if there is one."))

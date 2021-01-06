@@ -25,7 +25,6 @@
 
 (defun %destroy-all-mirrors (port)
   (maphash (lambda (key val)
-             (port-unregister-mirror port key val)
              (destroy-mirror port key))
            (slot-value port 'climi::sheet->mirror)))
 
@@ -54,7 +53,7 @@
 ;;; medium
 
 (defmethod make-medium ((port raster-image-port) (sheet basic-sheet))
-  (make-instance 'raster-image-medium :sheet sheet))
+  (make-instance 'raster-image-medium :port port :sheet sheet))
 
 ;;; mirror
 

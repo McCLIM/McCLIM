@@ -483,22 +483,8 @@ documentation produced by presentations.")
   (declare (ignore pane force-p))
   nil)
 
-(defgeneric medium-invoke-with-possible-double-buffering (frame pane medium continuation))
-
-(defmethod medium-invoke-with-possible-double-buffering (frame pane medium continuation)
-  (funcall continuation))
-
-(defgeneric invoke-with-possible-double-buffering (frame pane continuation))
-
-(defmethod invoke-with-possible-double-buffering (frame pane continuation)
-  (declare (ignore frame pane))
-  (funcall continuation))
-
-(defmethod invoke-with-possible-double-buffering (frame (pane sheet-with-medium-mixin) continuation)
-  (medium-invoke-with-possible-double-buffering frame pane (sheet-medium pane) continuation))
-
 (defmacro with-possible-double-buffering ((frame pane) &body body)
-  `(invoke-with-possible-double-buffering ,frame ,pane (lambda () ,@body)))
+  `(progn ,@body))
 
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
                                          &key force-p)

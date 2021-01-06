@@ -29,10 +29,6 @@
 	  :reader graft-units)
    (mirror :initarg :mirror)))
 
-(defmethod initialize-instance :after ((graft graft) &rest args)
-  (declare (ignore args))
-  (port-register-mirror (port graft) graft (slot-value graft 'mirror)))
-
 (defun graftp (x)
   (typep x 'graft))
 

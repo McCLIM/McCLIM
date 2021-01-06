@@ -122,7 +122,7 @@
   (when (eql event-key :mapping-notify)
     (xlib:mapping-notify display request 0 0)
     (return-from event-handler (maybe-funcall *wait-function*)))
-  (when-let ((sheet (and window (port-lookup-sheet *clx-port* window))))
+  (when-let ((sheet (and window (getf (xlib:window-plist window) 'sheet))))
     (case event-key
       ((:key-press :key-release)
        (multiple-value-bind (keyname modifier-state keysym-name)
