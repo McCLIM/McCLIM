@@ -1,11 +1,13 @@
 (defpackage #:clim-tooltips
   (:use #:clim :clim-lisp)
   (:export #:*tooltip-color* #:*tooltip-ink* #:*tooltip-text-style* 
-	   #:*tooltip-wrap-p* #:*tooltip-wrap-width* #:*tooltip-wrap-slop*
-	   #:*tooltip-max-height* #:*tooltip-enforce-max-height-p*
+	   #:*tooltip-wrap-p* #:*tooltip-wrap-width*
+;;         #:*tooltip-wrap-slop*
+;;	   #:*tooltip-max-height* #:*tooltip-enforce-max-height-p*
 	   #:*tooltip-delay*
            #:draw-tooltip #:erase-tooltip
-	   #:orec-relative->absolute-region))
+	   #:orec-relative->absolute-region
+	   ))
 
 (in-package :clim-tooltips)
 ;;;   Copyright (C) 1993-2004 by SRI International.  All rights reserved.
@@ -14,8 +16,6 @@
 ;;;
 ;;; $Id: utils.lisp,v 1.8 2007/07/14 02:14:21 gilham Exp $
 ;;;
-
-
 
 ;;============================= CLIM Tooltips ===============================
 ;; paley:Jun-19-2007 
@@ -48,29 +48,26 @@
 (defparameter *tooltip-text-style* (make-text-style :sans-serif :roman :small))
 (defparameter *tooltip-wrap-p* t)
 (defparameter *tooltip-wrap-width* 40) ; characters.
-(defparameter *tooltip-wrap-slop* 5)    ; characters.
-(defparameter *tooltip-max-height* 200)
-(defparameter *tooltip-enforce-max-height-p* nil)
-(defparameter *tooltip-delay* 0.5)
+;; (defparameter *tooltip-wrap-slop* 5)    ; characters.
+;; (defparameter *tooltip-max-height* 200)
+;; (defparameter *tooltip-enforce-max-height-p* nil)
+(defparameter *tooltip-delay* 0.25)
 
+(defvar *tooltip-lock* (clim-sys:make-lock "tooltip"))
 (defvar *tooltip-process* nil) ; Current tooltip drawing process.
 (defvar *tooltip-orec* nil)  ; The currently drawn tooltip.
 
 ;; ============================================================= draw-tooltip 
 ;; [API]
 ;; paley:Jun-19-2007    Description : Draw a box containing text, to be
-;;  used as a tooltip.  Either a region or x- and y-coordinates should be
-;;  supplied.  If coordinates are supplied, the box will have its upper left
-;;  corner at that position.  If  no coordinates are supplied but a clim
-;;  region is, the box will be positioned close to that region, but not
-;;  overlapping it.  Currently it is displayed immediately below the region,
-;;  but this should be changed to ensure that the entire box is positioned
-;;  within the viewport.  If no position and no region are supplied, the box
-;;  is drawn at (0,0).  This fn calls the pathway-tools fn 
-;;  ec::hyper-draw-text*, so it accepts markup w/in the string, but requires
-;;  that pathway-tools be loaded.  We actually output the text twice, once
-;;  to compute its size and the second time to actually render it -- we
-;;  may be able to make this more efficient.
+;;  used as a tooltip.  If x- and y-coordinates are supplied, the box will 
+;;  have its upper left corner at that position.  If  no coordinates are 
+;;  supplied but a clim region is, the box will be positioned close to that 
+;;  region, but not overlapping it. The entire box is positioned within the
+;;  viewport.  If no position and no region are supplied, the box is drawn
+;;  "near" the pointer. We actually output the text twice, once to compute 
+;;  its size and the second time to actually render it -- we may be able to
+;;  make this more efficient.
 ;; 
 ;;      Arguments : stream: the clim stream to output to
 ;;                  text: a string or NIL
@@ -82,24 +79,12 @@
 ;;   Side Effects : sets *tooltip-orec*
 ;; Update History : gilham:Jun-20-2007
 ;;                  Make text rendering function an argument to remove dependency
-;;                  on pathway tools code.  This is just to remove a warning in
-;;                  the build, not to set the interface in stone.
+;;                  on pathway tools code.
 ;;                  gilham:Jul-10-2007
 ;;                  More intelligent placement of tooltip.
 ;;
 ;;                  gilham:Jul-13-2007 Even more intelligent placement
-;;                  of tooltip.  But there are still some issues.
-;;
-;;                  1) On the organism home page where there are
-;;                     citations, the transformed region for the
-;;                     presentation for the citation seems to bear no
-;;                     relationship to any reality I can figure out.
-;;
-;;                  2) If the region of the tooltip intersects that of
-;;                     a button, the tooltip renders under the button.
-;;                     This seems to be a fundamental lossage that can
-;;                     only be overcome by some very low-level
-;;                     manipulation.
+;;                  of tooltip.
 ;;
 ;;                  Note that if the region has a large bounding box
 ;;                  it may not be reasonable to avoid having the
@@ -155,10 +140,10 @@
 			  (text-style *tooltip-text-style*)
 			  (wrap-p *tooltip-wrap-p*)
 			  (wrap-width *tooltip-wrap-width*)
-			  (max-height *tooltip-max-height*)
-			  (enforce-max-height-p *tooltip-enforce-max-height-p*)
+;;			  (max-height *tooltip-max-height*)
+;;			  (enforce-max-height-p *tooltip-enforce-max-height-p*)
 			  )
-  (declare (ignore max-height enforce-max-height-p))
+  ;; (declare (ignore max-height enforce-max-height-p))
 
 ;; Suggested new args.  Most or all should have defaults based on global vars.
 ;;   To wrap or not to wrap, and width limit
@@ -172,138 +157,137 @@
   
   (flet ((process-draw-tooltip ()
 	   (sleep *tooltip-delay*)
-	   
 	   (when (and text (not (equal text "")))
-	     (with-drawing-options (stream :text-style text-style
-					   :ink ink)
-	       (let ((margin 2)
-		     (text-height (+ (stream-line-height stream) 2))
-		     tt-x tt-y
-		     strings
-		     wd ht)
-		 (if wrap-p		; Do it this way in case the text has newlines in it.
-		     ;; You are running a fast computer, right?
-		     (progn
-		       (multiple-value-setq (wd ht)
-			 (bounding-rectangle-size
-			  (with-output-to-output-record (stream)
-			    (let (this-line
-				  (left-over text)
-				  (i 0))
-			      (loop
-				(multiple-value-setq (this-line left-over)
-				  (split-string-by-length left-over wrap-width))
-				(unless (equal this-line "")
-;;				  (format *error-output* "end ~A: ~A~%" i this-line)
-				  (push this-line strings)
-				  (funcall text-render-fn stream this-line 
-					   0 (+ (* i text-height) margin)))
-				(incf i)
-;;				(format *error-output* "left-over: ~A~%" left-over)
-				(unless left-over (return)))
-			      )
-			    (setf strings (nreverse strings))))
-			 )
-		       (setf *tooltip-orec*
-			 (with-output-recording-options (stream :draw nil :record t)
-			   (with-new-output-record (stream)
-			     (draw-rectangle* stream (- margin) (- margin)
-					      (+ wd margin) (+ ht margin)
-					      :ink background)
-			     (draw-rectangle* stream (- margin) (- margin)
-					      (+ wd margin) (+ ht margin)
-					      :filled nil)
-			     (do* ((string-list strings (cdr string-list))
-				   (string (car string-list) (car string-list))
-				   (i 0 (1+ i))
-				   )
-				 ((endp string-list))
-;;			       (format *error-output* "~A~%" string)
-			       (funcall text-render-fn stream string 
-					0 (* i text-height) :align-x :left :align-y :top)
-			       )))))
-		     (progn
-		       (multiple-value-setq (wd ht)
-			 (bounding-rectangle-size 
-			  (with-output-to-output-record (stream)
-			    (funcall text-render-fn stream text 0 0))))
-		       (setf *tooltip-orec*
-			     (with-output-recording-options (stream :draw nil :record t)
-			       (with-new-output-record (stream)
-				 (draw-rectangle* stream (- margin) (- margin)
-						  (+ wd margin) (+ ht margin)
-						  :ink background)
-				 (draw-rectangle* stream (- margin) (- margin)
-						  (+ wd margin) (+ ht margin)
-						  :filled nil)
-				 (funcall text-render-fn stream text 
-					  0 0 :align-x :left :align-y :top))))))
-		 ;; This tries to put the tool tip near the region and near the pointer.
-		 (when (and region (not (and x y)))
-		   (multiple-value-bind (ptr-x ptr-y) (stream-pointer-position stream)
-		     (let* ((viewport-br (window-viewport stream))
-			    (viewport-max-x (bounding-rectangle-max-x viewport-br))
-			    (viewport-min-x (bounding-rectangle-min-x viewport-br))
-			    (viewport-max-y (bounding-rectangle-max-y viewport-br))
-			    (viewport-min-y (bounding-rectangle-min-y viewport-br)))
-		       (with-bounding-rectangle* (tooltip-left tooltip-top tooltip-right tooltip-bottom)
-			   *tooltip-orec*
-			 (declare (ignore tooltip-left tooltip-top))
+	       (with-drawing-options (stream :text-style text-style
+					     :ink ink)
+		 (let ((margin 2)
+		       (text-height (+ (stream-line-height stream) 2))
+		       tt-x tt-y
+		       strings
+		       wd ht)
+		   (if wrap-p ; Do it this way in case the text has newlines in it.
+		       ;; You are running a fast computer, right?
+		       (progn
+			 (multiple-value-setq (wd ht)
+			   (bounding-rectangle-size
+			    (with-output-to-output-record (stream)
+			      (let (this-line
+				    (left-over text)
+				    (i 0))
+				(loop
+				  (multiple-value-setq (this-line left-over)
+				    (split-string-by-length left-over wrap-width))
+				  (unless (equal this-line "")
+				    ;;				  (format *error-output* "end ~A: ~A~%" i this-line)
+				    (push this-line strings)
+				    (funcall text-render-fn stream this-line 
+					     0 (+ (* i text-height) margin)))
+				  (incf i)
+				  ;;				(format *error-output* "left-over: ~A~%" left-over)
+				  (unless left-over (return)))
+				)
+			      (setf strings (nreverse strings))))
+			   )
+			 (setf *tooltip-orec*
+			       (with-output-recording-options (stream :draw nil :record t)
+				 (with-new-output-record (stream)
+				   (draw-rectangle* stream (- margin) (- margin)
+						    (+ wd margin) (+ ht margin)
+						    :ink background)
+				   (draw-rectangle* stream (- margin) (- margin)
+						    (+ wd margin) (+ ht margin)
+						    :filled nil)
+				   (do* ((string-list strings (cdr string-list))
+					 (string (car string-list) (car string-list))
+					 (i 0 (1+ i))
+					 )
+					((endp string-list))
+				     ;;			       (format *error-output* "~A~%" string)
+				     (funcall text-render-fn stream string 
+					      0 (* i text-height) :align-x :left :align-y :top)
+				     )))))
+		       (progn
+			 (multiple-value-setq (wd ht)
+			   (bounding-rectangle-size 
+			    (with-output-to-output-record (stream)
+			      (funcall text-render-fn stream text 0 0))))
+			 (setf *tooltip-orec*
+			       (with-output-recording-options (stream :draw nil :record t)
+				 (with-new-output-record (stream)
+				   (draw-rectangle* stream (- margin) (- margin)
+						    (+ wd margin) (+ ht margin)
+						    :ink background)
+				   (draw-rectangle* stream (- margin) (- margin)
+						    (+ wd margin) (+ ht margin)
+						    :filled nil)
+				   (funcall text-render-fn stream text 
+					    0 0 :align-x :left :align-y :top))))))
+		   ;; This tries to put the tool tip near the region and near the pointer.
+		   (when (and region (not (and x y)))
+		     (multiple-value-bind (ptr-x ptr-y) (stream-pointer-position stream)
+		       (let* ((viewport-br (window-viewport stream))
+			      (viewport-max-x (bounding-rectangle-max-x viewport-br))
+			      (viewport-min-x (bounding-rectangle-min-x viewport-br))
+			      (viewport-max-y (bounding-rectangle-max-y viewport-br))
+			      (viewport-min-y (bounding-rectangle-min-y viewport-br)))
+			 (with-bounding-rectangle* (tooltip-left tooltip-top tooltip-right tooltip-bottom)
+						   *tooltip-orec*
+			   (declare (ignore tooltip-left tooltip-top))
 
-			 ;; gilham:Aug-1-2007
-			 ;; First, check to see if the bottom of the region is
-			 ;; near the pointer.  If not, two things might be the
-			 ;; case:
-			 ;;
-			 ;; 1) The region is very large in height.
-			 ;; 2) We are encountering the problem with
-			 ;;    the coordinates of certain records
-			 ;;    being strange. (This may be a CLIM bug
-			 ;;    and is still being investigated.)
-			 ;;
-			 ;; In either case, we want to ignore the
-			 ;; region and just put the tool tip
-			 ;;
-			 ;; 1) Near the pointer, and
-			 ;; 2) In the viewport.
-			 ;;
-			 ;; The latter constraint is very
-			 ;; important---tooltips are useless if they
-			 ;; are not visible in the viewport.
-			 ;;
-			 (if (> (- (clim:bounding-rectangle-max-y region) ptr-y) 40)
-			     (progn
-			       (setf tt-x (+ ptr-x 10)
-				     tt-y (- ptr-y 30)))
-			   (progn
-			     ;; Make it seem as if the pointer hit the
-			     ;; record from the bottom every time.
-			     (setf ptr-y (bounding-rectangle-max-y region))
-			     ;;
-			     ;; The idea is to not have the tooltip
-			     ;; cover either the pointer or the region
-			     ;; (that is, the text in the presentation
-			     ;; that is being highlighted). It may not
-			     ;; be possible to avoid the latter, if it
-			     ;; would put the tooltip too far from the
-			     ;; pointer, but at least we try to make
-			     ;; it not too egregious.
-			     (setf tt-x (+ ptr-x 10)
-				   tt-y (- (bounding-rectangle-min-y region) ht 10))
-			     ))
-			 (when (< tt-y (- ptr-y (+ ht 40)))
-			   (setf tt-y (- ptr-y (+ ht 40))))
-			 ;; Try to keep the tool tip in the viewport.
-			 (when (> (+ tt-x tooltip-right) viewport-max-x)
-			   (decf tt-x (+ (- (+ tt-x tooltip-right) viewport-max-x) margin))
-			   (when (< tt-x viewport-min-x) (setf tt-x viewport-min-x)))
-			 ;; If the tooltip would go above the viewport, put it below the pointer.
-			 (when (< tt-y viewport-min-y)
-			   (setf tt-y (+ ptr-y 40))
-			   (when (> tt-y viewport-max-y) 
-			     (setf tt-y (- viewport-max-y tooltip-bottom))))))))
-		 (setq x (or x tt-x 0)
-		       y (or y tt-y 0)))))
+			   ;; gilham:Aug-1-2007
+			   ;; First, check to see if the bottom of the region is
+			   ;; near the pointer.  If not, two things might be the
+			   ;; case:
+			   ;;
+			   ;; 1) The region is very large in height.
+			   ;; 2) We are encountering the problem with
+			   ;;    the coordinates of certain records
+			   ;;    being strange. (This may be a CLIM bug
+			   ;;    and is still being investigated.)
+			   ;;
+			   ;; In either case, we want to ignore the
+			   ;; region and just put the tool tip
+			   ;;
+			   ;; 1) Near the pointer, and
+			   ;; 2) In the viewport.
+			   ;;
+			   ;; The latter constraint is very
+			   ;; important---tooltips are useless if they
+			   ;; are not visible in the viewport.
+			   ;;
+			   (if (> (- (clim:bounding-rectangle-max-y region) ptr-y) 40)
+			       (progn
+				 (setf tt-x (+ ptr-x 10)
+				       tt-y (- ptr-y 30)))
+			       (progn
+				 ;; Make it seem as if the pointer hit the
+				 ;; record from the bottom every time.
+				 (setf ptr-y (bounding-rectangle-max-y region))
+				 ;;
+				 ;; The idea is to not have the tooltip
+				 ;; cover either the pointer or the region
+				 ;; (that is, the text in the presentation
+				 ;; that is being highlighted). It may not
+				 ;; be possible to avoid the latter, if it
+				 ;; would put the tooltip too far from the
+				 ;; pointer, but at least we try to make
+				 ;; it not too egregious.
+				 (setf tt-x (+ ptr-x 10)
+				       tt-y (- (bounding-rectangle-min-y region) ht 10))
+				 ))
+			   (when (< tt-y (- ptr-y (+ ht 40)))
+			     (setf tt-y (- ptr-y (+ ht 40))))
+			   ;; Try to keep the tool tip in the viewport.
+			   (when (> (+ tt-x tooltip-right) viewport-max-x)
+			     (decf tt-x (+ (- (+ tt-x tooltip-right) viewport-max-x) margin))
+			     (when (< tt-x viewport-min-x) (setf tt-x viewport-min-x)))
+			   ;; If the tooltip would go above the viewport, put it below the pointer.
+			   (when (< tt-y viewport-min-y)
+			     (setf tt-y (+ ptr-y 40))
+			     (when (> tt-y viewport-max-y) 
+			       (setf tt-y (- viewport-max-y tooltip-bottom))))))))
+		   (setq x (or x tt-x 0)
+			 y (or y tt-y 0)))))
 	   (setf (output-record-position *tooltip-orec*) (values x y))
 	   (tree-recompute-extent *tooltip-orec*)
 	   (replay *tooltip-orec* stream)
@@ -316,8 +300,10 @@
     ;; before drawing the tooltip.  If the unhighlight method runs
     ;; before this process wakes up, it kills the process off and so
     ;; prevents the tooltip from being drawn.
-    (setf *tooltip-process* (clim-sys:make-process #'process-draw-tooltip :name "Draw-Tooltip"))
-    ))
+    (clim-sys:with-lock-held (*tooltip-lock*)
+      (setf *tooltip-process* 
+	    (clim-sys:make-process #'process-draw-tooltip :name "Draw-Tooltip"))
+      )))
 
 
 ;; paley:Jun-19-2007 Erase a tooltip drawn by draw-tooltip
@@ -325,14 +311,14 @@
 (defun erase-tooltip (stream)
   ;; gilham:Aug-1-2007 See if there's a process waiting to draw a
   ;; tooltip.  If so, kill it.
-  (when (and *tooltip-process*
-	     ;; XXX race condition. :-(
-	     (clim-sys:process-state *tooltip-process*))
-    (clim-sys:destroy-process *tooltip-process*))
+  (clim-sys:with-lock-held (*tooltip-lock*)
+    (when (and *tooltip-process*
+	       (clim-sys:process-state *tooltip-process*))
+      (clim-sys:destroy-process *tooltip-process*)))
   (when *tooltip-orec*
     (erase-output-record *tooltip-orec* stream nil)
-    (setf *tooltip-orec* nil)
-    ))
+    (setf *tooltip-orec* nil))
+    )
 
 
 ;; ============================================ orec-relative->absolute-region
@@ -347,41 +333,66 @@
 
 (defun orec-relative->absolute-region (orec stream)
   (declare (ignore stream))
-;;  (multiple-value-bind (xoff yoff)
-;;      (climi::convert-from-relative-to-absolute-coordinates stream orec)
     (transform-region +identity-transformation+ orec)
   )
 
 
 ;;;
-;;; Example code. Works with the "German Towns" example in the demos.
+;;; Example code. Adds tooltips to the Address Book example and
+;;; German Towns example.
+;;;
+;;; Note that if you run the demodemo example, both these examples
+;;; will work. That is, you can run the address book example and get
+;;; tooltips, then run the german towns example and get tooltips. Then
+;;; when you quit the german town example and go back to the address
+;;; book window, the address book tooltips will show up again.
+;;;
+;;; For some reason these demo examples won't both work
+;;; simultaneously. This seems to be an artifact of McCLIM, since the
+;;; same thing happens if the tooltips aren't loaded.
+
+;;; One way to organize your tooltip code is to have a
+;;; GET-TOOLTIP-TEXT method for each presentation object you want to
+;;; display a tooltip for. This allows the presentation methods to be
+;;; almost the same except for the type of the presentation object.
+;;;
+;;; The GET-TOOLTIP-TEXT method would then be responsible for any
+;;; groveling of the presentation object necessary to obtain the text
+;;; to put in the tooltip.
+
+#|
+(defmethod get-tooltip-text ((object clim-demo.town-example::town))
+  ;; German Towns text
+  (format nil "~A has ~:d inhabitants."
+	  (clim-demo.town-example::town-name object)
+	  (or (clim-demo.town-example::town-population object) "some")))
+
+;;; German Towns example
+(define-presentation-method highlight-presentation :after
+  ((type clim-demo.town-example::town) record stream (state (eql :highlight)))
+  (draw-tooltip stream (get-tooltip-text (clim-internals::presentation-object record))
+		:region (orec-relative->absolute-region record stream)))
 
 (define-presentation-method highlight-presentation :after
-  #-(and) ((type t) record stream (state (eql :highlight)))
-  ;; for german town example
-  #+(and) ((type clim-demo.town-example::town) record stream (state (eql :highlight)))
-  (unless (eq type 'blank-area)
-    (draw-tooltip stream (get-tooltip-text record)
-                  :region (orec-relative->absolute-region record stream))))
-
-(define-presentation-method highlight-presentation :after
-  #-(and) ((type t) record stream (state (eql :unhighlight)))
-  ;; for german town example
-  #+(and) ((type clim-demo.town-example::town) record stream (state (eql :unhighlight)))
+  ((type clim-demo.town-example::town) record stream (state (eql :unhighlight)))
   (declare (ignore record))
-  (unless (eq type 'blank-area)
-    (erase-tooltip stream)))
+  (erase-tooltip stream))
 
-(defun get-tooltip-text (record)
-  #-(and)
-  (let* ((text (format nil "~A" (clim-internals::presentation-object record)))
-	 (text-length (min 30 (length text))))
-    (subseq text 0 text-length))
-  ;; for german town example
-  #+(and)
-  (let* ((object (clim-internals::presentation-object record))
-	 (text (format nil "~A has ~:d inhabitants."
-		       (clim-demo.town-example::town-name object)
-		       (or (clim-demo.town-example::town-population object) "some"))))
-    text))
 
+;;; Address Book example
+
+(defmethod get-tooltip-text ((object clim-demo.address-book::address))
+    (with-output-to-string (s nil :element-type 'base-char)
+      (clim-demo.address-book::display-address object s)))
+
+(define-presentation-method highlight-presentation :after
+  ((type clim-demo.address-book::address) record stream (state (eql :highlight)))
+  (draw-tooltip stream (get-tooltip-text (clim-internals::presentation-object record))
+                :region (orec-relative->absolute-region record stream)))
+
+(define-presentation-method highlight-presentation :after
+  ((type clim-demo.address-book::address) record stream (state (eql :unhighlight)))
+  (declare (ignore record))
+  (erase-tooltip stream))
+
+|#
