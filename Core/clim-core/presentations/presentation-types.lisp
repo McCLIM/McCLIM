@@ -286,7 +286,7 @@ that has no default is supplied with '*"
 
 ;;; Yet another variation on a theme...
 
-(defun get-all-params (ll)
+(defun get-all-params (ll &key (kind :destructuring))
   (unless ll
     (return-from get-all-params nil))
   (when (atom ll)
@@ -297,7 +297,12 @@ that has no default is supplied with '*"
                         (setq state arg)
                         nil)
                        ((eq state 'required)
-                        (get-all-params arg))
+                        (ecase kind
+                          (:destructuring (get-all-params arg))
+                          (:specialized (list (if (consp arg)
+                                                  (first arg)
+                                                  arg)))
+                          (:ordinary (list arg))))
                        ((or (eq state '&optional) (eq state '&aux))
                         (if (atom arg)
                             (list arg)
