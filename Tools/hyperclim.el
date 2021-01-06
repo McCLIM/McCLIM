@@ -935,7 +935,8 @@
    ("frame-pretty-name" . "28-3.html#_1492")
    ("frame-pointer-documentation-output" . "28-3.html#_1501")
    ("frame-parent" . "28-3.html#_1503") ("frame-panes" . "28-3.html#_1504")
-   ("frame-name" . "28-3.html#_1491") ("frame-mananger-p" . "28-5.html#_1547")
+   ("frame-name" . "28-3.html#_1491")
+   ("frame-manager-p" . "28-5.html#_1547")
    ("frame-manager-notify-user" . "28-5.html#_1570")
    ("frame-manager-menu-choose" . "25.html#_1355")
    ("frame-manager-frames" . "28-5.html#_1555")
@@ -1249,6 +1250,19 @@
 
 ;;; Font lock highlighting for CLIM-specified symbols
 
+(defvar hyperclim-specification-keyword-exceptions
+  '("t" "nil"
+    "boolean"
+    "integer" "ratio" "rational" "float" "real" "complex" "number"
+    "character" "string" "symbol" "keyword" "pathname" "sequence"
+    "null" "not" "and" "or" "member"
+    "active" "state") ; concepts, not exported symbols
+  "Entries that should not be highlighted.
+Either because they coincide with Common Lisp symbols that are
+frequently used for other purposes or because the entries
+designate concepts that do not correspond to symbols in the CLIM
+package.")
+
 (defface font-lock-clim-specified-face
   '((t . (:underline "gray40")))
   "Face for symbols specified in the CLIM specification."
@@ -1259,10 +1273,7 @@
   (let ((keywords '()))
     (dolist (entry (cl-rest clim-gilberth-spec))
       (let ((symbol (car entry)))
-        (unless (cl-member symbol '("t" "nil"
-                                    "integer" "number" "keyword" "symbol" "string" "member"
-                                    "null" "not" "and" "or"
-                                    "active" "state") ; concepts, not exported symbols
+        (unless (cl-member symbol hyperclim-specification-keyword-exceptions
                            :test #'string=)
           (let ((regex (format "\\_<\\(%s\\)\\_>" (regexp-quote symbol))))
             (push `(,regex 1 'font-lock-clim-specified-face)
