@@ -710,52 +710,56 @@ stream. Output will be done to its typeout."
               (read-completion-gesture stream
                                        partial-completers
                                        help-displays-possibilities)
-            (if mode
-                (multiple-value-bind
-                      (input success object nmatches possibilities)
-                    (funcall func (subseq so-far 0) mode)
-                  (when (and (zerop nmatches)
-                             (eq mode :complete-limited)
-                             (complete-gesture-p gesture))
-                    ;; Gesture is both a partial completer and a
-                    ;; delimiter e.g., #\space.  If no partial match,
-                    ;; try again with a total match.
-                    (setf (values input success object nmatches possibilities)
-                          (funcall func (subseq so-far 0) :complete))
-                    (setf mode :complete))
-                  ;; Preserve the delimiter
-                  (when (and success (eq mode :complete))
-                    (unread-gesture gesture :stream stream))
-                  ;; Get completion from menu
-                  (when *trace-complete-input*
-                    (format *trace-output* "nmatches = ~A, mode = ~A~%"
-                            nmatches mode))
-                  (when (and (> nmatches 0) (eq mode :possibilities))
-                    (print-possibilities possibilities possibility-printer stream)
-                    (redraw-input-buffer stream)
-                    (if-let ((possibility (read-possibility stream possibilities)))
-                      (setf input (first possibility)
-                            object (second possibility)
-                            success t
-                            nmatches 1)
-                      (setf success nil
-                            nmatches 0)))
-                  (unless (and (eq mode :complete) (not success))
-                    (if (> nmatches 0)
-                        (insert-input input)
-                        (beep)))
-                  (cond ((and success (eq mode :complete))
-                         (return-from complete-input
-                           (values object success input)))
-                        ((activation-gesture-p gesture)
-                         (if allow-any-input
-                             (return-from complete-input
-                               (values nil t (subseq so-far 0)))
-                             (error 'simple-completion-error
-                                    :format-control "Input ~S does not match"
-                                    :format-arguments (list so-far)
-                                    :input-so-far so-far)))))
-                (vector-push-extend gesture so-far))))))))
+            (cond
+              (mode
+               (multiple-value-bind
+                     (input success object nmatches possibilities)
+                   (funcall func (subseq so-far 0) mode)
+                 (when (and (zerop nmatches)
+                            (eq mode :complete-limited)
+                            (complete-gesture-p gesture))
+                   ;; Gesture is both a partial completer and a
+                   ;; delimiter e.g., #\space.  If no partial match,
+                   ;; try again with a total match.
+                   (setf (values input success object nmatches possibilities)
+                         (funcall func (subseq so-far 0) :complete))
+                   (setf mode :complete))
+                 ;; Preserve the delimiter
+                 (when (and success (eq mode :complete))
+                   (unread-gesture gesture :stream stream))
+                 ;; Get completion from menu
+                 (when *trace-complete-input*
+                   (format *trace-output* "nmatches = ~A, mode = ~A~%"
+                           nmatches mode))
+                 (when (and (> nmatches 0) (eq mode :possibilities))
+                   (print-possibilities possibilities possibility-printer stream)
+                   (redraw-input-buffer stream)
+                   (if-let ((possibility (read-possibility stream possibilities)))
+                     (setf input (first possibility)
+                           object (second possibility)
+                           success t
+                           nmatches 1)
+                     (setf success nil
+                           nmatches 0)))
+                 (unless (and (eq mode :complete) (not success))
+                   (if (> nmatches 0)
+                       (insert-input input)
+                       (beep)))
+                 (cond ((and success (eq mode :complete))
+                        (return-from complete-input
+                          (values object success input)))
+                       ((activation-gesture-p gesture)
+                        (if allow-any-input
+                            (return-from complete-input
+                              (values nil t (subseq so-far 0)))
+                            (error 'simple-completion-error
+                                   :format-control "Input ~S does not match"
+                                   :format-arguments (list so-far)
+                                   :input-so-far so-far))))))
+              ((null gesture) ; e.g. end-of-input if STREAM is a string stream
+               (return-from complete-input (values nil nil so-far)))
+              (t
+               (vector-push-extend gesture so-far)))))))))
 
 ;;; helper function
 
@@ -883,11 +887,11 @@ stream. Output will be done to its typeout."
                   possibilities)
           (values initial-string nil nil nmatches (sort possibilities #'string-lessp :key #'car))))))
 
-(defun complete-from-possibilities (initial-string completions delimiters &key
-                                                                            (action :complete)
-                                                                            (predicate (constantly t))
-                                                                            (name-key #'car)
-                                                                            (value-key #'second))
+(defun complete-from-possibilities (initial-string completions delimiters
+                                    &key (action :complete)
+                                         (predicate (constantly t))
+                                         (name-key #'car)
+                                         (value-key #'second))
   (flet ((generator (input-string suggester)
            (declare (ignore input-string))
            (do-sequence (possibility completions)
@@ -895,8 +899,7 @@ stream. Output will be done to its typeout."
                       (funcall name-key possibility)
                       (funcall value-key possibility)))))
     (complete-from-generator initial-string #'generator delimiters
-                             :action action
-                             :predicate predicate)))
+                             :action action :predicate predicate)))
 
 (defun suggest (completion object)
   "Specifies one possibility for

@@ -5,6 +5,7 @@
 ;;;  (c) copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
 ;;;  (c) copyright 2001-2002 by Tim Moore <moore@bricoworks.com>
 ;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 Jan Moringen <jmoringe@techfak.uni-bielefe.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -760,11 +761,10 @@
 
 (define-presentation-method presentation-typep (object
                                                 (type subset-completion))
-  (map nil #'(lambda (obj)
-               (unless (find obj sequence :test test :key value-key)
-                 (return-from presentation-typep nil)))
-       object)
-  t)
+  (and (typep object 'sequence)
+       (every (lambda (element)
+                (find element sequence :test test :key value-key))
+              object)))
 
 (define-presentation-method presentation-subtypep ((type subset-completion)
                                                    maybe-supertype)
@@ -784,11 +784,10 @@
   (declare (ignore for-context-type))
   (loop for tail on object
         for (obj) = tail
-        do (progn
-             (present obj (presentation-type-of object)
-                        :stream stream :view view
-                        :acceptably acceptably
-                        :sensitive nil)
+        do (let ((name (funcall name-key obj)))
+             (with-output-as-presentation
+                 (stream obj (presentation-type-of obj) :view view)
+               (write-string name stream))
              (when (cdr tail)
                (if acceptably
                    (princ separator stream)
@@ -801,11 +800,10 @@
   (declare (ignore for-context-type))
   (loop for i from 0 below (length object)
         for obj = (aref object i)
-        do (progn
-             (present obj (presentation-type-of object)
-                        :stream stream :view view
-                        :acceptably acceptably
-                        :sensitive nil)
+        do (let ((name (funcall name-key obj)))
+             (with-output-as-presentation
+                 (stream obj (presentation-type-of obj) :view view)
+               (write-string name stream))
              (when (< i (1- (length object)))
                (if acceptably
                    (princ separator stream)

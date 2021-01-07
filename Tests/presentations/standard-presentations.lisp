@@ -337,21 +337,19 @@
 
 (define-presentation-type-tests (subset-completion)
   :typep
-  (fails
-    ('((((1 2 3)))                                            1     nil)
-     '((((1 2 3)))                                            4     nil)
-     '((((1 2 3)))                                            ()    t)
-     '((((1 2 3)))                                            (1 2) t)
-     '((((-1 -2 -3) :value-key abs))                          (4)   nil)
-     '((((-1 -2 -3) :value-key abs))                          (1)   t)
-     '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) (3)   nil)
-     '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) (1)   t)))
+  ('((((1 2 3)))                                            1     nil)
+   '((((1 2 3)))                                            4     nil)
+   '((((1 2 3)))                                            ()    t)
+   '((((1 2 3)))                                            (1 2) t)
+   '((((-1 -2 -3) :value-key abs))                          (4)   nil)
+   '((((-1 -2 -3) :value-key abs))                          (1)   t)
+   '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) (3)   nil)
+   '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) (1)   t))
   :present
-  (fails
-    ('((((1 2 3)))                               ()     "")
-     '((((1 2 3)))                               (1 3)  "1,3")
-     '((((:foo :bar)))                           (:foo) "Foo")
-     '((((:foo :bar)) :name-key string-downcase) (:foo) "foo")))
+  ('((((1 2 3)))                               ()     "")
+   '((((1 2 3)))                               (1 3)  "1,3")
+   '((((:foo :bar)))                           (:foo) "Foo")
+   '((((:foo :bar)) :name-key string-downcase) (:foo) "foo"))
   #+not-implemented :accept
   #+not-implemented (;; Invalid
                      '((((1 2 3)))                                            "4"   parse-error)
