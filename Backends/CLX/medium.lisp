@@ -26,18 +26,15 @@
 
 (in-package :clim-clx)
 
-(defgeneric X-pixel (port color))
-
 (defconstant +x11-pixmap-dimension-limit+ 2048)
 
-(defmethod X-pixel ((port clx-basic-port) color)
-  (let ((table (slot-value port 'color-table)))
-    (or (gethash color table)
-        (setf (gethash color table)
-              (multiple-value-bind (r g b) (color-rgb color)
-                (xlib:alloc-color (xlib:screen-default-colormap
-                                   (clx-port-screen port))
-                                  (xlib:make-color :red r :green g :blue b)))))))
+(defun X-pixel (port color)
+  (alexandria:ensure-gethash
+   color (slot-value port 'color-table)
+   (multiple-value-bind (r g b) (color-rgb color)
+     (xlib:alloc-color (xlib:screen-default-colormap
+                        (clx-port-screen port))
+                       (xlib:make-color :red r :green g :blue b)))))
 
 ;;; Needed changes:
 
@@ -254,7 +251,7 @@
                (aref tmp 3) height
                (xlib:gcontext-clip-mask gc :yx-banded) tmp)))
       (climi::standard-rectangle-set
-       (alexandria:when-let ((rect-seq (clipping-region->rect-seq clipping-region)))
+       (when-let ((rect-seq (clipping-region->rect-seq clipping-region)))
          ;; What McCLIM is generating is not :yx-banded in the same
          ;; sense as CLX requires it. Use :unsorted until we fix it.
          #+ (or) (setf (xlib:gcontext-clip-mask gc :yx-banded) rect-seq)

@@ -8,8 +8,7 @@
    (xlib-image :initform nil)
    (dirty-xr :initform +nowhere+)
    (clx-image :initform nil)
-   (gcontext :initform nil)
-   (skip-count :initform 0)))
+   (gcontext :initform nil)))
 
 ;;; for port
 (defmethod mcclim-render-internals::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
@@ -84,7 +83,7 @@
                mcclim-render-internals::dirty-region
                mcclim-render-internals::finished-output
                mcclim-render-internals::updating-p
-               width height dirty-xr skip-count)
+               width height dirty-xr)
       mirror
     (when (not (region-equal dirty-xr +nowhere+))
       (let (reg)
