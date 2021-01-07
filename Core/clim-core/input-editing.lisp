@@ -1130,35 +1130,39 @@ protocol retrieving gestures from a provided string."))
 
 (defmethod stream-read-gesture ((stream string-input-editing-stream)
                                 &key peek-p &allow-other-keys)
-  (unless (> (stream-scan-pointer stream) (length (stream-input-buffer stream)))
-    (prog1 (if (= (stream-scan-pointer stream) (length (stream-input-buffer stream)))
-               (second (first (gethash (first *activation-gestures*)
-                                       climi::*gesture-names*))) ; XXX - will always be non-NIL?
-               (aref (stream-input-buffer stream) (stream-scan-pointer stream)))
-      (unless peek-p
-        (incf (stream-scan-pointer stream))))))
+  (let* ((input-buffer (stream-input-buffer stream))
+         (length       (length input-buffer))
+         (scan-pointer (stream-scan-pointer stream)))
+    (if (> scan-pointer length)
+        nil
+        (prog1
+            (if (= scan-pointer length)
+                (second (first (gethash (first *activation-gestures*)
+                                        climi::*gesture-names*))) ; XXX - will always be non-NIL?
+                (aref input-buffer scan-pointer))
+          (unless peek-p
+            (incf (stream-scan-pointer stream)))))))
 
 (defmethod stream-unread-gesture ((stream string-input-editing-stream) gesture)
   (decf (stream-scan-pointer stream)))
 
 (defun accept-1 (stream type
-                 &key
-                   (view (stream-default-view stream))
-                   (default nil defaultp)
-                   (default-type nil default-type-p)
-                   provide-default
-                   insert-default
-                   (replace-input t)
-                   history
-                   active-p
-                   prompt
-                   prompt-mode
-                   display-default
-                   query-identifier
-                   (activation-gestures nil activationsp)
-                   (additional-activation-gestures nil additional-activations-p)
-                   (delimiter-gestures nil delimitersp)
-                   (additional-delimiter-gestures nil  additional-delimiters-p))
+                 &key (view (stream-default-view stream))
+                      (default nil defaultp)
+                      (default-type nil default-type-p)
+                      provide-default
+                      insert-default
+                      (replace-input t)
+                      history
+                      active-p
+                      prompt
+                      prompt-mode
+                      display-default
+                      query-identifier
+                      (activation-gestures nil activationsp)
+                      (additional-activation-gestures nil additional-activations-p)
+                      (delimiter-gestures nil delimitersp)
+                      (additional-delimiter-gestures nil additional-delimiters-p))
   (declare (ignore provide-default history active-p
                    prompt prompt-mode
                    display-default query-identifier))
@@ -1225,9 +1229,10 @@ protocol retrieving gestures from a provided string."))
                             (unless (or (null ag) (eq ag stream))
                               (unless (activation-gesture-p ag)
                                 (unread-gesture ag :stream stream)))))
-                        (values (car accept-results) (if (cdr accept-results)
-                                                         (cadr accept-results)
-                                                         type)))))
+                        (values (first accept-results)
+                                (if (rest accept-results)
+                                    (second accept-results)
+                                    type)))))
                 ;; A presentation was clicked on, or something
                 (t
                  (when (and replace-input
@@ -1240,22 +1245,22 @@ protocol retrieving gestures from a provided string."))
         (values sensitizer-object sensitizer-type)))))
 
 ;;; XXX This needs work! It needs to do everything that accept does for
-;;; expanding ptypes and setting up recursive call procesusing
+;;; expanding ptypes and setting up recursive call processing
 (defun accept-from-string (type string
                            &rest args
                            &key view
-                             (default nil defaultp)
-                             (default-type nil default-type-p)
-                             (activation-gestures nil activationsp)
-                             (additional-activation-gestures
-                              nil
-                              additional-activations-p)
-                             (delimiter-gestures nil delimitersp)
-                             (additional-delimiter-gestures
-                              nil
-                              additional-delimiters-p)
-                             (start 0)
-                             (end (length string)))
+                                (default nil defaultp)
+                                (default-type nil default-type-p)
+                                (activation-gestures nil activationsp)
+                                (additional-activation-gestures
+                                 nil
+                                 additional-activations-p)
+                                (delimiter-gestures nil delimitersp)
+                                (additional-delimiter-gestures
+                                 nil
+                                 additional-delimiters-p)
+                                (start 0)
+                                (end (length string)))
   (declare (ignore view))
   ;; XXX work in progress here.
   (with-activation-gestures ((if additional-activations-p
