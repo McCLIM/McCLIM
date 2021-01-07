@@ -1,0 +1,321 @@
+#+title: CLX backend rendering notes
+#+author: Daniel 'jackdaniel' Kochmański
+#+date: [2021-01-06 śro]
+
+# https://wiki.osdev.org/Double_Buffering
+# https://keithp.com/~keithp/talks/usenix2001/xrender/
+# https://www.x.org/releases/current/doc/renderproto/renderproto.txt
+# https://www.x.org/releases/current/doc/libXrender/libXrender.txt
+
+# zpixmap/xypixmap
+
+# https://stackoverflow.com/questions/2976091/what-is-the-format-of-xlib-zpixmap-format
+# https://handmade.network/wiki/2834-tutorial_a_tour_through_xlib_and_related_technologies
+
+#+BEGIN_SRC lisp
+(defmacro with-xrender-positions (transformation coordinates &body body)
+  (loop for (x y) on coordinates by #'cddr
+        collect `(with-transformed-position (,transformation ,x ,y))
+          into forms
+        append `((,x (clamp (round-coordinate ,x) #x-8000 #x7FFF))
+                 (,y (clamp (round-coordinate ,y) #x-8000 #x7FFF)))
+          into bindings
+        finally (return `(climi::nest ,@forms (let ,bindings ,@body)))))
+#+END_SRC
+
+* introduction
+
+CLIM provides two distinct models for the renderer: design composition and
+explicit medium drawing operations. The former is little used in McCLIM,
+however it is a good abstraction to tap in, because that's how the modern
+rendering models are defined.
+
+Drawing is done by means of operating on a medium - each backend creates its
+own medium type by specializing the function ~make-medium~ (also
+~allocate-medium~ and ~deallocate-medium~). Medium is responsible for
+maintaining drawing properties:
+
+- drawable :: the underlying opaque object (i.e a mirror, or a pixmap)
+- inks :: foreground, background and "current" design (i.e color) for drawing
+- transformation :: drawing transformation
+- clipping-region :: limits the region where actual output is visible
+- line-style, text-style :: properties for drawing
+
+Actual drawing is performed with functions ~medium-draw-point*~,
+~medium-draw-points*~, ~medium-draw-line*~, ~medium-draw-lines*~,
+~medium-draw-polygon*~, ~medium-draw-rectangle*~, ~medium-draw-rectangles*~,
+~medium-draw-circle*~, ~medium-draw-ellipse*~, ~medium-draw-text~.
+
+Above functions usually accept the medium argument (for specialization), the
+position (or a set of coordinates), for area drawing operations an argument
+~filled~, and for drawing text alignment etc.
+
+Drawing properties (line style, text style, colors) may be directly set for
+the medium with accessors like ~medium-ink~, or augumented with the operator
+~with-drawing-options~. Usually medium is used as a sheet's component to
+maintain its drawing state.
+
+Copying data between two mediums (and their drawables) is implemented by the
+function ~medium-copy-area~. Buffering is controlled with the accessor
+~medium-buffering-output-p~ and the macro ~with-output-buffered~. To swap
+buffers and to ensure that output is visible functions ~medium-finish-output~
+and ~medium-force-output~ are defined
+
+Clearing the medium is performed with a function ~medium-clear-area~. A "beep"
+is peformed with a function ~medium-beep~.
+
+* CLX backend rendering
+
+** Graphical Context
+
+Rendering on clx-medium requires gcontext that defines properties of drawing.
+When a medium drawing properties change, its gcontext is updated if it exists.
+
+The function ~medium-gcontext~ is responsible for creating the graphical
+context and configuring it. Each medium has its own ~gc~ (as a slot). The
+function is responsible for setting gcontext's:
+
+- fill mode (:solid, :tiled)
+- function (fun src-pixel dst-pixel) -> result-pixel
+- font (for fonts rendered by x11)
+- clipping region (maintains the last result - infrequent changes)
+- ink (foreground, background, mask)
+
+Setting the ink and the clipping region may be non-trivial when the ink is not
+uniform and/or when clipping region is not a rectangle/rectangle-set/nowhere.
+
+For example when the ink is a pattern, we need to create a pixmap, which will
+be later set as ~xlib:gcontext-tile~ by the function ~design-gcontext~. The
+latter is responsible for computing pattern designs. Similar for clipping
+region - when it is a custom region, we create a pixmap with depth 1 and use
+it as a clipping mask (~xlib:gcontext-clip-mask~).
+
+# optimization opportunity - memoize results
+
+In both cases resultsare not cached (pixmaps are recomputed each time and new
+gc is consed). We deallocate resources pushing appropriate thunk to a ^cleanup
+anaphoric variable introduced with the operatior ~with-clx-graphics~.
+
+** clx-medium drawing
+
+# optimization opportunity - always keep with-clx-graphics as top (i.e to not
+# transform coordinates when there will be no drawing operation).
+
+Each drawing operation is enclosed in a macro ~with-clx-graphics~. This macro
+is responsible for binding a drawable, a line-style, an ink and a gcontext.
+When the drawable does not exist for a medium the body is not executed.
+Otherwise gcontext is bound to a result of calling medium-gcontext. After the
+body is executed, all ~^cleanup~ thunks are executed. The macro introduces new
+variables with an option to specify their names - otherwise they are
+approrpaitely ~line-style~, ~ink~, ~gcontext~ and ~mirror~. ~^cleanup~ has a
+fixed name.
+
+Drawing code looks could look like this:
+
+#+BEGIN_SRC lisp
+(with-clx-graphics () medium
+  (with-transformed-coords (coords (medium-native-transformation medium))
+    (apply #'xlib:draw-something mirror gc coords other-args)))
+#+END_SRC
+
+** clx-render-medium drawing
+
+Currently this class has a very underutilized functionality. The instance has
+a slot picture which is initialized with ~xlib:render-create-picture~ defined
+for a drawable (see a function ~clx-render-medium-picture~).
+
+All methods except ~medium-draw-rectangle*~ and ~medium-draw-text*~ are
+trampolines to methods defined on ~clx-medium~. The former is currently
+disabled because it conflicts with the latter.
+
+*** medium-draw-rectangle*
+
+~medium-draw-rectangle*~ could be summarized in the following pseudocode:
+
+#+BEGIN_SRC lisp
+  (with-transformed-coords (coords (medium-native-transformation medium))
+    (multiple-value-bind (r g b a) (clime:color-rgba ink)
+      ;; clim's RGBA are values [0;1] and x11 are [0;#xffff], xrender uses
+      ;; premultipled alpha.
+      (setf r (round (* #xffff a r)) r (clamp r 0 #xffff)
+            g (round (* #xffff a g)) g (clamp g 0 #xffff)
+            b (round (* #xffff a b)) b (clamp b 0 #xffff)
+            a (round (* #xffff a))   a (clamp a 0 #xffff))
+      (when-let ((picture (clx-render-medium-picture medium)))
+        (setf (xlib:picture-clip-mask picture)
+              (clipping-region->rect-seq (or (last-medium-device-region medium)
+                                             (medium-device-region medium))))
+        (xlib:render-fill-rectangle picture :over (list r g b a)
+                                    (clamp x      #x-8000 #x7fff)
+                                    (clamp y      #x-8000 #x7fff)
+                                    (clamp width        0 #xffff)
+                                    (clamp height       0 #xffff)))))
+#+END_SRC
+
+There are a few things to notice: the method body is not wrapped in the
+operator ~with-clx-graphics~ and there is no separate gcontext nor explicit
+drawable. The drawable is available from ~(xlib:picture-drawable picture)~.
+
+*** medium-draw-text*
+
+CLX backend has three alternative text renderers:
+
+- the one available with default clx methods (x11-specific fonts)
+- freetype renderer (uses harfbuzz and performs font shaping) [ffi]
+- truetype renderer using ~zpb-ttf~ and ~cl-vectors~ (no font shaping)
+
+The method specialized on the class clx-medium-renderer uses the native ttf
+renderer. It supports kerning (but no shaping) and is well optimized. The
+following pseudocode illustrates how it works:
+
+#+BEGIN_SRC lisp
+  (with-transformed-coords (coords (medium-native-transformation medium))
+    (let ((glyph-set (display-the-glyph-set (xlib:drawable-display mirror))))
+      (collect (glyph-ids)
+        ;; in the real code chars are cached as pairs for kerning purposes
+        (loop for char in string
+              for cache-code = (char-code char)
+              ;; FONT-GLYPH-ID calls FONT-GLYPH-INFO which caches results xx
+              ;; when CACHE-CODE is not found, FONT-GENERATE-GLYPH is called
+              do (glyph-ids (font-glyph-id font cache-code)))
+        (let* ((drawable (medium-drawable medium))
+               (gcontext (medium-gcontext medium))
+               (picture (drawable-picture drawable))
+               (drawable-picture (drawable-picture drawable))
+               (gcontext-picture (gcontext-picture drawable gcontext))
+               (source-picture (first gcontext-picture))
+               (source-pixmap (second gcontext-picture)))
+          ;; synchronize clip masks
+          (unless (eq #1=(xlib:picture-clip-mask drawable-picture)
+                      #2=(xlib:gcontext-clip-mask gc))
+
+            (setf #1# #2#))
+          ;; render!
+          (xlib:render-composite-glyphs
+           drawable-picture glyph-set source-picture x y glyph-ids)))))
+#+END_SRC
+
+The code above is very simplified because it doesn't account for aligning the
+text, transforming glyphs and the fact, that we cache character pairs for
+kerning purposes. When a particular glyph id can't be found in a cached
+database, font-glyph-id will indirectly call a function ~font-generate-glyph~.
+The cache is local for each font (but glyph-set may be shared because it is
+stored in the display).
+
+#+BEGIN_SRC lisp
+  (defmethod font-generate-glyph (font code)
+    (let* ((display (clx-truetype-font-display font))
+           (glyph-set (display-the-glyph-set display))
+           (glyph-id (display-draw-glyph-id display))
+           (character (code-char code)))
+      (multiple-value-bind (arr left top width height dx dy udx udy)
+          (glyph-pixarray font character next-character transformation)
+        (xlib::render-add-glyph glyph-set glyph-id
+                                :data arr
+                                :x-origin (- left) :y-origin top
+                                :x-advance dx :y-advance dy)
+        (let ((right (+ left (1- (array-dimension arr 1))))
+              (bottom (- top (1- (array-dimension arr 0)))))
+          (glyph-info glyph-id nil width height left right top bottom dx dy)))))
+#+END_SRC
+
+
+** Problems
+
+- designs are not cached (each time they are recomputed)
+- glyph-set is retained until the display is destroyed
+- glyph-ids are never freed (even for transformed text)
+- picture is associated with the medium, but the drawable may change
+- gcontext associated with the medium is never freed
+- different pictures may be used by different functions and text renderer
+- extensive use of plist, but the lingering resources are never freed
+- xrender's medium-draw-rectangle* works only with rectangular clips
+- clx manual doesn't document render-fill-* function etc
+- text renderer does not work with arbitrary designs (see #1132)
+
+** Limitations
+
+- gcontext and pixmap must be used on the same screen with the same depth as
+  drawable they were created for (they may be used with other drawables)
+- picture is tied to a single drawable
+- xrender can do transformations and alpha-blending, however it can't draw
+  paths - they must be tesselized client-side - we can address this problem in
+  thre ways - draw on a pixmap with "ordinary" xlib routines and then channel
+  the result through a picture, use cl-vectors and copy the image result to a
+  pixmap, or do the math and pass a set of triangles
+- when we draw paths, it is important to be vary of transformations that may
+  be performed by xrender (if we use them) -- i.e the line thickness will also
+  scale
+- when we draw a line with xlib, then the line won't be antialiased
+
+* CLX-fb backend rendering
+
+CLX-fb backned inherits from CLX, so all input and window managament are
+shared between them. The only difference is the rendering mode. The CLX
+framebuffer backend provides its own medium class ~clx-fb-medium~ that
+inherits from the ~render-medium-mixin~ (McCLIM's rasterizer extension based
+on cl-vectors). Alpha blending is implemented in software.
+
+~realize-mirror~ returns an instance of ~clx-mirror~, however it sets before
+that an internal renderer mapping ~mirror->%image~ where ~%image~ is an object
+of type ~clx-fb-mirror~ inheriting from the ~image-mirror-mixin~ - this object
+maintains the original X mirror and a set of dirty regions. Each drawing
+operation is performed on the ~clx-fb-mirror~ and adds the bounding rectangle
+to dirty regions.
+
+When the ~clx-fb-port~ is initialized it starts a process which every 1/100s
+copies data from each ~clx-fb-mirror~ to its ~clx-mirror~ counterpart. Data is
+converted to x11's pixmap format before that.
+
+* Proposed solution
+
+The port has following slots:
+
+| name          | type           | description                            |
+|---------------+----------------+----------------------------------------|
+| color-table   | hash-table eq  | cache clim:color  -> xlib:color        |
+| design-cache  | hash-table eq  | cache clim:design -> xlib:pixmap       |
+| clip-cache    | hash-table eq  | cache clim:design -> xlib:pixmap (1d)  |
+| glyph-set     | xlib:glyph-set | translate character index -> glyph     |
+| next-glyph-id | fixnum         | first available index in the glyph-set |
+
+The mirror has following slots:
+
+| name    | type         | description                        |
+|---------+--------------+------------------------------------|
+| window  | xlib:window  | a host window object (a drawable)  |
+| buffer  | xlib:pixmap  | a buffer for rasterizing i.e paths |
+| picture | xlib:picture | a render context for the window    |
+| scratch | xlib:picture | a render context for the pixmap    |
+
+The slot has following  slots:
+
+| name        | type         | description                          |
+|-------------+--------------+--------------------------------------|
+| buffering-p | boolean      | determines the drawable picture used |
+| backbuffer  | xlib:pixmap  | contains buffered output pixels      |
+| picture     | xlib:picture | a render context for the backbuffer  |
+
+** Overview
+
+Each medium returns as a result of calling ~medium-drawable~ an object of type
+~xlib:picture~ (not the mirror). The drawable associated with a picture may be
+accessed with a reader ~xlib:picture-drawable~. The reason for that is to give
+the medium necessary freedom to pick the necessary drawable:
+
+- in direct rendering mode it is the mirror's ~picture~
+- in buffered rendering mode it is the medium's ~picture~
+- in a context of ~with-output-to-pixmap~ it is a picture associated with a
+  newly created pixmap
+
+When operation may be finished using "pure" xrender operations then we do just
+that, however when we are expected to stylize a path (i.e with dashes), the
+drawing routine is expected to adjust the mirror's ~buffer~, clean it with
+transparent black and rasterize the output; when it is done, compose the
+~scratch~ picture over either mirror's ~picture~ or medium's ~picture~.
+
+** Rendering filled figures
+
+Filled figures are not paths and are not a subject of the path style. They may
+be directly rendered using xrender primitives (however
+
