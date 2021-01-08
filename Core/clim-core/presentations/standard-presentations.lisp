@@ -221,15 +221,16 @@
         (let ((super-part-type part-type))
           (presentation-subtypep sub-part-type super-part-type))))))
 
-(define-presentation-method present (object (type complex) stream
-                                     (view textual-view)
+(define-presentation-method present (object (type complex) stream (view textual-view)
                                      &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (present (realpart object) (presentation-type-of (realpart object))
-           :stream stream :view view :sensitive nil)
+  (let ((realpart (realpart object)))
+    (present realpart (presentation-type-of realpart)
+             :stream stream :view view :sensitive nil))
   (write-char #\Space stream)
-  (present (imagpart object) (presentation-type-of (imagpart object))
-           :stream stream :view view :sensitive nil))
+  (let ((imagpart (imagpart object)))
+    (present imagpart (presentation-type-of imagpart)
+             :stream stream :view view :sensitive nil)))
 
 (define-presentation-method accept ((type complex) stream (view textual-view)
                                     &key (default-type type) default)
@@ -256,32 +257,7 @@
             (values (complex realpart imagpart) type)
             (values default default-type))))))
 
-;;; Standard presentation type `real'
-
-(define-presentation-type real (&optional low high) :options ((base 10) radix)
-  :inherit-from 'number)
-
-(define-presentation-method presentation-typep (object (type real))
-  (and (realp object)
-       (or (eq low '*) (<= low object))
-       (or (eq high '*) (<= object high))))
-
-(define-presentation-method present (object (type real) stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (let ((*print-base* base)
-        (*print-radix* radix))
-    (princ object stream)))
-
-(define-presentation-method accept ((type real) stream (view textual-view) &key
-                                                (default-type type)
-                                                default)
-  (let ((read-result (let ((*read-base* base))
-                       (accept-using-read stream type))))
-    (if (and (null read-result) default)
-        (values default default-type)
-        (values read-result type))))
+;;; Standard presentation types `real', `rational', etc
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
@@ -300,98 +276,51 @@
         (return-from number-subtypep nil)))
   t)
 
-;;; Standard presentation type `rational'
+(macrolet
+    ((define (type predicate supertype)
+       `(progn
+          (define-presentation-type ,type (&optional low high)
+            :options ((base 10) radix)
+            :inherit-from ,(if (eq supertype 'number)
+                               `',supertype
+                               ``((,',supertype ,low ,high) :base ,base :radix ,radix)))
 
-(define-presentation-type rational (&optional low high)
-  :options ((base 10) radix)
-  :inherit-from `((real ,low ,high) :base ,base :radix ,radix))
+          (define-presentation-method presentation-typep (object (type ,type))
+            (and ,(if (eq type 'ratio)
+                      `(and (not (integerp object))
+                            (rationalp object))
+                      `(,predicate object))
+                 (or (eq low '*) (<= low object))
+                 (or (eq high '*) (<= object high))))
 
-(define-presentation-method presentation-typep (object (type rational))
-  (and (rationalp object)
-       (or (eq low '*) (<= low object))
-       (or (eq high '*) (<= object high))))
+          (define-presentation-method presentation-subtypep
+              ((type ,type) maybe-supertype)
+            (with-presentation-type-parameters (,type maybe-supertype)
+              (let ((super-low low)
+                    (super-high high))
+                (with-presentation-type-parameters (,type type)
+                  (values (number-subtypep low high super-low super-high)
+                          t))))))))
+  (define real     realp     number)
+  (define rational rationalp real)
+  (define integer  integerp  rational)
+  (define ratio    nil       rational)
+  (define float    floatp    real))
 
-(define-presentation-method present (object (type rational) stream
-                                     (view textual-view)
+(define-presentation-method present (object (type real) stream (view textual-view)
                                      &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
   (let ((*print-base* base)
         (*print-radix* radix))
     (princ object stream)))
 
-(define-presentation-type integer (&optional low high)
-  :options ((base 10) radix)
-  :inherit-from `((rational ,low ,high) :base ,base :radix ,radix))
-
-;;; Standard presentation type `rational'
-
-(define-presentation-method presentation-typep (object (type integer))
-  (and (integerp object)
-       (or (eq low '*) (<= low object))
-       (or (eq high '*) (<= object high))))
-
-(define-presentation-method present (object (type integer) stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (let ((*print-base* base)
-        (*print-radix* radix))
-    (princ object stream)))
-
-;;; Standard presentation type `ratio'
-
-(define-presentation-type ratio (&optional low high)
-  :options ((base 10) radix)
-  :inherit-from `((rational ,low ,high) :base ,base :radix ,radix))
-
-(define-presentation-method presentation-typep (object (type ratio))
-  (and (not (integerp object))
-       (rationalp object)
-       (or (eq low '*) (<= low object))
-       (or (eq high '*) (<= object high))))
-
-(define-presentation-method present (object (type ratio) stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (let ((*print-base* base)
-        (*print-radix* radix))
-    (princ object stream)))
-
-;;; Standard presentation type `float'
-
-(define-presentation-type float (&optional low high)
-  :options ((base 10) radix)
-  :inherit-from `((real ,low ,high) :base ,base :radix ,radix))
-
-(define-presentation-method presentation-typep (object (type float))
-  (and (floatp object)
-       (or (eq low '*) (<= low object))
-       (or (eq high '*) (<= object high))))
-
-(define-presentation-method present (object (type float) stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore acceptably for-context-type))
-  (let ((*print-base* base)
-        (*print-radix* radix))
-    (princ object stream)))
-
-(macrolet ((frob (num-type)
-             `(define-presentation-method presentation-subtypep ((type
-                                                                  ,num-type)
-                                                                 maybe-supertype)
-                (with-presentation-type-parameters (,num-type maybe-supertype)
-                  (let ((super-low low)
-                        (super-high high))
-                    (with-presentation-type-parameters (,num-type type)
-                      (values (number-subtypep low high super-low super-high)
-                              t)))))))
-  (frob real)
-  (frob rational)
-  (frob ratio)
-  (frob integer)
-  (frob float))
+(define-presentation-method accept ((type real) stream (view textual-view)
+                                    &key (default-type type) default)
+  (let ((read-result (let ((*read-base* base))
+                       (accept-using-read stream type))))
+    (if (and (null read-result) default)
+        (values default default-type)
+        (values read-result type))))
 
 ;;; Standard presentation type `character'
 
