@@ -42,10 +42,11 @@
          (let ((width (round (- max-x min-x)))
                (height (round (- max-y min-y))))
            (when (and xmirror clx-image)
-             (xlib::put-image xmirror
+             (xlib::put-image (window xmirror)
                               gcontext
                               clx-image
-                              :src-x (round (max min-x 0)) :src-y (round (max min-y 0))
+                              :src-x (round (max min-x 0))
+                              :src-y (round (max min-y 0))
                               :x (round (max min-x 0)) :y (round (max min-y 0))
                               :width  (max 0 (- width (min 0 (- min-x))))
                               :height (max 0 (- height (min 0 (- min-y)))))))))

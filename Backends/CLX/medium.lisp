@@ -54,6 +54,12 @@
    ;; when configuring the clipping region.
    (clipping-region-tmp :initform (vector 0 0 0 0))))
 
+(defmethod medium-drawable ((medium clx-medium))
+  (let ((mirror-or-drawable (call-next-method)))
+    (if (typep mirror-or-drawable 'clx-mirror)
+        (window mirror-or-drawable)
+        mirror-or-drawable)))
+
 ;; Variable is used to deallocate lingering resources after the operation.
 (defvar ^cleanup)
 
