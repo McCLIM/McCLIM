@@ -214,7 +214,7 @@
 (define-presentation-method presentation-subtypep ((type complex)
                                                    maybe-supertype)
   (with-presentation-type-parameters (complex type)
-    (let ((component-type part-type)) ;i.e., the parameter named "type"
+    (let ((component-type part-type))
       (with-presentation-type-parameters (complex maybe-supertype)
         (let ((super-component-type part-type))
           (presentation-subtypep component-type super-component-type))))))
@@ -859,12 +859,11 @@
        (presentation-type-specifier-p (second type))))
 
 (define-presentation-method presentation-typep (object (type sequence))
-  ;; XXX TYPE here is the sequence element type, not the whole type specifier
   (unless (or (listp object) (vectorp object))
     (return-from presentation-typep nil))
-  (let ((real-type (expand-presentation-type-abbreviation element-type)))
+  (let ((element-type (expand-presentation-type-abbreviation element-type)))
     (map nil #'(lambda (obj)
-                 (unless (presentation-typep obj real-type)
+                 (unless (presentation-typep obj element-type)
                    (return-from presentation-typep nil)))
          object)
     t))
@@ -872,7 +871,6 @@
 (define-presentation-method presentation-subtypep ((type sequence)
                                                    maybe-supertype)
   (with-presentation-type-parameters (sequence type)
-    ;; now TYPE is bound to the parameter TYPE
     (let ((real-type (expand-presentation-type-abbreviation element-type)))
       (with-presentation-type-parameters (sequence maybe-supertype)
         (let ((real-super-type (expand-presentation-type-abbreviation element-type)))
@@ -886,7 +884,7 @@
   (loop for tail on object
         for (obj) = tail
         do (progn
-             (present obj type          ; i.e., the type parameter
+             (present obj element-type
                         :stream stream :view view
                         :acceptably acceptably
                         :sensitive nil)
@@ -901,7 +899,7 @@
   (loop for i from 0 below (length object)
         for obj = (aref object i)
         do (progn
-             (present obj type          ; i.e., the type parameter
+             (present obj element-type
                         :stream stream :view view
                         :acceptably acceptably
                         :sensitive nil)
@@ -915,7 +913,7 @@
                                     &key)
   (loop
      with separators = (list separator)
-     for element = (accept element-type ; i.e., the type parameter
+     for element = (accept element-type
                            :stream stream
                            :view view
                            :prompt nil

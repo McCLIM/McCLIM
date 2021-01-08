@@ -105,10 +105,9 @@
        ,@(when present
            `((test ,(test-name 'present)
                ,(test-documentation 'present)
-               (,(if (typep present '(cons (eql fails))) 'fails 'progn)
-                (let ((*read-default-float-format* 'single-float))
-                  (present-cases (,presentation-type-name)
-                    ,@(if (typep present '(cons (eql fails))) (second present) present)))))))
+               (let ((*read-default-float-format* 'single-float))
+                 (present-cases (,presentation-type-name)
+                   ,@present)))))
        ,@(when accept
            `((test ,(test-name 'accept)
                ,(test-documentation 'accept)
@@ -368,13 +367,12 @@
    '((number) (1)   t)
    '((number) (1 2) t))
   :present
-  (fails
-    ('((number)  ()       "")
-     '((number)  #()      "")
-     '((number)  (1)      "1")
-     '((number)  #(1)     "1")
-     '((boolean) (nil t)  "No,Yes")
-     '((boolean) #(nil t) "No,Yes")))
+  ('((number)  ()       "")
+   '((number)  #()      "")
+   '((number)  (1)      "1")
+   '((number)  #(1)     "1")
+   '((boolean) (nil t)  "No,Yes")
+   '((boolean) #(nil t) "No,Yes"))
   :accept
   (;; Invalid
    '((boolean)        "1"       parse-error)
