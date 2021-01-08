@@ -25,49 +25,43 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun display-the-glyph-set (display)
-  (let ((glyph-set (or (getf (xlib:display-plist display) 'the-glyph-set)
-                       (setf (getf (xlib:display-plist display) 'the-glyph-set)
-                             (xlib::render-create-glyph-set
-                              (first (xlib::find-matching-picture-formats display
-                                                                          :alpha 8 :red 0 :green 0 :blue 0)))))))
-    glyph-set))
-
-(defun display-free-the-glyph-set (display)
-  (alexandria:when-let ((glyph-set (getf (xlib:display-plist display) 'the-glyph-set)))
-    (xlib:render-free-glyph-set glyph-set)
-    (remf (xlib:display-plist display) 'the-glyph-set)))
-
-(defun display-free-glyph-ids (display)
-  (getf (xlib:display-plist display) 'free-glyph-ids))
-
-(defun (setf display-free-glyph-ids) (new-value display)
-  (setf (getf (xlib:display-plist display) 'free-glyph-ids) new-value))
-
-(defun display-free-glyph-id-counter (display)
-  (getf (xlib:display-plist display) 'free-glyph-id-counter 0))
-
-(defun (setf display-free-glyph-id-counter) (new-value display)
-  (setf (getf (xlib:display-plist display) 'free-glyph-id-counter) new-value))
-
-(defun display-draw-glyph-id (display)
-  (or (pop (display-free-glyph-ids display))
-      (incf (display-free-glyph-id-counter display))))
-
 
-(defclass clx-ttf-port (clim-clx:clx-render-port) ())
+(defclass clx-ttf-port (clim-clx:clx-render-port)
+  ((glyph-set
+    :initform nil
+    :accessor glyph-set)
+   (next-glyph-id
+    :initform 0
+    :accessor next-glyph-id)))
 
 (defmethod climb:find-port-type ((port (eql :clx-ttf)))
   (values 'clx-ttf-port (nth-value 1 (climb:find-port-type :clx))))
 
+(defun ensure-glyph-set (port)
+  (or (glyph-set port)
+      (setf (glyph-set port)
+            (xlib::render-create-glyph-set
+             (first (xlib::find-matching-picture-formats
+                     (clim-clx::clx-port-display port)
+                     :alpha 8 :red 0 :green 0 :blue 0))))))
+
+(defun free-glyph-set (port)
+  (alexandria:when-let ((glyph-set (glyph-set port)))
+    (xlib:render-free-glyph-set glyph-set)
+    (setf (glyph-set port) nil)))
+
+(defun draw-glyph-id (port)
+  (incf (next-glyph-id port)))
+
 (defclass clx-truetype-font (cached-truetype-font)
-  ((display           :initarg :display :reader clx-truetype-font-display)
-   (%buffer%          :initform (make-array 1024
-                                            :element-type '(unsigned-byte 32)
-                                            :adjustable nil
-                                            :fill-pointer nil)
-                      :accessor clx-truetype-font-%buffer%
-                      :type (simple-array (unsigned-byte 32)))))
+  ((port     :initarg :port :reader port)
+   (display  :initarg :display :reader clx-truetype-font-display)
+   (%buffer% :initform (make-array 1024
+                                   :element-type '(unsigned-byte 32)
+                                   :adjustable nil
+                                   :fill-pointer nil)
+             :accessor clx-truetype-font-%buffer%
+             :type (simple-array (unsigned-byte 32)))))
 
 (defun register-all-ttf-fonts (port &optional (dir *truetype-font-path*))
   (when *truetype-font-path*
@@ -111,8 +105,9 @@
 	     (font (ensure-gethash
                     (list display loader size) font-cache
                     (make-instance 'clx-truetype-font
-                                   :face font-face
+                                   :port port
                                    :display display
+                                   :face font-face
                                    :size size))))
         (pushnew family    (clim-clx::font-families port))
         (ensure-gethash
@@ -125,20 +120,20 @@
 
 
 
-(defmethod font-generate-glyph ((font clx-truetype-font) code
-                                &optional (transformation +identity-transformation+))
-  (let* ((display (clx-truetype-font-display font))
-         (glyph-id (display-draw-glyph-id display))
-         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0) code)))
-         (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
-                                               #.(ceiling (log char-code-limit 2)))
-                                         code))))
+(defun %font-generate-glyph (font code transformation glyph-set)
+  (let ((glyph-id (draw-glyph-id (port font)))
+        (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0)
+                                   code)))
+        (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
+                                              #.(ceiling (log char-code-limit 2)))
+                                        code))))
     (multiple-value-bind (arr left top width height dx dy udx udy)
         (if (identity-transformation-p transformation)
             (glyph-pixarray font character next-character transformation)
             (glyph-pixarray font character next-character
-                            (compose-transformations #1=(make-scaling-transformation 1.0 -1.0)
-                                                     (compose-transformations transformation #1#))))
+                            (compose-transformations
+                             #1=(make-scaling-transformation 1.0 -1.0)
+                             (compose-transformations transformation #1#))))
       (with-slots (fixed-width) font
         (when (and (numberp fixed-width)
                    (/= fixed-width dx))
@@ -150,7 +145,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
         (setf arr (make-array (list 1 1)
                               :element-type '(unsigned-byte 8)
                               :initial-element 0)))
-      (xlib::render-add-glyph (display-the-glyph-set display) glyph-id
+      (xlib::render-add-glyph glyph-set glyph-id
                               :data arr
 ;;; We negate LEFT, because we want to start drawing array LEFT pixels after the
 ;;; pen (pixarray contains only a glyph without its left-side bearing). TOP is
@@ -174,6 +169,10 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
         (glyph-info glyph-id array width height
                     left right top bottom
                     dx dy udx udy)))))
+
+(defmethod font-generate-glyph ((font clx-truetype-font) code
+                                &optional (transformation +identity-transformation+))
+  (%font-generate-glyph font code transformation (ensure-glyph-set (port font))))
 
 (defun drawable-picture (drawable)
   (or (getf (xlib:drawable-plist drawable) 'picture)
@@ -269,7 +268,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
       (%render-transformed-glyphs font string x y align-x align-y transformation mirror gc)))
 
   (let ((glyph-ids (clx-truetype-font-%buffer% font))
-        (glyph-set (display-the-glyph-set (xlib:drawable-display mirror)))
+        (glyph-set (ensure-glyph-set (port medium)))
         (origin-x 0))
     (loop
        with char = (char string start)
@@ -335,51 +334,53 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
   (when-let ((clip (xlib::gcontext-clip-mask gc)))
     (unless (eq (xlib::picture-clip-mask (drawable-picture mirror)) clip))
     (setf (xlib::picture-clip-mask (drawable-picture mirror)) clip))
-
   (loop
-     with glyph-transformation = (multiple-value-bind (x0 y0)
-                                     (transform-position tr 0 0)
-                                   (compose-transformation-with-translation tr (- x0) (- y0)))
-     ;; for rendering one glyph at a time
-     with current-x = x
-     with current-y = y
-     with picture = (drawable-picture mirror)
-     with source-picture = (car (gcontext-picture mirror gc))
-     ;; ~
-     with glyph-ids = (clx-truetype-font-%buffer% font)
-     with glyph-set = (display-the-glyph-set (xlib:drawable-display mirror))
-     with char = (char string 0)
-     with i* = 0
-     for i from 1 below end
-     as next-char = (char string i)
-     as next-char-code = (char-code next-char)
-     as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
-                                         #.(ceiling (log char-code-limit 2)))
-                    (char-code char))
-     as glyph-info = (font-generate-glyph font code glyph-transformation)
-     do
+    with glyph-tr = (multiple-value-bind (x0 y0)
+                        (transform-position tr 0 0)
+                      (compose-transformation-with-translation tr (- x0) (- y0)))
+    ;; for rendering one glyph at a time
+    with current-x = x
+    with current-y = y
+    with picture = (drawable-picture mirror)
+    with source-picture = (car (gcontext-picture mirror gc))
+    ;; ~
+    with glyph-ids = (clx-truetype-font-%buffer% font)
+    with glyph-set = (xlib::render-create-glyph-set
+                      (first (xlib::find-matching-picture-formats
+                              (xlib:drawable-display mirror)
+                              :alpha 8 :red 0 :green 0 :blue 0)))
+    with char = (char string 0)
+    with i* = 0
+    for i from 1 below end
+    as next-char = (char string i)
+    as next-char-code = (char-code next-char)
+    as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                        #.(ceiling (log char-code-limit 2)))
+                   (char-code char))
+    as glyph-info = (%font-generate-glyph font code glyph-tr glyph-set)
+    do
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
              (the (unsigned-byte 32) (glyph-info-id glyph-info)))
-     do ;; rendering one glyph at a time
+    do ;; rendering one glyph at a time
        (multiple-value-bind (current-x current-y)
            (transform-position tr current-x current-y)
          (xlib:render-composite-glyphs picture glyph-set source-picture
                                        (truncate (+ current-x 0.5))
                                        (truncate (+ current-y 0.5))
                                        glyph-ids :start i* :end (1+ i*)))
-     ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
+       ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
        (incf current-x (glyph-info-advance-width* glyph-info))
        (incf current-y (glyph-info-advance-height* glyph-info))
-     do
+    do
        (setf char next-char)
        (incf i*)
-     finally
+    finally
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-             (the (unsigned-byte 32) (glyph-info-id (font-generate-glyph font
-                                                                         (char-code char)
-                                                                         glyph-transformation))))
-     finally
-     ;; rendering one glyph at a time (last glyph)
+             (the (unsigned-byte 32)
+                  (glyph-info-id (%font-generate-glyph font (char-code char)
+                                  glyph-tr glyph-set))))
+    finally
+       ;; rendering one glyph at a time (last glyph)
        (multiple-value-bind (current-x current-y)
            (transform-position tr current-x current-y)
          (xlib:render-composite-glyphs picture glyph-set source-picture
@@ -387,7 +388,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                        (truncate (+ current-y 0.5))
                                        glyph-ids :start i* :end (1+ i*)))
        (xlib:render-free-glyphs glyph-set (subseq glyph-ids 0 (1+ i*)))
-       #+ (or) ;; rendering all glyphs at once
+    #+ (or) ;; rendering all glyphs at once
        (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
          (declare (ignore source-pixmap))
          ;; This solution is correct in principle, but advance-width and
@@ -401,7 +402,9 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                           source-picture
                                           (truncate (+ x 0.5))
                                           (truncate (+ y 0.5))
-                                          glyph-ids :start 0 :end end)))))
+                                          glyph-ids :start 0 :end end)))
+    finally
+       (xlib:render-free-glyph-set glyph-set)))
 
 (defstruct truetype-device-font-name
   (font-file (error "missing argument"))
