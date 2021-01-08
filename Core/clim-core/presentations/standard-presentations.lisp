@@ -77,7 +77,7 @@
 
 (define-presentation-method accept ((type boolean) stream (view textual-view)
                                     &key)
-  (accept-using-completion 'boolean
+  (accept-using-completion type
                            stream
                            #'(lambda (input-string mode)
                                (complete-from-possibilities

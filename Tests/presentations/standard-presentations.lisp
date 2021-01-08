@@ -135,14 +135,13 @@
   ('(() nil "No")
    '(() t   "Yes"))
   :accept
-  (fails
-    (;; Invalid
-     '(() "foo" parse-error)
-     ;; Valid
-     '(() "yes" t)
-     '(() "Yes" t)
-     '(() "no"  nil)
-     '(() "No"  nil))))
+  (;; Invalid
+   '(() "foo" parse-error)
+   ;; Valid
+   '(() "yes" t)
+   '(() "Yes" t)
+   '(() "no"  nil)
+   '(() "No"  nil)))
 
 (define-presentation-type-tests (symbol)
   :typep
