@@ -233,14 +233,13 @@
    '((() :base 16)          15 "F")
    '((() :base 16 :radix t) 15 "#xF"))
   :accept
-  (fails
-    (;; Invalid
-     '(()            "f"   parse-error)
-     ;; Valid
-     '(()            "15"  15)
-     '(()            "#xf" 15)
-     '((() :base 16) "f"   15)
-     '(()            "1/2" 1/2))))
+  (;; Invalid
+   '(()            "f"   parse-error)
+   ;; Valid
+   '(()            "15"  15)
+   '(()            "#xf" 15)
+   '((() :base 16) "f"   15)
+   '(()            "1/2" 1/2)))
 
 (define-presentation-type-tests (integer)
   :typep
@@ -254,14 +253,13 @@
    '((() :base 16)          15 "F")
    '((() :base 16 :radix t) 15 "#xF"))
   :accept
-  (fails
-    (;; Invalid
-     '(()            "1/2" parse-error)
-     '(()            "f"   parse-error)
-     ;; Valid
-     '(()            "15"  15)
-     '(()            "#xf" 15)
-     '((() :base 16) "f"   15))))
+  (;; Invalid
+   '(()            "1/2" parse-error)
+   '(()            "f"   parse-error)
+   ;; Valid
+   '(()            "15"  15)
+   '(()            "#xf" 15)
+   '((() :base 16) "f"   15)))
 
 (define-presentation-type-tests (character)
   :typep

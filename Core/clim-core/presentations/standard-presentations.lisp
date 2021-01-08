@@ -250,8 +250,8 @@
 (define-presentation-method accept ((type real) stream (view textual-view) &key
                                                 (default-type type)
                                                 default)
-  (let ((*read-base* base)
-         (read-result (accept-using-read stream type)))
+  (let ((read-result (let ((*read-base* base))
+                       (accept-using-read stream type))))
     (if (and (null read-result) default)
         (values default default-type)
         (values read-result type))))
