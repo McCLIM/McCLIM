@@ -770,7 +770,7 @@
                   (,port (port ,sheet))
                   (,medium-var (make-medium ,port ,sheet)))
              (degraft-medium ,medium-var ,port ,sheet)
-             (letf (((%medium-drawable ,medium-var) ,pixmap)
+             (letf (((medium-drawable ,medium-var) ,pixmap)
                     ((medium-clipping-region ,medium-var)
                      (make-rectangle* 0 0 ,width ,height)))
                ,@body)

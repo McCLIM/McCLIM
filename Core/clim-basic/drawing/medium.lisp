@@ -175,6 +175,9 @@
       (when-let ((sheet (medium-sheet medium)))
         (sheet-mirror sheet))))
 
+(defmethod (setf medium-drawable) (new-drawable (medium basic-medium))
+  (setf (%medium-drawable medium) new-drawable))
+
 (defmethod initialize-instance :after ((medium basic-medium) &rest args)
   (declare (ignore args))
   ;; Initial CLIPPING-REGION is in coordinates, given by initial
