@@ -709,19 +709,15 @@
                                     stream
                                     (view textual-view)
                                     &key)
-  (accept-using-completion (make-presentation-type-specifier
-                            `(completion ,@parameters)
-                            options)
-                           stream
-                           #'(lambda (input-string mode)
-                               (complete-from-possibilities
-                                input-string
-                                sequence
-                                partial-completers
-                                :action mode
-                                :name-key name-key
-                                :value-key value-key))
-                           :partial-completers partial-completers))
+  (let ((type (apply #'make-presentation-type-specifier
+                     `(completion ,@parameters)
+                     options)))
+    (accept-using-completion
+     type stream (lambda (input-string mode)
+                   (complete-from-possibilities
+                    input-string sequence partial-completers
+                    :action mode :name-key name-key :value-key value-key))
+     :partial-completers partial-completers)))
 
 (define-presentation-type-abbreviation member (&rest elements)
   (make-presentation-type-specifier `(completion ,elements)

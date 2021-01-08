@@ -111,9 +111,8 @@
        ,@(when accept
            `((test ,(test-name 'accept)
                ,(test-documentation 'accept)
-               (,(if (typep accept '(cons (eql fails))) 'fails 'progn)
-                (accept-cases (,presentation-type-name)
-                  ,@(if (typep accept '(cons (eql fails))) (second accept) accept)))))))))
+               (accept-cases (,presentation-type-name)
+                 ,@accept)))))))
 
 (define-presentation-type-tests (null)
   :typep
@@ -319,16 +318,15 @@
    '((((:foo :bar)))                           :foo "Foo")
    '((((:foo :bar)) :name-key string-downcase) :foo "foo"))
   :accept
-  (fails
-    (;; Invalid
-     '((((1 2 3)))                                            "4"   parse-error)
-     ;; Valid
-     '((((1 2 3)))                                            "1"   1)
-     '((((1 2 3)))                                            "2"   2)
-     '((((-1 -2 -3) :value-key abs))                          "-2"  2)
-     '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) "a"   1)
-     '((((:foo :bar)))                                        "Foo" :foo)
-     '((((:foo :bar)))                                        "foo" :foo))))
+  (;; Invalid
+   '((((1 2 3)))                                            "4"   parse-error)
+   ;; Valid
+   '((((1 2 3)))                                            "1"   1)
+   '((((1 2 3)))                                            "2"   2)
+   '((((-1 -2 -3) :value-key abs))                          "-2"  2)
+   '((((("a" . 1) ("b" . 2)) :value-key cdr) :name-key car) "a"   1)
+   '((((:foo :bar)))                                        "Foo" :foo)
+   '((((:foo :bar)))                                        "foo" :foo)))
 
 (define-presentation-type-tests (subset-completion)
   :typep
