@@ -655,11 +655,9 @@
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type completion))
-  (map nil (lambda (obj)
-             (when (funcall test object (funcall value-key obj))
-               (return-from presentation-typep t)))
-       sequence)
-  nil)
+  (some (lambda (element)
+          (funcall test object (funcall value-key element)))
+        sequence))
 
 ;;; Useful for subtype comparisons for several of the "member" style types
 
@@ -792,37 +790,22 @@
                                    super-sequence super-test super-value-key)
                 t)))))
 
-(define-presentation-method present ((object list) (type subset-completion)
+(define-presentation-method present ((object sequence) (type subset-completion)
                                      stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
   (declare (ignore for-context-type))
-  (loop for (obj . rest) on object
-        do (let ((name (funcall name-key obj)))
-             (with-output-as-presentation
-                 (stream obj (presentation-type-of obj) :view view)
-               (write-string name stream))
-             (when rest
-               (if acceptably
-                   (princ separator stream)
-                   (terpri stream))))))
-
-(define-presentation-method present ((object vector) (type subset-completion)
-                                     stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore for-context-type))
-  (loop with length = (length object)
-        for i from 0 below length
-        for obj = (aref object i)
-        do (let ((name (funcall name-key obj)))
-             (with-output-as-presentation
-                 (stream obj (presentation-type-of obj) :view view)
-               (write-string name stream))
-             (when (< i (1- length))
-               (if acceptably
-                   (princ separator stream)
-                   (terpri stream))))))
+  (let ((length (length object))
+        (index  0))
+    (do-sequence (element object)
+      (let ((name (funcall name-key element)))
+        (with-output-as-presentation
+            (stream element (presentation-type-of element) :view view)
+          (write-string name stream)))
+      (when (< (incf index) length)
+        (if acceptably
+            (princ separator stream)
+            (terpri stream))))))
 
 ;;; XXX is it a typo in the spec that subset, subset-sequence and subset-alist
 ;;; have the same options as completion, and not subset-completion?
@@ -876,14 +859,11 @@
        (presentation-type-specifier-p (second type))))
 
 (define-presentation-method presentation-typep (object (type sequence))
-  (unless (or (listp object) (vectorp object))
-    (return-from presentation-typep nil))
-  (let ((element-type (expand-presentation-type-abbreviation element-type)))
-    (map nil (lambda (obj)
-               (unless (presentation-typep obj element-type)
-                 (return-from presentation-typep nil)))
-         object)
-    t))
+  (and (typep object 'sequence)
+       (let ((element-type (expand-presentation-type-abbreviation element-type)))
+         (every (lambda (element)
+                  (presentation-typep element element-type))
+                object))))
 
 (define-presentation-method presentation-subtypep ((type sequence)
                                                    maybe-supertype)
@@ -893,29 +873,18 @@
         (let ((super-element-type (expand-presentation-type-abbreviation element-type)))
           (presentation-subtypep sub-element-type super-element-type))))))
 
-(define-presentation-method present ((object list) (type sequence)
+(define-presentation-method present ((object sequence) (type sequence)
                                      stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
   (declare (ignore for-context-type))
-  (loop for (obj . rest) on object
-        do (present obj element-type :stream stream :view view
-                                     :acceptably acceptably :sensitive nil)
-           (when rest
-             (write-char separator stream))))
-
-(define-presentation-method present ((object vector) (type sequence)
-                                     stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore for-context-type))
-  (loop with length = (length object)
-        for i from 0 below length
-        for obj = (aref object i)
-        do (present obj element-type :stream stream :view view
-                                     :acceptably acceptably :sensitive nil)
-           (when (< i (1- length))
-             (write-char separator stream))))
+  (let ((length (length object))
+        (index  0))
+    (do-sequence (element object)
+      (present element element-type :stream stream :view view
+                                    :acceptably acceptably :sensitive nil)
+      (when (< (incf index) length)
+        (write-char separator stream)))))
 
 (define-presentation-method accept ((type sequence) stream (view textual-view)
                                     &key)
@@ -943,16 +912,12 @@
 
 (define-presentation-method presentation-typep (object
                                                 (type sequence-enumerated))
-  (unless (or (listp object) (vectorp object))
-    (return-from presentation-typep nil))
-  (unless (= (length object) (length types))
-    (return-from presentation-typep nil))
-  (map nil (lambda (obj type)
-             (let ((real-type (expand-presentation-type-abbreviation type)))
-               (unless (presentation-typep obj real-type)
-                 (return-from presentation-typep nil))))
-       object types)
-  t)
+  (and (typep object 'sequence)
+       (= (length object) (length types))
+       (every (lambda (obj type)
+                (let ((real-type (expand-presentation-type-abbreviation type)))
+                  (presentation-typep obj real-type)))
+              object types)))
 
 (define-presentation-method presentation-subtypep ((type sequence-enumerated)
                                                    maybe-supertype)
@@ -977,35 +942,22 @@
              types supertypes)
         (values t t)))))
 
-(define-presentation-method present ((object list) (type sequence-enumerated)
+(define-presentation-method present ((object sequence) (type sequence-enumerated)
                                      stream
                                      (view textual-view)
                                      &key acceptably for-context-type)
   (declare (ignore for-context-type))
-  (loop for (obj . rest) on object
-        for type in types
-        do (present obj type :stream stream :view view
-                             :acceptably acceptably :sensitive nil)
-           (when rest
-             (if acceptably
-                 (princ separator stream)
-                 (terpri stream)))))
-
-(define-presentation-method present ((object vector) (type sequence-enumerated)
-                                     stream
-                                     (view textual-view)
-                                     &key acceptably for-context-type)
-  (declare (ignore for-context-type))
-  (loop with length = (length object)
-        for i from 0 below length
-        for obj = (aref object i)
-        for type in types
-        do (present obj type :stream stream :view view
-                             :acceptably acceptably :sensitive nil)
-           (when (< i (1- length))
-             (if acceptably
-                 (princ separator stream)
-                 (terpri stream)))))
+  (let ((remaining-types types)
+        (length          (length object))
+        (index           0))
+    (do-sequence (element object)
+      (let ((type (pop remaining-types)))
+        (present element type :stream stream :view view
+                              :acceptably acceptably :sensitive nil))
+      (when (< (incf index) length)
+        (if acceptably
+            (princ separator stream)
+            (terpri stream))))))
 
 (define-presentation-method accept ((type sequence-enumerated)
                                     stream
