@@ -641,9 +641,13 @@ documentation produced by presentations.")
   ;; command accelerators will appear to not work, confusing new users.
   #+(or)
   (read-command (frame-command-table frame) :use-keystrokes nil :stream stream)
-  (if stream
-      (read-command (frame-command-table frame) :use-keystrokes t :stream stream)
-      (simple-event-loop frame)))
+  (let ((command-table (frame-command-table frame)))
+    (if stream
+        (read-command command-table :use-keystrokes t :stream stream)
+        (with-input-context (`(command :command-table ,command-table))
+            (object)
+            (simple-event-loop frame)
+          (t (ensure-complete-command object command-table nil))))))
 
 (define-event-class execute-command-event (window-manager-event)
   ((sheet :initarg :sheet :reader event-sheet)
