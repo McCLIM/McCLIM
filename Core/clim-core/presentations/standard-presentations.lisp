@@ -229,6 +229,31 @@
   (present (imagpart object) (presentation-type-of (imagpart object))
            :stream stream :view view :sensitive nil))
 
+(define-presentation-method accept ((type complex) stream (view textual-view)
+                                    &key (default-type type) default)
+  (let ((part-default-type (if (consp default-type)
+                               (second default-type)
+                               part-type)))
+    (flet ((accept-part (prompt default &optional skip-whitespace)
+             (when skip-whitespace
+               (loop :for timeout = nil :then 0
+                     :for gesture = (stream-read-gesture
+                                     stream :peek-p t :timeout timeout)
+                     :while (eql gesture #\Space)
+                     :do (stream-read-gesture stream)))
+             (accept part-type :stream stream :view view :prompt prompt
+                               :default-type part-default-type
+                               :default default
+                               :additional-delimiter-gestures '(#\Space))))
+      (let* ((realpart (accept-part "real part"
+                                    (when default (realpart default))))
+             (imagpart (accept-part "imaginary part"
+                                    (when default (imagpart default))
+                                    t)))
+        (if (and realpart imagpart)
+            (values (complex realpart imagpart) type)
+            (values default default-type))))))
+
 (define-presentation-type real (&optional low high) :options ((base 10) radix)
                           :inherit-from 'number)
 

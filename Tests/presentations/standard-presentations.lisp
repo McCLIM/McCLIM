@@ -209,17 +209,16 @@
   ('(() 1       "1 0")
    '(() #C(1 2) "1 2"))
   :accept
-  (fails
-    (;; Invalid
-     '(()        ":foo"      parse-error)
-     '((integer) "1.2f0 .5"  parse-error)
-      ;; Valid
-     '(()        "1 0"       1)
-     '(()        "1 2"       #C(1 2))
-     '((integer) "1 0"       1)
-     '((integer) "1 2"       #C(1 2))
-     '((real)    "1/2 0.5f0" #C(.5f0 .5f0))
-     '((real)    "1/2 3/4"   #C(1/2 3/4)))))
+  (;; Invalid
+   '(()        ":foo"      parse-error)
+   '((integer) "1.2f0 .5"  parse-error)
+   ;; Valid
+   '(()        "1 0"       1)
+   '(()        "1 2"       #C(1 2))
+   '((integer) "1 0"       1)
+   '((integer) "1 2"       #C(1 2))
+   '((real)    "1/2 0.5f0" #C(.5f0 .5f0))
+   '((real)    "1/2 3/4"   #C(1/2 3/4))))
 
 (define-presentation-type-tests (real)
   :typep
