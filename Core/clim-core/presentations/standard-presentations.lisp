@@ -939,6 +939,8 @@
                                                 (type sequence-enumerated))
   (unless (or (listp object) (vectorp object))
     (return-from presentation-typep nil))
+  (unless (= (length object) (length types))
+    (return-from presentation-typep nil))
   (map nil #'(lambda (obj type)
                (let ((real-type (expand-presentation-type-abbreviation type)))
                  (unless (presentation-typep obj real-type)

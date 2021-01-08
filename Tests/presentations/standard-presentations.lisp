@@ -100,9 +100,8 @@
        ,@(when typep
            `((test ,(test-name 'typep)
                ,(test-documentation 'typep)
-               (,(if (typep typep '(cons (eql fails))) 'fails 'progn)
-                (typep-cases (,presentation-type-name)
-                  ,@(if (typep typep '(cons (eql fails))) (second typep) typep))))))
+               (typep-cases (,presentation-type-name)
+                 ,@typep))))
        ,@(when present
            `((test ,(test-name 'present)
                ,(test-documentation 'present)
@@ -388,14 +387,13 @@
 
 (define-presentation-type-tests (sequence-enumerated)
   :typep
-  (fails
-    ('(()              1      nil)
-     '((number)        (:a)   nil)
-     '((number number) (1)    nil)
-     '((number)        (1 2)  nil)
-     '(()              ()     t)
-     '((number)        (1)    t)
-     '((number symbol) (1 :a) t)))
+  ('(()              1      nil)
+   '((number)        (:a)   nil)
+   '((number number) (1)    nil)
+   '((number)        (1 2)  nil)
+   '(()              ()     t)
+   '((number)        (1)    t)
+   '((number symbol) (1 :a) t))
   :present
   ('(()               ()     "")
    '(()               #()    "")
