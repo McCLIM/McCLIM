@@ -57,9 +57,6 @@
 (defmethod destroy-mirror ((port null-port) (sheet mirrored-sheet-mixin))
   nil)
 
-(defmethod mirror-transformation ((port null-port) mirror)
-  nil)
-
 (defmethod port-enable-sheet ((port null-port) (sheet mirrored-sheet-mixin))
   nil)
 

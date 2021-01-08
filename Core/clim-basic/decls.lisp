@@ -1354,7 +1354,6 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;; "exported" from a port
 
-(defgeneric mirror-transformation (port mirror))
 (defgeneric port-text-style-mappings (port))
 (defgeneric port-enable-sheet (port sheet))
 (defgeneric port-disable-sheet (port sheet))

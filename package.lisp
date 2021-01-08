@@ -2012,7 +2012,6 @@
    #:find-port-type
    #:make-graft
    #:medium-draw-circle*
-   #:mirror-transformation
    #:port-disable-sheet
    #:port-enable-sheet
    #:port-shrink-sheet

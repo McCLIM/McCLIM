@@ -179,10 +179,6 @@ is a McCLIM extension.")
     (call-next-method)
     (setf (%sheet-direct-mirror sheet) nil)))
 
-(defmethod mirror-transformation ((port basic-port) mirror)
-  (declare (ignore mirror))
-  (error "MIRROR-TRANSFORMATION is not implemented for generic ports"))
-
 (defmethod port-properties ((port basic-port) indicator)
   (with-slots (properties) port
     (getf properties indicator)))

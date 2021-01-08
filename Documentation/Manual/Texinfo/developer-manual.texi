@@ -286,7 +286,6 @@ NO LONGER NEEDED IN BACKEND
 ---------------------------
 queue-callback                  ; moved to clim-core
 medium-clipping-                ; moved to clim-basic
-mirror-transformation           ; never used
 @end verbatim
 
 @node PostScript backend

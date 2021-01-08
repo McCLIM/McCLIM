@@ -100,10 +100,6 @@
       (setf (xlib:window-priority mirror) :below)
       (xlib:display-force-output (clx-port-display port)))))
 
-(defmethod mirror-transformation ((port clx-basic-port) mirror)
-  (make-translation-transformation (xlib:drawable-x mirror)
-                                   (xlib:drawable-y mirror)))
-
 (defmethod port-enable-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (xlib:map-window mirror)
