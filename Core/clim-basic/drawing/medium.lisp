@@ -175,8 +175,6 @@
       (when-let ((sheet (medium-sheet medium)))
         (sheet-mirror sheet))))
 
-(defclass ungrafted-medium (basic-medium) ())
-
 (defmethod initialize-instance :after ((medium basic-medium) &rest args)
   (declare (ignore args))
   ;; Initial CLIPPING-REGION is in coordinates, given by initial
