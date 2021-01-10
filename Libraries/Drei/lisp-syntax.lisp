@@ -1938,7 +1938,8 @@ syntax.")
             (and (not (beginning-of-buffer-p (point view)))
                  (equal (object-before (point view)) #\))))
     ;; Might still be a fake match, so do the semiexpensive proper test.
-    (let ((form (form-around syntax (offset (point view)))))
+    (let ((form (and (<= 0 (offset (point view)) (size (buffer syntax)))
+                     (form-around syntax (offset (point view))))))
       (when form
         (let ((start-offset (start-offset form))
               (end-offset (end-offset form)))

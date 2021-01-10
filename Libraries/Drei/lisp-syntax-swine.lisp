@@ -570,9 +570,10 @@ at that position if none is there, and the operands in the form."
   (update-parse syntax)
   (let* ((form
           ;; Find a form with a valid (fboundp) operator.
-          (let ((immediate-form
-                 (or (form-before syntax offset)
-                     (form-around syntax offset))))
+           (let ((immediate-form
+                   (and (<= 0 offset (size (buffer syntax)))
+                        (or (form-before syntax offset)
+                            (form-around syntax offset)))))
             (unless (null immediate-form)
               (find-applicable-form syntax immediate-form)
               (or (find-applicable-form syntax immediate-form)
