@@ -1270,13 +1270,17 @@ list. If no such package is specified, return \"CLIM-USER\"."
                         (extract child))
                   (package-list syntax))))))
 
+(defvar *update-syntax-after-recursive* nil)
+
 (defmethod update-syntax :after ((syntax lisp-syntax) prefix-size suffix-size
                                  &optional begin end)
   (declare (ignore begin end))
   (setf (form-before-cache syntax) (make-hash-table :test #'equal)
         (form-after-cache syntax) (make-hash-table :test #'equal)
         (form-around-cache syntax) (make-hash-table :test #'equal))
-  (when (need-to-update-package-list-p prefix-size suffix-size syntax)
+  (when (and (not *update-syntax-after-recursive*)
+             (let ((*update-syntax-after-recursive* t))
+               (need-to-update-package-list-p prefix-size suffix-size syntax)))
     (update-package-list syntax)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
