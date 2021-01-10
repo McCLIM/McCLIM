@@ -605,11 +605,11 @@ is not T, NIL or a `minibuffer-pane'."))))
         (insert-buffer-sequence (buffer view) 0 initial-contents))
       (if syntax
           (setf (syntax view)
-                (make-instance (or (when (syntaxp syntax)
-                                     syntax)
-                                   (syntax-from-name (string syntax))
-                                   (error "Syntax ~A not found" (string syntax)))
-                 :buffer (buffer view))))
+                (if (syntaxp syntax)
+                    syntax
+                    (make-instance (or (syntax-from-name (string syntax))
+                                       (error "Syntax ~A not found" (string syntax)))
+                                   :buffer (buffer view)))))
       (when scroll-bars
         (setf pane (scrolling (:scroll-bar scroll-bars)
                      pane)))
