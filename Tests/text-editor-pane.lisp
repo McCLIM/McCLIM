@@ -21,12 +21,16 @@
   ()
   (:panes
    (editor text-editor-with-syntax-pane :nlines 20)
-   (drei   :drei :syntax (make-instance (drei-syntax:syntax-from-name :lisp)) :scroll-bars t))
+   (drei   :drei :syntax (make-instance (drei-syntax:syntax-from-name :lisp)
+                                        :buffer (make-instance 'drei-buffer:standard-buffer))
+                 :scroll-bars t)
+   )
   (:layouts
    (default
        (vertically ()
          editor
-         drei))))
+         drei
+         ))))
 
 (let ((frame (make-application-frame 'text-editor-pane-test)))
   (run-frame-top-level frame))
