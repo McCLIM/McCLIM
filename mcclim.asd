@@ -64,15 +64,12 @@ interface management system."
   :components ((:file "default-icons"))
   :in-order-to ((test-op (test-op "mcclim/test"))))
 
-;;; A system that loads the appropriate backend for the current
-;;; platform.
+;;; A system that loads the appropriate backend for the current platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #:mcclim-clx                                 #| raw clim-clx backend |#
-               #:mcclim-clx/truetype                        #| adds truetype        |#
-               #+mcclim-ffi-freetype #:mcclim-clx/freetype  #| adds freetype        |#
-               #:mcclim-clx-fb                              #| experimental backend |#
-
+               #:mcclim-clx                                #| truetype clx backend |#
+               #+mcclim-ffi-freetype #:mcclim-clx/freetype #| adds freetype        |#
+               #:mcclim-clx-fb                             #| experimental backend |#
                ;; null backend
                #:mcclim-null))
 
