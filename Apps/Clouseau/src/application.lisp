@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -31,6 +31,17 @@
 
 ;;; Application frame
 
+(macrolet ((load-icon (name)
+             `(make-pattern-from-bitmap-file
+               (merge-pathnames
+                ,(make-pathname :name (pathname-name name)
+                                :type (pathname-type name)
+                                :directory '(:relative :up :up :up "data/icons"))
+                #.(or *compile-file-pathname*
+                      *load-pathname*)))))
+  (defvar *default-icon* (load-icon "inspector-logo.png"))
+  (defvar *small-icon* (load-icon "inspector-logo-small.png")))
+
 (define-application-frame inspector ()
   ((%state          :accessor %state
                     :initform nil)
@@ -58,6 +69,7 @@
   (:command-definer nil)
   (:menu-bar nil)
   (:pointer-documentation t)
+  (:icon (list *default-icon* *small-icon*))
   (:default-initargs
    :object (error "~@<Missing required initarg ~S.~@:>" :object)))
 
