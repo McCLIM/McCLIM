@@ -3,8 +3,31 @@
 (defclass clx-mirror ()
   ((window
     :initarg :window
-    :reader window))
+    :reader window)
+   (picture
+    :initform nil
+    :accessor %clx-mirror-picture))
   (:default-initargs :window (alexandria:required-argument :window)))
+
+(defun clx-drawable-format (drawable)
+  (let ((root (xlib:drawable-root drawable)))
+    (xlib:find-window-picture-format root)))
+
+(defun clx-drawable-picture (drawable)
+  (or (getf (xlib:drawable-plist drawable) :picture)
+      (setf (getf (xlib:drawable-plist drawable) :picture)
+            (xlib:render-create-picture
+             drawable :format (clx-drawable-format drawable)))))
+
+(defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (let ((window (window mirror)))
+      (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
+                                   (xlib:window-plist window))))
+        (xlib:render-free-picture picture))
+      (remf (xlib:window-plist window) 'sheet)
+      (xlib:destroy-window window)
+      (xlib:display-force-output (clx-port-display port)))))
 
 ;;; Return a string in which every non-STANDARD-CHAR in STRING has
 ;;; been replaced with #\_. The result is guaranteed to be an ASCII
@@ -88,13 +111,6 @@
       (multiple-value-bind (x y) (transform-position transformation 0 0)
         (setf (xlib:drawable-x window) (round-coordinate x)
               (xlib:drawable-y window) (round-coordinate y))))))
-
-(defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
-  (when-let ((mirror (sheet-direct-mirror sheet)))
-    (let ((window (window mirror)))
-      (remf (xlib:window-plist window) 'sheet)
-      (xlib:destroy-window window)
-      (xlib:display-force-output (clx-port-display port)))))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
   (when-let ((mirror (sheet-mirror sheet)))
