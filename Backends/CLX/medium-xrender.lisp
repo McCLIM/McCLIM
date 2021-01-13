@@ -5,45 +5,62 @@
 
 (in-package #:clim-clx)
 
+(defun make-clx-render-color (r g b a)
+  ;; Hmm, XRender uses pre-multiplied alpha, how useful!
+  (xlib:render-make-color :red (* r a) :green (* g a) :blue (* b a) :alpha a))
+
 (defclass clx-render-medium (clx-medium
                              climb:multiline-text-medium-mixin
                              climb:font-rendering-medium-mixin)
-  ((picture :initform nil)))
+  ())
 
-(defun clx-render-medium-picture (medium)
-  (or (slot-value medium 'picture)
-      (when-let ((drawable (medium-drawable medium)))
-        (let* ((root (xlib:drawable-root drawable))
-               (format (xlib:find-window-picture-format root)))
-          (setf (slot-value medium 'picture)
-                (xlib:render-create-picture drawable :format format))))))
+(defun medium-target-picture (medium)
+  (when-let ((drawable (medium-drawable medium)))
+    (clx-drawable-picture drawable)))
 
-(defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
-  (declare (ignore filled))
-  (let ((tr (climb:medium-native-transformation medium)))
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (let ((x1 (round-coordinate x1))
-              (y1 (round-coordinate y1))
-              (x2 (round-coordinate x2))
-              (y2 (round-coordinate y2)))
-          (multiple-value-bind (r g b a) (clime:color-rgba (medium-ink medium))
-            ;; Hmm, XRender uses pre-multiplied alpha, how useful!
-            (setf r (min #xffff (max 0 (round (* #xffff a r))))
-                  g (min #xffff (max 0 (round (* #xffff a g))))
-                  b (min #xffff (max 0 (round (* #xffff a b))))
-                  a (min #xffff (max 0 (round (* #xffff a)))))
-            ;; If there is no picture that means that sheet does not have a
-            ;; registered mirror. Happens with DREI panes during the startup..
-            (alexandria:when-let ((picture (clx-render-medium-picture medium)))
-              (setf (xlib:picture-clip-mask picture) (clipping-region->rect-seq
-                                                      (or (last-medium-device-region medium)
-                                                          (medium-device-region medium))))
-              (xlib:render-fill-rectangle picture :over (list r g b a)
-                                          (max #x-8000 (min #x7FFF x1))
-                                          (max #x-8000 (min #x7FFF y1))
-                                          (max 0 (min #xFFFF (- x2 x1)))
-                                          (max 0 (min #xFFFF (- y2 y1)))))))))))
+(defun medium-source-picture (medium)
+  (let ((design (medium-ink medium)))
+    (when (clime:indirect-ink-p design)
+      (setf design (clime:indirect-ink-ink design)))
+    (unless (typep design '(or climi::uniform-compositum color opacity))
+      (setf design (compose-in +deep-pink+ (make-opacity .5))))
+    (let* ((drawable (medium-drawable medium))
+           (pixmap (xlib:create-pixmap
+                    :drawable drawable
+                    :depth (xlib:drawable-depth drawable)
+                    :width 1 :height 1))
+           (picture (xlib:render-create-picture
+                     pixmap
+                     :format (xlib:find-window-picture-format
+                              (xlib:drawable-root drawable))
+                     :repeat :on)))
+      (multiple-value-bind (r g b a) (clime:color-rgba design)
+        (let ((color (make-clx-render-color r g b a)))
+          (xlib:render-fill-rectangle picture :src color 0 0 1 1)))
+      picture)))
+
+(defun medium-fill-rectangle (medium x1 y1 x2 y2)
+  (alexandria:when-let ((picture (medium-target-picture medium)))
+    ;; If there is no picture that means that sheet does not have a registered
+    ;; mirror. Happens with DREI panes during the startup..
+    (let ((color (multiple-value-call #'make-clx-render-color
+                   (clime:color-rgba (medium-ink medium))))
+          (tr (climb:medium-native-transformation medium)))
+      (with-transformed-position (tr x1 y1)
+        (with-transformed-position (tr x2 y2)
+          (let ((x1 (round-coordinate x1))
+                (y1 (round-coordinate y1))
+                (x2 (round-coordinate x2))
+                (y2 (round-coordinate y2)))
+            (setf (xlib:picture-clip-mask picture)
+                  (clipping-region->rect-seq
+                   (or (last-medium-device-region medium)
+                       (medium-device-region medium))))
+            (xlib:render-fill-rectangle picture :over color
+                                        (max #x-8000 (min #x7FFF x1))
+                                        (max #x-8000 (min #x7FFF y1))
+                                        (max 0 (min #xFFFF (- x2 x1)))
+                                        (max 0 (min #xFFFF (- y2 y1))))))))))
 
 
 (defmethod medium-buffering-output-p ((medium clx-render-medium))
@@ -156,172 +173,7 @@
                                     (medium-sheet medium))
                    :transform-glyphs transform-glyphs))))
 
-
-
 
-(defun drawable-picture (drawable)
-  (or (getf (xlib:drawable-plist drawable) 'picture)
-      (setf (getf (xlib:drawable-plist drawable) 'picture)
-            (xlib:render-create-picture drawable
-                                        :format
-                                        (xlib:find-window-picture-format
-                                         (xlib:drawable-root drawable))))))
-
-(defun gcontext-picture (drawable gcontext)
-  (flet ((update-foreground (picture)
-           ;; FIXME! This makes assumptions about pixel format, and breaks
-           ;; on e.g. 16 bpp displays.
-           ;; It would be better to store xrender-friendly color values in
-           ;; medium-gcontext, at the same time we set the gcontext
-           ;; foreground. That way we don't need to know the pixel format.
-           (let ((fg (the xlib:card32 (xlib:gcontext-foreground gcontext))))
-             (xlib:render-fill-rectangle picture
-                                         :src
-                                         (list (ash (ldb (byte 8 16) fg) 8)
-                                               (ash (ldb (byte 8 8) fg) 8)
-                                               (ash (ldb (byte 8 0) fg) 8)
-                                               #xFFFF)
-                                         0 0 1 1))))
-    (let* ((fg (xlib:gcontext-foreground gcontext))
-           (picture-info
-             (or (getf (xlib:gcontext-plist gcontext) 'picture)
-                 (setf (getf (xlib:gcontext-plist gcontext) 'picture)
-                       (let* ((pixmap (xlib:create-pixmap
-                                       :drawable drawable
-                                       :depth (xlib:drawable-depth drawable)
-                                       :width 1 :height 1))
-                              (picture (xlib:render-create-picture
-                                        pixmap
-                                        :format (xlib:find-window-picture-format
-                                                 (xlib:drawable-root drawable))
-                                        :repeat :on)))
-                         (update-foreground picture)
-                         (list fg
-                               picture
-                               pixmap))))))
-      (unless (eql fg (first picture-info))
-        (update-foreground (second picture-info))
-        (setf (first picture-info) fg))
-      (cdr picture-info))))
-
-;;; Restriction: no more than 65536 glyph pairs cached on a single display. I
-;;; don't think that's unreasonable. Having keys as glyph pairs is essential for
-;;; kerning where the same glyph may have different advance-width values for
-;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
-;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
-(defun draw-glyphs (medium mirror gc x y string
-                    &key start end
-                      align-x align-y
-                      translate direction
-                      transformation transform-glyphs
-                    &aux (text-style (medium-text-style medium))
-                         (port (port medium))
-                         (font (text-style-mapping port text-style)))
-  (declare (optimize (speed 3))
-           (ignore translate direction)
-           (type #-sbcl (integer 0 #.array-dimension-limit)
-                 #+sbcl sb-int:index
-                 start end)
-           (type string string))
-
-  (when (< (length (the (simple-array (unsigned-byte 32))
-                        (clx-truetype-font-%buffer% font)))
-           (- end start))
-    (setf (clx-truetype-font-%buffer% font)
-          (make-array (* 256 (ceiling (- end start) 256))
-                      :element-type '(unsigned-byte 32)
-                      :adjustable nil :fill-pointer nil)))
-  (when (and transform-glyphs
-             (not (clim:translation-transformation-p transformation)))
-    (setq string (subseq string start end))
-    (ecase align-x
-      (:left)
-      (:center
-       (let ((origin-x (climb:text-size medium string :text-style text-style)))
-         (decf x (/ origin-x 2.0))))
-      (:right
-       (let ((origin-x (climb:text-size medium string :text-style text-style)))
-         (decf x origin-x))))
-    (ecase align-y
-      (:top
-       (incf y (climb:font-ascent font)))
-      (:baseline)
-      (:center
-       (let* ((ascent (climb:font-ascent font))
-              (descent (climb:font-descent font))
-              (height (+ ascent descent))
-              (middle (- ascent (/ height 2.0s0))))
-         (incf y middle)))
-      (:baseline*)
-      (:bottom
-       (decf y (climb:font-descent font))))
-    (return-from draw-glyphs
-      (%render-transformed-glyphs
-       font string x y align-x align-y transformation mirror gc)))
-  (let ((glyph-ids (clx-truetype-font-%buffer% font))
-        (glyph-set (ensure-glyph-set port))
-        (origin-x 0))
-    (loop
-      with char = (char string start)
-      with i* = 0
-      for i from (1+ start) below end
-      as next-char = (char string i)
-      as next-char-code = (char-code next-char)
-      as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
-                                          #.(ceiling (log char-code-limit 2)))
-                     (char-code char))
-      do
-         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32) (mcclim-truetype:font-glyph-id font code)))
-         (setf char next-char)
-         (incf i*)
-         (incf origin-x (climb:font-glyph-dx font code))
-      finally
-         (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32)
-                    (mcclim-truetype:font-glyph-id font (char-code char))))
-         (incf origin-x (climb:font-glyph-dx font (char-code char))))
-    (multiple-value-bind (new-x new-y) (clim:transform-position transformation x y)
-      (setq x (ecase align-x
-                (:left
-                 (truncate (+ new-x 0.5)))
-                (:center
-                 (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
-                (:right
-                 (truncate (+ (- new-x origin-x) 0.5)))))
-      (setq y (ecase align-y
-                (:top
-                 (truncate (+ new-y (climb:font-ascent font) 0.5)))
-                (:baseline
-                 (truncate (+ new-y 0.5)))
-                (:center
-                 (let* ((ascent (climb:font-ascent font))
-                        (descent (climb:font-descent font))
-                        (height (+ ascent descent))
-                        (middle (- ascent (/ height 2.0s0))))
-                   (truncate (+ new-y middle 0.5))))
-                (:baseline*
-                 (truncate (+ new-y 0.5)))
-                (:bottom
-                 (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
-      (unless (and (typep x '(signed-byte 16))
-                   (typep y '(signed-byte 16)))
-        (warn "Trying to render string outside the mirror.")
-        (return-from draw-glyphs)))
-    (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-      (declare (ignore source-pixmap))
-      ;; Sync the picture-clip-mask with that of the gcontext.
-      (unless  (eq (xlib:picture-clip-mask (drawable-picture mirror))
-                   (xlib:gcontext-clip-mask gc))
-        (setf (xlib:picture-clip-mask (drawable-picture mirror))
-              (xlib:gcontext-clip-mask gc)))
-      (xlib:render-composite-glyphs (drawable-picture mirror)
-                                    glyph-set
-                                    source-picture
-                                    x y
-                                    glyph-ids
-                                    :end (- end start)))))
-
 (defun %font-generate-glyph (font code transformation glyph-set)
   (let ((glyph-id (draw-glyph-id (port font)))
         (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0)
@@ -377,14 +229,129 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
      &optional (transformation +identity-transformation+))
   (%font-generate-glyph font code transformation (ensure-glyph-set (port font))))
 
+;;; Restriction: no more than 65536 glyph pairs cached on a single display. I
+;;; don't think that's unreasonable. Having keys as glyph pairs is essential for
+;;; kerning where the same glyph may have different advance-width values for
+;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
+;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
+(defun draw-glyphs (medium mirror gc x y string
+                    &key start end
+                      align-x align-y
+                      translate direction
+                      transformation transform-glyphs)
+  (declare (optimize (speed 3))
+           (ignore translate direction)
+           (type #-sbcl (integer 0 #.array-dimension-limit)
+                 #+sbcl sb-int:index
+                 start end)
+           (type string string))
+  (let* ((text-style (medium-text-style medium))
+         (port (port medium))
+         (font (text-style-mapping port text-style))
+         (picture (medium-target-picture medium))
+         (source-picture (medium-source-picture medium))
+         (clip-mask (xlib:gcontext-clip-mask gc)))
+    ;; Sync the picture-clip-mask with that of the gcontext.
+    (unless (eq (xlib:picture-clip-mask picture) clip-mask)
+      (setf (xlib:picture-clip-mask picture) clip-mask))
+
+    (when (< (length (the (simple-array (unsigned-byte 32))
+                          (clx-truetype-font-%buffer% font)))
+             (- end start))
+      (setf (clx-truetype-font-%buffer% font)
+            (make-array (* 256 (ceiling (- end start) 256))
+                        :element-type '(unsigned-byte 32)
+                        :adjustable nil :fill-pointer nil)))
+    (when (and transform-glyphs
+               (not (clim:translation-transformation-p transformation)))
+      (setq string (subseq string start end))
+      (ecase align-x
+        (:left)
+        (:center
+         (let ((origin-x (climb:text-size medium string :text-style text-style)))
+           (decf x (/ origin-x 2.0))))
+        (:right
+         (let ((origin-x (climb:text-size medium string :text-style text-style)))
+           (decf x origin-x))))
+      (ecase align-y
+        (:top
+         (incf y (climb:font-ascent font)))
+        (:baseline)
+        (:center
+         (let* ((ascent (climb:font-ascent font))
+                (descent (climb:font-descent font))
+                (height (+ ascent descent))
+                (middle (- ascent (/ height 2.0s0))))
+           (incf y middle)))
+        (:baseline*)
+        (:bottom
+         (decf y (climb:font-descent font))))
+      (return-from draw-glyphs
+        (%render-transformed-glyphs
+         font string x y align-x align-y transformation mirror
+         picture source-picture)))
+    (let ((glyph-ids (clx-truetype-font-%buffer% font))
+          (glyph-set (ensure-glyph-set port))
+          (origin-x 0))
+      (loop
+        with char = (char string start)
+        with i* = 0
+        for i from (1+ start) below end
+        as next-char = (char string i)
+        as next-char-code = (char-code next-char)
+        as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                            #.(ceiling (log char-code-limit 2)))
+                       (char-code char))
+        do
+           (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                 (the (unsigned-byte 32) (mcclim-truetype:font-glyph-id font code)))
+           (setf char next-char)
+           (incf i*)
+           (incf origin-x (climb:font-glyph-dx font code))
+        finally
+           (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                 (the (unsigned-byte 32)
+                      (mcclim-truetype:font-glyph-id font (char-code char))))
+           (incf origin-x (climb:font-glyph-dx font (char-code char))))
+      (multiple-value-bind (new-x new-y) (clim:transform-position transformation x y)
+        (setq x (ecase align-x
+                  (:left
+                   (truncate (+ new-x 0.5)))
+                  (:center
+                   (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
+                  (:right
+                   (truncate (+ (- new-x origin-x) 0.5)))))
+        (setq y (ecase align-y
+                  (:top
+                   (truncate (+ new-y (climb:font-ascent font) 0.5)))
+                  (:baseline
+                   (truncate (+ new-y 0.5)))
+                  (:center
+                   (let* ((ascent (climb:font-ascent font))
+                          (descent (climb:font-descent font))
+                          (height (+ ascent descent))
+                          (middle (- ascent (/ height 2.0s0))))
+                     (truncate (+ new-y middle 0.5))))
+                  (:baseline*
+                   (truncate (+ new-y 0.5)))
+                  (:bottom
+                   (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
+        (unless (and (typep x '(signed-byte 16))
+                     (typep y '(signed-byte 16)))
+          (warn "Trying to render string outside the mirror.")
+          (return-from draw-glyphs)))
+      (xlib:render-composite-glyphs picture
+                                    glyph-set
+                                    source-picture
+                                    x y
+                                    glyph-ids
+                                    :end (- end start)))))
+
 ;;; Transforming glyphs is very inefficient because we don't cache them.
-(defun %render-transformed-glyphs (font string x y align-x align-y tr mirror gc
-                                   &aux (end (length string)))
+(defun %render-transformed-glyphs
+    (font string x y align-x align-y tr mirror picture source-picture
+     &aux (end (length string)))
   (declare (ignore align-x align-y))
-  ;; Sync the picture-clip-mask with that of the gcontext.
-  (when-let ((clip (xlib:gcontext-clip-mask gc)))
-    (unless (eq (xlib:picture-clip-mask (drawable-picture mirror)) clip))
-    (setf (xlib:picture-clip-mask (drawable-picture mirror)) clip))
   (loop
     with glyph-tr = (multiple-value-bind (x0 y0)
                         (transform-position tr 0 0)
@@ -392,8 +359,6 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
     ;; for rendering one glyph at a time
     with current-x = x
     with current-y = y
-    with picture = (drawable-picture mirror)
-    with source-picture = (car (gcontext-picture mirror gc))
     ;; ~
     with glyph-ids = (clx-truetype-font-%buffer% font)
     with glyph-set = (make-glyph-set (xlib:drawable-display mirror))
@@ -440,21 +405,19 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                        (truncate (+ current-y 0.5))
                                        glyph-ids :start i* :end (1+ i*)))
        (xlib:render-free-glyphs glyph-set (subseq glyph-ids 0 (1+ i*)))
-    #+ (or) ;; rendering all glyphs at once
-       (destructuring-bind (source-picture source-pixmap)
-           (gcontext-picture mirror gc)
-         (declare (ignore source-pixmap))
-         ;; This solution is correct in principle, but advance-width and
-         ;; advance-height are victims of rounding errors and they don't
-         ;; hold the line for longer text in case of rotations and other
-         ;; hairy transformations. That's why we take our time and
-         ;; render one glyph at a time. -- jd 2018-10-04
-         (multiple-value-bind (x y) (clim:transform-position tr x y)
-           (xlib:render-composite-glyphs (drawable-picture mirror)
-                                         glyph-set
-                                         source-picture
-                                         (truncate (+ x 0.5))
-                                         (truncate (+ y 0.5))
-                                         glyph-ids :start 0 :end end)))
+    #+ (or)
+    ;; rendering all glyphs at once
+    ;; This solution is correct in principle, but advance-width and
+    ;; advance-height are victims of rounding errors and they don't
+    ;; hold the line for longer text in case of rotations and other
+    ;; hairy transformations. That's why we take our time and
+    ;; render one glyph at a time. -- jd 2018-10-04
+       (multiple-value-bind (x y) (clim:transform-position tr x y)
+         (xlib:render-composite-glyphs picture
+                                       glyph-set
+                                       source-picture
+                                       (truncate (+ x 0.5))
+                                       (truncate (+ y 0.5))
+                                       glyph-ids :start 0 :end end))
     finally
        (xlib:render-free-glyph-set glyph-set)))
