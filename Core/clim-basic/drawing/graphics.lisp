@@ -83,10 +83,6 @@
   (when sheet
     (funcall func sheet)))
 
-(defmethod do-graphics-with-options ((pixmap pixmap) func &rest options)
-  (with-pixmap-medium (medium pixmap)
-    (apply #'do-graphics-with-options-internal medium medium func options)))
-
 (defmethod do-graphics-with-options-internal ((medium medium) orig-medium func
                                      &rest args
                                      &key ink clipping-region transformation
@@ -229,12 +225,6 @@
   (with-sheet-medium (medium sheet)
     (letf (((medium-transformation medium) +identity-transformation+))
       (funcall continuation sheet))))
-
-(defmethod invoke-with-identity-transformation
-    ((destination pixmap) continuation)
-  (with-pixmap-medium (medium destination)
-    (letf (((medium-transformation medium) +identity-transformation+))
-      (funcall continuation destination))))
 
 (defmethod invoke-with-identity-transformation
     ((medium medium) continuation)
@@ -724,6 +714,18 @@
 
 ;;; Pixmap functions
 
+(defmethod allocate-pixmap ((sheet sheet) width height)
+  (with-sheet-medium (medium sheet)
+    (allocate-pixmap medium width height)))
+
+(defmethod allocate-pixmap ((medium medium) width height)
+  (declare (ignore medium width height))
+  (error "Don't know how to allocate a pixmap for a generic medium"))
+
+(defmethod deallocate-pixmap (pixmap)
+  (error "Don't know how to deallocate a pixmap of class ~s" (class-of pixmap)))
+
+
 (defmethod copy-to-pixmap ((medium medium) medium-x medium-y width height
                            &optional pixmap (pixmap-x 0) (pixmap-y 0))
   (unless pixmap
@@ -760,137 +762,31 @@
       (copy-area (sheet-medium stream) from-x from-y width height to-x to-y)
     (error "COPY-AREA on a stream is not implemented")))
 
-;;; XXX The modification of the sheet argument to hold the pixmap
-;;; medium seems completely incorrect here; the description of the
-;;; macro in the spec says nothing about that. On the other hand, the
-;;; spec talks about "medium-var" when that is clearly meant to be a
-;;; stream (and an output-recording stream at that, if the example in
-;;; the Franz user guide is to be believed). What a mess. I think we
-;;; need a pixmap output recording stream in order to do this
-;;; right. -- moore
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
-  (if (and width height)
-      `(let* ((pixmap (allocate-pixmap ,sheet ,width ,height))
-              (,medium-var (make-medium (port ,sheet) pixmap))
-              (old-medium (sheet-medium ,sheet)))
-         (setf (slot-value pixmap 'medium) ,medium-var) ; hmm, [seems to work] -- BTS
-         (setf (%sheet-medium ,sheet) ,medium-var) ;is sheet a sheet-with-medium-mixin? --GB
-         (unwind-protect
-              (progn ,@body)
-           (setf (%sheet-medium ,sheet) old-medium)) ;is sheet a sheet-with-medium-mixin? --GB
-         pixmap)
-      (let ((record (gensym "OUTPUT-RECORD-")))
-        ;; rudi (2005-09-05) What to do when only width or height are
-        ;; given?  And what's the meaning of medium-var?
-        `(let* ((,medium-var ,sheet)
-                (,record (with-output-to-output-record (,medium-var)
-                           ,@body)))
-           (with-output-to-pixmap
-               (,medium-var
-                ,sheet
-                :width ,(or width `(bounding-rectangle-width ,record))
-                :height ,(or height `(bounding-rectangle-height ,record)))
-             (replay-output-record ,record ,sheet))))))
-
-(defun invoke-with-double-buffering (sheet continuation x1 y1 x2 y2)
-  (let* ((msheet (sheet-mirrored-ancestor sheet))
-         (medium (sheet-medium sheet))
-         (sheet-transform (sheet-native-transformation sheet))
-         (msheet-transform (sheet-native-transformation msheet))
-         (medium-transform (medium-transformation medium))
-         (world-transform (compose-transformations
-                           sheet-transform
-                           medium-transform)))
-    (multiple-value-bind (sheet-x1 sheet-y1)
-        (transform-position world-transform x1 y1)
-      (multiple-value-bind (sheet-x2 sheet-y2)
-          (transform-position world-transform x2 y2)
-        ;; Be conservative with the size of the pixmap, including all of
-        ;; the pixels at the edges.
-        (let* ((pixmap-x1 (floor sheet-x1))
-               (pixmap-y1 (floor sheet-y1))
-               (pixmap-x2 (ceiling sheet-x2))
-               (pixmap-y2 (ceiling sheet-y2))
-               (pixmap-width (- pixmap-x2 pixmap-x1))
-               (pixmap-height (- pixmap-y2 pixmap-y1))
-               (msheet-native (compose-translation-with-transformation
-                               msheet-transform
-                               (- pixmap-x1)
-                               (- pixmap-y1)))
-               (pixmap (allocate-pixmap msheet pixmap-width pixmap-height)))
-          (unless pixmap
-            (error "Couldn't allocate pixmap"))
-          (multiple-value-bind (user-pixmap-x1 user-pixmap-y1)
-              (untransform-position world-transform pixmap-x1 pixmap-y1)
-            (multiple-value-bind (user-pixmap-x2 user-pixmap-y2)
-                (untransform-position world-transform pixmap-x2 pixmap-y2)
-              (multiple-value-bind (msheet-pixmap-x1 msheet-pixmap-y1)
-                  (untransform-position msheet-transform pixmap-x1 pixmap-y1)
-                (multiple-value-bind (msheet-pixmap-x2 msheet-pixmap-y2)
-                    (untransform-position msheet-transform pixmap-x2 pixmap-y2)
-                  ;; Assume that the scaling for the sheet-native
-                  ;; transformation for the pixmap will be the same as that of
-                  ;; the mirror .
-                  (unwind-protect
-                       (let ((pixmap-region
-                              (region-intersection
-                               (sheet-native-region sheet)
-                               (make-bounding-rectangle msheet-pixmap-x1
-                                                        msheet-pixmap-y1
-                                                        msheet-pixmap-x2
-                                                        msheet-pixmap-y2))))
-                         (with-temp-mirror%%% (msheet (pixmap-mirror pixmap) msheet-native pixmap-region)
-                           (with-drawing-options
-                               (medium :ink (medium-background medium))
-                             (medium-draw-rectangle* medium
-                                                     user-pixmap-x1
-                                                     user-pixmap-y1
-                                                     user-pixmap-x2
-                                                     user-pixmap-y2
-                                                     t))
-                           (funcall continuation sheet
-                                    user-pixmap-x1 user-pixmap-y1
-                                    user-pixmap-x2 user-pixmap-y2)))
-                    (copy-from-pixmap pixmap 0 0
-                                      pixmap-width pixmap-height sheet
-                                      user-pixmap-x1 user-pixmap-y1)
-                    (deallocate-pixmap pixmap)))))))))))
-
-(defmacro with-double-buffering (((sheet &rest bounds-args)
-                                  (&rest pixmap-args))
-                                 &body body)
-  (with-gensyms (continuation)
-    (let ((cont-form
-           (case (length pixmap-args)
-             (1
-              (with-gensyms (pixmap-x1 pixmap-y1 pixmap-x2 pixmap-y2)
-                `(,continuation (,sheet
-                                 ,pixmap-x1 ,pixmap-y1 ,pixmap-x2 ,pixmap-y2)
-                   (let ((,(car pixmap-args)
-                          (make-bounding-rectangle ,pixmap-x1 ,pixmap-y1
-                                                   ,pixmap-x2 ,pixmap-y2)))
-                     ,@body))))
-             (4
-              `(,continuation (,sheet ,@pixmap-args)
-                 ,@body))
-             (otherwise (error "Invalid pixmap-args ~S" pixmap-args)))))
-      (case (length bounds-args)
-        (1
-         (with-gensyms (x1 y1 x2 y2)
-           `(flet (,cont-form)
-              (declare (dynamic-extent #',continuation))
-              (with-bounding-rectangle* (,x1 ,y1 ,x2 ,y2)
-                  ,(car bounds-args)
-                (invoke-with-double-buffering ,sheet
-                                              #',continuation
-                                              ,x1 ,y1 ,x2 ,y2)))))
-        (4
-         `(flet (,cont-form)
-            (declare (dynamic-extent #',continuation))
-            (invoke-with-double-buffering ,sheet #',continuation
-                                          ,@bounds-args)))
-        (otherwise (error "invalid bounds-args ~S" bounds-args))))))
-
+  (alexandria:once-only (sheet width height)
+    (if (and width height)
+        (alexandria:with-gensyms (pixmap port)
+          `(let* ((,pixmap (allocate-pixmap ,sheet ,width ,height))
+                  (,port (port ,sheet))
+                  (,medium-var (make-medium ,port ,sheet)))
+             (degraft-medium ,medium-var ,port ,sheet)
+             (letf (((medium-drawable ,medium-var) ,pixmap)
+                    ((medium-clipping-region ,medium-var)
+                     (make-rectangle* 0 0 ,width ,height)))
+               ,@body)
+             ,pixmap))
+        (let ((record (gensym "OUTPUT-RECORD-")))
+          ;; What to do when only width or height are given?  And what's the
+          ;; meaning of medium-var? -- rudi 2005-09-05
+          `(let* ((,medium-var ,sheet)
+                  (,record (with-output-to-output-record (,medium-var)
+                             ,@body)))
+             (with-output-to-pixmap
+                 (,medium-var
+                  ,sheet
+                  :width ,(or width `(bounding-rectangle-width ,record))
+                  :height ,(or height `(bounding-rectangle-height ,record)))
+               (replay-output-record ,record ,medium-var)))))))
 
 
 ;;; Generic graphic operation methods

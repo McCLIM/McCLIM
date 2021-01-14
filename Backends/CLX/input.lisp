@@ -122,7 +122,7 @@
   (when (eql event-key :mapping-notify)
     (xlib:mapping-notify display request 0 0)
     (return-from event-handler (maybe-funcall *wait-function*)))
-  (when-let ((sheet (and window (port-lookup-sheet *clx-port* window))))
+  (when-let ((sheet (and window (getf (xlib:window-plist window) 'sheet))))
     (case event-key
       ((:key-press :key-release)
        (multiple-value-bind (keyname modifier-state keysym-name)
@@ -234,6 +234,10 @@
               (make-instance 'window-configuration-event
                              :sheet sheet
                              :x x :y y :width width :height height))))
+      (:map-notify
+       (make-instance 'window-map-event :sheet sheet))
+      (:unmap-notify
+       (make-instance 'window-unmap-event :sheet sheet))
       (:destroy-notify
        (make-instance 'window-destroy-event :sheet sheet))
       (:motion-notify

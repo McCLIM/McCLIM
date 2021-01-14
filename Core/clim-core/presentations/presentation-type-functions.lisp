@@ -416,7 +416,7 @@ MAYBE-SUPERTYPE, regardless of parameters."
 (defun map-over-ptype-superclasses (function type)
   (let* ((type-name (presentation-type-name type))
          (type-meta (get-ptype-metaclass type-name))
-         (type-is-ptype (typep type-meta 'presentation-type-class)))
+         (type-is-ptype (presentation-type-class-p type-meta)))
     (unless type-meta
       (return-from map-over-ptype-superclasses nil))
     (loop

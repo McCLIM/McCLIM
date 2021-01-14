@@ -17,6 +17,15 @@
 
 ;;; change geometry
 
+(defmethod distribute-event :before
+    ((port render-port-mixin) (event window-configuration-event))
+  (let ((sheet (event-sheet event))
+        (width (climi::window-configuration-event-width event))
+        (height (climi::window-configuration-event-height event)))
+    (when-let ((mirror (sheet-direct-mirror sheet)))
+      (%set-image-region (mirror->%image port mirror)
+                         (make-bounding-rectangle 0 0 width height)))))
+
 (defmethod port-set-mirror-region :after
     ((port render-port-mixin) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))

@@ -5,7 +5,8 @@
                 #:clx-medium
                 #:with-clx-graphics)
   (:import-from #:climi
-                #:standard-translation))
+                #:standard-translation
+                #:medium-native-transformation))
 
 (in-package :mcclim-bezier-clx)
 
@@ -23,7 +24,7 @@
     coord-vec))
 
 (defun %clx-medium-draw-bezier-design (medium design &key filled)
-  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+  (let* ((tr (medium-native-transformation medium))
          (region (transform-region tr design))
          (coord-vec (bezier-region-to-coord-vec region)))
     (with-clx-graphics (mirror line-style ink gc)
@@ -87,7 +88,7 @@
                       (xlib:gcontext-clip-y gc) imin-y)
 
                 (dolist (area (positive-areas design))
-                  (let* ((tr (sheet-native-transformation (medium-sheet medium)))
+                  (let* ((tr (medium-native-transformation medium))
                          (region (transform-region tr area))
                          (coord-vec (bezier-region-to-coord-vec region)))
                     (xlib:draw-lines drawable gc coord-vec :fill-p t)))

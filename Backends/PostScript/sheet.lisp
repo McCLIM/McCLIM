@@ -167,7 +167,7 @@
 ;;; Output Protocol
 
 (defmethod make-medium ((port postscript-port) (sheet postscript-stream))
-  (make-instance 'postscript-medium :sheet sheet))
+  (make-instance 'postscript-medium :port port :sheet sheet))
 
 (defmethod medium-miter-limit ((medium postscript-medium))
   #.(* pi (/ 11 180))) ; ?

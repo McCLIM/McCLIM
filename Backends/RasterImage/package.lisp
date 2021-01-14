@@ -8,12 +8,6 @@
 		  #:do-sequence
 		  #:with-transformed-position
 		  #:with-transformed-positions
-		  #:port-register-mirror
-		  #:port-unregister-mirror
-		  #:port-lookup-sheet
-		  #:destroy-mirror
-		  #:realize-mirror
-                  #:pixmap-mirror
                   #:unmanaged-top-level-sheet-pane
 		  #:vbox-pane)
     (:import-from :mcclim-render-internals

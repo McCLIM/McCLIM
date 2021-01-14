@@ -376,8 +376,9 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric graft-units (graft))
 (defgeneric graft-width (graft &key units))
 (defgeneric graft-height (graft &key units))
-(declfun graft-pixels-per-millimeter (graft))
-(declfun graft-pixels-per-inch (graft))
+(defgeneric graft-pixel-aspect-ratio (graft))
+(declfun graft-pixels-per-millimeter (graft &key orientation))
+(declfun graft-pixels-per-inch (graft &key orientation))
 
 ;;; Not in the spec, clearly needed.
 (defgeneric make-graft (port &key orientation units))
@@ -474,6 +475,24 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric make-device-font-text-style (port font-name))
 
 
+;;; 12.6 Pixmaps
+(defgeneric allocate-pixmap (sheet width height))
+(defgeneric deallocate-pixmap (pixmap))
+
+(defgeneric pixmap-width (sheet))
+(defgeneric pixmap-height (sheet))
+(defgeneric pixmap-depth (sheet))
+
+(defgeneric copy-to-pixmap (medium medium-x medium-y width height
+                            &optional pixmap pixmap-x pixmap-y))
+(defgeneric copy-from-pixmap (pixmap from-x from-y width height
+                              medium medium-x medium-y))
+(defgeneric copy-area (medium from-x from-y width height to-x to-y))
+(defgeneric medium-copy-area (from-drawable from-x from-y width height
+                              to-drawable to-x to-y))
+
+;; with-output-to-pixmap (medium-var medium &key width height) &body body [Macro]
+
 ;;; 12.7.3 Other Medium-specific Output Functions
 
 (defgeneric medium-finish-output (medium))
@@ -732,10 +751,40 @@ unspecified. "))
 (defgeneric make-design-from-output-record (record))
 
 
+;;;; 17.3 The Table and Item List Formatting Protocols
+
+(defgeneric map-over-table-elements (function table-record type)
+  (:documentation "Applies FUNCTION to all the rows or columns of
+TABLE-RECORD that are of type TYPE. TYPE is one of :ROW, :COLUMN or
+:ROW-OR-COLUMN. FUNCTION is a function of one argument. The function
+skips intervening non-table output record structures."))
+
+(defgeneric map-over-block-cells (function block)
+  (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
+
+(defgeneric map-over-row-cells (function row-record)
+  (:documentation "Applies FUNCTION to all the cells in the row
+ROW-RECORD, skipping intervening non-table output record structures.
+FUNCTION is a function of one argument, an output record corresponding
+to a table cell within the row."))
+
+(defgeneric map-over-column-cells (function column-record)
+  (:documentation "Applies FUNCTION to all the cells in the column
+COLUMN-RECORD, skipping intervening non-table output record
+structures. FUNCTION is a function of one argument, an output record
+corresponding to a table cell within the column."))
+
+(defgeneric map-over-item-list-cells (function item-list-record))
+
+(defgeneric adjust-table-cells (table-record stream))
+(defgeneric adjust-multiple-columns (table-record stream))
+(defgeneric adjust-item-list-cells (item-list-record stream))
+
+
 ;;;; 21.2
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
-            &key fixed-position all-new parent-cache))
+     &key fixed-position all-new parent-cache))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol
@@ -1305,14 +1354,10 @@ rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;; "exported" from a port
 
-(defgeneric mirror-transformation (port mirror))
 (defgeneric port-text-style-mappings (port))
-(defgeneric port-lookup-mirror (port sheet))
-(defgeneric port-register-mirror (port sheet mirror))
-(defgeneric port-allocate-pixmap (port sheet width height))
-(defgeneric port-deallocate-pixmap (port pixmap))
 (defgeneric port-enable-sheet (port sheet))
 (defgeneric port-disable-sheet (port sheet))
+(defgeneric port-shrink-sheet (port sheet))
 (defgeneric port-pointer (port))
 
 (defgeneric pointer-update-state (pointer event)

@@ -181,8 +181,6 @@ PORT (BRIDGE) TO GUI (A SERVER LIKE)
 destroy-port
 
 ;;; Originally in CLIM-INTERNALS
-port-allocate-pixmap
-port-deallocate-pixmap
 port-disable-sheet
 port-enable-sheet
 port-force-output
@@ -288,7 +286,6 @@ NO LONGER NEEDED IN BACKEND
 ---------------------------
 queue-callback                  ; moved to clim-core
 medium-clipping-                ; moved to clim-basic
-mirror-transformation           ; never used
 @end verbatim
 
 @node PostScript backend

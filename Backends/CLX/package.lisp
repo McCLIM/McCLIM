@@ -17,7 +17,6 @@
                 #:+alt-key+
                 ;;
                 #:port-text-style-mappings
-                #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
                 #:%%sheet-native-transformation
@@ -26,14 +25,9 @@
                 ;;
                 #:clamp
                 #:get-environment-variable
-                #:pixmap-sheet
-                #:port-lookup-sheet
-                #:port-unregister-mirror
                 #:port-pointer-sheet
                 #:map-repeated-sequence
-                #:pixmap-mirror
                 #:do-sequence
-                #:with-double-buffering
                 #:with-transformed-position
                 #:with-transformed-positions
                 #:with-medium-options
@@ -56,7 +50,6 @@
                 ;;
                 #:medium-miter-limit
                 ;; classes
-                #:mirrored-pixmap
                 #:window-destroy-event
                 #:pointer-grab-enter-event
                 #:pointer-grab-leave-event

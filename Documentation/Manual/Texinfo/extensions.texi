@@ -4,6 +4,7 @@
 @menu
 * Frame and sheet icons::
 * Frame and sheet names::
+* Frame and sheet shrinking::
 * Text editor substrate::
 * Extended text formatting::
 * Extended blank area presentation type::
@@ -47,6 +48,19 @@ Furthermore @mcclim{} provides a way for clients to be notified when the
 pretty name of a frame changes:
 
 @include docstrings/fun-clim-extensions-note-frame-pretty-name-changed.texi
+
+@node Frame and sheet shrinking
+@section Frame and sheet shrinking
+
+According to the @clim{} specification, a frame may be shrunk the
+function @func{shrink-frame}. This operation disables a top-level
+sheet by minimizing it.
+
+@mcclim{} extends this design to top-level sheets and ports in form of
+the following protocol:
+
+@include docstrings/fun-clim-extensions-shrink-sheet.texi
+@include docstrings/fun-clim-backend-port-shrink-sheet.texi
 
 @node Text editor substrate
 @section Text editor substrate

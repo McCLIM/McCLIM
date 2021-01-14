@@ -85,6 +85,24 @@
   (:method (sheet) nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; conditions
+
+(define-condition sheet-is-not-child (error) ())
+(define-condition sheet-is-top-level (error) ())
+(define-condition sheet-ordering-underspecified (error) ())
+(define-condition sheet-is-not-ancestor (error) ())
+(define-condition sheet-already-has-parent (error) ())
+(define-condition sheet-is-ancestor (error) ())
+
+(define-condition sheet-supports-only-one-child (error)
+  ((sheet :initarg :sheet)))
+
+(defmethod print-object ((object sheet-supports-only-one-child) stream)
+  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
+          (slot-value object 'sheet)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
 ;;;; sheet protocol class
 
@@ -113,10 +131,6 @@
               :initform t
               :accessor sheet-enabled-p)))
 
-;;; Native region is volatile, and is only computed at the first
-;;; request when it's equal to nil.
-;;;
-
 (defmethod sheet-parent ((sheet basic-sheet))
   nil)
 
@@ -133,8 +147,6 @@
   (note-sheet-adopted child)
   (when (sheet-grafted-p sheet)
     (note-sheet-grafted child)))
-
-(define-condition sheet-is-not-child (error) ())
 
 (defmethod sheet-disown-child :before
     ((sheet basic-sheet) (child sheet) &key (errorp t))
@@ -168,7 +180,8 @@
 (defmethod bury-sheet ((sheet basic-sheet))
   (error 'sheet-is-not-child))
 
-(define-condition sheet-ordering-underspecified (error) ())
+(defmethod shrink-sheet ((sheet basic-sheet))
+  (error 'sheet-is-not-top-level))
 
 (defmethod reorder-sheets ((sheet basic-sheet) new-ordering)
   (when (set-difference (sheet-children sheet) new-ordering)
@@ -311,8 +324,6 @@
 				   (sheet-parent sheet) ancestor)))
 	(t +identity-transformation+)))
 
-(define-condition sheet-is-not-ancestor (error) ())
-
 (defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor sheet))
   (cond ((eq sheet ancestor) +identity-transformation+)
 	((sheet-parent sheet)
@@ -385,6 +396,8 @@
               +identity-transformation+)))
     native-transformation))
 
+;;; Native region is volatile, and is only computed at the first
+;;; request when it's equal to nil.
 (defmethod sheet-native-region ((sheet basic-sheet))
   (with-slots (native-region) sheet
     (unless native-region
@@ -476,9 +489,6 @@
 (defclass sheet-parent-mixin ()
   ((parent :initform nil :accessor sheet-parent)))
 
-(define-condition sheet-already-has-parent (error) ())
-(define-condition sheet-is-ancestor (error) ())
-
 (defmethod sheet-adopt-child :before (sheet (child sheet-parent-mixin))
   (when (and (sheet-parent child) (not (eq sheet (sheet-parent child))))
     (error 'sheet-already-has-parent))
@@ -549,13 +559,6 @@
 
 (defmethod sheet-children ((sheet sheet-single-child-mixin))
   (and (sheet-child sheet) (list (sheet-child sheet))))
-
-(define-condition sheet-supports-only-one-child (error)
-  ((sheet :initarg :sheet)))
-
-(defmethod print-object ((object sheet-supports-only-one-child) stream)
-  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
-          (slot-value object 'sheet)))
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
 				      (child sheet-parent-mixin))
@@ -663,6 +666,10 @@
 
 (defclass mirrored-sheet-mixin ()
   ((port :initform nil :initarg :port :accessor port)
+   (mirror
+    :initform nil
+    :reader sheet-direct-mirror
+    :writer (setf %sheet-direct-mirror))
    (native-transformation :initform +identity-transformation+)
    (mirror-transformation
     :documentation "Our idea of the current mirror transformation. Might not be
@@ -675,9 +682,6 @@ if a foreign application changes our mirror's geometry. Also note that this
 might be different from the sheet's native region."
     :initform nil
     :accessor %sheet-mirror-region)))
-
-(defmethod sheet-direct-mirror ((sheet mirrored-sheet-mixin))
-  (port-lookup-mirror (port sheet) sheet))
 
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
@@ -695,11 +699,9 @@ might be different from the sheet's native region."
 
 (defmethod (setf sheet-enabled-p) :after
     (new-value (sheet mirrored-sheet-mixin))
-  (when (sheet-direct-mirror sheet)
-    ;; We do this only if the sheet actually has a mirror.
-    (if new-value
-        (port-enable-sheet (port sheet) sheet)
-        (port-disable-sheet (port sheet) sheet))))
+  (if new-value
+      (port-enable-sheet (port sheet) sheet)
+      (port-disable-sheet (port sheet) sheet)))
 
 (defmethod (setf sheet-pretty-name) :after (new-name (sheet mirrored-sheet-mixin))
   (port-set-mirror-name (port sheet) sheet new-name))
@@ -760,6 +762,10 @@ might be different from the sheet's native region."
                          host's window manager to represent the sheet,
                          for example when its mirror is iconified.")))
 
+(defmethod shrink-sheet ((sheet top-level-sheet-mixin))
+  (when (sheet-enabled-p sheet)
+    (port-shrink-sheet (port sheet) sheet)))
+
 ;;; Unmanaged sheet is not managed by the window manager.
 (defclass unmanaged-sheet-mixin () ())
 
@@ -782,32 +788,3 @@ might be different from the sheet's native region."
 ;;; The null sheet
 
 (defclass null-sheet (basic-sheet) ())
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; dangerous codes
-;;; postfix: %%%
-;;;
-
-;; used by invoke-with-double-buffering
-(defmacro with-temp-mirror%%% ((mirrored-sheet new-mirror new-native-transformation new-region)
-                               &body body)
-  (alexandria:once-only (mirrored-sheet new-mirror new-native-transformation new-region)
-    (alexandria:with-gensyms (port old-native-transformation old-region set-native)
-      `(let ((,port (port sheet))
-             (,old-native-transformation (sheet-native-transformation ,mirrored-sheet))
-             (,old-region (sheet-region ,mirrored-sheet)))
-         (flet ((,set-native (transform region sheet)
-                  (invalidate-cached-regions sheet)
-                  (invalidate-cached-transformations sheet)
-                  (%%set-sheet-native-transformation transform sheet)
-                  (setf (slot-value sheet 'region) region))
-                ((setf sheet-direct-mirror) (new-mirror sheet)
-                  (port-register-mirror ,port sheet new-mirror)))
-           (letf (((sheet-parent ,mirrored-sheet) nil)
-                  ((sheet-direct-mirror ,mirrored-sheet) ,new-mirror))
-             (unwind-protect
-                  (progn
-                    (,set-native ,new-native-transformation ,new-region ,mirrored-sheet)
-                    ,@body)
-               (,set-native ,old-native-transformation ,old-region ,mirrored-sheet)
-               (port-unregister-mirror ,port ,mirrored-sheet ,new-mirror))))))))

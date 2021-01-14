@@ -53,6 +53,8 @@
 ;;     window-event
 ;;       window-configuration-event
 ;;       window-repaint-event
+;;       window-map-event
+;;       window-unmap-event
 ;;     window-manager-event
 ;;       window-manager-delete-event
 ;;       window-manager-focus-event
@@ -249,6 +251,7 @@
     (:method ((event window-configuration-event))
       (get-window-property :size 1 event))))
 
+(define-event-class window-map-event     (window-event) ())
 (define-event-class window-unmap-event   (window-event) ())
 (define-event-class window-destroy-event (window-event) ())
 (define-event-class window-repaint-event (window-event) ())

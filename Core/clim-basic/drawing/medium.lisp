@@ -163,14 +163,20 @@
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
-          :writer (setf %medium-sheet) ))
+          :writer (setf %medium-sheet) )
+   (port :initarg :port
+         :accessor port)
+   (drawable :initform nil
+             :accessor %medium-drawable))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
 (defmethod medium-drawable ((medium basic-medium))
-  (when-let ((sheet (medium-sheet medium)))
-    (sheet-mirror sheet)))
+  (or (%medium-drawable medium)
+      (when-let ((sheet (medium-sheet medium)))
+        (sheet-mirror sheet))))
 
-(defclass ungrafted-medium (basic-medium) ())
+(defmethod (setf medium-drawable) (new-drawable (medium basic-medium))
+  (setf (%medium-drawable medium) new-drawable))
 
 (defmethod initialize-instance :after ((medium basic-medium) &rest args)
   (declare (ignore args))
@@ -180,58 +186,54 @@
     (setf clipping-region (transform-region (medium-transformation medium)
                                             clipping-region))))
 
-(defmethod medium-clipping-region ((medium medium))
+(defmethod medium-clipping-region ((medium basic-medium))
   (untransform-region (medium-transformation medium)
                       (slot-value medium 'clipping-region)))
 
-(defmethod (setf medium-clipping-region) (region (medium medium))
+(defmethod (setf medium-clipping-region) (region (medium basic-medium))
   (setf (slot-value medium 'clipping-region)
         (transform-region (medium-transformation medium)
                           region)))
 
 (defmethod (setf medium-clipping-region) :after (region (medium medium))
   (declare (ignore region))
-  (let ((sheet (medium-sheet medium)))
-    (when sheet
-      (%invalidate-cached-device-regions sheet))))
+  (when-let ((sheet (medium-sheet medium)))
+    (%invalidate-cached-device-regions sheet)))
 
 (defmethod (setf medium-transformation) :after (transformation (medium medium))
   (declare (ignore transformation))
-  (let ((sheet (medium-sheet medium)))
-    (when sheet
-      (%invalidate-cached-device-transformations sheet))))
+  (when-let ((sheet (medium-sheet medium)))
+    (%invalidate-cached-device-transformations sheet)))
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
 
-;;; with-sheet-medium moved to output.lisp. --GB
-;;; with-sheet-medium-bound moved to output.lisp. --GB
-
-(defmacro with-pixmap-medium ((medium pixmap) &body body)
-  (let ((old-medium (gensym))
-        (old-pixmap (gensym)))
-    `(let* ((,old-medium (pixmap-medium ,pixmap))
-            (,medium (or ,old-medium (make-medium (port ,pixmap) ,pixmap)))
-            (,old-pixmap (medium-sheet ,medium)))
-       (setf (pixmap-medium ,pixmap) ,medium)
-       (setf (%medium-sheet ,medium) ,pixmap) ;is medium a basic medium? --GB
-       (unwind-protect
-            (progn
-              ,@body)
-         (setf (pixmap-medium ,pixmap) ,old-medium)
-         (setf (%medium-sheet ,medium) ,old-pixmap)))))
-
 ;;; Medium Device functions
 
-(defgeneric medium-device-transformation (medium))
+(defgeneric medium-device-transformation (medium)
+  (:method ((medium medium))
+    (if-let ((sheet (medium-sheet medium)))
+      (sheet-device-transformation sheet)
+      (medium-transformation medium))))
 
-(defmethod medium-device-transformation ((medium medium))
-  (sheet-device-transformation (medium-sheet medium)))
+(defgeneric medium-device-region (medium)
+  (:method ((medium medium))
+    (if-let ((sheet (medium-sheet medium)))
+      (sheet-device-region sheet)
+      (medium-clipping-region medium))))
 
-(defgeneric medium-device-region (medium))
+(defgeneric medium-native-transformation (medium)
+  (:method ((medium medium))
+    (if-let ((sheet (medium-sheet medium)))
+      (sheet-native-transformation sheet)
+      +identity-transformation+)))
 
-(defmethod medium-device-region ((medium medium))
-  (sheet-device-region (medium-sheet medium)))
+(defgeneric medium-native-region (medium)
+  (:method ((medium medium))
+    (if-let ((sheet (medium-sheet medium)))
+      (sheet-native-region sheet)
+      (transform-region (medium-transformation medium)
+                        (medium-clipping-region medium)))))
 
 
 ;;; Line-Style class
@@ -508,10 +510,6 @@
 (defmethod deallocate-medium ((port port) medium)
   (declare (ignorable port medium))
   nil)
-
-(defmethod port ((medium basic-medium))
-  (and (medium-sheet medium)
-       (port (medium-sheet medium))))
 
 (defmethod graft ((medium basic-medium))
   (and (medium-sheet medium)

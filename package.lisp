@@ -1897,6 +1897,7 @@
    #:sheet-name
    #:sheet-pretty-name
    #:sheet-icon
+   #:shrink-sheet
 
    #:always-repaint-background-mixin
    #:never-repaint-background-mixin
@@ -2011,11 +2012,9 @@
    #:find-port-type
    #:make-graft
    #:medium-draw-circle*
-   #:mirror-transformation
-   #:port-allocate-pixmap
-   #:port-deallocate-pixmap
    #:port-disable-sheet
    #:port-enable-sheet
+   #:port-shrink-sheet
    #:port-force-output
    #:port-grab-pointer
    #:port-ungrab-pointer
@@ -2028,9 +2027,12 @@
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:window-manager-focus-event
+   #:window-map-event
+   #:window-unmap-event
    #:with-port
    #:invoke-with-port
    #:find-concrete-pane-class
+   #:graft-pixel-aspect-ratio
    ;; Text-style
    #:text-style-character-width
    #:text-bounding-rectangle*
@@ -2104,6 +2106,11 @@
    #:text-style-height
    #:text-style-mapping
    #:text-style-width
+   ;; transformations
+   #:medium-device-transformation
+   #:medium-device-region
+   #:medium-native-transformation
+   #:medium-native-region
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
    #:medium-draw-circle*

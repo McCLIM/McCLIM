@@ -29,10 +29,6 @@
 	  :reader graft-units)
    (mirror :initarg :mirror)))
 
-(defmethod initialize-instance :after ((graft graft) &rest args)
-  (declare (ignore args))
-  (port-register-mirror (port graft) graft (slot-value graft 'mirror)))
-
 (defun graftp (x)
   (typep x 'graft))
 
@@ -60,13 +56,28 @@
   `(let ((graft ,graft))
      ,@body))
 
-(defun graft-pixels-per-millimeter (graft)
-  ;; We assume square pixels here --GB
-  (/ (graft-width graft :units :device)
-     (graft-width graft :units :millimeters)))
+(defmethod graft-pixel-aspect-ratio ((graft graft))
+  (let ((x/inch (graft-pixels-per-inch graft :orientation :horizontal))
+        (y/inch (graft-pixels-per-inch graft :orientation :vertical)))
+    (if (= x/inch y/inch)
+        (values 1 1)
+        (values x/inch y/inch))))
 
-(defun graft-pixels-per-inch (graft)
-  ;; We assume square pixels here --GB
-  (/ (graft-width graft :units :device)
-     (graft-width graft :units :inches)))
+(defun graft-pixels-per-millimeter (graft &key (orientation :horizontal))
+  (ecase orientation
+    (:horizontal
+     (/ (graft-width graft :units :device)
+        (graft-width graft :units :millimeters)))
+    (:vertical
+     (/ (graft-height graft :units :device)
+        (graft-height graft :units :millimeters)))))
+
+(defun graft-pixels-per-inch (graft &key (orientation :horizontal))
+  (ecase orientation
+    (:horizontal
+     (/ (graft-width graft :units :device)
+        (graft-width graft :units :inches)))
+    (:vertical
+     (/ (graft-height graft :units :device)
+        (graft-height graft :units :inches)))))
 

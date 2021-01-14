@@ -75,22 +75,22 @@
          (multiple-value-bind (family face size)
              (text-style-components text-style)
            (setf size (max 2 size))
-           (let ((display (clim-clx::clx-port-display port)))
+           (let ((display (clx-port-display port)))
              (find-and-make-xlib-face display family face size)))))
     (find-font)))
 
 
 
-(defmethod climb:font-ascent ((font xlib:font))
+(defmethod font-ascent ((font xlib:font))
   (xlib:font-ascent font))
 
-(defmethod climb:font-descent ((font xlib:font))
+(defmethod font-descent ((font xlib:font))
   (xlib:font-descent font))
 
-(defmethod climb:font-character-width ((font xlib:font) char)
+(defmethod font-character-width ((font xlib:font) char)
   (xlib:char-width font (char-code char)))
 
-(defmethod climb:font-text-extents ((font xlib:font) string &key start end align-x align-y direction)
+(defmethod font-text-extents ((font xlib:font) string &key start end align-x align-y direction)
   (declare (ignore align-x align-y direction))
   (multiple-value-bind (width ascent descent
                         left-bearing right-bearing overall-ascent overall-descent
@@ -105,22 +105,22 @@
 
 ;;; Font listing implementation
 
-(defclass clx-font-family (clim-extensions:font-family)
+(defclass clx-font-family (clime:font-family)
   ((all-faces :initform nil
               :accessor all-faces
-              :reader clim-extensions:font-family-all-faces)
+              :reader clime:font-family-all-faces)
    (raw-name :initarg :raw-name
              :reader clx-font-family-raw-name)))
 
-(defclass clx-font-face (clim-extensions:font-face)
+(defclass clx-font-face (clime:font-face)
   ((all-sizes :initform nil
               :accessor all-sizes
-              :reader clim-extensions:font-face-all-sizes)
+              :reader clime:font-face-all-sizes)
    (raw-name :initarg :raw-name
              :reader clx-font-face-raw-name)))
 
-(defmethod clim-extensions:port-all-font-families ((port clx-basic-port) &key invalidate-cache)
-  (when (or (null (clim-clx::font-families port)) invalidate-cache)
+(defmethod clime:port-all-font-families ((port clx-basic-port) &key invalidate-cache)
+  (when (or (null (font-families port)) invalidate-cache)
     (setf (font-families port) (reload-font-table port)))
   (font-families port))
 
@@ -167,7 +167,7 @@
                  (face-name* (format nil "~A-~A" weight slant))
                  (face-instance
                   (find face-name (all-faces family-instance)
-                        :key #'clim-extensions:font-face-name
+                        :key #'clime:font-face-name
                         :test #'equal)))
             (unless face-instance
               (setf face-instance
@@ -183,18 +183,15 @@
                (setf (all-faces family)
                      (sort (all-faces family)
                            #'string<
-                           :key #'clim-extensions:font-face-name))
+                           :key #'clime:font-face-name))
                (dolist (face (all-faces family))
                  (setf (all-sizes face)
                        #- (or) (sort (all-sizes face) #'<)))
              collect family)
           #'string<
-          :key #'clim-extensions:font-family-name)))
+          :key #'clime:font-family-name)))
 
-(defmethod clim-extensions:font-face-text-style
-    ((face clx-font-face) &optional size)
-  (make-text-style
-   (clx-font-family-raw-name
-    (clim-extensions:font-face-family face))
-   (clx-font-face-raw-name face)
-   size))
+(defmethod clime:font-face-text-style ((face clx-font-face) &optional size)
+  (make-text-style (clx-font-family-raw-name (clime:font-face-family face))
+                   (clx-font-face-raw-name face)
+                   size))

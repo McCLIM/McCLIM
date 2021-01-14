@@ -27,7 +27,7 @@
      concrete-pane-class (mirroring fm)
      (symbol-name (class-gensym fm)) (find-package '#:clim-clx-fb)
      (lambda (concrete-pane-class)
-       `(,(find-class 'clx-fb-mirrored-sheet-mixin)
+       `(,(find-class 'mirrored-sheet-mixin)
          ,(find-class 'climi::always-repaint-background-mixin)
          ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
              `(;; temporary-medium-sheet-output-mixin

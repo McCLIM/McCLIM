@@ -1,0 +1,429 @@
+#+title: Extended Stream Input Facilities in McCLIM
+#+author: Daniel 'jackdaniel' Kochmański
+#+date: [2020-07-25 sob]
+
+* Introduction
+
+This writeup purpose is to summarize the specification of input streams.  CLIM
+provides a stream-oriented input layer that is implemented *on top* of the
+sheet input architecture.
+
+* Glossary
+
+- EIS :: Extended Input Stream
+- BIS :: Basic Input Stream
+
+* [[http://bauhh.dyndns.org:8000/clim-spec/22.html][Extended Stream Input]]
+
+The specification defines [[http://bauhh.dyndns.org:8000/clim-spec/22-1.html][Basic Input Streams]] and [[http://bauhh.dyndns.org:8000/clim-spec/22-2.html][Extended Input Streams]].
+Basic input streams define a ~handle-event~ method for keystroke events and
+extended input streams define ~handle-event~ methods for keystroke and pointer
+events. ~handle-event~ methods are specified to queue resulting gestures in a
+per-stream input buffer.
+
+- basic input stream is a character input stream
+- extended input stream is an input stream (characters and pointer gestures)
+
+Basic input stream protocol implements the Gray's character stream protocol
+and we can assume, that only characters are available in it.
+
+Extended input stream has its own protocol which allows specifying wait
+timeouts and auxiliary input test functions (see a function ~read-gesture~).
+That means in particular EIS is not a subclass of BIS.
+
+Classes ~standard-input-stream~ and ~standard-extended-input-stream~ are
+specified to be based on "CLIM's input kernel", a term which is not explicitly
+defined in the spec. Extended input stream is specified to be a subclass of a
+class ~input-stream~ (which is also not specified).
+
+** Input buffer
+
+The input buffer is not specified for basic input streams (there is a concept
+of the same name specified for input editing streams). The specification of
+EIS talks about the accessor ~stream-input-buffer~ where the input buffer is
+defined as a "vector with a fill pointer capable of holding general input
+gesture objects". In the same section it is said that the input buffer may be
+shared by multiple streams.
+
+* Problems with the specification
+
+** EIS initargs
+
+Extended input streams are specified to accept initargs ~:input-buffer~,
+~:pointer~ and ~:text-cursor~:
+
+- Specifying ~:input-buffer~ make sense because we want to allow sharing the
+  same buffer by multiple streams (as defined in ~stream-input-buffer~)
+
+- The ~pointer~ purpose is not clear – functions of the protocol which operate
+  on the pointer are specified to default to the ~port-pointer~ (undefined),
+  also it is not up to the stream to say, which events are queued for it -- it
+  might be also that the stream is expected to "update" its private pointer
+  state based on pointer events, but that is not specified
+
+- Including ~:text-cursor~ seems to be out of place, because the text cursor
+  protocol is described in [[http://bauhh.dyndns.org:8000/clim-spec/15-3.html][15.3 The Text Cursor]], which is part of the chapter
+  [[http://bauhh.dyndns.org:8000/clim-spec/15.html][15 Extended Stream Output]] (so it makes sense to interactive streams), also
+  there is no mention of functions which operate (or even return) the cursor
+
+** CLIM input kernel
+
+This term is not specified. It could be interpreted as either:
+
+- the input abstraction defined for sheets (event-queue etc)
+- the implementation-specific input-stream class interacting with event-queue
+
+Saying, that they are "based on" seems to imply, that it is a stream class
+(that is the latter option), as opposed to being "implemented on top of the
+sheet input architecture", as it is stated in the chapter 22 introduction.
+
+** Input buffer
+
+As mentioned before, the term is mentioned for BIS, but it is defined only
+later for EIS with the accessor ~stream-input-buffer~. This specification has
+a few problems:
+
+What happens when we "read" from the input buffer? Since it is a vector,
+"popping" the element from it does not make sense. We could copy the vector
+except for the first element and decrement the fill pointer, but it sounds
+terribly inefficient compared to ordinary queue. Another idea is to have a
+separate scan pointer (inspired by input editing streams), but this idea
+breaks when we account for shared input buffers, because the scan pointer must
+be shared too.
+
+The idea of copying the vector to shift it by one is not sound. Let's assume
+that streams in fact share a structure ~(cons scan-pointer input-buffer)~. In
+this scenario events accumulate very fast (pointer motion events are also
+appended to the buffer), so the buffer should be cleared at some point;
+however it is not clear when the function ~stream-clear-input~ (n.b specified
+only for BIS) should be called.
+
+** Unspecified functionality
+
+- there is no ~gesture-available-p~ function defined for EIS, which would
+  check whether there is available input in the input buffer (equivalent of
+  ~peek-char-no-hang~) -- it is different from "peeking" for a gesture with a
+  timeout 0, because ~stream-input-wait~ may advance the event queue what may
+  not be desired
+
+- the function ~stream-process-gesture~ is defined for input editing streams,
+  but it would be also useful for EIS to allow gesture translations like
+  changing a keyboard gesture to a character (if applicable)
+
+- the function ~stream-append-gesture~ to allow pushing the event to the input
+  buffer (expected to be called from ~handle-event~)
+
+- all of EIS protocol make perfect sense for BIS too, for instance
+  ~stream-read-gesture~; ~stream-pointer-position~ also makes sense if we
+  assume, that the pointer defaults to the ~port-pointer~ of the stream's port
+  (and that's how it is specified), the only difference between them is that
+  BIS is a character stream while EIS contains also pointer events
+
+- ~stream-input-wait~ is specified to "wait for input to become available on
+  the stream", but it is not said how it does that nor what it returns, it is
+  also not clear when the ~input-wait-test~ is called (more on that later)
+
+- ~stream-read-gesture~ accepts both ~timeout~ and ~input-wait-test~ as well
+  as a ~pointer-button-press-handler~ and ~input-wait-handler~, but the
+  specification of how they are treated is sloppy at best. For example:
+
+  - Should the event be removed from the queue before
+    ~pointer-button-press-handler~ is invoked? This handler may perform a
+    non-local exit i.e by throwing the presentation.
+
+  - Should ~stream-read-gesture~ loop over to read the next gesture or return
+    after invoking one a button press handler or input wait handler?
+
+  - Should handlers be invoked when peek-p is true?
+
+* Current practice
+
+Both McCLIM and CLIM-TOS assume, that the input-buffer is the sheet's event
+queue (which is by default "inherited" from the frame). In the source code of
+CLIM-TOS someone raises in comment a concern whether it is correct. In both
+cases EIS protocol implementation is just a trampoline to event functions.
+
+What's more, SEIS in McCLIM is implemented as a subclass of BIS (a character
+stream), so when the ~read-char~ is invoked all pointer events are discared.
+
+Drawbacks:
+
+- the abstraction is violated and the method because the function
+  ~handle-event~ may not be called for all sheet events. That makes
+  stream-sheets not obey the sheet input protocol
+
+- it is not possible to have streams having different event queues to interact
+  with each other (i.e select the presentation from a different application
+  frame for the active input context)
+
+McCLIM introduces a concept of the ~port-frame-keyboard-input-focus~ which is
+harmful for two reasons: it assumes that all sheets are panes and duplicates
+what can be done directly with ~port-keyboard-input-focus~, so there doesn't
+seem to be a good reason for adding this abstraction.
+
+Handlers and testers bound by the macro ~with-input-context~ also operate on
+the event queue and sometimes "steal" events when they see fit. Most notably
+no pointer events remain 
+
+* Proposed solution
+
+1. Implement ~input-stream-kernel~ class without ~handle-event~ methods
+   specialized on it. It defines basic versions of the EIS protocol which
+   interact with the sheet's event queue.
+
+2. Make the input-buffer a queue (not a vector), but the sheet event queue
+   can't be the same object as the stream's input buffer.
+
+3. Make the ~standard-input-stream~ inherit from the ~input-stream-kernel~,
+   define the ~handle-event~ method on keystroke gestures to append only
+   characters and implement the character stream protocol on it. Thanks to
+   that ~standard-input-stream~ can be used as a drop-in replacement for the
+   ~standard-extended-input-stream~ but it doesn't enqueue pointer events.
+
+4. Carefully specify how ~stream-read-gesture~ and ~stream-input-wait~ work
+
+5. [This still requires some thought] Make a default input-buffer for all
+   stream a global queue which is shared across whole image, so it is possible
+   to exchange presentations between different application frames (with
+   different queues and ports).
+
+** STREAM-READ-GESTURE
+
+ Interactions between the event queue and functions arguments.
+
+*** Reading a gesture from EIS (specified algorithm)
+
+    1. bind *input-wait-test*, *input-wait-handler* and
+       *pointer-button-press-handler* to the function arguments
+
+       /these arguments default to these variables/
+
+    2. Wait for input by invoking:
+       #+BEGIN_SRC lisp
+         (stream-input-wait stream
+                           :timeout timeout
+                           :input-wait-test input-wait-test)
+       #+END_SRC
+
+    3. Process the result
+
+       1. timeout reached: return (values nil :timeout)
+
+       2. input-wait reached: call input-wait-handler
+
+          /and what then? return (values nil :input-wait-test)? loop over to
+          the point "1." and try again? The latter is more feasible, because
+          input-wait-* are specified as means for interactive feedback./
+
+       3. pointer button pressed: call pointer-button-press-handler
+
+          /should we remove the event from the input buffer first? a default
+          handler estabilished by with-input-context performs a non-local exit
+          and throws the presentation, so we may end up in the infinite loop./
+
+       4. otherwise process the gesture
+          - abort gesture       :: signal abort-gesture condition
+          - accelerator-gesture :: signal accelerator-gesture
+          - some other processing? :: return the gesture
+
+    3. When the boolean peek-p is true, then leave in the input buffer
+
+       /does not apply to "normal" frame loop, but if peek-p is true, should
+       handlers be respected for? Or do we only return the event and ignore
+       handler parameters (i.e binding to NIL)?/
+
+*** How the function is used (in McCLIM)
+
+    1. ~accept-1~ encapsulates the stream in ~with-input-editing~
+
+    2. Function is called inside ~with-input-context~ which binds the input
+       wait test, the input wait handler and the pointer button press handler:
+
+       - input-context-wait-test            :: (and event-p pointer/keyboard-p)
+       - input-context-event-handler        :: highlight-applicable-presentation
+       - input-context-button-press-handler :: throw-highlighted-presentation
+
+       /it is not clear whether the event is consumed or not, neither whether
+       the event is taken from the input buffer or the event queue./
+
+    3. ~read-token~ or similar is called from the presentation method ~accept~
+
+    4. ~read-gesture~ is called with ~input-wait-handler~ and
+       ~pointer-button-press-handler~ (the stream is an input-editing stream),
+       without ~timeout~ nor ~peek-p~ specified)
+
+    5. ~read-gesture~ trampolines to the encapsulating stream method
+       ~stream-read-gesture~ and passes all arguments to it
+
+
+    6. When the enacpsulating stream method needs a new gesture it passes all
+       arguments except ~peek-p~ to the underlying stream (EIS)
+
+       /peek-p is always nil anyways on the analyzed code path/
+
+*** Proposed solution
+
+**** stream-read-gesture specialized on input-stream-kernel:
+
+     1. When peek-p is true, just check the input buffer and return
+
+        /don't call stream-input-wait, call stream-gesture-available-p/
+
+     2. bind *input-wait-test*, *input-wait-handler* and
+        *pointer-button-press-handler* to the function arguments
+
+     3. Decay the timeout (if applicable)
+
+     4. Wait for input by invoking:
+        #+BEGIN_SRC lisp
+          (stream-input-wait stream
+                             :timeout timeout
+                             :input-wait-test input-wait-test)
+        #+END_SRC
+
+     5. timeout reached: return (values nil :timeout)
+
+     6. input-wait reached: call input-wait-handler and goto point 4.
+
+     7. process the gesture
+
+        - remove a gesture from the input buffer
+        - (setf gesture (stream-process-gesture gesture))
+        - when the gesture is NIL, goto point 4.
+        - when the gesture is pointer-button-press-event call the handler
+
+     8. return the gesture
+
+**** stream-process-gesture specialized on input-stream-kernel
+      
+     1. When the gesture is abort, signal abort-gesture
+     2. When the gesture is accelerator, signal accelerator-gesture
+     3. If gesture can be coerced, return (values char 'standard-character)
+     4. Otherwise,                 return (values gesture (type-of gesture))
+
+     This makes also BIS conform to abort and accelerator gestures. Note, that
+     this method never returns NIL, looping over on NIL in stream-read-gesture
+     is specified for sake of extensions (i.e gesture causes some side effect).
+     For instance input-editing-stream implements with that editor commands
+     (however it has different stream-process-gesture method).
+
+     Signalling abort and accelerator gesture conditions does not necessarily
+     transfer the program control - both are non-serious conditions and are
+     ignored if not explicitly handled.
+
+
+** STREAM-WAIT-INPUT
+
+*** (Un)specified algorithm
+
+    #+BEGIN_QUOTE
+    Waits for input to become available on the extended input stream
+    stream. timeout and input-wait-test are as for stream-read-gesture.
+    #+END_QUOTE
+
+    So basically not specified. While not specifying /how/ it interacts with
+    the event queue is easy to understand, this entry should specify the
+    function return values and the order of probing things:
+
+    - first check input-wait-test then for the event
+    - first check for the event then input-wait-test
+
+    The difference seemingly small is actually quite meaningful: imagine that
+    input-wait-test returns, when motion event is available in the queue - if
+    we return nothing, then stream-read-gesture executes the handler and calls
+    again the input-wait-test, which again returns to call input-wait-handler.
+    That leads to infinite loop and is clearly not desired. On the other hand,
+    if we first check for the event, then input-wait-test (assuming it waits
+    for motion events) will be never called and handler will never highlight
+    the presentation. Also not desired.
+
+*** How the function is used (in McCLIM)
+
+    The function is only called from the primary method ~stream-read-gesture~
+    specified for the ~standard-extended-input-stream~. Function may be
+    considered as a more elaborate version of the function ~stream-listen~.
+
+*** [rejected] Proposed solution
+
+    This solution is rejected, because if we want to share the input buffer
+    between different streams (not having the same event queue), then
+    input-wait-test should operate on the input buffer, not the event queue,
+    and this solution operates under assumption that it operates on the latter.
+
+    1. Check if a gesture is already available in the input-buffer (fast path)
+
+    2. Call input-wait-test, when returns T, then handle-event if avaiable and
+       return (values nil :input-wait-test)
+
+       /calling handle-event on event which was possibly read assures the event
+       queue progress by putting the gesture in the input-buffer (compare 1.)/
+
+    3. Decay the timeout if applicable
+
+    4. Call event-listen-or-wait and process the result
+
+       - if returns t, call handle-event and goto 1.
+       - if it is timeout, return (nil :timeout)
+       - if it is wait-function, then handle event if available and return
+         (values nil :input-wait-test)
+
+*** Proposed solution
+
+    1. If the gesture is already available in the input-buffer return true
+    2. Decay the timeout if applicable
+    3. Call event-listen-or-wait and process results
+       - true :: do nothing
+       - (values nil :timeout) :: return (nil :timeout)
+       - (values nil :wait-function) :: do nothing
+    4. When read-event-no-hang returns an event, call handle-event
+    5. Call input-wait-test and process the result
+       - true  :: return (values :input-wait-test)
+       - false :: go to 1.
+
+    This algorithm ensures, that:
+    - stream input-buffer progresses even when input-wait-test returns always T
+    - input-wait-handler is called at most once for each event
+
+
+** Input buffer and event sheet interaction
+
+   With this change EIS and BIS both implement the protocol which is useful
+   from the higher abstraction perspective. Additionally they respect the
+   abstraction separation what makes them better composable with systems built
+   on top of the lower CLIM abstractions which were known on Genera as
+   ~Silica~.
+
+   At the bottom there is the backend which is advanced with calls to
+   ~process-next~event~. Events are either queued in the queue specific to the
+   sheet or handled immedietely (depends on the sheet mixin).
+
+   - when they are handled immedietely, the input buffer is filled from the
+     ~handle-event~ method called directly from ~dispatch-event~
+
+   - when they are enqueued, ~stream-input-wait~ advances the queue processing
+     with ~event-listen-or-wait~ and handles them when available
+
+   In this sense ~stream-input-wait~ never advances the input buffer, but
+   advances the sheet event queue. After the event is put in the input buffer
+   it may be read in the ~stream-read-buffer~. That "drains" the input buffer
+   and after processing may lead to a non-local transfer control (the abort
+   gesture, pointer button press on a sensitive presentation etc).
+
+** Input buffer and input context handlers interaction
+
+* Future work
+
+  ~stream-input-wait~ should be able to be build on top of the
+  ~immediate-sheet-input-mixin~ which doesn't have any queue. In this scenario
+  it should either call ~process-next-event~ directly, or the immediate mixin
+  should have a specialization on the function ~event-listen-or-wait~ which is
+  a simple trampoline to the ~process-next-event~ (other functions which
+  trampoline to queue should have somewhat similar implementations which
+  directly interact with the port). This is a subject of possible improvements
+  after input buffers are separated from event queues (indeed, without such
+  separation it would be impossible to have EIS working on top of the
+  ~immediate-sheet-input-mixin~).
+
+  Share by default the input buffer between all EIS, so it is possible to
+  handle contextual input across different frames. Before doing that a proper
+  input focus should be implemented (there is a pull request doing that).

@@ -2176,7 +2176,7 @@ according to the flags RECORD and DRAW."
     (multiple-value-bind (dx dy)
         (transform-position (medium-transformation medium) 0 0)
       (letf (((medium-transformation medium)
-              (compose-transformation-translation-with
+              (compose-transformation-with-translation
                (if first-quadrant
                    (make-scaling-transformation 1 -1)
                    +identity-transformation+)

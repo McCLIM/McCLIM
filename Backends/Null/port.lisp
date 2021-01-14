@@ -45,25 +45,25 @@
     (format stream "~S ~S" :id (slot-value object 'id))))
 
 (defmethod port-set-mirror-region ((port null-port) sheet region)
-  ())
+  nil)
                                    
 (defmethod port-set-mirror-transformation
     ((port null-port) sheet transformation)
-  ())
+  nil)
 
 (defmethod realize-mirror ((port null-port) (sheet mirrored-sheet-mixin))
   nil)
 
 (defmethod destroy-mirror ((port null-port) (sheet mirrored-sheet-mixin))
-  ())
-
-(defmethod mirror-transformation ((port null-port) mirror)
-  ())
-
-(defmethod port-enable-sheet ((port null-port) (mirror mirrored-sheet-mixin))
   nil)
 
-(defmethod port-disable-sheet ((port null-port) (mirror mirrored-sheet-mixin))
+(defmethod port-enable-sheet ((port null-port) (sheet mirrored-sheet-mixin))
+  nil)
+
+(defmethod port-disable-sheet ((port null-port) (sheet mirrored-sheet-mixin))
+  nil)
+
+(defmethod port-shrink-sheet ((port null-port) (mirror mirrored-sheet-mixin))
   nil)
 
 (defmethod destroy-port :before ((port null-port))
@@ -91,7 +91,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port null-port) sheet)
-  (make-instance 'null-medium :sheet sheet))
+  (make-instance 'null-medium :port port :sheet sheet))
 
 (defmethod text-style-mapping
     ((port null-port) (text-style text-style) &optional character-set)
@@ -107,17 +107,6 @@
 
 (defmethod graft ((port null-port))
   (first (climi::port-grafts port)))
-
-(defmethod port-allocate-pixmap ((port null-port) sheet width height)
-  (declare (ignore sheet width height))
-  ;; FIXME: this isn't actually good enough; it leads to errors in
-  ;; WITH-OUTPUT-TO-PIXMAP
-  nil)
-
-(defmethod port-deallocate-pixmap ((port null-port) pixmap)
-  #+nil
-  (when (pixmap-mirror port pixmap)
-    (destroy-mirror port pixmap)))
 
 (defmethod pointer-position ((pointer null-pointer))
   (values (slot-value pointer 'x) (slot-value pointer 'y)))
