@@ -177,7 +177,7 @@
                  :orientation orientation :units units))
 
 (defmethod make-medium ((port gtk-port) sheet)
-  (make-instance 'gtk-medium :sheet sheet))
+  (make-instance 'gtk-medium :port port :sheet sheet))
 
 (defmethod graft ((port gtk-port))
   (first (climi::port-grafts port)))
