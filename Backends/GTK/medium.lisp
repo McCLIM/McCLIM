@@ -4,7 +4,7 @@
   (check-type mirror-sym symbol)
   (alexandria:once-only (medium)
     (alexandria:with-gensyms (mirror-copy-sym)
-      `(let ((,mirror-copy-sym (climi::port-lookup-mirror (port ,medium) (medium-sheet ,medium))))
+      `(let ((,mirror-copy-sym (sheet-direct-mirror (sheet-mirrored-ancestor (medium-sheet ,medium)))))
          (unless ,mirror-copy-sym
            (log:warn "Trying to use null mirror"))
          (when ,mirror-copy-sym
@@ -33,7 +33,7 @@
            (unwind-protect
                 (let ((,image-sym ,image))
                   ,@body)
-             (cairo:cairo-surface-destroy (gtk-mirror/image ,mirror-sym))))))))
+             (cairo:cairo-surface-destroy ,image)))))))
 
 (defun region->clipping-values (region)
   (with-bounding-rectangle* (min-x min-y max-x max-y) region
@@ -207,7 +207,7 @@
     `(call-with-fallback-cairo-context ,port (lambda (,context-sym) ,@body))))
 
 (defun call-with-cairo-context-measure (medium fn)
-  (let ((image (alexandria:if-let ((mirror (climi::port-lookup-mirror (port medium) (medium-sheet medium))))
+  (let ((image (alexandria:if-let ((mirror (sheet-direct-mirror (sheet-mirrored-ancestor (medium-sheet medium)))))
                  (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
                    (let ((image (gtk-mirror/image mirror)))
                      (cairo:cairo-surface-reference image)
@@ -443,11 +443,28 @@
   (declare (ignore from-x from-y width height to-x to-y))
   nil)
 
+(defvar *repainting-medium* nil)
+
+(defmethod repaint-sheet :around ((sheet sheet) region)
+  (labels ((fn ()
+             (call-next-method)))
+    (let ((medium (let ((root (sheet-mirrored-ancestor sheet)))
+                    (and root (sheet-medium root)))))
+      (if medium
+          (progn
+            (let ((*repainting-medium* medium))
+              (fn))
+            (medium-finish-output medium))
+          (fn)))))
+
 (defmethod medium-finish-output ((medium gtk-medium))
-  (with-medium-mirror (mirror medium)
-    (let ((widget (gtk-mirror/drawing-area mirror)))
-      (in-gtk-thread ()
-        (gtk:gtk-widget-queue-draw widget)))))
+  (unless (eq medium *repainting-medium*)
+    (with-medium-mirror (mirror medium)
+      (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
+        (setf (gtk-mirror/need-redraw mirror) t))
+      (let ((widget (gtk-mirror/drawing-area mirror)))
+        (in-gtk-thread (:no-wait t)
+          (gtk:gtk-widget-queue-draw widget))))))
 
 (defmethod medium-force-output ((medium gtk-medium))
   nil)
@@ -485,6 +502,8 @@
           (cairo:cairo-line-to cr x y)))
       (cairo:cairo-stroke cr))))
 
+(defparameter *draw-count* 0)
+
 (defmethod medium-draw-rectangle* ((medium gtk-medium) left top right bottom filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))
     (climi::with-transformed-position (tr left top)
@@ -508,14 +527,14 @@
   nil)
 
 (defmethod medium-draw-point* ((medium gtk-medium) x y)
-  (declare (ignore x y))
-  (break)
-  nil)
+  (with-cairo-context (cr medium :transform t)
+    (cairo:cairo-rectangle cr (- x 0.5) (- y 0.5) (+ x 0.5) (+ y 0.5))))
 
 (defmethod medium-draw-points* ((medium gtk-medium) coord-seq)
-  (declare (ignore coord-seq))
-  (break)
-  nil)
+  (with-cairo-context (cr medium :transform t)
+    (loop
+      for (x y) on (coerce coord-seq 'list) by #'cddr
+      do (cairo:cairo-rectangle cr (- x 0.5) (- y 0.5) (+ x 0.5) (+ y 0.5)))))
 
 (defmethod medium-draw-polygon* ((medium gtk-medium) coord-seq closed filled)
   (let ((tr (sheet-native-transformation (medium-sheet medium))))

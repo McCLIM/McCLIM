@@ -40,7 +40,9 @@
                            :reader gtk-mirror/lock
                            :documentation "This lock must be held while accessing the requested dimension")
    (input-context          :initarg :input-context
-                           :accessor gtk-mirror/input-context)))
+                           :accessor gtk-mirror/input-context)
+   (need-redraw            :initform nil
+                           :accessor gtk-mirror/need-redraw)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'gtk-port 'identity))
@@ -143,10 +145,10 @@
       (setf (gtk-mirror/input-context mirror) input-context)
       (setf (gtk-mirror/drawing-area mirror) drawing-area)
       (setf (gtk-mirror/pango-context mirror) pango-context)
-      (climi::port-register-mirror port sheet mirror))))
+      (setf (climi::%sheet-direct-mirror sheet) mirror))))
 
 (defmethod destroy-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))
-  (let ((mirror (climi::port-lookup-mirror port sheet)))
+  (let ((mirror (sheet-direct-mirror sheet)))
     (in-gtk-thread ()
       (gtk:gtk-widget-destroy (gtk-mirror/window mirror)))
     (cairo:cairo-surface-destroy (gtk-mirror/image mirror))))

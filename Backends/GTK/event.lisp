@@ -92,7 +92,7 @@
   (gobject:g-signal-connect window "button-press-event"
                             (lambda (widget event)
                               (declare (ignore widget))
-                              (process-button-press-event port event sheet)
+                              (process-button-press-event port event sheet window)
                               gdk:+gdk-event-propagate+))
   (gobject:g-signal-connect window "button-release-event"
                             (lambda (widget event)
@@ -237,8 +237,10 @@
                                         :modifier-state 0
                                         :timestamp (incf *event-ts*)))))
 
-(defun process-button-press-event (port event sheet)
-  (process-button-event 'pointer-button-press-event port event sheet))
+(defun process-button-press-event (port event sheet window)
+  (if (= (gdk:gdk-event-button-button event) 3)
+      (gtk:gtk-widget-queue-draw window)
+      (process-button-event 'pointer-button-press-event port event sheet)))
 
 (defun process-button-release-event (port event sheet)
     (process-button-event 'pointer-button-release-event port event sheet))

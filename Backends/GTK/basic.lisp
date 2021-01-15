@@ -34,35 +34,44 @@
 
 (defvar *gtk-thread-p* nil)
 
-(defun call-with-gtk-thread (fn)
+(defun call-with-gtk-thread (no-block fn)
   (if *gtk-thread-p*
       (funcall fn)
       ;; ELSE: Need to call the function in the GTK thread
-      (let ((lock (bordeaux-threads:make-lock))
-            (condvar (bordeaux-threads:make-condition-variable))
-            (result nil))
-        (gtk:within-gtk-thread
-          (let ((new-result (block gtk-update
-                              (handler-bind ((error (lambda (condition)
-                                                      (log:error "Error in GTK thread: ~a" condition)
-                                                      (break)
-                                                      (return-from gtk-update (list :error condition)))))
-                                (let ((*gtk-thread-p* t))
-                                  (let ((inner-result (multiple-value-list (funcall fn))))
-                                    (cons :result inner-result)))))))
-            (bordeaux-threads:with-lock-held (lock)
-              (setq result new-result)
-              (bordeaux-threads:condition-notify condvar))))
-        (bordeaux-threads:with-lock-held (lock)
-          (loop
-            until result
-            do (bordeaux-threads:condition-wait condvar lock)))
-        (ecase (car result)
-          (:result (apply #'values (cdr result)))
-          (:error (error "Error in GTK thread: ~a" (cadr result)))))))
+      (labels ((call ()
+                 (block gtk-update
+                   (handler-bind ((error (lambda (condition)
+                                           (log:error "Error in GTK thread: ~a" condition)
+                                           (break)
+                                           (return-from gtk-update (list :error condition)))))
+                     (let ((*gtk-thread-p* t))
+                       (let ((inner-result (multiple-value-list (funcall fn))))
+                         (cons :result inner-result)))))))
+        (let ((lock (bordeaux-threads:make-lock))
+              (condvar (bordeaux-threads:make-condition-variable))
+              (result nil))
+          (cond (no-block
+                 (gtk:within-gtk-thread
+                   (call))
+                 nil)
+                ;; ELSE: Call the function and wait for result
+                (t
+                 (gtk:within-gtk-thread
+                   (let ((new-result (call)))
+                     (bordeaux-threads:with-lock-held (lock)
+                       (setq result new-result)
+                       (bordeaux-threads:condition-notify condvar))))
+                 (bordeaux-threads:with-lock-held (lock)
+                   (loop
+                     until result
+                     do (bordeaux-threads:condition-wait condvar lock)))
+                 (ecase (car result)
+                   (:result (apply #'values (cdr result)))
+                   (:error (error "Error in GTK thread: ~a" (cadr result))))))))))
 
-(defmacro in-gtk-thread (() &body body)
-  `(call-with-gtk-thread (lambda () ,@body)))
+(defmacro in-gtk-thread ((&key no-wait) &body body)
+  (alexandria:once-only (no-wait)
+    `(call-with-gtk-thread ,no-wait (lambda () ,@body))))
 
 (defmacro iterate-over-seq-pairs ((a-sym b-sym seq) first-pair &body body)
   (check-type a-sym symbol)
