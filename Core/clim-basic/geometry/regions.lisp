@@ -65,8 +65,8 @@
 (defclass everywhere-mixin () ())
 (defclass nowhere-mixin    () ())
 
-(defclass nowhere-region    (region nowhere-mixin)    ())
-(defclass everywhere-region (region everywhere-mixin) ())
+(defclass nowhere-region    (nowhere-mixin region)    ())
+(defclass everywhere-region (everywhere-mixin region) ())
 
 (defconstant +everywhere+ (make-instance 'everywhere-region))
 (defconstant +nowhere+    (make-instance 'nowhere-region))
