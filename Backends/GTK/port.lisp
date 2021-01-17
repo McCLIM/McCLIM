@@ -113,6 +113,7 @@
          (cr (cairo:cairo-create image)))
     (apply-colour-from-ink cr ink)
     (cairo:cairo-paint cr)
+    (cairo:cairo-destroy cr)
     image))
 
 (defmethod realize-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))

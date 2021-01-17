@@ -157,7 +157,8 @@
           (call-with-computed-transformation transform
                                              (lambda (matrix)
                                                (cairo:cairo-pattern-set-matrix cairo-pattern matrix))))
-        (cairo:cairo-set-source cr cairo-pattern)))))
+        (cairo:cairo-set-source cr cairo-pattern))
+      (cairo:cairo-surface-destroy image))))
 
 (defun update-attrs (cr medium)
   (set-clipping-region cr medium)
@@ -331,6 +332,7 @@
 
 (defun measure-text-bounds-from-font (cr string font)
   (let ((layout (pango:pango-cairo-create-layout cr)))
+    ;; LAYOUT has no g-object-unref...
     (set-current-font layout font)
     (pango:pango-layout-set-text layout string)
     (multiple-value-bind (ink-rect logical-rect)
