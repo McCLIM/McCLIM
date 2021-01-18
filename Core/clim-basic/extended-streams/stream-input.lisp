@@ -589,6 +589,8 @@ known gestures."
 ;;; *standard-activation-gestures*
 
 (define-gesture-name :newline :keyboard (#\newline))
+(define-gesture-name :newline :keyboard (#\return) :unique nil)
+
 (define-gesture-name :return :keyboard (#\return))
 
 ;;; The standard delimiter
