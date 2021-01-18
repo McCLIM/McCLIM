@@ -244,9 +244,9 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
   (insert-object (point) #\Newline)
   (indent-current-line (current-view) (point)))
 
-(set-key 'com-newline-and-indent
-	 'indent-table
-	 '((#\j :control)))
+(set-key 'com-newline-and-indent 'indent-table '((#\j :control)))
+(set-key 'com-newline-and-indent 'indent-table '((#\return)))
+(set-key 'com-newline-and-indent 'indent-table '((#\newline)))
 
 (define-command (com-indent-region :name t :command-table indent-table) ()
   "Indent every line of the current region as specified by the
