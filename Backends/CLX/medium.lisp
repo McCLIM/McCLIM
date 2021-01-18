@@ -407,9 +407,7 @@ translated, so they begin at different position than [0,0])."))
                 (put-partial-image width (floor height 2) x0 (+ y0 (ceiling height 2)))))))
     (put-partial-image width height x0 y0)))
 
-;;; XXX: both PM and MM pixmaps should be freed with (xlib:free-pixmap pixmap)
-;;; when not used. We do not do that right now.
-(defun compute-rgb-mask (drawable image)
+(defun compute-rgb-mask (drawable image region)
   (let* ((width (pattern-width image))
          (height (pattern-height image))
          (idata (climi::pattern-array image))
@@ -425,11 +423,15 @@ translated, so they begin at different position than [0,0])."))
                                       :height height
                                       :depth  1
                                       :data   mdata)))
-    (declare (type (integer 0 #.(ash 1 30)) width height) ; this will be IMAGE-INDEX if we move that into the core
+    ;; this will be IMAGE-INDEX if we move that into the core
+    (declare (type (integer 0 #.(ash 1 30)) width height)
              (type (simple-array (unsigned-byte 32) 2) idata))
-    (loop for i of-type alexandria:array-index below (* width height)
-          do (setf (row-major-aref mdata i)
-                   (if (< (ldb (byte 8 24) (row-major-aref idata i)) #x80) 0 1)))
+    (loop for x of-type alexandria:array-index below width
+          do (loop for y of-type alexandria:array-index below height
+                   do (setf (aref mdata x y)
+                            (if (and (>= (ldb (byte 8 24) (aref idata x y)) #x80)
+                                     (region-contains-position-p region x y))
+                                1 0))))
     (put-image-recursively mm mm-gc mm-image width height 0 0)
     (xlib:free-gcontext mm-gc)
     (push (lambda () (xlib:free-pixmap mm)) ^cleanup)
@@ -469,10 +471,7 @@ translated, so they begin at different position than [0,0])."))
                                         (clime:effective-transformed-design ink))))
   (let* ((drawable (medium-drawable medium))
          (rgba-pattern (climi::%collapse-pattern ink))
-         (pm (compute-rgb-image drawable rgba-pattern))
-         (mask (if (typep ink* 'clime:rectangular-tile)
-                   nil
-                   (compute-rgb-mask drawable rgba-pattern))))
+         (pm (compute-rgb-image drawable rgba-pattern)))
     (let ((gc (xlib:create-gcontext :drawable drawable)))
       (setf (xlib:gcontext-fill-style gc) :tiled
             (xlib:gcontext-tile gc) pm
@@ -480,8 +479,12 @@ translated, so they begin at different position than [0,0])."))
             (xlib:gcontext-clip-y gc) 0
             (xlib:gcontext-ts-x gc) 0
             (xlib:gcontext-ts-y gc) 0)
-      (when mask
-        (setf (xlib:gcontext-clip-mask gc) mask))
+      (if-let ((mask (and (not (typep ink* 'clime:rectangular-tile))
+                          (compute-rgb-mask drawable
+                                            rgba-pattern
+                                            (medium-device-region medium)))))
+        (setf (xlib:gcontext-clip-mask gc) mask)
+        (%set-gc-clipping-region medium gc))
       (push #'(lambda () (xlib:free-gcontext gc)) ^cleanup)
       gc)))
 
