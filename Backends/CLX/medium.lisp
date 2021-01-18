@@ -394,7 +394,8 @@ translated, so they begin at different position than [0,0])."))
 (defun put-image-recursively (pixmap pixmap-context pixmap-image width height x0 y0)
   (labels ((put-partial-image (width height x0 y0)
              (cond
-               ((and (< width +x11-pixmap-dimension-limit+) (< height +x11-pixmap-dimension-limit+))
+               ((and (< width +x11-pixmap-dimension-limit+)
+                     (< height +x11-pixmap-dimension-limit+))
                 (xlib:put-image pixmap pixmap-context pixmap-image
                                 :src-x x0 :src-y y0 :x x0 :y y0
                                 :width width :height height))
@@ -447,22 +448,17 @@ translated, so they begin at different position than [0,0])."))
   (let* ((width (pattern-width image))
          (height (pattern-height image))
          (depth (cached-drawable-depth drawable))
-         (idata (climi::pattern-array image))
+         (idata (clime:pattern-array image))
          (pm (xlib:create-pixmap :drawable drawable
                                  :width width
                                  :height height
                                  :depth depth))
          (pm-gc (xlib:create-gcontext :drawable pm))
-         (pdata (make-array (list height width) :element-type '(unsigned-byte 32)))
          (pm-image (xlib:create-image :width  width
                                       :height height
                                       :depth  depth
                                       :bits-per-pixel 32
-                                      :data   pdata)))
-    (declare (type (integer 0 #.(ash 1 30)) width height) ; this will be IMAGE-INDEX if we move that into the core
-             (type (simple-array (unsigned-byte 32) 2) idata))
-    (loop for i of-type alexandria:array-index below (* width height)
-          do (setf (row-major-aref pdata i) (row-major-aref idata i)))
+                                      :data   idata)))
     (put-image-recursively pm pm-gc pm-image width height 0 0)
     (xlib:free-gcontext pm-gc)
     (push (lambda () (xlib:free-pixmap pm)) ^cleanup)
