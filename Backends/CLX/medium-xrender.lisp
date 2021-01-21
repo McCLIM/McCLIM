@@ -5,46 +5,181 @@
 
 (in-package #:clim-clx)
 
-(defun make-clx-render-color (r g b a)
+(deftype uniform-source ()
+  `(or color opacity climi::uniform-compositum))
+
+(defun make-clx-render-color (medium design)
   ;; Hmm, XRender uses pre-multiplied alpha, how useful!
-  (xlib:render-make-color :red (* r a) :green (* g a) :blue (* b a) :alpha a))
+  (multiple-value-bind (r g b a) (clime:color-rgba design)
+    (vector (round (* r a #xffff))
+            (round (* g a #xffff))
+            (round (* b a #xffff))
+            (round (*   a #xffff)))))
+
+(defun transform-picture (transformation picture)
+  ;; 1. XRender expects a transformation to the target's plane
+  ;;      (X SOURCE) -> TARGET
+  ;;
+  ;; 2. Ink transformation is specified for the source's plane
+  ;;      (Y DESIGN) -> SOURCE
+  ;;
+  ;; 3. Untransformed design has the same plane as the target
+  ;;      DESIGN = TARGET
+  ;;
+  ;; 4. Let's substitute the DESIGN with the TARGET in (2):
+  ;;      1: (X SOURCE) -> TARGET
+  ;;      2: (Y TARGET) -> SOURCE
+  ;;
+  ;; C: In other words Y is the inverse transformation of X -- jd 2021-01-22
+  (multiple-value-bind (rxx rxy ryx ryy dx dy)
+      (climi::get-transformation (invert-transformation transformation))
+    (flet ((clx-fixed (value)
+             ;; 32 bit value (top 16 integer, bottom 16 fraction)
+             (logand (truncate (* value #x10000)) #xFFFFFFFF)))
+      (apply #'xlib:render-set-picture-transform picture
+             (mapcar #'clx-fixed (list rxx rxy dx ryx ryy dy 0 0 1))))))
+
+;;; FIXME this method is wrong because we transform the pattern's designs
+;;; along with the pattern, while "14.2 Patterns and Stencils" says:
+;;;
+;;;  Applying a coordinate transformation to a pattern does not affect the
+;;;  designs that make up the pattern. It only changes the position, size, and
+;;;  shape of the cells' holes, allowing different portions of the designs in
+;;;  the cells to show through. Consequently, applying make-rectangular-tile
+;;;  to a pattern of nonuniform designs can produce a different appearance in
+;;;  each tile.
+;;;
+;;; I think that Doing the "right thing" could be achieved by composing-over
+;;; each design onto the source pattern with masks representing appropriate
+;;; array cells. -- jd 2021-01-25
+(defun collapse-pattern (pattern)
+  (loop with width = (pattern-width pattern)
+        with height = (pattern-height pattern)
+        with array = (make-array (list height width)
+                                 :element-type '(unsigned-byte 32)
+                                 :initial-element #x00000000)
+        for x of-type fixnum below width
+        do (loop for y of-type fixnum below height
+                 do (multiple-value-bind (r g b a)
+                        (clime:color-rgba
+                         (clime:design-ink pattern x y))
+                      (setf (aref array y x)
+                            (logior
+                             (ash (truncate (* a   #xff)) 24)
+                             (ash (truncate (* r a #xff)) 16)
+                             (ash (truncate (* g a #xff))  8)
+                             (ash (truncate (* b a #xff))  0)))))
+        finally (return array)))
+
+(defun make-clx-render-pixmap (medium pattern)
+  (let* ((drawable (medium-drawable medium))
+         (idata  (collapse-pattern pattern))
+         (height (pattern-height pattern))
+         (width  (pattern-width pattern))
+         (pixmap (xlib:create-pixmap :drawable drawable
+                                     :width width
+                                     :height height
+                                     :depth 32))
+         (gcontext (xlib:create-gcontext :drawable pixmap))
+         (ximage   (xlib:create-image :width  width
+                                      :height height
+                                      :depth  32
+                                      :bits-per-pixel 32
+                                      :data   idata)))
+    (put-image-recursively pixmap gcontext ximage width height 0 0)
+    (xlib:free-gcontext gcontext)
+    pixmap))
+
+(defun clx-render-color-picture (medium rgba-design)
+  (let* ((display (clx-port-display (port medium)))
+         (pixmap (xlib:create-pixmap :drawable (medium-drawable medium)
+                                     :depth 32
+                                     :width 1
+                                     :height 1))
+         (format (xlib:find-standard-picture-format display :argb32))
+         (picture (xlib:render-create-picture pixmap :format format :repeat :on))
+         (color (make-clx-render-color medium rgba-design)))
+    (xlib:render-fill-rectangle picture :src color 0 0 1 1)
+    picture))
+
+(defun clx-render-pixmap-picture (medium pattern repeat)
+  (let* ((display (clx-port-display (port medium)))
+         (pixmap (make-clx-render-pixmap medium pattern))
+         (format (xlib:find-standard-picture-format display :argb32)))
+    (xlib:render-create-picture pixmap :format format :repeat repeat)))
+
+(defun clx-render-flipping-picture (medium design)
+  (let* ((drawable (medium-drawable medium))
+         (port (port medium))
+         (display (clx-port-display port))
+         (width (xlib:drawable-width drawable))
+         (height (xlib:drawable-height drawable))
+         (depth (xlib:drawable-depth drawable))
+         (pixmap (xlib:create-pixmap :drawable drawable
+                                     :width width
+                                     :height height
+                                     :depth depth))
+         (format (xlib:find-standard-picture-format display :rgb24))
+         (gcontext (xlib:create-gcontext :drawable pixmap))
+         (flipper (logxor (X-pixel port (slot-value design 'climi::design1))
+                          (X-pixel port (slot-value design 'climi::design2)))))
+    (xlib:copy-area drawable gcontext 0 0 width height pixmap 0 0)
+    (xlib:gcontext-fill-style gcontext) :solid
+    (setf (xlib:gcontext-function gcontext) boole-xor)
+    (setf (xlib:gcontext-foreground gcontext) flipper)
+    (setf (xlib:gcontext-background gcontext) flipper)
+    (xlib:draw-rectangle pixmap gcontext 0 0 width height t)
+    (xlib:free-gcontext gcontext)
+    (xlib:render-create-picture pixmap :format format)))
 
 (defclass clx-render-medium (clx-medium
                              climb:multiline-text-medium-mixin
                              climb:font-rendering-medium-mixin)
   ())
 
+(defgeneric clx-render-picture (medium design)
+  (:method ((medium clx-render-medium) (design color))
+    (clx-render-color-picture medium design))
+  (:method ((medium clx-render-medium) (design clim:opacity))
+    (clx-render-color-picture medium design))
+  (:method ((medium clx-render-medium) (design climi::uniform-compositum))
+    (clx-render-color-picture medium design))
+  (:method ((medium clx-render-medium) (design clime:indirect-ink))
+    (clx-render-picture medium (clime:indirect-ink-ink design)))
+  (:method ((medium clx-render-medium) (design climi::standard-flipping-ink))
+    (clx-render-flipping-picture medium design))
+  (:method ((medium clx-render-medium) (design clime:transformed-pattern))
+    (let* ((edesign (clime:effective-transformed-design design))
+           (source-design (clime:transformed-design-design edesign))
+           (transformation (clime:transformed-design-transformation edesign))
+           (picture (if (typep source-design 'clime:rectangular-tile)
+                        (clx-render-pixmap-picture medium source-design :on)
+                        (clx-render-pixmap-picture medium source-design :off))))
+      (transform-picture transformation picture)
+      picture))
+  (:method ((medium clx-render-medium) (design clime:rectangular-tile))
+    (clx-render-pixmap-picture medium design :on))
+  (:method ((medium clx-render-medium) (design clime:pattern))
+    (clx-render-pixmap-picture medium design :off))
+  ;; FIXME We should also handle regions, which are "solid, colorless designs"
+  ;; opaque at points in the region and transparent elsewhere. The color is
+  ;; taken from the foreground ink (so the ink may have a color and opacity).
+  (:method ((medium clx-render-medium) design)
+    (warn "Unsupported design: ~s." (class-of design))
+    (clx-render-picture medium (compose-in +deep-pink+ (make-opacity .4)))))
+
 (defun medium-target-picture (medium)
   (when-let ((drawable (medium-drawable medium)))
     (clx-drawable-picture drawable)))
 
 (defun medium-source-picture (medium)
-  (let ((design (medium-ink medium)))
-    (when (clime:indirect-ink-p design)
-      (setf design (clime:indirect-ink-ink design)))
-    (unless (typep design '(or climi::uniform-compositum color opacity))
-      (setf design (compose-in +deep-pink+ (make-opacity .5))))
-    (let* ((drawable (medium-drawable medium))
-           (pixmap (xlib:create-pixmap
-                    :drawable drawable
-                    :depth (xlib:drawable-depth drawable)
-                    :width 1 :height 1))
-           (picture (xlib:render-create-picture
-                     pixmap
-                     :format (xlib:find-window-picture-format
-                              (xlib:drawable-root drawable))
-                     :repeat :on)))
-      (multiple-value-bind (r g b a) (clime:color-rgba design)
-        (let ((color (make-clx-render-color r g b a)))
-          (xlib:render-fill-rectangle picture :src color 0 0 1 1)))
-      picture)))
+  (clx-render-picture medium (medium-ink medium)))
 
 (defun medium-fill-rectangle (medium x1 y1 x2 y2)
   (alexandria:when-let ((picture (medium-target-picture medium)))
     ;; If there is no picture that means that sheet does not have a registered
     ;; mirror. Happens with DREI panes during the startup..
-    (let ((color (multiple-value-call #'make-clx-render-color
-                   (clime:color-rgba (medium-ink medium))))
+    (let ((color (make-clx-render-color medium (medium-ink medium)))
           (tr (climb:medium-native-transformation medium)))
       (with-transformed-position (tr x1 y1)
         (with-transformed-position (tr x2 y2)
@@ -61,6 +196,34 @@
                                         (max #x-8000 (min #x7FFF y1))
                                         (max 0 (min #xFFFF (- x2 x1)))
                                         (max 0 (min #xFFFF (- y2 y1))))))))))
+
+(defun medium-fill-rectangle* (medium x1 y1 x2 y2)
+  (alexandria:when-let ((picture (medium-target-picture medium)))
+    ;; If there is no picture that means that sheet does not have a registered
+    ;; mirror. Happens with DREI panes during the startup..
+    (let ((color (clx-render-picture medium (medium-ink medium)))
+          (tr (climb:medium-native-transformation medium))
+          (x0 0)
+          (y0 0))
+      (with-transformed-position (tr x0 y0)
+        (with-transformed-position (tr x1 y1)
+          (with-transformed-position (tr x2 y2)
+            (let ((x0 (round-coordinate x0))
+                  (y0 (round-coordinate y0))
+                  (x1 (round-coordinate x1))
+                  (y1 (round-coordinate y1))
+                  (x2 (round-coordinate x2))
+                  (y2 (round-coordinate y2)))
+              (setf (xlib:picture-clip-mask picture)
+                    (clipping-region->rect-seq
+                     (or (last-medium-device-region medium)
+                         (medium-device-region medium))))
+              (xlib:render-composite :over
+                                     color nil picture (- x1 x0) (- y1 y0) 0 0
+                                     (max #x-8000 (min #x7FFF x1))
+                                     (max #x-8000 (min #x7FFF y1))
+                                     (max 0 (min #xFFFF (- x2 x1)))
+                                     (max 0 (min #xFFFF (- y2 y1)))))))))))
 
 
 (defmethod medium-buffering-output-p ((medium clx-render-medium))
@@ -106,7 +269,12 @@
 
 (defmethod medium-draw-rectangle* ((medium clx-render-medium)
                                    left top right bottom filled)
-  (call-next-method))
+  (cond ((not filled)
+         (call-next-method))
+        ((typep (medium-ink medium) 'uniform-source)
+         (medium-fill-rectangle medium left top right bottom))
+        (t
+         (medium-fill-rectangle* medium left top right bottom))))
 
 (defmethod medium-draw-rectangles* ((medium clx-render-medium) position-seq filled)
   (call-next-method medium position-seq filled))
@@ -345,6 +513,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                     source-picture
                                     x y
                                     glyph-ids
+                                    :src-x x :src-y y
                                     :end (- end start)))))
 
 ;;; Transforming glyphs is very inefficient because we don't cache them.
@@ -383,7 +552,10 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
          (xlib:render-composite-glyphs picture glyph-set source-picture
                                        (truncate (+ current-x 0.5))
                                        (truncate (+ current-y 0.5))
-                                       glyph-ids :start i* :end (1+ i*)))
+                                       glyph-ids
+                                       :start i* :end (1+ i*)
+                                       :src-x (truncate (+ current-x 0.5))
+                                       :src-y (truncate (+ current-y 0.5))))
        ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
        (incf current-x (mcclim-truetype:glyph-info-advance-width* glyph-info))
        (incf current-y (mcclim-truetype:glyph-info-advance-height* glyph-info))
