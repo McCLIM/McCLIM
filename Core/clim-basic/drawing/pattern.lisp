@@ -261,8 +261,8 @@ throughout the drawing plane. This is most commonly used with patterns."))
                          (y (mod y (pattern-height pattern))))
   (let ((element (rectangular-tile-design pattern)))
     (if (patternp element)
-        ;; If design is a pattern we delegate the question
-        (%pattern-rgba-value element x y)
+        ;; If design is a pattern we delegate the question.
+        (design-ink element x y)
         element)))
 
 
