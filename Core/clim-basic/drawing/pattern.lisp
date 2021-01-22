@@ -167,6 +167,8 @@ pattern, stencil, image etc)."))
   (:documentation "Indexed pattern maps numbers in array to designs."))
 
 (defun make-pattern (array designs)
+  (check-type array array)
+  (check-type designs sequence)
   (make-instance 'indexed-pattern :array array :designs designs))
 
 (defmethod %pattern-rgba-value ((pattern indexed-pattern) x y)
