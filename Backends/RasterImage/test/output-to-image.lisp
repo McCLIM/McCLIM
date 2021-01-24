@@ -16,13 +16,14 @@
   (flet ((do-it (width height border-width)
            (let* ((name (format nil "with-output-to-raster-image-~A-~A-~A"
                                 width height border-width))
-                  (pathname (make-pathname :name name :type "png")))
+                  (pathname (make-pathname :name name :type "png"))
+                  (string   (with-output-to-string (*standard-output*)
+                              (room))))
              (mcclim-raster-image:with-output-to-raster-image-file
                  (stream pathname :width width
                                   :height height
                                   :border-width border-width)
-               (let ((*standard-output* stream))
-                 (room))))))
+               (write-string string stream)))))
     (map-product (lambda (&rest args)
                    (finishes (apply #'do-it args)))
                  '(60 :compute) '(60 :compute) '(0 20))))
