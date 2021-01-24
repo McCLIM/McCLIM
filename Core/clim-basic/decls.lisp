@@ -652,6 +652,12 @@ Only those records that overlap REGION are displayed."))
 
 (defgeneric displayed-output-record-ink (displayed-output-record))
 
+;;; 16.2.1. The Basic Output Record Protocol (extras)
+
+(defgeneric (setf output-record-parent) (parent record)
+  (:documentation "Additional protocol generic function. PARENT may be
+an output record or NIL."))
+
 ;;; 16.2.2. Output Record "Database" Protocol
 
 (defgeneric output-record-children (record))
@@ -695,6 +701,21 @@ each other, MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION hits the least
 recently inserted record first and the most recently inserted record
 last. Otherwise, the order in which the records are traversed is
 unspecified. "))
+
+;;; 16.2.2. Output Record "Database" Protocol (extras)
+;;;
+;;; From the Franz CLIM user's guide but not in the spec... clearly
+;;; necessary.
+
+(defgeneric map-over-output-records-1 (continuation record continuation-args))
+
+(defun map-over-output-records
+    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
+  "Call FUNCTION on each of the children of RECORD.
+FUNCTION is a function of one or more arguments and called with all of
+FUNCTION-ARGS as APPLY arguments."
+  (declare (ignore x-offset y-offset))
+  (map-over-output-records-1 function record function-args))
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 
@@ -787,6 +808,10 @@ corresponding to a table cell within the column."))
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
      &key fixed-position all-new parent-cache))
+
+;;; 21.3 Incremental Redisplay Protocol.
+
+(defgeneric match-output-records (record &rest args))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol

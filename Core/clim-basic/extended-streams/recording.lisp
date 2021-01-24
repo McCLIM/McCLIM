@@ -62,33 +62,12 @@
 
 (in-package #:clim-internals)
 
-;;; 16.2.1. The Basic Output Record Protocol (extras)
-
-(defgeneric (setf output-record-parent) (parent record)
-  (:documentation "Additional protocol generic function. PARENT may be
-an output record or NIL."))
-
-;;; 16.2.2. Output Record "Database" Protocol (extras)
-;;; From the Franz CLIM user's guide but not in the spec... clearly necessary.
-
-(defgeneric map-over-output-records-1
-    (continuation record continuation-args))
-
-(defun map-over-output-records
-    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
-  "Maps over all of the children of the RECORD, calling FUNCTION on
-each one. It is a function of one or more arguments and called with
-all of FUNCTION-ARGS as APPLY arguments."
-  (declare (ignore x-offset y-offset))
-  (map-over-output-records-1 function record function-args))
-
 ;;; Forward definition
 (defclass stream-output-history-mixin ()
   ((stream :initarg :stream :reader output-history-stream)))
 
-;;; 21.3 Incremental Redisplay Protocol.  These generic functions need
-;;; to be implemented for all the basic displayed-output-records, so
-;;; they are defined in this file.
+;;; These generic functions need to be implemented for all the basic
+;;; displayed-output-records, so they are defined in this file.
 ;;;
 ;;; MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD, as defined in
 ;;; the CLIM spec, are pretty silly.  How does incremental redisplay
@@ -97,16 +76,14 @@ all of FUNCTION-ARGS as APPLY arguments."
 ;;; match... why not define the search function and the predicate on
 ;;; two records then!
 ;;;
+;;; These gf's use :MOST-SPECIFIC-LAST because one of the least
+;;; specific methods will check the bounding boxes of the records,
+;;; which should cause an early out most of the time.
+;;;
 ;;; We'll implement MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD,
 ;;; but we won't actually use them.  Instead, output-record-equal will
 ;;; match two records, and find-child-record-equal will search for the
 ;;; equivalent record.
-
-(defgeneric match-output-records (record &rest args))
-
-;;; These gf's use :MOST-SPECIFIC-LAST because one of the least
-;;; specific methods will check the bounding boxes of the records,
-;;; which should cause an early out most of the time.
 
 (defgeneric match-output-records-1 (record &key)
   (:method-combination and :most-specific-last))
