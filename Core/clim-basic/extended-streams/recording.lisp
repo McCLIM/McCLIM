@@ -1,72 +1,66 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000, 2014, 2016 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2001 by
-;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;  (c) copyright 2001, 2002 by Alexey Dejneka (adejneka@comail.ru)
-;;;  (c) copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998,1999,2000,2001,2003 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000-2003,2009-2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2001 Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001 Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001,2002 Alexey Dejneka <adejneka@comail.ru>
+;;;  (c) copyright 2002,2003,2004 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2002,2003,2004,2005 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2003-2008 Andy Hefner <ahefner@common-lisp.net>
+;;;  (c) copyright 2005,2006 Christophe Rhodes <crhodes@common-lisp.net>
+;;;  (c) copyright 2006 Andreas Fuchs <afuchs@common-lisp.net>
+;;;  (c) copyright 2007 David Lichteblau <dlichteblau@common-lisp.net>
+;;;  (c) copyright 2007 Robert Goldman <rgoldman@common-lisp.net>
+;;;  (c) copyright 2016-2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2017 Cyrus Harmon <cyrus@bobobeach.com>
+;;;  (c) copyright 2018 Elias Martenson <lokedhs@gmail.com>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Machinery for creating, querying and modifying output records.
 
 ;;; TODO:
 ;;;
 ;;; - Scrolling does not work correctly. Region is given in "window"
-;;; coordinates, without bounding-rectangle-position transformation.
-;;; (Is it still valid?)
+;;;   coordinates, without bounding-rectangle-position transformation.
+;;;   (Is it still valid?)
 ;;;
 ;;; - Redo setf*-output-record-position, extent recomputation for
-;;; compound records
+;;;   compound records
 ;;;
 ;;; - When DRAWING-P is NIL, should stream cursor move?
 ;;;
 ;;; - :{X,Y}-OFFSET.
 ;;;
 ;;; - (SETF OUTPUT-RECORD-START-CURSOR-POSITION) does not affect the
-;;; bounding rectangle. What does it affect?
+;;;   bounding rectangle. What does it affect?
 ;;;
 ;;; - How should (SETF OUTPUT-RECORD-POSITION) affect the bounding
-;;; rectangle of the parent? Now its bounding rectangle is accurately
-;;; recomputed, but it is very inefficient for table formatting. It
-;;; seems that CLIM is supposed to keep a "large enougn" rectangle and
-;;; to shrink it to the correct size only when the layout is complete
-;;; by calling TREE-RECOMPUTE-EXTENT.
+;;;   rectangle of the parent? Now its bounding rectangle is
+;;;   accurately recomputed, but it is very inefficient for table
+;;;   formatting. It seems that CLIM is supposed to keep a "large
+;;;   enough" rectangle and to shrink it to the correct size only when
+;;;   the layout is complete by calling TREE-RECOMPUTE-EXTENT.
 ;;;
 ;;; - Computation of the bounding rectangle of lines/polygons ignores
-;;; LINE-STYLE-CAP-SHAPE.
+;;;   LINE-STYLE-CAP-SHAPE.
 ;;;
 ;;; - Rounding of coordinates.
 ;;;
-;;; - Document carefully the interface of
-;;; STANDARD-OUTPUT-RECORDING-STREAM.
+;;; - Document carefully the interface of STANDARD-OUTPUT-RECORDING-STREAM.
 ;;;
 ;;; - COORD-SEQ is a sequence, not a list.
-
-;;; Troubles
-
-;;; DC
 ;;;
-;;; Some GFs are defined to have "a default method on CLIM's standard
-;;; output record class". What does it mean? What is "CLIM's standard
-;;; output record class"? Is it OUTPUT-RECORD or BASIC-OUTPUT-RECORD?
-;;; Now they are defined on OUTPUT-RECORD.
+;;; - Some GFs are defined to have "a default method on CLIM's
+;;;   standard output record class". What does it mean? What is
+;;;   "CLIM's standard output record class"? Is it OUTPUT-RECORD or
+;;;   BASIC-OUTPUT-RECORD?  Now they are defined on OUTPUT-RECORD.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; 16.2.1. The Basic Output Record Protocol (extras)
 
@@ -949,7 +943,8 @@ were added."
                 :most-recent-last
                 '()))))
 
-(defmethod recompute-extent-for-changed-child :around ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
+(defmethod recompute-extent-for-changed-child :around
+    ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
   (when (eql record (output-record-parent child))
     (let ((entry (%entry-in-children-cache record child)))
      (spatial-trees:delete entry (%tree-record-children record))
@@ -1359,7 +1354,7 @@ were added."
                              2 (- len 4)))
                (ecase (line-style-joint-shape line-style)
                  (:miter
-                  ;;FIXME: Remove successive positively proportional segments
+                  ;; FIXME: Remove successive positively proportional segments
                   (loop with sin-limit = (sin (* 0.5 miter-limit))
                         and xn and yn
                         for i from initial-index to final-index by 2
@@ -1578,9 +1573,10 @@ were added."
                     (coordinate= (slot-value record 'center-y) center-y))
        (if-supplied (filled)
                     (eql (slot-value record 'filled) filled))))
-;;;; Patterns
 
-;;;; Text
+;;; Patterns
+
+;;; Text
 
 (defun enclosing-transform-polygon (transformation positions)
   (when (null positions)
@@ -2214,9 +2210,7 @@ according to the flags RECORD and DRAW."
                       dy))))
         (funcall cont stream)))))
 
-;;; ----------------------------------------------------------------------------
-;;;  Baseline
-;;;
+;;; Baseline
 
 (defgeneric output-record-baseline (record))
 
@@ -2241,9 +2235,7 @@ according to the flags RECORD and DRAW."
                            record)
   (call-next-method))
 
-;;; ----------------------------------------------------------------------------
-;;;  copy-textual-output
-;;;
+;;; copy-textual-output
 
 (defun copy-textual-output-history (window stream &optional region record)
   (unless region (setf region +everywhere+))
