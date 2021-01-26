@@ -428,8 +428,8 @@ translated, so they begin at different position than [0,0])."))
              (type (simple-array (unsigned-byte 32) 2) idata))
     (loop for x of-type alexandria:array-index below width
           do (loop for y of-type alexandria:array-index below height
-                   do (setf (aref mdata x y)
-                            (if (and (>= (ldb (byte 8 24) (aref idata x y)) #x80)
+                   do (setf (aref mdata y x)
+                            (if (and (>= (ldb (byte 8 24) (aref idata y x)) #x80)
                                      (region-contains-position-p region x y))
                                 1 0))))
     (put-image-recursively mm mm-gc mm-image width height 0 0)
