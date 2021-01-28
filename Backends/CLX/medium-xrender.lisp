@@ -175,36 +175,52 @@
 (defun medium-source-picture (medium)
   (clx-render-picture medium (medium-ink medium)))
 
+(defmacro with-render-context ((source target) medium &body body)
+  (alexandria:with-gensyms (drawable gc pixmap)
+    (alexandria:once-only (medium)
+      `(when-let* ((,source (medium-source-picture ,medium))
+                   (,target (medium-target-picture ,medium)))
+         (let* ((^cleanup nil)
+                (,drawable (medium-drawable ,medium))
+                (,gc (xlib:create-gcontext :drawable ,drawable)))
+           (unwind-protect
+                (progn
+                  ;; FIXME write an optimized and antialiased equivalent of
+                  ;; %set-gc-clipping-region for pictures - then get rid of
+                  ;; the usage of the gcontext.
+                  (%set-gc-clipping-region ,medium ,gc)
+                  (setf (xlib:picture-clip-mask ,target)
+                        (xlib:gcontext-clip-mask ,gc))
+                  ,@body)
+             (mapc #'funcall ^cleanup)
+             (xlib:free-gcontext ,gc)
+             (let ((,pixmap (xlib:picture-drawable ,source)))
+               (xlib:render-free-picture ,source)
+               (xlib:free-pixmap ,pixmap))))))))
+
 (defun medium-fill-rectangle (medium x1 y1 x2 y2)
-  (alexandria:when-let ((picture (medium-target-picture medium)))
-    ;; If there is no picture that means that sheet does not have a registered
-    ;; mirror. Happens with DREI panes during the startup..
-    (let ((color (make-clx-render-color medium (medium-ink medium)))
-          (tr (climb:medium-native-transformation medium)))
+  (with-render-context (source picture) medium
+    (let* ((design (medium-ink medium))
+           (color (make-clx-render-color medium design))
+           (tr (climb:medium-native-transformation medium))
+           (op (if (colorp design) :src :over)))
       (with-transformed-position (tr x1 y1)
         (with-transformed-position (tr x2 y2)
           (let ((x1 (round-coordinate x1))
                 (y1 (round-coordinate y1))
                 (x2 (round-coordinate x2))
                 (y2 (round-coordinate y2)))
-            (setf (xlib:picture-clip-mask picture)
-                  (clipping-region->rect-seq
-                   (or (last-medium-device-region medium)
-                       (medium-device-region medium))))
-            (xlib:render-fill-rectangle picture :over color
-                                        (max #x-8000 (min #x7FFF x1))
-                                        (max #x-8000 (min #x7FFF y1))
-                                        (max 0 (min #xFFFF (- x2 x1)))
-                                        (max 0 (min #xFFFF (- y2 y1))))))))))
+            (xlib:render-fill-rectangle
+             picture op color
+             (max #x-8000 (min #x7FFF x1))
+             (max #x-8000 (min #x7FFF y1))
+             (max 0 (min #xFFFF (- x2 x1)))
+             (max 0 (min #xFFFF (- y2 y1))))))))))
 
 (defun medium-fill-rectangle* (medium x1 y1 x2 y2)
-  (alexandria:when-let ((picture (medium-target-picture medium)))
-    ;; If there is no picture that means that sheet does not have a registered
-    ;; mirror. Happens with DREI panes during the startup..
-    (let ((color (clx-render-picture medium (medium-ink medium)))
-          (tr (climb:medium-native-transformation medium))
-          (x0 0)
-          (y0 0))
+  (with-render-context (source target) medium
+    (let ((tr (climb:medium-native-transformation medium))
+          (x0 0) (y0 0))
       (with-transformed-position (tr x0 y0)
         (with-transformed-position (tr x1 y1)
           (with-transformed-position (tr x2 y2)
@@ -214,16 +230,12 @@
                   (y1 (round-coordinate y1))
                   (x2 (round-coordinate x2))
                   (y2 (round-coordinate y2)))
-              (setf (xlib:picture-clip-mask picture)
-                    (clipping-region->rect-seq
-                     (or (last-medium-device-region medium)
-                         (medium-device-region medium))))
-              (xlib:render-composite :over
-                                     color nil picture (- x1 x0) (- y1 y0) 0 0
-                                     (max #x-8000 (min #x7FFF x1))
-                                     (max #x-8000 (min #x7FFF y1))
-                                     (max 0 (min #xFFFF (- x2 x1)))
-                                     (max 0 (min #xFFFF (- y2 y1)))))))))))
+              (xlib:render-composite
+               :over source nil target (- x1 x0) (- y1 y0) 0 0
+               (max #x-8000 (min #x7FFF x1))
+               (max #x-8000 (min #x7FFF y1))
+               (max 0 (min #xFFFF (- x2 x1)))
+               (max 0 (min #xFFFF (- y2 y1)))))))))))
 
 
 (defmethod medium-buffering-output-p ((medium clx-render-medium))
@@ -331,15 +343,14 @@
   (declare (ignore toward-x toward-y))
   (when (alexandria:emptyp string)
     (return-from clim:medium-draw-text*))
-  (with-clx-graphics () medium
-    (clim-sys:with-lock-held (*draw-font-lock*)
-      (draw-glyphs medium mirror gc x y string
-                   :start start :end end
-                   :align-x align-x :align-y align-y
-                   :translate #'translate
-                   :transformation (sheet-device-transformation
-                                    (medium-sheet medium))
-                   :transform-glyphs transform-glyphs))))
+  (clim-sys:with-lock-held (*draw-font-lock*)
+    (draw-glyphs medium x y string
+                 :start start :end end
+                 :align-x align-x :align-y align-y
+                 :translate #'translate
+                 :transformation (sheet-device-transformation
+                                  (medium-sheet medium))
+                 :transform-glyphs transform-glyphs)))
 
 
 (defun %font-generate-glyph (font code transformation glyph-set)
@@ -402,7 +413,7 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
 ;;; kerning where the same glyph may have different advance-width values for
 ;;; different next elements. (byte 16 0) is the character code and (byte 16 16)
 ;;; is the next character code. For standalone glyphs (byte 16 16) is zero.
-(defun draw-glyphs (medium mirror gc x y string
+(defun draw-glyphs (medium x y string
                     &key start end
                       align-x align-y
                       translate direction
@@ -413,108 +424,107 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                  #+sbcl sb-int:index
                  start end)
            (type string string))
-  (let* ((text-style (medium-text-style medium))
-         (port (port medium))
-         (font (text-style-mapping port text-style))
-         (picture (medium-target-picture medium))
-         (source-picture (medium-source-picture medium))
-         (clip-mask (xlib:gcontext-clip-mask gc)))
-    ;; Sync the picture-clip-mask with that of the gcontext.
-    (unless (eq (xlib:picture-clip-mask picture) clip-mask)
-      (setf (xlib:picture-clip-mask picture) clip-mask))
+  (with-render-context (source-picture picture) medium
+    (let* ((source-picture (medium-source-picture medium))
+           (picture (medium-target-picture medium))
+           (mirror (medium-drawable medium))
+           (text-style (medium-text-style medium))
+           (port (port medium))
+           (font (text-style-mapping port text-style)))
 
-    (when (< (length (the (simple-array (unsigned-byte 32))
-                          (clx-truetype-font-%buffer% font)))
-             (- end start))
-      (setf (clx-truetype-font-%buffer% font)
-            (make-array (* 256 (ceiling (- end start) 256))
-                        :element-type '(unsigned-byte 32)
-                        :adjustable nil :fill-pointer nil)))
-    (when (and transform-glyphs
-               (not (clim:translation-transformation-p transformation)))
-      (setq string (subseq string start end))
-      (ecase align-x
-        (:left)
-        (:center
-         (let ((origin-x (climb:text-size medium string :text-style text-style)))
-           (decf x (/ origin-x 2.0))))
-        (:right
-         (let ((origin-x (climb:text-size medium string :text-style text-style)))
-           (decf x origin-x))))
-      (ecase align-y
-        (:top
-         (incf y (climb:font-ascent font)))
-        (:baseline)
-        (:center
-         (let* ((ascent (climb:font-ascent font))
-                (descent (climb:font-descent font))
-                (height (+ ascent descent))
-                (middle (- ascent (/ height 2.0s0))))
-           (incf y middle)))
-        (:baseline*)
-        (:bottom
-         (decf y (climb:font-descent font))))
-      (return-from draw-glyphs
-        (%render-transformed-glyphs
-         font string x y align-x align-y transformation mirror
-         picture source-picture)))
-    (let ((glyph-ids (clx-truetype-font-%buffer% font))
-          (glyph-set (ensure-glyph-set port))
-          (origin-x 0))
-      (loop
-        with char = (char string start)
-        with i* = 0
-        for i from (1+ start) below end
-        as next-char = (char string i)
-        as next-char-code = (char-code next-char)
-        as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
-                                            #.(ceiling (log char-code-limit 2)))
-                       (char-code char))
-        do
-           (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-                 (the (unsigned-byte 32) (mcclim-truetype:font-glyph-id font code)))
-           (setf char next-char)
-           (incf i*)
-           (incf origin-x (climb:font-glyph-dx font code))
-        finally
-           (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-                 (the (unsigned-byte 32)
-                      (mcclim-truetype:font-glyph-id font (char-code char))))
-           (incf origin-x (climb:font-glyph-dx font (char-code char))))
-      (multiple-value-bind (new-x new-y) (clim:transform-position transformation x y)
-        (setq x (ecase align-x
-                  (:left
-                   (truncate (+ new-x 0.5)))
-                  (:center
-                   (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
-                  (:right
-                   (truncate (+ (- new-x origin-x) 0.5)))))
-        (setq y (ecase align-y
-                  (:top
-                   (truncate (+ new-y (climb:font-ascent font) 0.5)))
-                  (:baseline
-                   (truncate (+ new-y 0.5)))
-                  (:center
-                   (let* ((ascent (climb:font-ascent font))
-                          (descent (climb:font-descent font))
-                          (height (+ ascent descent))
-                          (middle (- ascent (/ height 2.0s0))))
-                     (truncate (+ new-y middle 0.5))))
-                  (:baseline*
-                   (truncate (+ new-y 0.5)))
-                  (:bottom
-                   (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
-        (unless (and (typep x '(signed-byte 16))
-                     (typep y '(signed-byte 16)))
-          (warn "Trying to render string outside the mirror.")
-          (return-from draw-glyphs)))
-      (xlib:render-composite-glyphs picture
-                                    glyph-set
-                                    source-picture
-                                    x y
-                                    glyph-ids
-                                    :src-x x :src-y y
-                                    :end (- end start)))))
+      (when (< (length (the (simple-array (unsigned-byte 32))
+                            (clx-truetype-font-%buffer% font)))
+               (- end start))
+        (setf (clx-truetype-font-%buffer% font)
+              (make-array (* 256 (ceiling (- end start) 256))
+                          :element-type '(unsigned-byte 32)
+                          :adjustable nil :fill-pointer nil)))
+      (when (and transform-glyphs
+                 (not (clim:translation-transformation-p transformation)))
+        (setq string (subseq string start end))
+        (ecase align-x
+          (:left)
+          (:center
+           (let ((origin-x (climb:text-size medium string :text-style text-style)))
+             (decf x (/ origin-x 2.0))))
+          (:right
+           (let ((origin-x (climb:text-size medium string :text-style text-style)))
+             (decf x origin-x))))
+        (ecase align-y
+          (:top
+           (incf y (climb:font-ascent font)))
+          (:baseline)
+          (:center
+           (let* ((ascent (climb:font-ascent font))
+                  (descent (climb:font-descent font))
+                  (height (+ ascent descent))
+                  (middle (- ascent (/ height 2.0s0))))
+             (incf y middle)))
+          (:baseline*)
+          (:bottom
+           (decf y (climb:font-descent font))))
+        (return-from draw-glyphs
+          (%render-transformed-glyphs
+           font string x y align-x align-y transformation mirror
+           picture source-picture)))
+      (let ((glyph-ids (clx-truetype-font-%buffer% font))
+            (glyph-set (ensure-glyph-set port))
+            (origin-x 0))
+        (loop
+          with char = (char string start)
+          with i* = 0
+          for i from (1+ start) below end
+          as next-char = (char string i)
+          as next-char-code = (char-code next-char)
+          as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
+                                              #.(ceiling (log char-code-limit 2)))
+                         (char-code char))
+          do
+             (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                   (the (unsigned-byte 32) (mcclim-truetype:font-glyph-id font code)))
+             (setf char next-char)
+             (incf i*)
+             (incf origin-x (climb:font-glyph-dx font code))
+          finally
+             (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
+                   (the (unsigned-byte 32)
+                        (mcclim-truetype:font-glyph-id font (char-code char))))
+             (incf origin-x (climb:font-glyph-dx font (char-code char))))
+        (multiple-value-bind (new-x new-y)
+            (clim:transform-position transformation x y)
+          (setq x (ecase align-x
+                    (:left
+                     (truncate (+ new-x 0.5)))
+                    (:center
+                     (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
+                    (:right
+                     (truncate (+ (- new-x origin-x) 0.5)))))
+          (setq y (ecase align-y
+                    (:top
+                     (truncate (+ new-y (climb:font-ascent font) 0.5)))
+                    (:baseline
+                     (truncate (+ new-y 0.5)))
+                    (:center
+                     (let* ((ascent (climb:font-ascent font))
+                            (descent (climb:font-descent font))
+                            (height (+ ascent descent))
+                            (middle (- ascent (/ height 2.0s0))))
+                       (truncate (+ new-y middle 0.5))))
+                    (:baseline*
+                     (truncate (+ new-y 0.5)))
+                    (:bottom
+                     (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
+          (unless (and (typep x '(signed-byte 16))
+                       (typep y '(signed-byte 16)))
+            (warn "Trying to render string outside the mirror.")
+            (return-from draw-glyphs)))
+        (xlib:render-composite-glyphs picture
+                                      glyph-set
+                                      source-picture
+                                      x y
+                                      glyph-ids
+                                      :src-x x :src-y y
+                                      :end (- end start))))))
 
 ;;; Transforming glyphs is very inefficient because we don't cache them.
 (defun %render-transformed-glyphs
