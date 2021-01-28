@@ -982,11 +982,12 @@ were added."
 (defmethod replay-output-record :around
     ((record gs-clip-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
-  (let ((clipping-region (graphics-state-clip record)))
-    (if (or (eq clipping-region +everywhere+) ; !!!
-            (region-contains-region-p clipping-region (medium-clipping-region stream)))
+  (let ((record-clip (untransform-region (medium-transformation stream)
+                                         (graphics-state-clip record)))
+        (stream-clip (medium-clipping-region stream)))
+    (if (region-contains-region-p record-clip stream-clip)
         (call-next-method)
-        (with-drawing-options (stream :clipping-region (graphics-state-clip record))
+        (with-drawing-options (stream :clipping-region record-clip)
           (call-next-method)))))
 
 (defrecord-predicate gs-clip-mixin (clipping-region)
