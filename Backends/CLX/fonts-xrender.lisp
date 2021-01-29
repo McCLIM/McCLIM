@@ -88,34 +88,30 @@
   (defun make-truetype-font (port filename size)
     (clim-sys:with-lock-held (mcclim-truetype:*zpb-font-lock*)
       (let* ((display (clx-port-display port))
-             (loader (alexandria:ensure-gethash
-                      filename font-loader-cache
-                      (zpb-ttf:open-font-loader filename)))
+             (loader (ensure-gethash filename font-loader-cache
+                       (zpb-ttf:open-font-loader filename)))
              (family-name (zpb-ttf:family-name loader))
-             (family (alexandria:ensure-gethash
-                      family-name font-families
-                      (make-instance 'mcclim-truetype:truetype-font-family
-                                     :port port
-                                     :name (zpb-ttf:family-name loader))))
+             (family (ensure-gethash family-name font-families
+                       (make-instance 'mcclim-truetype:truetype-font-family
+                                      :port port
+                                      :name (zpb-ttf:family-name loader))))
              (face-name (zpb-ttf:subfamily-name loader))
-             (font-face (alexandria:ensure-gethash
-                         (list family-name face-name) font-faces
-                         (make-instance 'mcclim-truetype:truetype-face
-                                        :family family
-                                        :name (zpb-ttf:subfamily-name loader)
-                                        :loader loader)))
-	     (font (alexandria:ensure-gethash
-                    (list display loader size) font-cache
-                    (make-instance 'clx-truetype-font
-                                   :port port
-                                   :display display
-                                   :face font-face
-                                   :size size))))
+             (font-face (ensure-gethash (list family-name face-name) font-faces
+                          (make-instance 'mcclim-truetype:truetype-face
+                                         :family family
+                                         :name (zpb-ttf:subfamily-name loader)
+                                         :loader loader)))
+	     (font (ensure-gethash (list display loader size) font-cache
+                     (make-instance 'clx-truetype-font
+                                    :port port
+                                    :display display
+                                    :face font-face
+                                    :size size))))
         (pushnew family (font-families port))
-        (alexandria:ensure-gethash
-         (list port (make-text-style family-name face-name size))
-         text-style-cache
-         font))))
+        (ensure-gethash
+            (list port (make-text-style family-name face-name size))
+            text-style-cache
+          font))))
 
   (defun find-truetype-font (port text-style)
     (gethash (list port text-style) text-style-cache)))

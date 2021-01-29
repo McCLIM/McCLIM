@@ -67,6 +67,8 @@
                 #:%sheet-mirror-region
                 #:%sheet-mirror-transformation
                 #:standard-port)
+  (:import-from #:alexandria
+                #:ensure-gethash)
   (:export
    #:clx-port
    #:clx-render-port

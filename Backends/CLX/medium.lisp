@@ -29,12 +29,10 @@
 (defconstant +x11-pixmap-dimension-limit+ 2048)
 
 (defun X-pixel (port color)
-  (alexandria:ensure-gethash
-   color (slot-value port 'color-table)
-   (multiple-value-bind (r g b) (color-rgb color)
-     (xlib:alloc-color (xlib:screen-default-colormap
-                        (clx-port-screen port))
-                       (xlib:make-color :red r :green g :blue b)))))
+  (ensure-gethash color (slot-value port 'color-table)
+    (multiple-value-bind (r g b) (color-rgb color)
+      (xlib:alloc-color (xlib:screen-default-colormap (clx-port-screen port))
+                        (xlib:make-color :red r :green g :blue b)))))
 
 ;;; Needed changes:
 
