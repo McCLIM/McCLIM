@@ -24,11 +24,24 @@
 (defclass clx-port (clim-xcommon:keysym-port-mixin
                     clx-selection-mixin
                     clx-basic-port)
-  ((color-table :initform (make-hash-table :test #'eq))
-   (design-cache :initform (make-hash-table :test #'eq))))
+  ((color-table :initform (make-hash-table :test #'eq))))
 
-(defclass clx-render-port (clx-port) ())
+(defclass clx-render-port (clx-port)
+  (;; key: a design, value: a picture with the pixmap
+   (design-cache
+    :initform (make-hash-table :test #'eq)
+    :reader clx-design-cache)
+   ;; key: an uniform ink, value: a vector with premultiplied rgba
+   (color-cache
+    :initform (make-hash-table :test #'eq)
+    :reader clx-color-cache)))
 
+(defmethod destroy-port :before ((port clx-render-port))
+  ;; When the connection is closed all server-side resources are released
+  ;; (including pixmaps and pictures).
+  (clrhash (slot-value port 'color-table))
+  (clrhash (slot-value port 'color-cache))
+  (clrhash (slot-value port 'design-cache)))
 
 (defun server-options-from-environment ()
   (let ((name (get-environment-variable "DISPLAY")))

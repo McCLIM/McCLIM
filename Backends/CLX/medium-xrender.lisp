@@ -8,13 +8,29 @@
 (deftype uniform-source ()
   `(or color opacity climi::uniform-compositum))
 
+;;; Some inks can't be cached because they may depend on a current state of
+;;; the drawable (flipping inks), the medium (foreground and background inks)
+;;; or one of the ink component's can't be cached (patterns and tiles).
+(defun cacheable-design-p (design)
+  (typecase design
+    ((or uniform-source climi::stencil)
+     t)
+    (climi::indexed-pattern
+     (every #'cacheable-design-p (climi::pattern-designs design)))
+    (climi::rectangular-tile
+     (cacheable-design-p (climi::rectangular-tile-design design)))
+    (otherwise
+     nil)))
+
 (defun make-clx-render-color (medium design)
   ;; Hmm, XRender uses pre-multiplied alpha, how useful!
-  (multiple-value-bind (r g b a) (clime:color-rgba design)
-    (vector (round (* r a #xffff))
-            (round (* g a #xffff))
-            (round (* b a #xffff))
-            (round (*   a #xffff)))))
+  (alexandria:ensure-gethash design (clx-color-cache (port medium))
+    (multiple-value-bind (r g b a)
+        (clime:color-rgba design)
+      (vector (round (* r a #xffff))
+              (round (* g a #xffff))
+              (round (* b a #xffff))
+              (round (*   a #xffff))))))
 
 (defun transform-picture (transformation picture)
   ;; 1. XRender expects a transformation to the target's plane
@@ -173,30 +189,35 @@
     (clx-drawable-picture drawable)))
 
 (defun medium-source-picture (medium)
-  (clx-render-picture medium (medium-ink medium)))
+  (let* ((design (medium-ink medium))
+         (source (clx-render-picture medium design)))
+    (when (cacheable-design-p design)
+      (setf (gethash design (clx-design-cache (port medium))) source))
+    source))
 
 (defmacro with-render-context ((source target) medium &body body)
   (alexandria:with-gensyms (drawable gc pixmap)
     (alexandria:once-only (medium)
-      `(when-let* ((,source (medium-source-picture ,medium))
-                   (,target (medium-target-picture ,medium)))
-         (let* ((^cleanup nil)
+      `(when-let ((,target (medium-target-picture ,medium)))
+         (let* ((,source (medium-source-picture ,medium))
+                (^cleanup nil)
                 (,drawable (medium-drawable ,medium))
                 (,gc (xlib:create-gcontext :drawable ,drawable)))
            (unwind-protect
                 (progn
                   ;; FIXME write an optimized and antialiased equivalent of
                   ;; %set-gc-clipping-region for pictures - then get rid of
-                  ;; the usage of the gcontext.
+                  ;; the usage of the gcontext. Masks should also be cached.
                   (%set-gc-clipping-region ,medium ,gc)
                   (setf (xlib:picture-clip-mask ,target)
                         (xlib:gcontext-clip-mask ,gc))
                   ,@body)
              (mapc #'funcall ^cleanup)
              (xlib:free-gcontext ,gc)
-             (let ((,pixmap (xlib:picture-drawable ,source)))
-               (xlib:render-free-picture ,source)
-               (xlib:free-pixmap ,pixmap))))))))
+             (unless (cacheable-design-p (medium-ink medium))
+               (let ((,pixmap (xlib:picture-drawable ,source)))
+                 (xlib:render-free-picture ,source)
+                 (xlib:free-pixmap ,pixmap)))))))))
 
 (defun medium-fill-rectangle (medium x1 y1 x2 y2)
   (with-render-context (source picture) medium
