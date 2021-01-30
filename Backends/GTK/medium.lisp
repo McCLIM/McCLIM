@@ -198,11 +198,12 @@
                               (lambda (,context-sym) ,@body))))
 
 (defun call-with-fallback-cairo-context (port fn)
-  (let* ((image (gtk-port/image-fallback port))
+  (let* ((image (cairo:cairo-surface-reference (gtk-port/image-fallback port)))
          (context (cairo:cairo-create image)))
     (unwind-protect
          (funcall fn context)
-      (cairo:cairo-destroy context))))
+      (cairo:cairo-destroy context)
+      (cairo:cairo-surface-destroy image))))
 
 (defmacro with-fallback-cairo-context ((context-sym port) &body body)
   (alexandria:once-only (port)
