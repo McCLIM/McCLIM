@@ -28,8 +28,7 @@
          (let ((,image (bordeaux-threads:with-lock-held ((gtk-mirror/lock ,mirror-sym))
                          (update-mirror-if-needed ,medium ,mirror-sym)
                          (let ((,image (gtk-mirror/image ,mirror-sym)))
-                           (cairo:cairo-surface-reference ,image)
-                           ,image))))
+                           (cairo:cairo-surface-reference ,image)))))
            (unwind-protect
                 (let ((,image-sym ,image))
                   ,@body)
@@ -211,12 +210,10 @@
   (let ((image (alexandria:if-let ((mirror (sheet-direct-mirror (sheet-mirrored-ancestor (medium-sheet medium)))))
                  (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
                    (let ((image (gtk-mirror/image mirror)))
-                     (cairo:cairo-surface-reference image)
-                     image))
+                     (cairo:cairo-surface-reference image)))
                  ;; ELSE: No mirror, use the dedicated image
                  (let ((image (gtk-port/image-fallback (port medium))))
-                   (cairo:cairo-surface-reference image)
-                   image))))
+                   (cairo:cairo-surface-reference image)))))
     (unwind-protect
          (let ((context (cairo:cairo-create image)))
            (unwind-protect

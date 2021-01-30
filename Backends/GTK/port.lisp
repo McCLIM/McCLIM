@@ -99,8 +99,7 @@
 (defun draw-window-content (cr mirror)
   (let ((image (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
                  (let ((v (gtk-mirror/image mirror)))
-                   (cairo:cairo-surface-reference v)
-                   v))))
+                   (cairo:cairo-surface-reference v)))))
     (cairo:cairo-set-source-surface cr image 0 0)
     (cairo:cairo-rectangle cr 0 0
                            (cairo:cairo-image-surface-get-width image)
