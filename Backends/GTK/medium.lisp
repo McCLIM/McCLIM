@@ -138,7 +138,8 @@
                                                      :displaced-to data)
                                          `(:array :uint32 ,(* height width)))
       (let ((image (cairo:cairo-image-surface-create-for-data native-buf :argb32 width height (* width 4))))
-        (cairo:cairo-set-source-surface cr image 0 0)))
+        (cairo:cairo-set-source-surface cr image 0 0)
+	(cairo:cairo-surface-destroy image)))
     (let ((image (cairo:cairo-image-surface-create :argb32 width height)))
       (loop
         with image-data = (cairo:cairo-image-surface-get-data image)
@@ -156,7 +157,8 @@
           (call-with-computed-transformation transform
                                              (lambda (matrix)
                                                (cairo:cairo-pattern-set-matrix cairo-pattern matrix))))
-        (cairo:cairo-set-source cr cairo-pattern))
+        (cairo:cairo-set-source cr cairo-pattern)
+	(cairo:cairo-pattern-destroy cairo-pattern))
       (cairo:cairo-surface-destroy image))))
 
 (defun update-attrs (cr medium)
