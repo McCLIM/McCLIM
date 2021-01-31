@@ -275,7 +275,10 @@
       (when size
         (let ((size-num (coerce (* (climb:normalize-font-size size) pango:+pango-scale+) 'double-float)))
           (pango:pango-font-description-set-absolute-size desc size-num)))
-      (make-instance 'gtk-medium-font :port port :font-description desc))))
+      (let ((instance (make-instance 'gtk-medium-font :port port :font-description desc)))
+	(trivial-garbage:finalize instance (lambda ()
+					     (pango:pango-font-description-free desc)))
+	instance))))
 
 (defmethod (setf text-style-mapping) (font-name
                                       (port gtk-port)
