@@ -339,7 +339,8 @@
     (multiple-value-bind (ink-rect logical-rect)
         (pango:pango-layout-get-pixel-extents layout)
       (let ((baseline (/ (pango:pango-layout-get-baseline layout) pango:+pango-scale+)))
-        (values ink-rect logical-rect baseline)))))
+	(gobject:g-object-unref (gobject:pointer layout))
+	(values ink-rect logical-rect baseline)))))
 
 (defun measure-text-bounds (medium string text-style)
   (with-cairo-context-measure (cr medium)
