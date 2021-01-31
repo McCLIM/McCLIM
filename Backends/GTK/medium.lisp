@@ -141,6 +141,7 @@
         (cairo:cairo-set-source-surface cr image 0 0)
 	(cairo:cairo-surface-destroy image)))
     (let ((image (cairo:cairo-image-surface-create :argb32 width height)))
+      (cairo:cairo-surface-flush image)
       (loop
         with image-data = (cairo:cairo-image-surface-get-data image)
         with stride-in-words = (let ((v (/ (cairo:cairo-image-surface-get-stride image) 4)))
