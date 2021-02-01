@@ -128,7 +128,11 @@
         (:dialog (xlib:change-property mirror
                                        :_NET_WM_WINDOW_TYPE
                                        (list (xlib:intern-atom (xlib:window-display mirror) :_NET_WM_WINDOW_TYPE_DIALOG))
-                                       :atom 32)))
+                                       :atom 32))
+        (:dock (xlib:change-property mirror
+                                     :_NET_WM_WINDOW_TYPE
+                                     (list (xlib:intern-atom (xlib:window-display mirror) :_NET_WM_WINDOW_TYPE_DOCK))
+                                     :atom 32)))
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
         (declare (ignore w h))
         (when (and x y)
