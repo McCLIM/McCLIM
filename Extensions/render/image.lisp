@@ -136,10 +136,10 @@
                      clip-region nil))))))
   (let* (;; Stencil
          (stencil-array (and stencil (climi::pattern-array stencil)))
-         (stencil-width (when stencil-array
-                          (array-dimension stencil-array 1)))
-         (stencil-height (when stencil-array
-                           (array-dimension stencil-array 0)))
+         (stencil-width-max (when stencil-array
+                              (1- (array-dimension stencil-array 1))))
+         (stencil-height-max (when stencil-array
+                               (1- (array-dimension stencil-array 0))))
          ;; Destination
          (dst-array (climi::pattern-array image))
          (x2 (+ x width -1))
@@ -154,11 +154,11 @@
              (type octet old-alpha alpha))
     (flet ((update-alpha (i j)
              (locally (declare (type stencil-array stencil-array)
-                               (type image-dimension stencil-width stencil-height))
+                               (type image-dimension stencil-width-max stencil-height-max))
                (let ((stencil-x (+ stencil-dx i))
                      (stencil-y (+ stencil-dy j)))
-                 (setf alpha (if (and (<= 0 stencil-y stencil-height)
-                                      (<= 0 stencil-x stencil-width))
+                 (setf alpha (if (and (<= 0 stencil-y stencil-height-max)
+                                      (<= 0 stencil-x stencil-width-max))
                                  (aref stencil-array stencil-y stencil-x)
                                  0)))))
            (update-ink (i j)
