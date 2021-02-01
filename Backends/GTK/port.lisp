@@ -67,7 +67,10 @@
   (declare (ignore initargs))
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
-  (setf (slot-value port 'image-fallback) (cairo:cairo-image-surface-create :argb32 10 10))
+  (let ((image-fallback (cairo:cairo-image-surface-create :argb32 10 10)))
+    (setf (slot-value port 'image-fallback) image-fallback)
+    (trivial-garbage:finalize port (lambda ()
+				     (cairo:cairo-surface-destroy image-fallback))))
   (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread")
   (start-port-event-thread port))
 
