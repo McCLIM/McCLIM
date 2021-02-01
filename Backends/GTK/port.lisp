@@ -67,7 +67,10 @@
   (declare (ignore initargs))
   (push (make-instance 'gtk-frame-manager :port port)
 	(slot-value port 'climi::frame-managers))
-  (setf (slot-value port 'image-fallback) (cairo:cairo-image-surface-create :argb32 10 10))
+  (let ((image-fallback (cairo:cairo-image-surface-create :argb32 10 10)))
+    (setf (slot-value port 'image-fallback) image-fallback)
+    (trivial-garbage:finalize port (lambda ()
+				     (cairo:cairo-surface-destroy image-fallback))))
   (bordeaux-threads:make-thread #'gtk-main-no-traps :name "GTK Event Thread")
   (start-port-event-thread port))
 
@@ -99,8 +102,7 @@
 (defun draw-window-content (cr mirror)
   (let ((image (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
                  (let ((v (gtk-mirror/image mirror)))
-                   (cairo:cairo-surface-reference v)
-                   v))))
+                   (cairo:cairo-surface-reference v)))))
     (cairo:cairo-set-source-surface cr image 0 0)
     (cairo:cairo-rectangle cr 0 0
                            (cairo:cairo-image-surface-get-width image)
@@ -113,6 +115,7 @@
          (cr (cairo:cairo-create image)))
     (apply-colour-from-ink cr ink)
     (cairo:cairo-paint cr)
+    (cairo:cairo-destroy cr)
     image))
 
 (defmethod realize-mirror ((port gtk-port) (sheet mirrored-sheet-mixin))

@@ -28,8 +28,7 @@
          (let ((,image (bordeaux-threads:with-lock-held ((gtk-mirror/lock ,mirror-sym))
                          (update-mirror-if-needed ,medium ,mirror-sym)
                          (let ((,image (gtk-mirror/image ,mirror-sym)))
-                           (cairo:cairo-surface-reference ,image)
-                           ,image))))
+                           (cairo:cairo-surface-reference ,image)))))
            (unwind-protect
                 (let ((,image-sym ,image))
                   ,@body)
@@ -139,8 +138,10 @@
                                                      :displaced-to data)
                                          `(:array :uint32 ,(* height width)))
       (let ((image (cairo:cairo-image-surface-create-for-data native-buf :argb32 width height (* width 4))))
-        (cairo:cairo-set-source-surface cr image 0 0)))
+        (cairo:cairo-set-source-surface cr image 0 0)
+	(cairo:cairo-surface-destroy image)))
     (let ((image (cairo:cairo-image-surface-create :argb32 width height)))
+      (cairo:cairo-surface-flush image)
       (loop
         with image-data = (cairo:cairo-image-surface-get-data image)
         with stride-in-words = (let ((v (/ (cairo:cairo-image-surface-get-stride image) 4)))
@@ -157,7 +158,9 @@
           (call-with-computed-transformation transform
                                              (lambda (matrix)
                                                (cairo:cairo-pattern-set-matrix cairo-pattern matrix))))
-        (cairo:cairo-set-source cr cairo-pattern)))))
+        (cairo:cairo-set-source cr cairo-pattern)
+	(cairo:cairo-pattern-destroy cairo-pattern))
+      (cairo:cairo-surface-destroy image))))
 
 (defun update-attrs (cr medium)
   (set-clipping-region cr medium)
@@ -196,11 +199,12 @@
                               (lambda (,context-sym) ,@body))))
 
 (defun call-with-fallback-cairo-context (port fn)
-  (let* ((image (gtk-port/image-fallback port))
+  (let* ((image (cairo:cairo-surface-reference (gtk-port/image-fallback port)))
          (context (cairo:cairo-create image)))
     (unwind-protect
          (funcall fn context)
-      (cairo:cairo-destroy context))))
+      (cairo:cairo-destroy context)
+      (cairo:cairo-surface-destroy image))))
 
 (defmacro with-fallback-cairo-context ((context-sym port) &body body)
   (alexandria:once-only (port)
@@ -210,12 +214,10 @@
   (let ((image (alexandria:if-let ((mirror (sheet-direct-mirror (sheet-mirrored-ancestor (medium-sheet medium)))))
                  (bordeaux-threads:with-lock-held ((gtk-mirror/lock mirror))
                    (let ((image (gtk-mirror/image mirror)))
-                     (cairo:cairo-surface-reference image)
-                     image))
+                     (cairo:cairo-surface-reference image)))
                  ;; ELSE: No mirror, use the dedicated image
                  (let ((image (gtk-port/image-fallback (port medium))))
-                   (cairo:cairo-surface-reference image)
-                   image))))
+                   (cairo:cairo-surface-reference image)))))
     (unwind-protect
          (let ((context (cairo:cairo-create image)))
            (unwind-protect
@@ -273,7 +275,10 @@
       (when size
         (let ((size-num (coerce (* (climb:normalize-font-size size) pango:+pango-scale+) 'double-float)))
           (pango:pango-font-description-set-absolute-size desc size-num)))
-      (make-instance 'gtk-medium-font :port port :font-description desc))))
+      (let ((instance (make-instance 'gtk-medium-font :port port :font-description desc)))
+	(trivial-garbage:finalize instance (lambda ()
+					     (pango:pango-font-description-free desc)))
+	instance))))
 
 (defmethod (setf text-style-mapping) (font-name
                                       (port gtk-port)
@@ -331,12 +336,14 @@
 
 (defun measure-text-bounds-from-font (cr string font)
   (let ((layout (pango:pango-cairo-create-layout cr)))
+    ;; LAYOUT has no g-object-unref...
     (set-current-font layout font)
     (pango:pango-layout-set-text layout string)
     (multiple-value-bind (ink-rect logical-rect)
         (pango:pango-layout-get-pixel-extents layout)
       (let ((baseline (/ (pango:pango-layout-get-baseline layout) pango:+pango-scale+)))
-        (values ink-rect logical-rect baseline)))))
+	(gobject:g-object-unref (gobject:pointer layout))
+	(values ink-rect logical-rect baseline)))))
 
 (defun measure-text-bounds (medium string text-style)
   (with-cairo-context-measure (cr medium)

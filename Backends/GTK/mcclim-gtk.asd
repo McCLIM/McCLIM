@@ -1,5 +1,5 @@
 (defsystem #:mcclim-gtk
-  :depends-on ("clim" "log4cl" "cl-cffi-gtk")
+  :depends-on ("clim" "log4cl" "cl-cffi-gtk" "trivial-garbage")
   :components ((:file "package")
                (:file "pango-updates" :depends-on ("package"))
                (:file "basic" :depends-on ("pango-updates"))

@@ -51,7 +51,7 @@
 (export 'pango-font-description-new)
 
 (defcfun ("pango_font_description_free" pango-font-description-free) :void
-  (desc :pointer))
+  (desc (g-boxed-foreign pango-font-description)))
 
 (export 'pango-font-description-free)
 
