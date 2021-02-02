@@ -6,6 +6,14 @@
     :reader window))
   (:default-initargs :window (alexandria:required-argument :window)))
 
+(defun clx-drawable (object)
+  (etypecase object
+    (sheet  (clx-drawable (sheet-mirror object)))
+    (medium (clx-drawable (medium-drawable object)))
+    (clx-mirror (window object))
+    (xlib:drawable object)
+    (null nil)))
+
 ;;; Return a string in which every non-STANDARD-CHAR in STRING has
 ;;; been replaced with #\_. The result is guaranteed to be an ASCII
 ;;; string.

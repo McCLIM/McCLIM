@@ -12,7 +12,7 @@
 
 (defun clx-render-medium-picture (medium)
   (or (slot-value medium 'picture)
-      (when-let ((drawable (medium-drawable medium)))
+      (when-let ((drawable (clx-drawable medium)))
         (let* ((root (xlib:drawable-root drawable))
                (format (xlib:find-window-picture-format root)))
           (setf (slot-value medium 'picture)

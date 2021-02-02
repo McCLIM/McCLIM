@@ -54,12 +54,6 @@
    ;; when configuring the clipping region.
    (clipping-region-tmp :initform (vector 0 0 0 0))))
 
-(defmethod medium-drawable ((medium clx-medium))
-  (let ((mirror-or-drawable (call-next-method)))
-    (if (typep mirror-or-drawable 'clx-mirror)
-        (window mirror-or-drawable)
-        mirror-or-drawable)))
-
 ;; Variable is used to deallocate lingering resources after the operation.
 (defvar ^cleanup)
 
@@ -265,7 +259,7 @@
       (otherwise
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
-         (let* ((drawable (medium-drawable medium))
+         (let* ((drawable (clx-drawable medium))
                 (mask (xlib:create-pixmap :drawable drawable
                                           :depth 1
                                           :width (+ x1 width)
@@ -295,7 +289,7 @@ specialized on class too. Keep in mind, that inks may be transformed (i.e
 translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
-  (let ((mirror (medium-drawable medium)))
+  (let ((mirror (clx-drawable medium)))
     (with-slots (gc) medium
       (unless gc
         (setf gc (xlib:create-gcontext :drawable mirror)
@@ -475,7 +469,7 @@ translated, so they begin at different position than [0,0])."))
 (defmethod design-gcontext ((medium clx-medium) (ink clime:pattern)
                             &aux (ink* (climi::transformed-design-design
                                         (clime:effective-transformed-design ink))))
-  (let* ((drawable (medium-drawable medium))
+  (let* ((drawable (clx-drawable medium))
          (rgba-pattern (climi::%collapse-pattern ink))
          (pm (compute-rgb-image drawable rgba-pattern)))
     (let ((gc (xlib:create-gcontext :drawable drawable)))
@@ -530,7 +524,7 @@ translated, so they begin at different position than [0,0])."))
                                 medium &body body)
   (let ((medium-var (gensym)))
     `(let* ((,medium-var ,medium)
-            (,mirror (medium-drawable ,medium-var))
+            (,mirror (clx-drawable ,medium-var))
             (^cleanup nil))
        (when ,mirror
          (unwind-protect (let* ((,line-style (medium-line-style ,medium-var))
@@ -911,7 +905,7 @@ translated, so they begin at different position than [0,0])."))
               (max-y (round-coordinate (max top bottom))))
           (let ((^cleanup nil))
             (unwind-protect
-                 (xlib:draw-rectangle (medium-drawable medium)
+                 (xlib:draw-rectangle (clx-drawable medium)
                                       (medium-gcontext medium (medium-background medium))
                                       (clamp min-x           #x-8000 #x7fff)
                                       (clamp min-y           #x-8000 #x7fff)
