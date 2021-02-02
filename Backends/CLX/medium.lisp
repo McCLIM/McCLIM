@@ -486,9 +486,10 @@ translated, so they begin at different position than [0,0])."))
             (xlib:gcontext-ts-x gc) 0
             (xlib:gcontext-ts-y gc) 0)
       (if-let ((mask (and (not (typep ink* 'clime:rectangular-tile))
-                          (compute-rgb-mask drawable
-                                            rgba-pattern
-                                            (medium-device-region medium)))))
+                          (let* ((tr (clime:transformed-design-transformation ink))
+                                 (region (medium-device-region medium))
+                                 (region (untransform-region tr region)))
+                            (compute-rgb-mask drawable rgba-pattern region)))))
         (setf (xlib:gcontext-clip-mask gc) mask)
         (%set-gc-clipping-region medium gc))
       (push #'(lambda () (xlib:free-gcontext gc)) ^cleanup)
