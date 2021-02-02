@@ -315,7 +315,7 @@
           ;; hmm, this message seems to be sent twice.
           (when-let ((mirror (sheet-mirror sheet)))
             (xlib:set-input-focus (clx-port-display *clx-port*)
-                                  mirror :parent (elt data 1)))
+                                  (window mirror) :parent (elt data 1)))
           (make-instance 'window-manager-focus-event :sheet sheet :timestamp time))
          (:wm_delete_window
           (make-instance 'window-manager-delete-event :sheet sheet :timestamp time))
@@ -394,7 +394,7 @@
               (ancestor (sheet-mirrored-ancestor sheet))
               (mirror (sheet-direct-mirror ancestor)))
     (multiple-value-bind (x y same-screen-p child mask root-x root-y)
-        (xlib:query-pointer mirror)
+        (xlib:query-pointer (window mirror))
       (declare (ignore child))
       (when same-screen-p
         (multiple-value-bind (x y)
@@ -410,12 +410,12 @@
 
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
                               &key multiple-window)
-  (let ((mirror (sheet-mirror sheet))
+  (let ((window (window (sheet-mirror sheet)))
         (events '(:button-press :button-release
 	          :leave-window :enter-window
 	          :pointer-motion)))
     ;; Probably we want to set :cursor here..
-    (eq :success (xlib:grab-pointer mirror events :owner-p multiple-window))))
+    (eq :success (xlib:grab-pointer window events :owner-p multiple-window))))
 
 (defmethod port-ungrab-pointer ((port clx-basic-port) pointer sheet)
   (declare (ignore pointer sheet))

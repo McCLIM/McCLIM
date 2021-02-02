@@ -1,5 +1,11 @@
 (in-package :clim-clx)
 
+(defclass clx-mirror ()
+  ((window
+    :initarg :window
+    :reader window))
+  (:default-initargs :window (alexandria:required-argument :window)))
+
 ;;; Return a string in which every non-STANDARD-CHAR in STRING has
 ;;; been replaced with #\_. The result is guaranteed to be an ASCII
 ;;; string.
@@ -23,9 +29,10 @@
 (defmethod port-set-mirror-name
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) name)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (%set-window-name mirror name)
-    (%set-window-icon-name mirror name)
-    (xlib:display-force-output (xlib:drawable-display mirror))))
+    (let ((window (window mirror)))
+      (%set-window-name window name)
+      (%set-window-icon-name window name)
+      (xlib:display-force-output (xlib:drawable-display window)))))
 
 ;;; The format of the _NET_WM_ICON property is described in
 ;;; "Application Window Properties" section of the "Extended Window
@@ -63,54 +70,53 @@
 (defmethod port-set-mirror-icon
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) icon)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (%mirror-install-icons mirror icon)))
+    (%mirror-install-icons (window mirror) icon)))
 
 (defmethod port-set-mirror-region
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (with-bounding-rectangle* (x1 y1 x2 y2) region
-      (declare (ignore x1 y1))
-      (setf (xlib:drawable-width mirror) (round-coordinate x2)
-            (xlib:drawable-height mirror) (round-coordinate y2)))))
+    (let ((window (window mirror)))
+      (with-bounding-rectangle* (x1 y1 x2 y2) region
+        (declare (ignore x1 y1))
+        (setf (xlib:drawable-width window) (round-coordinate x2)
+              (xlib:drawable-height window) (round-coordinate y2))))))
 
 (defmethod port-set-mirror-transformation
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) transformation)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (multiple-value-bind (x y) (transform-position transformation 0 0)
-      (setf (xlib:drawable-x mirror) (round-coordinate x)
-            (xlib:drawable-y mirror) (round-coordinate y)))))
+    (let ((window (window mirror)))
+      (multiple-value-bind (x y) (transform-position transformation 0 0)
+        (setf (xlib:drawable-x window) (round-coordinate x)
+              (xlib:drawable-y window) (round-coordinate y))))))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
-  (let ((window (sheet-direct-mirror sheet)))
-    (remf (xlib:window-plist window) 'sheet)
-    (xlib:destroy-window window)
-    (xlib:display-force-output (clx-port-display port))))
+  (when-let ((mirror (sheet-direct-mirror sheet)))
+    (let ((window (window mirror)))
+      (remf (xlib:window-plist window) 'sheet)
+      (xlib:destroy-window window)
+      (xlib:display-force-output (clx-port-display port)))))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-mirror sheet)))
-    (when (and mirror
-               (typep mirror 'xlib:window))
-      (setf (xlib:window-priority mirror) :above)
-      (xlib:display-force-output (clx-port-display port)))))
+  (when-let ((mirror (sheet-mirror sheet)))
+    (setf (xlib:window-priority (window mirror)) :above)
+    (xlib:display-force-output (clx-port-display port))))
 
 (defmethod bury-mirror ((port clx-basic-port) (sheet basic-sheet))
-  (let ((mirror (sheet-mirror sheet)))
-    (when (and mirror
-               (typep mirror 'xlib:window))
-      (setf (xlib:window-priority mirror) :below)
-      (xlib:display-force-output (clx-port-display port)))))
+  (when-let ((mirror (sheet-mirror sheet)))
+    (setf (xlib:window-priority (window mirror)) :below)
+    (xlib:display-force-output (clx-port-display port))))
 
 (defmethod port-enable-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:map-window mirror)
+    (xlib:map-window (window mirror))
     (xlib:display-force-output (clx-port-display port))))
 
 (defmethod port-disable-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:unmap-window mirror)
+    (xlib:unmap-window (window mirror))
     (xlib:display-force-output (clx-port-display port))))
 
 (defmethod port-shrink-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:iconify-window mirror (clx-port-screen port))
+    (xlib:iconify-window (window mirror) (clx-port-screen port))
     (xlib:display-force-output (clx-port-display port))))
