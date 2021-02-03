@@ -301,16 +301,25 @@
 
 
 ;;; Misc ops
-
 (defmacro with-output-buffered ((medium &optional (buffer-p t)) &body body)
-  (declare (type symbol medium))
-  (when (eq medium t)
-    (setq medium '*standard-output*))
-  (let ((old-buffer (gensym)))
-    `(let ((,old-buffer (medium-buffering-output-p ,medium)))
-       (setf (medium-buffering-output-p ,medium) ,buffer-p)
-       (unwind-protect (progn ,@body)
-         (setf (medium-buffering-output-p ,medium) ,old-buffer)))))
+  (with-gensyms (cont)
+    `(flet ((,cont () ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-output-buffered ,medium (function ,cont) ,buffer-p))))
+
+(defmethod invoke-with-output-buffered
+    ((sheet sheet) continuation &optional (buffered-p t))
+  (with-sheet-medium (medium sheet)
+    (invoke-with-output-buffered medium continuation buffered-p)))
+
+(defmethod invoke-with-output-buffered
+    ((medium basic-medium) continuation &optional (buffered-p t))
+  (unwind-protect
+       (letf (((medium-buffering-output-p medium) buffered-p))
+         (unless buffered-p
+           (medium-force-output medium))
+         (funcall continuation))
+    (medium-force-output medium)))
 
 
 ;;; BASIC-MEDIUM class
