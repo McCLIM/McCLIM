@@ -46,6 +46,8 @@
                 #:clx-port-screen
                 #:clx-graft
                 #:clx-port-window
+                #:clx-mirror
+                #:window
                 #:mirroring
                 #:class-gensym
                 #:maybe-add-mirroring-superclasses)

@@ -12,7 +12,7 @@
             ((:file "package")
              (:file "clipboard")
              (:file "basic" :depends-on ("package"))
-             (:file "port" :depends-on ("package" "graft" "basic"))
+             (:file "port" :depends-on ("package" "graft" "basic" "mirror"))
              (:file "frame-manager" :depends-on ("port"))
              (:file "keysyms-common" :depends-on ("basic" "package"))
              (:file "keysyms" :depends-on ("keysyms-common"))

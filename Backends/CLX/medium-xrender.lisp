@@ -12,7 +12,7 @@
 
 (defun clx-render-medium-picture (medium)
   (or (slot-value medium 'picture)
-      (when-let ((drawable (medium-drawable medium)))
+      (when-let ((drawable (clx-drawable medium)))
         (let* ((root (xlib:drawable-root drawable))
                (format (xlib:find-window-picture-format root)))
           (setf (slot-value medium 'picture)
@@ -67,11 +67,7 @@
 
 (defmethod medium-draw-rectangle* ((medium clx-render-medium)
                                    left top right bottom filled)
-  (if (and filled
-           (typep (medium-ink medium)
-                  '(or climi::uniform-compositum clim:color clim:opacity)))
-      (medium-draw-rectangle-xrender medium left top right bottom filled)
-      (call-next-method)))
+  (call-next-method))
 
 (defmethod medium-draw-rectangles* ((medium clx-render-medium) position-seq filled)
   (call-next-method medium position-seq filled))

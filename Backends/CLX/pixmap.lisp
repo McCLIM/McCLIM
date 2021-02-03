@@ -3,26 +3,29 @@
 ;;; Pixmap
 
 (defmethod allocate-pixmap ((medium clx-medium) width height)
-  (when-let ((drawable (medium-drawable medium)))
-    (xlib:create-pixmap :width (ceiling width)
-                        :height (ceiling height)
-                        :depth (xlib:drawable-depth drawable)
-                        :drawable drawable)))
+  (when-let ((mirror (medium-drawable medium)))
+    (let* ((window (window mirror))
+           (pixmap (xlib:create-pixmap :width (ceiling width)
+                                       :height (ceiling height)
+                                       :depth (xlib:drawable-depth window)
+                                       :drawable window)))
+      (make-instance 'clx-mirror :window pixmap))))
 
-(defmethod deallocate-pixmap ((pixmap xlib:pixmap))
-  (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
-                               (xlib:pixmap-plist pixmap))))
-    (xlib:render-free-picture picture))
-  (xlib:free-pixmap pixmap))
+(defmethod deallocate-pixmap ((pixmap clx-mirror))
+  (let ((pixmap (clx-drawable pixmap)))
+    (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
+                                 (xlib:pixmap-plist pixmap))))
+      (xlib:render-free-picture picture))
+    (xlib:free-pixmap pixmap)))
 
-(defmethod pixmap-width ((pixmap xlib:pixmap))
-  (xlib:drawable-width pixmap))
+(defmethod pixmap-width ((pixmap clx-mirror))
+  (xlib:drawable-width (window pixmap)))
 
-(defmethod pixmap-height ((pixmap xlib:pixmap))
-  (xlib:drawable-height pixmap))
+(defmethod pixmap-height ((pixmap clx-mirror))
+  (xlib:drawable-height (window pixmap)))
 
-(defmethod pixmap-depth ((pixmap xlib:pixmap))
-  (xlib:drawable-depth pixmap))
+(defmethod pixmap-depth ((pixmap clx-mirror))
+  (xlib:drawable-depth (window pixmap)))
 
 ;;; WIDTH and HEIGHT arguments should be integers, but we'll leave the calls
 ;;; to round "in" for now.
@@ -35,19 +38,20 @@
         ((medium-native-transformation to-drawable) to-x to-y)
       (multiple-value-bind (width height)
           (transform-distance (medium-transformation from-drawable) width height)
-        (xlib:copy-area (medium-drawable from-drawable)
+        (xlib:copy-area (clx-drawable from-drawable)
                         (medium-gcontext to-drawable +background-ink+)
                         (round-coordinate from-x) (round-coordinate from-y)
                         (round width) (round height)
-                        (medium-drawable to-drawable)
+                        (clx-drawable to-drawable)
                         (round-coordinate to-x) (round-coordinate to-y))))))
 
 (defmethod medium-copy-area ((from-drawable clx-medium) from-x from-y width height
-                             (to-drawable xlib:drawable) to-x to-y)
+                             (to-drawable clx-mirror) to-x to-y)
   (with-transformed-position
       ((medium-native-transformation from-drawable) from-x from-y)
-    (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
-      (xlib:copy-area (medium-drawable from-drawable)
+    (let* ((to-drawable (clx-drawable to-drawable))
+           (gcontext (xlib:create-gcontext :drawable to-drawable)))
+      (xlib:copy-area (clx-drawable from-drawable)
                       gcontext
                       (round-coordinate from-x)
                       (round-coordinate from-y)
@@ -58,20 +62,21 @@
                       (round-coordinate to-y))
       (xlib:free-gcontext gcontext))))
 
-(defmethod medium-copy-area ((from-drawable xlib:drawable) from-x from-y width height
+(defmethod medium-copy-area ((from-drawable clx-mirror) from-x from-y width height
                              (to-drawable clx-medium) to-x to-y)
   (with-transformed-position ((medium-native-transformation to-drawable) to-x to-y)
-    (xlib:copy-area from-drawable
+    (xlib:copy-area (clx-drawable from-drawable)
                     (medium-gcontext to-drawable +background-ink+)
                     (round-coordinate from-x) (round-coordinate from-y)
                     (round width) (round height)
-                    (medium-drawable to-drawable)
+                    (clx-drawable to-drawable)
                     (round-coordinate to-x) (round-coordinate to-y))))
 
-(defmethod medium-copy-area ((from-drawable xlib:drawable) from-x from-y width height
-                             (to-drawable xlib:drawable) to-x to-y)
-  (let ((gcontext (xlib:create-gcontext :drawable to-drawable)))
-    (xlib:copy-area from-drawable
+(defmethod medium-copy-area ((from-drawable clx-mirror) from-x from-y width height
+                             (to-drawable clx-mirror) to-x to-y)
+  (let* ((to-drawable (clx-drawable to-drawable))
+         (gcontext (xlib:create-gcontext :drawable to-drawable)))
+    (xlib:copy-area (clx-drawable from-drawable)
                     gcontext
                     (round-coordinate from-x) (round-coordinate from-y)
                     (round width) (round height)

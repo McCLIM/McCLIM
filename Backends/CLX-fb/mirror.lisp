@@ -42,10 +42,11 @@
          (let ((width (round (- max-x min-x)))
                (height (round (- max-y min-y))))
            (when (and xmirror clx-image)
-             (xlib::put-image xmirror
+             (xlib::put-image (window xmirror)
                               gcontext
                               clx-image
-                              :src-x (round (max min-x 0)) :src-y (round (max min-y 0))
+                              :src-x (round (max min-x 0))
+                              :src-y (round (max min-y 0))
                               :x (round (max min-x 0)) :y (round (max min-y 0))
                               :width  (max 0 (- width (min 0 (- min-x))))
                               :height (max 0 (- height (min 0 (- min-y)))))))))
@@ -63,16 +64,22 @@
          (fn (etypecase pixels
                ((simple-array (unsigned-byte 32) 2)
                 #'(lambda (region)
+                    (declare (optimize (speed 3)))
                     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
                         (region-intersection region (make-rectangle* 0 0 (1- width) (1- height)))
+                      (declare (type fixnum min-x min-y max-x max-y))
                       (when (and xmirror clx-image)
-                        (do ((x min-x)
-                             (y min-y (1+ y)))
-                            ((> x max-x))
-                          (setf (aref xlib-image y x) (aref pixels y x))
-                          (when (= y max-y)
-                            (incf x)
-                            (setf y min-y))))))))))
+                        (do ((y min-y)
+                             (x min-x (1+ x)))
+                            ((> y max-y))
+                          (locally
+                              (declare (type (simple-array (unsigned-byte 32) (* *))
+                                             pixels
+                                             xlib-image))
+                            (setf (aref xlib-image y x) (aref pixels y x)))
+                          (when (= x max-x)
+                            (incf y)
+                            (setf x min-x))))))))))
     (map-over-region-set-regions fn dirty-r)))
 
 (defun image-mirror-to-x (mirror)

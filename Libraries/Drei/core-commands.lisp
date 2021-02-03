@@ -35,16 +35,16 @@
 
 (define-command (com-overwrite-mode :name t :command-table editing-table) ()
   "Toggle overwrite mode for the current mode.
-When overwrite is on, an object entered on the keyboard 
-will replace the object after the point. 
-When overwrite is off (the default), objects are inserted at point. 
+When overwrite is on, an object entered on the keyboard
+will replace the object after the point.
+When overwrite is off (the default), objects are inserted at point.
 In both cases point is positioned after the new object."
   (setf (overwrite-mode (current-view))
         (not (overwrite-mode (current-view)))))
 
 (set-key 'com-overwrite-mode
-	 'editing-table
-	 '((:insert)))
+         'editing-table
+         '((:insert)))
 
 (defun set-fill-column (column)
   (if (> column 1)
@@ -54,39 +54,39 @@ In both cases point is positioned after the new object."
 (define-command (com-set-fill-column :name t :command-table fill-table)
     ((column 'integer :prompt "Column Number:"))
   "Set the fill column to the specified value.
-You must supply a numeric argument. The fill column is 
-the column beyond which automatic line-wrapping will occur. 
+You must supply a numeric argument. The fill column is
+the column beyond which automatic line-wrapping will occur.
 
 The default fill column is 70."
   (set-fill-column column))
 
 (set-key `(com-set-fill-column ,*numeric-argument-marker*)
-	 'fill-table
-	 '((#\x :control) (#\f)))
+         'fill-table
+         '((#\x :control) (#\f)))
 
 (define-command (com-zap-to-object :name t :command-table deletion-table) ()
   "Prompt for an object and kill to the next occurence of that object after point.
 Characters can be entered in #\ format."
   (require-minibuffer)
   (let* ((item (handler-case (accept 't :prompt "Zap to Object")
-		(error () (progn (beep)
-				 (display-message "Not a valid object")
-				 (return-from com-zap-to-object nil)))))
-	 (item-mark (clone-mark (point)))
-	 (current-offset (offset (point))))
+                (error () (progn (beep)
+                                 (display-message "Not a valid object")
+                                 (return-from com-zap-to-object nil)))))
+         (item-mark (clone-mark (point)))
+         (current-offset (offset (point))))
     (search-forward item-mark (vector item))
     (delete-range (point) (- (offset item-mark) current-offset))))
 
 (define-command (com-zap-to-character :name t :command-table deletion-table) ()
   "Prompt for a character and kill to the next occurence of that character after point.
-FIXME: Accepts a string (that is, zero or more characters) 
-terminated by a #\NEWLINE. If a zero length string signals an error. 
+FIXME: Accepts a string (that is, zero or more characters)
+terminated by a #\NEWLINE. If a zero length string signals an error.
 If a string of length >1, uses the first character of the string."
   (require-minibuffer)
   (let* ((item-string (handler-case (accept 'string :prompt "Zap to Character") ; Figure out how to get #\d and d.  (or 'string 'character)?
-		(error () (progn (beep)
-				 (display-message "Not a valid string. ")
-				 (return-from com-zap-to-character nil)))))
+                (error () (progn (beep)
+                                 (display-message "Not a valid string. ")
+                                 (return-from com-zap-to-character nil)))))
        (item (subseq item-string 0 1))
        (item-mark (clone-mark (point)))
 
@@ -97,8 +97,8 @@ If a string of length >1, uses the first character of the string."
   (delete-range (point) (- (offset item-mark) current-offset))))
 
 (set-key 'com-zap-to-character
-	 'deletion-table
-	 '((#\z :meta)))
+         'deletion-table
+         '((#\z :meta)))
 
 (define-command (com-open-line :name t :command-table editing-table)
     ((numarg 'integer :prompt "How many lines?" :default 1))
@@ -107,8 +107,8 @@ With a numeric argument greater than 1, insert that many #\Newlines."
   (open-line (point) numarg))
 
 (set-key `(com-open-line ,*numeric-argument-marker*)
-	 'editing-table
-	 '((#\o :control)))
+         'editing-table
+         '((#\o :control)))
 
 (defmacro define-mark-unit-command (unit command-table &key
                                     move-point
@@ -130,15 +130,15 @@ With a numeric argument greater than 1, insert that many #\Newlines."
            ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
          ,(if (not (null move-point))
               (concat "Place point and mark around the current " noun ".
-Put point at the beginning of the current " noun ", and mark at the end. 
-With a positive numeric argument, put mark that many " plural " forward. 
-With a negative numeric argument, put point at the end of the current 
-" noun " and mark that many " plural " backward. 
+Put point at the beginning of the current " noun ", and mark at the end.
+With a positive numeric argument, put mark that many " plural " forward.
+With a negative numeric argument, put point at the end of the current
+" noun " and mark that many " plural " backward.
 Successive invocations extend the selection.")
               (concat "Place mark at the next " noun " end.
-With a positive numeric argument, place mark at the end of 
-that many " plural " forward. With a negative numeric argument, 
-place mark at the beginning of that many " plural " backward. 
+With a positive numeric argument, place mark at the end of
+that many " plural " forward. With a negative numeric argument,
+place mark at the beginning of that many " plural " backward.
 
 Successive invocations extend the selection."))
          (unless (eq (command-name *previous-command*) 'com-mark-word)
@@ -155,16 +155,16 @@ Successive invocations extend the selection."))
 (define-mark-unit-command definition marking-table :move-point t)
 
 (set-key `(com-mark-word ,*numeric-argument-marker*)
-	 'marking-table
-	 '((#\@ :meta)))
+         'marking-table
+         '((#\@ :meta)))
 
 (set-key `(com-mark-paragraph ,*numeric-argument-marker*)
-	 'marking-table
-	 '((#\h :meta)))
+         'marking-table
+         '((#\h :meta)))
 
 (set-key 'com-mark-definition
-	 'marking-table
-	 '((#\h :control :meta)))
+         'marking-table
+         '((#\h :control :meta)))
 
 (define-command (com-upcase-region :name t :command-table case-table) ()
   "Convert the region to upper case."
@@ -184,8 +184,8 @@ Leave point at the word end."
   (upcase-word (point) (current-syntax)))
 
 (set-key 'com-upcase-word
-	 'case-table
-	 '((#\u :meta)))
+         'case-table
+         '((#\u :meta)))
 
 (define-command (com-downcase-word :name t :command-table case-table) ()
   "Convert the characters from point until the next word end to lower case.
@@ -193,22 +193,22 @@ Leave point at the word end."
   (downcase-word (point) (current-syntax)))
 
 (set-key 'com-downcase-word
-	 'case-table
-	 '((#\l :meta)))
+         'case-table
+         '((#\l :meta)))
 
 (define-command (com-capitalize-word :name t :command-table case-table) ()
   "Capitalize the next word.
-If point is in a word, convert the next character to 
-upper case and the remaining letters in the word to lower case. 
-If point is before the start of a word, convert the first character 
-of that word to upper case and the rest of the letters to lower case. 
+If point is in a word, convert the next character to
+upper case and the remaining letters in the word to lower case.
+If point is before the start of a word, convert the first character
+of that word to upper case and the rest of the letters to lower case.
 
 Leave point at the word end."
   (capitalize-word (point) (current-syntax)))
 
 (set-key 'com-capitalize-word
-	 'case-table
-	 '((#\c :meta)))
+         'case-table
+         '((#\c :meta)))
 
 (define-command (com-tabify-region :name t :command-table editing-table) ()
   "Replace runs of spaces with tabs in region where possible.
@@ -225,28 +225,28 @@ Uses TAB-SPACE-COUNT of the STREAM-DEFAULT-VIEW of the pane."
 (define-command (com-set-tab-stops :name t :command-table editing-table)
     ((tab-stops '(sequence (integer 0)) :prompt "List of tab stops"))
   "Accept a list of tab positions (in columns) for the view."
-  (setf (drei::tab-stop-columns (current-view)) 
-	tab-stops))
+  (setf (drei::tab-stop-columns (current-view))
+        tab-stops))
 
 (define-command (com-indent-line :name t :command-table indent-table) ()
   (indent-current-line (current-view) (point)))
 
 (set-key 'com-indent-line
-	 'indent-table
-	 '((#\Tab)))
+         'indent-table
+         '((#\Tab)))
 
 (set-key 'com-indent-line
-	 'indent-table
-	 '((#\i :control)))
+         'indent-table
+         '((#\i :control)))
 
 (define-command (com-newline-and-indent :name t :command-table indent-table) ()
   "Inserts a newline and indents the new line."
   (insert-object (point) #\Newline)
   (indent-current-line (current-view) (point)))
 
-(set-key 'com-newline-and-indent
-	 'indent-table
-	 '((#\j :control)))
+(set-key 'com-newline-and-indent 'indent-table '((#\j :control)))
+(set-key 'com-newline-and-indent 'indent-table '((#\return)))
+(set-key 'com-newline-and-indent 'indent-table '((#\newline)))
 
 (define-command (com-indent-region :name t :command-table indent-table) ()
   "Indent every line of the current region as specified by the
@@ -255,16 +255,16 @@ syntax for the buffer."
 
 (define-command (com-delete-indentation :name t :command-table indent-table) ()
   "Join current line to previous non-blank line.
-Leaves a single space between the last non-whitespace object 
-of the previous line and the first non-whitespace object of 
-the current line, and point after that space. If there is no 
-previous non-blank line, deletes all whitespace at the 
+Leaves a single space between the last non-whitespace object
+of the previous line and the first non-whitespace object of
+the current line, and point after that space. If there is no
+previous non-blank line, deletes all whitespace at the
 beginning of the buffer at leaves point there."
   (delete-indentation (current-syntax) (point)))
 
 (set-key 'com-delete-indentation
-	 'indent-table
-	 '((#\^ :meta)))
+         'indent-table
+         '((#\^ :meta)))
 
 (define-command (com-auto-fill-mode :name t :command-table fill-table) ()
   (let ((view (current-view)))
@@ -288,54 +288,54 @@ beginning of the buffer at leaves point there."
       (setf (offset (point)) (offset point-backup)))))
 
 (set-key 'com-fill-paragraph
-	 'fill-table
-	 '((#\q :meta)))
+         'fill-table
+         '((#\q :meta)))
 
 (define-command (com-beginning-of-buffer :name t :command-table movement-table) ()
   "Move point to the beginning of the buffer."
   (beginning-of-buffer (point)))
 
 (set-key 'com-beginning-of-buffer
-	 'movement-table
-	 '((#\< :meta)))
+         'movement-table
+         '((#\< :meta)))
 
 (set-key 'com-beginning-of-buffer
-	 'movement-table
-	 '((:home :control)))
+         'movement-table
+         '((:home :control)))
 
 (define-command (com-page-down :name t :command-table view-table) ()
   (page-down (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-down
-	 'view-table
-	 '((#\v :control)))
+         'view-table
+         '((#\v :control)))
 
 (set-key 'com-page-down
-	 'view-table
-	 '((:next)))
+         'view-table
+         '((:next)))
 
 (define-command (com-page-up :name t :command-table view-table) ()
   (page-up (editor-pane (drei-instance)) (current-view)))
 
 (set-key 'com-page-up
-	 'view-table
-	 '((#\v :meta)))
+         'view-table
+         '((#\v :meta)))
 
 (set-key 'com-page-up
-	 'view-table
-	 '((:prior)))
+         'view-table
+         '((:prior)))
 
 (define-command (com-end-of-buffer :name t :command-table movement-table) ()
   "Move point to the end of the buffer."
   (end-of-buffer (point)))
 
 (set-key 'com-end-of-buffer
-	 'movement-table
-	 '((#\> :meta)))
+         'movement-table
+         '((#\> :meta)))
 
 (set-key 'com-end-of-buffer
-	 'movement-table
-	 '((:end :control)))
+         'movement-table
+         '((:end :control)))
 
 (define-command (com-mark-whole-buffer :name t :command-table marking-table) ()
   "Place point at the beginning and mark at the end of the buffer."
@@ -343,8 +343,8 @@ beginning of the buffer at leaves point there."
   (end-of-buffer (mark)))
 
 (set-key 'com-mark-whole-buffer
-	 'marking-table
-	 '((#\x :control) (#\h)))
+         'marking-table
+         '((#\x :control) (#\h)))
 
 (define-command (com-back-to-indentation :name t :command-table movement-table) ()
   "Move point to the first non-whitespace object on the current line.
@@ -352,8 +352,8 @@ If there is no non-whitespace object, leaves point at the end of the line."
   (back-to-indentation (point) (current-syntax)))
 
 (set-key 'com-back-to-indentation
-	 'movement-table
-	 '((#\m :meta)))
+         'movement-table
+         '((#\m :meta)))
 
 (define-command (com-delete-horizontal-space :name t :command-table deletion-table)
     ((backward-only-p
@@ -363,8 +363,8 @@ With a numeric argument, only delete whitespace before point."
   (delete-horizontal-space (point) (current-syntax) backward-only-p))
 
 (set-key `(com-delete-horizontal-space ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\\ :meta)))
+         'deletion-table
+         '((#\\ :meta)))
 
 (define-command (com-just-one-space :name t :command-table deletion-table)
     ((count 'integer :prompt "Number of spaces" :default 1))
@@ -375,20 +375,20 @@ FIXME: should distinguish between types of whitespace."
   (just-n-spaces (point) count))
 
 (set-key `(com-just-one-space ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\Space :meta)))
+         'deletion-table
+         '((#\Space :meta)))
 
-(define-command (com-goto-position :name t :command-table movement-table) 
+(define-command (com-goto-position :name t :command-table movement-table)
     ((position 'integer :prompt "Goto Position"))
   "Prompts for an integer, and sets the offset of point to that integer."
-  (goto-position (point) position))  
+  (goto-position (point) position))
 
-(define-command (com-goto-line :name t :command-table movement-table) 
+(define-command (com-goto-line :name t :command-table movement-table)
     ((line-number 'integer :prompt "Goto Line"))
   "Prompts for a line number, and sets point to the beginning of that line.
-The first line of the buffer is 1. Giving a number <1 leaves 
-point at the beginning of the buffer. Giving a line number 
-larger than the number of the last line in the buffer leaves 
+The first line of the buffer is 1. Giving a number <1 leaves
+point at the beginning of the buffer. Giving a line number
+larger than the number of the last line in the buffer leaves
 point at the beginning of the last line of the buffer."
   (goto-line (point) line-number))
 
@@ -397,8 +397,8 @@ point at the beginning of the last line of the buffer."
   (setf (offset (mark)) (offset (point))))
 
 (set-key 'com-set-mark
-	 'marking-table
-	 '((#\Space :control)))
+         'marking-table
+         '((#\Space :control)))
 
 (define-command (com-exchange-point-and-mark :name t :command-table marking-table) ()
   "Exchange the positions of point and mark."
@@ -406,8 +406,8 @@ point at the beginning of the last line of the buffer."
          (offset (point)) (offset (mark))))
 
 (set-key 'com-exchange-point-and-mark
-	 'marking-table
-	 '((#\x :control) (#\x :control)))
+         'marking-table
+         '((#\x :control) (#\x :control)))
 
 (define-command (com-sort-lines :name t :command-table editing-table)
     ((sort-ascending 'boolean :prompt "Sort in ascending order" :default nil))
@@ -431,7 +431,7 @@ will ask whether to sort in ascending or descending order."
     (backward-delete-object (point))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Kill-ring
 
 ;; Copies an element from a kill-ring to a buffer at the given offset
@@ -445,8 +445,8 @@ will ask whether to sort in ascending or descending order."
         (display-message "Kill ring is empty")))))
 
 (set-key 'com-yank
-	 'editing-table
-	 '((#\y :control)))
+         'editing-table
+         '((#\y :control)))
 
 ;; Destructively cut a given buffer region into the kill-ring
 (define-command (com-kill-region :name t :command-table editing-table) ()
@@ -455,8 +455,8 @@ That is, push them onto the kill ring, and delete them from the buffer."
   (kill-region (mark) (point)))
 
 (set-key 'com-kill-region
-	 'editing-table
-	 '((#\w :control)))
+         'editing-table
+         '((#\w :control)))
 
 ;; Non destructively copies buffer region to the kill ring
 (define-command (com-copy-region :name t :command-table marking-table) ()
@@ -466,13 +466,13 @@ That is, push them onto the kill ring, and delete them from the buffer."
                                                (mark))))
 
 (set-key 'com-copy-region
-	 'marking-table
-	 '((#\w :meta)))
+         'marking-table
+         '((#\w :meta)))
 
 (define-command (com-rotate-yank :name t :command-table editing-table) ()
   "Replace the immediately previously yanked objects with others.
-Must be given immediately following a Yank or Rotate Yank command. 
-The replacement objects are those before the previously yanked 
+Must be given immediately following a Yank or Rotate Yank command.
+The replacement objects are those before the previously yanked
 objects in the kill ring."
   (handler-case (let ((last-yank (kill-ring-yank *kill-ring*)))
                   (if (member (command-name *previous-command*)
@@ -486,10 +486,10 @@ objects in the kill ring."
       (display-message "Kill ring is empty"))))
 
 (set-key 'com-rotate-yank
-	 'editing-table
-	 '((#\y :meta)))
+         'editing-table
+         '((#\y :meta)))
 
-(define-command (com-resize-kill-ring :name t :command-table editing-table) 
+(define-command (com-resize-kill-ring :name t :command-table editing-table)
     ((size 'integer :prompt "New kill ring size" :default 5))
   "Prompt for a new size for the kill ring.
 The default is 5. A number less than 5 will be replaced by 5."
@@ -500,11 +500,11 @@ The default is 5. A number less than 5 will be replaced by 5."
   (setf (append-next-p *kill-ring*) t))
 
 (set-key 'com-append-next-kill
-	 'editing-table
-	 '((#\w :control :meta)))
+         'editing-table
+         '((#\w :control :meta)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Undo/redo
 
 (define-command (com-undo :name t :command-table editing-table) ()
@@ -512,33 +512,33 @@ The default is 5. A number less than 5 will be replaced by 5."
     (no-more-undo () (beep) (display-message "No more undo"))))
 
 (set-key 'com-undo
-	 'editing-table
-	 '((#\_ :control)))
+         'editing-table
+         '((#\_ :control)))
 
 (set-key 'com-undo
-	 'editing-table
-	 '((#\x :control) (#\u)))
+         'editing-table
+         '((#\x :control) (#\u)))
 
 (define-command (com-redo :name t :command-table editing-table) ()
   (handler-case (redo (undo-tree (current-buffer)))
     (no-more-undo () (beep) (display-message "No more redo"))))
 
 (set-key 'com-redo
-	 'editing-table
-	 '((#\_ :meta)))
+         'editing-table
+         '((#\_ :meta)))
 
 (set-key 'com-redo
-	 'editing-table
-	 '((#\x :control) (#\r :control)))
+         'editing-table
+         '((#\x :control) (#\r :control)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Dynamic abbrevs
 
 (define-command (com-dabbrev-expand :name t :command-table editing-table) ()
   "Expand word before point dynamically.
-Search from point (first backward to the beginning of the buffer, 
-then forward) for words for which the word before point is a prefix, 
+Search from point (first backward to the beginning of the buffer,
+then forward) for words for which the word before point is a prefix,
 inserting each in turn at point as an expansion."
   (with-accessors ((original-prefix original-prefix)
                    (prefix-start-offset prefix-start-offset)
@@ -577,17 +577,17 @@ inserting each in turn at point as an expansion."
                    (move)))))))
 
 (set-key 'com-dabbrev-expand
-	 'editing-table
-	 '((#\/ :meta)))
+         'editing-table
+         '((#\/ :meta)))
 
 (define-command (com-mark-page :name t :command-table marking-table)
     ((count 'integer :prompt "Move how many pages" :default 1)
      (numargp 'boolean :prompt "Move to another page?" :default nil))
   "Place point and mark around the current page.
-With a numeric argument, move point that many 
-pages forward (backward if negative) before marking the 
-surrounding page. When no page delimeters are found, 
-leave point at the beginning and mark at the end of the buffer. 
+With a numeric argument, move point that many
+pages forward (backward if negative) before marking the
+surrounding page. When no page delimeters are found,
+leave point at the beginning and mark at the end of the buffer.
 
 A page is delimited by the sequence #\Newline #\Page."
   (cond ((and numargp (/= 0 count))
@@ -599,19 +599,19 @@ A page is delimited by the sequence #\Newline #\Page."
   (forward-page (mark) (current-syntax) 1))
 
 (set-key `(com-mark-page ,*numeric-argument-marker* ,*numeric-argument-marker*)
-	 'marking-table
-	 '((#\x :control) (#\p :control)))
+         'marking-table
+         '((#\x :control) (#\p :control)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Commenting
 
-;;; figure out how to make commands without key bindings accept numeric arguments. 
+;;; figure out how to make commands without key bindings accept numeric arguments.
 (define-command (com-comment-region :name t :command-table comment-table) ()
   (comment-region (current-syntax) (point) (mark)))
 
 ;; (defparameter *insert-pair-alist*
-;; 	      '((#\( #\)) (#\[ #\]) (#\{ #\}) (#\< #\>) (#\" #\") (#\' #\') (#\` #\')))
+;;            '((#\( #\)) (#\[ #\]) (#\{ #\}) (#\< #\>) (#\" #\") (#\' #\') (#\` #\')))
 
 (defun insert-parentheses (mark syntax count)
   (insert-pair mark syntax count #\( #\)))
@@ -620,14 +620,14 @@ A page is delimited by the sequence #\Newline #\Page."
     ((count 'integer :prompt "Number of expressions" :default 1)
      (wrap-p 'boolean :prompt "Wrap expressions?" :default nil))
   "Insert a pair of parentheses, leaving point in between.
-With a numeric argument, enclose that many expressions 
+With a numeric argument, enclose that many expressions
 forward (backward if negative)."
   (unless wrap-p (setf count 0))
   (insert-parentheses (point) (current-syntax) count))
 
 (set-key `(com-insert-parentheses ,*numeric-argument-marker* ,*numeric-argument-marker*)
-	 'editing-table
-	 '((#\( :meta)))
+         'editing-table
+         '((#\( :meta)))
 
 (define-command (com-visible-region :name t :command-table marking-table) ()
   "Toggle the visibility of the region in the current pane."
@@ -640,16 +640,16 @@ forward (backward if negative)."
   (move-past-close-and-reindent (current-view) (point)))
 
 (set-key `(com-move-past-close-and-reindent)
-	 'editing-table
-	 '((#\) :meta)))
+         'editing-table
+         '((#\) :meta)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Rectangle editing
 
 (define-command (com-kill-rectangle :name t :command-table deletion-table)
     ()
-  "Kill the rectangle bounded by current point and mark.   
+  "Kill the rectangle bounded by current point and mark.
 
 The rectangle will be put in a rectangle kill buffer, from which it can
 later be yanked with Yank Rectangle. This kill buffer is completely
@@ -680,7 +680,7 @@ The rectangle will be deleted and NOT put in the kill buffer."
 
 (define-command (com-yank-rectangle :name t :command-table editing-table)
     ()
-  "Insert the rectangle from the rectangle kill buffer at mark.  
+  "Insert the rectangle from the rectangle kill buffer at mark.
 
 The rectangle kill buffer will not be emptied, so it is possible to yank
 the same rectangle several times."
@@ -706,7 +706,7 @@ the same rectangle several times."
 
 (define-command (com-open-rectangle :name t :command-table editing-table)
     ()
-  "Open the rectangle bounded by current point and mark.  
+  "Open the rectangle bounded by current point and mark.
 
 The rectangle will not be deleted, but instead pushed to the right, with
 the area previously inhabited by it filled with spaces."

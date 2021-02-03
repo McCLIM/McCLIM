@@ -143,7 +143,7 @@
                          (bounding-rectangle-size region)
                          (values width height))
                      (xlib:create-window
-                      :parent (sheet-mirror (sheet-parent sheet))
+                      :parent (window (sheet-mirror (sheet-parent sheet)))
                       :width (round-coordinate width)
                       :height (round-coordinate height)
                       :x (round-coordinate x)
@@ -170,7 +170,7 @@
   ;;mirrored-sheet-mixin is always in the top of the Class Precedence List
   (let ((window (%realize-mirror port sheet)))
     (setf (getf (xlib:window-plist window) 'sheet) sheet)
-    window))
+    (make-instance 'clx-mirror :window window)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
   (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)))
@@ -205,8 +205,10 @@
                                  :map nil))
 
 (defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
-  (let* ((graft (make-instance 'clx-graft
-                               :port port :mirror (clx-port-window port)
+  (let* ((root (clx-port-window port))
+         (graft (make-instance 'clx-graft
+                               :port port
+                               :mirror (make-instance 'clx-mirror :window root)
                                :orientation orientation :units units))
          (screen (clx-port-screen port))
          (width (xlib:screen-width screen))

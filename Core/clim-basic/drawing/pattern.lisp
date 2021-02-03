@@ -167,6 +167,8 @@ pattern, stencil, image etc)."))
   (:documentation "Indexed pattern maps numbers in array to designs."))
 
 (defun make-pattern (array designs)
+  (check-type array array)
+  (check-type designs sequence)
   (make-instance 'indexed-pattern :array array :designs designs))
 
 (defmethod %pattern-rgba-value ((pattern indexed-pattern) x y)
@@ -261,8 +263,8 @@ throughout the drawing plane. This is most commonly used with patterns."))
                          (y (mod y (pattern-height pattern))))
   (let ((element (rectangular-tile-design pattern)))
     (if (patternp element)
-        ;; If design is a pattern we delegate the question
-        (%pattern-rgba-value element x y)
+        ;; If design is a pattern we delegate the question.
+        (design-ink element x y)
         element)))
 
 
