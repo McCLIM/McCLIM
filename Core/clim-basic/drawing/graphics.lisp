@@ -791,12 +791,16 @@
 
 ;;; Generic graphic operation methods
 
+(defmacro def-sheet-trampoline (name (&rest args))
+  (with-gensyms (stream medium)
+    `(defmethod ,name ((,stream sheet) ,@args)
+       (with-sheet-medium (,medium ,stream)
+         (,name ,medium ,@args)))))
+
 (defmacro def-graphic-op (name (&rest args))
   (let ((method-name (symbol-concat '#:medium- name '*)))
     `(eval-when (:execute :load-toplevel :compile-toplevel)
-       (defmethod ,method-name ((stream sheet) ,@args)
-         (with-sheet-medium (medium stream)
-           (,method-name medium ,@args))))))
+       (def-sheet-trampoline ,method-name ,args))))
 
 (def-graphic-op draw-point (x y))
 (def-graphic-op draw-points (coord-seq))
@@ -814,9 +818,10 @@
                                align-x align-y
                                toward-x toward-y transform-glyphs))
 
-(defmethod medium-clear-area ((sheet sheet) left top right bottom)
-  (with-sheet-medium (medium sheet)
-    (medium-clear-area medium left top right bottom)))
+(def-sheet-trampoline medium-clear-area (left top right bottom))
+(def-sheet-trampoline medium-finish-output ())
+(def-sheet-trampoline medium-force-output ())
+(def-sheet-trampoline medium-beep ())
 
 ;;;;
 ;;;; DRAW-DESIGN
