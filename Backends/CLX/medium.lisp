@@ -44,9 +44,9 @@
 
 ;;; CLX-MEDIUM class
 
-(defclass clx-medium (basic-medium
-                      multiline-text-medium-mixin
-                      font-rendering-medium-mixin)
+(defclass clx-medium (multiline-text-medium-mixin
+                      font-rendering-medium-mixin
+                      basic-medium)
   ((gc :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
@@ -879,12 +879,6 @@ translated, so they begin at different position than [0,0])."))
           (transform-position merged-transform x y)
         (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
                           :start start :end end :translate #'translate :size 16)))))
-
-(defmethod medium-buffering-output-p ((medium clx-medium))
-  t)
-
-(defmethod (setf medium-buffering-output-p) (buffer-p (medium clx-medium))
-  buffer-p)
 
 
 ;;; Other Medium-specific Output Functions

@@ -20,7 +20,7 @@
 (in-package :clim-null)
 
 (defclass null-medium (basic-medium)
-  ((buffering-output-p :accessor medium-buffering-output-p)))
+  ())
 
 (defmethod (setf medium-text-style) :before (text-style (medium null-medium))
   (declare (ignore text-style))
@@ -168,14 +168,6 @@
                               toward-x toward-y transform-glyphs)
   (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
   nil)
-
-#+nil
-(defmethod medium-buffering-output-p ((medium null-medium))
-  t)
-
-#+nil
-(defmethod (setf medium-buffering-output-p) (buffer-p (medium null-medium))
-  buffer-p)
 
 (defmethod medium-finish-output ((medium null-medium))
   nil)

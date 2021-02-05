@@ -167,7 +167,9 @@
    (port :initarg :port
          :accessor port)
    (drawable :initform nil
-             :accessor %medium-drawable))
+             :accessor %medium-drawable)
+   (buffering-p :initform t
+                :accessor medium-buffering-output-p))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
 (defmethod medium-drawable ((medium basic-medium))

@@ -136,12 +136,6 @@
 
 
 
-(defmethod medium-buffering-output-p ((medium clx-render-medium))
-  (call-next-method))
-
-(defmethod (setf medium-buffering-output-p) (buffer-p (medium clx-render-medium))
-  (call-next-method))
-
 (defmethod medium-finish-output ((medium clx-render-medium))
   (call-next-method))
 
