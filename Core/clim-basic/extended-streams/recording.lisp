@@ -2121,10 +2121,10 @@ according to the flags RECORD and DRAW."
 ;;; rotation, scaling or translation in the current medium transformation.
 (defmethod invoke-with-room-for-graphics (cont (stream extended-output-stream)
                                           &key (first-quadrant t)
-                                          height
-                                          (move-cursor t)
-                                          (record-type
-                                           'standard-sequence-output-record))
+                                               height
+                                               (move-cursor t)
+                                               (record-type
+                                                'standard-sequence-output-record))
   ;; I am not sure what exactly :height should do.           ; [avengers pun]
   ;; --GB 2003-05-25                                         ; -----------------
   ;; The current behavior is consistent with 'classic' CLIM  ; where is genera?
@@ -2142,45 +2142,59 @@ according to the flags RECORD and DRAW."
   ;; record it will be the only means to assure space in case of the
   ;; FIRST-QUADRANT = T (Y-axis inverted). -- jd
   ;;
-  ;; FIXME: clip the output record to HEIGHT if the argument is supplied.
   ;; ADDME: add width argument for clipping (McCLIM extension)
-  (multiple-value-bind (cx cy)
-      (stream-cursor-position stream)
+  (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (with-sheet-medium (medium stream)
-      (letf (((medium-transformation medium)
-              (if first-quadrant
-                  (make-scaling-transformation 1 -1)
-                  +identity-transformation+)))
-        (let ((record (with-output-to-output-record (stream record-type)
-                        (funcall cont stream))))
-          ;; Bounding  rectangle is in sheet coordinates!
-          (with-bounding-rectangle* (x1 y1 x2 y2)
-              record
-            (declare (ignore x2))
-            (if first-quadrant
-                (setf (output-record-position record)
-                      (values (max cx (+ cx x1))
-                              (if height
-                                  (max cy (+ cy (- height (abs y1))))
-                                  cy)))
-                (setf (output-record-position record)
-                      (values (max cx (+ cx x1)) (max cy (+ cy y1)))))
-            (when (stream-recording-p stream)
-              (stream-add-output-record stream record))
-            (when (stream-drawing-p stream)
-              (replay record stream))
-            (if move-cursor
-                (let ((record-height (- y2 y1)))
-                  (setf (stream-cursor-position stream)
-                        (values cx
-                                (if first-quadrant
-                                    (+ cy (max (- y1)
-                                               (or height 0)
-                                               record-height))
-                                    (+ cy (max (or height 0)
-                                               record-height))))))
-                (setf (stream-cursor-position stream) (values cx cy)))
-            record))))))
+      (let ((clip-region (graphics-state-clip medium)))
+        (letf (((medium-transformation medium)
+                (if first-quadrant
+                    (make-scaling-transformation 1 -1)
+                    +identity-transformation+))
+               ((medium-clipping-region medium)
+                +everywhere+))
+          (let ((record (with-output-to-output-record (stream record-type)
+                          (funcall cont stream))))
+            ;; Bounding rectangle is in sheet coordinates!
+            (with-bounding-rectangle* (x1 y1 x2 y2) record
+              (let* ((record-height (- y2 y1))
+                     (height-clip   (when (and height
+                                               (< height record-height))
+                                      (make-rectangle*
+                                       cx cy (+ cx (- x2 x1)) (+ cy height))))
+                     (new-x         (max cx (+ cx x1)))
+                     (new-y         (cond ((not first-quadrant)
+                                           (max cy (+ cy y1)))
+                                          (height
+                                           (+ cy (- height record-height)))
+                                          (t
+                                           cy))))
+                (setf (output-record-position record) (values new-x new-y))
+                ;; Clip all output records to HEIGHT and/or the medium clipping
+                ;; region. All clipping region are in sheet coordinates.
+                (when-let ((clip-region
+                            (cond ((and (not (eq clip-region +everywhere+))
+                                        height-clip)
+                                   (region-intersection clip-region height-clip))
+                                  (height-clip)
+                                  ((not (eq clip-region +everywhere+))
+                                   clip-region))))
+                  (map-over-output-records
+                   (lambda (record)
+                     (when (typep record 'gs-clip-mixin)
+                       (setf (graphics-state-clip record) clip-region)))
+                   record))
+                ;; And and/or replay the clipped and repositioned RECORD.
+                (when (stream-recording-p stream)
+                  (stream-add-output-record stream record))
+                (when (stream-drawing-p stream)
+                  (replay record stream))
+                ;; Restore the cursor position or move the cursor.
+                (setf (stream-cursor-position stream)
+                      (values cx (+ cy (if move-cursor
+                                           (max (if first-quadrant (- y1) 0)
+                                                (or height record-height))
+                                           0)))))
+              record)))))))
 
 ;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
 ;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
