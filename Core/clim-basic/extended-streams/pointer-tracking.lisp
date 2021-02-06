@@ -186,14 +186,15 @@
                     (eql tracked-sheet (event-sheet event)))
             (track-pointer-event event)))
         (loop for event = (event-read tracked-sheet)
+              for sheet = (event-sheet event)
               ;; We let HANDLE-EVENT take care of events that are not
               ;; for TRACKED-SHEET (unless MULTIPLE-WINDOW is true). On
               ;; the other hand, we pass events for TRACKED-SHEET (or
               ;; all events if MULTIPLE-WINDOW is true) to TRACK-EVENT.
               do (cond ((not (or multiple-window
-                                 (eql tracked-sheet (event-sheet event))))
+                                 (eql tracked-sheet sheet)))
                         ;; Event is not intercepted.
-                        (handle-event (event-sheet event) event))
+                        (handle-event sheet event))
                        ((typep event 'pointer-event)
                         (track-pointer-event event))
                        (t
@@ -207,7 +208,8 @@
                      (when (not (eql modifier-state new-state))
                        (track-pointer-event
                         (synthesize-pointer-motion-event pointer)))
-                     (setf modifier-state new-state)))))))
+                     (setf modifier-state new-state))
+              do (medium-finish-output sheet))))))
 
 (defmacro tracking-pointer
     ((sheet &rest args &key pointer multiple-window transformp context-type highlight)

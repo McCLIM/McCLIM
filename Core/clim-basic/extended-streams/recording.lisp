@@ -377,7 +377,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
                           (bounding-rectangle record)
                           (region-difference (bounding-rectangle record)
                                              (make-rectangle* (1+ x1) (1+ y1) (1- x2) (1- y2))))
-                      :ink +foreground-ink+)))
+                      :ink +foreground-ink+))
+       (medium-force-output stream))
       (:unhighlight
        (repaint-sheet stream (bounding-rectangle record))
        ;; Using queue-repaint should be faster in apps (such as clouseau) that
@@ -385,12 +386,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
        ;; should merge these into a single larger repaint. Unfortunately, since
        ;; an enqueued repaint does not occur immediately, and highlight
        ;; rectangles are not recorded, newer highlighting gets wiped out shortly
-       ;; after being drawn. So, we aren't ready for this yet.  ..Actually, it
+       ;; after being drawn. So, we aren't ready for this yet... Actually, it
        ;; isn't necessarily faster. Depends on the app.
        #+ (or)
-       (queue-repaint stream (make-instance 'window-repaint-event
-                                            :sheet stream
-                                            :region (bounding-rectangle record)))))))
+       (queue-repaint stream
+                      (make-instance 'window-repaint-event
+                                     :sheet stream
+                                     :region (bounding-rectangle record)))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
@@ -2039,7 +2041,7 @@ according to the flags RECORD and DRAW."
       (letf (((stream-current-output-record stream) new-record))
         ;; Should we switch on recording? -- APD
         (funcall continuation stream new-record)
-        (force-output stream))
+        (stream-close-text-output-record stream))
       (if parent
           (add-output-record new-record parent)
           (stream-add-output-record stream new-record))
@@ -2058,7 +2060,7 @@ according to the flags RECORD and DRAW."
         (letf (((stream-current-output-record stream) new-record)
                ((stream-cursor-position stream) (values 0 0)))
           (funcall continuation stream new-record)
-          (force-output stream))))
+          (stream-close-text-output-record stream))))
     new-record))
 
 (defmethod make-design-from-output-record (record)
