@@ -9,7 +9,7 @@
 (define-application-frame superapp ()
 
   ;; New addition of a slot to the application frame which
-  ;; defines a application-specific slot.  
+  ;; defines an application-specific slot.
 
   ;; The slot is simply a number.
   ((currrent-number :initform nil
@@ -29,10 +29,9 @@
     (default (vertically ()
 	      app int))))
 
-;; This is the function that will display the pane app.
-;; Simply prints the number of the application frame slot
-;; and whether it is odd or even.
-;; Note that the print stream of format is pane.
+;; This is the function that will display the pane app. It simply
+;; prints the number of the application frame slot and whether it is
+;; odd or even. Note that the print stream of 'format' is 'pane'.
 (defun display-app (frame pane)
   (let ((number (current-number frame)))
     (format pane "~a is ~a"

@@ -281,7 +281,7 @@ different actions on the pointer device. This was done by
 including \texttt{(:pointer-documentation t)} in the frame definition.
 
 If you execute this example, you will find that you now have three
-different panes, the application pane, the interactor pane and the
+different panes—the application pane, the interactor pane, and the
 pointer documentation pane.  In the pointer documentation pane, you
 will see the text \texttt{R possibilities} which indicates that if you
 click the right mouse button, you will automatically see a popup menu
@@ -332,13 +332,13 @@ each iteration of the command loop displays the entire data structure
 to the application pane.
 
 Here is a variation of the previous application that shows this
-possibility where the \texttt{parity} is now useful.
+possibility, and in which the \texttt{parity} command is now useful.
 
 \verbatiminput{ex2b.lisp}
 
 Here, we have added a slot that is called \texttt{current-number} to
 the application frame.  It is initialized to \texttt{NIL} and it has
-an accessor function that allow us to query and to modify the value.
+an accessor function that allows us to query and to modify the value.
 
 Observe that in this example, we no longer have the option
 \texttt{:display-time nil} set in the application pane.  By default,
