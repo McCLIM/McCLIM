@@ -1571,21 +1571,25 @@ were added."
 
 ;;; Text
 
-(defun enclosing-transform-polygon (transformation positions)
-  (when (null positions)
-    (error "Need at least one coordinate"))
-  (loop with min-x = most-positive-fixnum
-        with min-y = most-positive-fixnum
-        with max-x = most-negative-fixnum
-        with max-y = most-negative-fixnum
-        for (xp yp) on positions by #'cddr
-        do (multiple-value-bind (x y)
-               (transform-position transformation xp yp)
-             (setf min-x (min min-x x))
-             (setf min-y (min min-y y))
-             (setf max-x (max max-x x))
-             (setf max-y (max max-y y)))
-        finally (return (values min-x min-y max-x max-y))))
+(declaim (inline %enclosing-transform-polygon))
+(defun %enclosing-transform-polygon (transformation x1 y1 x2 y2)
+  (let (min-x min-y max-x max-y)
+    (setf (values min-x min-y) (transform-position transformation x1 y1)
+          (values max-x max-y) (values min-x min-y))
+    (flet ((do-point (x y)
+             (with-transformed-position (transformation x y)
+               (cond ((< x min-x)
+                      (setf min-x x))
+                     ((> x max-x)
+                      (setf max-x x)))
+               (cond ((< y min-y)
+                      (setf min-y y))
+                     ((> y max-y)
+                      (setf max-y y))))))
+      (do-point x1 y2)
+      (do-point x2 y1)
+      (do-point x2 y2))
+    (values min-x min-y max-x max-y)))
 
 (def-grecording (draw-text :replay-fn nil) (gs-text-style-mixin gs-transformation-mixin)
     ((string (subseq string (or start 0) end))
@@ -1595,18 +1599,16 @@ were added."
      align-x align-y
      toward-x toward-y transform-glyphs)
   ;; FIXME!!! Text direction.
-  (let* ((transformation (medium-transformation medium))
+  (let* ((transformation (graphics-state-transformation medium))
          (text-style (graphics-state-text-style graphic)))
-    (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
         (text-bounding-rectangle* medium string
                                   :align-x align-x :align-y align-y
                                   :text-style text-style)
       (if transform-glyphs
-          (enclosing-transform-polygon transformation (list (+ point-x left)  (+ point-y top)
-                                                            (+ point-x right) (+ point-y top)
-                                                            (+ point-x left)  (+ point-y bottom)
-                                                            (+ point-x right) (+ point-y bottom)))
+          (%enclosing-transform-polygon
+           transformation
+           (+ point-x left) (+ point-y top) (+ point-x right) (+ point-y bottom))
           (with-transformed-position (transformation point-x point-y)
             (values (+ point-x left) (+ point-y top)
                     (+ point-x right) (+ point-y bottom)))))))
