@@ -215,7 +215,7 @@ designator) inherits keystrokes."
   "Return true if `command-table' (which must be a command table
 designator) inherits menu items."
   (let ((inherit-menu (inherit-menu (find-command-table command-table))))
-    (or (inherit-keystrokes command-table)
+    (or (eq inherit-menu t)
         (eq inherit-menu :menu))))
 
 (defun %add-menu-item (command-table item after)

@@ -21,12 +21,10 @@
 (defun make-menu-buttons (table client)
   (setf table (find-command-table table))
   (collect (items)
-    (map-over-command-table-menu
-     (lambda (item table)
-       (declare (ignore table))
-       (with-slots (menu-name keystroke type) item
-         (when (or menu-name (eq type :divider))
-           (items (make-menu-button-from-menu-item item client)))))
+    (map-over-command-table-menu-items
+     (lambda (name keystroke item)
+       (declare (ignore name keystroke))
+       (items (make-menu-button-from-menu-item item client)))
      table
      :inherited (inherit-menu table))
     (items +fill+)))
