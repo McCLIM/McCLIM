@@ -43,15 +43,6 @@
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
   ((redisplay-needed :initarg :display-time)
-   (scroll-bars :initform :obsolete
-                :initarg :scroll-bar
-                :initarg :scroll-bars
-                :accessor pane-scroll-bars)
-
-                                        ; Should inherit from label-pane for this one ??
-   (label :initform :obsolete
-          :initarg :label
-          :reader pane-label)
    (text-margin :initarg :text-margin
                 :reader pane-text-margin)
    (vertical-spacing :initarg :vertical-spacing
@@ -76,18 +67,6 @@
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
-
-(defmethod initialize-instance :after ((instance clim-stream-pane) &rest initargs)
-  (declare (ignore initargs))
-  (with-slots (scroll-bars label) instance
-    (when (not (eql :obsolete scroll-bars))
-      (warn "~@<The SCROLL-BARS slot in CLIM-STREAM-PANE is obsolete, ~
-             don't use it but use the keyword :SCROLL-BARS in function ~
-             MAKE-CLIM-STREAM-PANE.~@:>"))
-    (when (not (eql :obsolete label))
-      (warn "~@<The LABEL slot in CLIM-STREAM-PANE is obsolete, don't use ~
-             it but use the keyword :LABEL in function ~
-             MAKE-CLIM-STREAM-PANE.~@:>"))))
 
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))
@@ -471,10 +450,10 @@ current background message was set."))
                  (if (or scroll-bar-p scroll-bars-p)
                      options
                      (list* :scroll-bars ,default-scroll-bar options))))))
-  (define make-clim-interactor-pane            interactor-pane            :vertical)
-  (define make-clim-application-pane           application-pane           t)
+  (define make-clim-interactor-pane interactor-pane :vertical)
+  (define make-clim-application-pane application-pane t)
   (define make-clim-pointer-documentation-pane pointer-documentation-pane nil)
-  (define make-clim-command-menu-pane          command-menu-pane          t))
+  (define make-clim-command-menu-pane command-menu-pane t))
 
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
