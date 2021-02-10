@@ -12,7 +12,7 @@
   (values 'clx-freetype-port (nth-value 1 (climb:find-port-type :clx))))
 
 (defmethod clim:make-medium ((port clx-freetype-port) sheet)
-  (make-instance 'clx-freetype-medium :sheet sheet))
+  (make-instance 'clx-freetype-medium :port port :sheet sheet))
 
 (defparameter *freetype-font-scale* 26.6)
 
