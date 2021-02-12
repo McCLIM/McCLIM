@@ -633,26 +633,30 @@ translated, so they begin at different position than [0,0])."))
         (call-next-method))
       (call-next-method)))
 
-(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
-                                   &aux (ink (medium-ink medium)))
-  (declare (ignore ink))
+(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (let ((tr (medium-native-transformation medium)))
-    (with-transformed-position (tr left top)
-      (with-transformed-position (tr right bottom)
-        (with-clx-graphics () medium
-          (when (< right left) (rotatef left right))
-          (when (< bottom top) (rotatef top bottom))
-          (let ((left   (round-coordinate left))
-                (top    (round-coordinate top))
-                (right  (round-coordinate right))
-                (bottom (round-coordinate bottom)))
-            ;; To clip rectangles, we just need to clamp the coordinates
-            (xlib:draw-rectangle mirror gc
-                                 (clamp left           #x-8000 #x7FFF)
-                                 (clamp top            #x-8000 #x7FFF)
-                                 (clamp (- right left) 0       #xFFFF)
-                                 (clamp (- bottom top) 0       #xFFFF)
-                                 filled)))))))
+    (if (rectilinear-transformation-p tr)
+        (with-transformed-position (tr left top)
+          (with-transformed-position (tr right bottom)
+            (with-clx-graphics () medium
+              (when (< right left) (rotatef left right))
+              (when (< bottom top) (rotatef top bottom))
+              (let ((left   (round-coordinate left))
+                    (top    (round-coordinate top))
+                    (right  (round-coordinate right))
+                    (bottom (round-coordinate bottom)))
+                ;; To clip rectangles, we just need to clamp the coordinates
+                (xlib:draw-rectangle mirror gc
+                                     (clamp left           #x-8000 #x7FFF)
+                                     (clamp top            #x-8000 #x7FFF)
+                                     (clamp (- right left) 0       #xFFFF)
+                                     (clamp (- bottom top) 0       #xFFFF)
+                                     filled)))))
+        (let ((coords (vector left top right top right bottom left bottom left top)))
+          (with-transformed-positions (tr coords)
+            (map-into coords #'round-coordinate coords)
+            (with-clx-graphics () medium
+              (xlib:draw-lines mirror gc coords :fill-p filled)))))))
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (let ((length (length position-seq)))
