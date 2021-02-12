@@ -117,21 +117,20 @@
    (graft-x :initarg :graft-x :reader device-event-native-graft-x)
    (graft-y :initarg :graft-y :reader device-event-native-graft-y)))
 
-;;; This macro is responsible for translating the pointer coordinates into
-;;; sheet coordinates. That make sense i.e when we try to synthesize event for
-;;; a different sheet (i.e when it doesn't have a mirror), or to "detect" the
-;;; innermost sheet under the pointer (ditto).
-(defmacro get-pointer-position ((sheet event) &body body)
-  (alexandria:once-only (sheet event)
-    `(multiple-value-bind (x y)
-         (if ,sheet
-             (untransform-position (sheet-delta-transformation ,sheet (graft ,sheet))
-                                   (device-event-native-graft-x ,event)
-                                   (device-event-native-graft-y ,event))
-             (values (device-event-native-x ,event)
-                     (device-event-native-y ,event)))
-       (declare (ignorable x y))
-       ,@body)))
+;;; This function is responsible for transforming the sheet of the event
+;;; coordinates into target-sheet coordinates.
+(defun do-get-pointer-position (target-sheet event)
+  ;; FIXME sheet-delta-transformation may contain noticeable rounding errors
+  ;; if it has intermixed translations and rotations.
+  (untransform-position (sheet-delta-transformation target-sheet nil)
+                        (device-event-native-graft-x event)
+                        (device-event-native-graft-y event)))
+
+(defmacro get-pointer-position ((target-sheet event) &body body)
+  `(multiple-value-bind (x y)
+       (do-get-pointer-position ,target-sheet ,event)
+     (declare (ignorable x y))
+     ,@body))
 
 (defmethod initialize-instance :after ((event device-event) &key x y)
   (if-let ((sheet (event-sheet event)))
