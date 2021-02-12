@@ -177,15 +177,13 @@
        (xlib:draw-rectangle mask mask-gc x1 y1 width height t)))
     (clim:standard-polygon
      (let ((coord-seq (climi::expand-point-seq (polygon-points clipping-region))))
-       (with-transformed-positions
-           ((medium-native-transformation medium) coord-seq)
-         (setq coord-seq (map 'vector #'round-coordinate coord-seq))
-         (xlib:draw-lines mask mask-gc
-                          (concatenate 'vector
-                                       coord-seq
-                                       (vector (elt coord-seq 0)
-                                               (elt coord-seq 1)))
-                          :fill-p t))))
+       (setq coord-seq (map 'vector #'round-coordinate coord-seq))
+       (xlib:draw-lines mask mask-gc
+                        (concatenate 'vector
+                                     coord-seq
+                                     (vector (elt coord-seq 0)
+                                             (elt coord-seq 1)))
+                        :fill-p t)))
     (clim:standard-ellipse
      (flet ((%draw-lines (scan-line)
               (map-over-region-set-regions
