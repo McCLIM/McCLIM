@@ -240,6 +240,8 @@
     (typecase clipping-region
       (climi::nowhere-region
        (setf (xlib:gcontext-clip-mask gc) #()))
+      (climi::everywhere-region
+       (setf (xlib:gcontext-clip-mask gc) :none))
       (clim:standard-rectangle
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
