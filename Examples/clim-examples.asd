@@ -58,6 +58,7 @@
                (:file "frame-sheet-name-test")
                (:file "dnd-commented")
                (:file "tracking-pointer")
+               (:file "sheet-geometry")
                (:file "file-manager")
                (:file "presentation-translators-test")
                (:file "graph-formatting-test")
