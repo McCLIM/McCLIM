@@ -1,0 +1,348 @@
+#+title: Sheet Geometry
+#+author: Daniel 'jackdaniel' Kochmański
+#+date: [2021-02-09 wto]
+
+* Sheet geometry for sheets
+** Coordinate systems
+
+   We distinguish five types of coordinate systems in relation to a sheet:
+
+   - local  :: coordinates as passed to drawing functions
+   - sheet  :: coordinates are relative to the sheet's region[fn:3]
+   - parent :: coordinates are relative to the parent's region
+   - native :: coordinates are relative to the mirror's region
+   - screen :: coordinates are relative to the graft's region
+
+** Transformations
+
+   #+BEGIN_SRC lisp
+   (medium-transformation       sheet) ; (local -> sheet)
+   (sheet-transformation        sheet) ; (sheet -> parent)
+   (sheet-native-transformation sheet) ; (sheet -> mirror)
+   (sheet-device-transformation sheet) ; (local -> mirror)
+   #+END_SRC
+
+   Sheets are arranged in a tree hierarchy. To acquire a transformation between
+   two sheets coordinate systems we use a function ~sheet-delta-transformation~,
+   where the second argument must be an ancestor (or nil) of the first sheet.
+
+   #+BEGIN_SRC lisp
+   ;; Parent transformation (sheet -> parent)
+   (sheet-delta-transformation sheet (sheet-parent sheet))
+   ;; Native transformation (sheet -> mirrored-ancestor -> mirror)
+   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
+     (compose-transformations
+      (sheet-native-transformation mirrored-ancestor)
+      (sheet-delta-transformation sheet mirrored-ancestor)))
+   ;; Screen transformation (sheet -> graft)
+   (sheet-delta-transformation sheet nil)
+   #+END_SRC
+
+   Given the above, the following relation is always true:
+
+   #+BEGIN_SRC lisp
+   (transformation-equal (sheet-device-transformation sheet)
+                         (compose-transformations
+                          (sheet-native-transformation sheet)
+                          (medium-transformation sheet)))
+   #+END_SRC
+
+   Both ~sheet-transformation~ and ~medium-transformation~ are setf-able.
+   Changing the former invalidates the cached ~sheet-native-transformation~.
+   Moreover ~move-sheet~ may change the ~sheet-transformation~.
+
+** Regions
+
+   Every sheet has a region which is an area (for example an intersection between
+   two ellipses[fn:1]). It is accessed with a function ~sheet-region~.
+
+   The operators ~sheet-native-region~ and ~sheet-device-region~[fn:4] work in a
+   similar way to the transformation operators with one important difference: the
+   region of the parent clips the region of the child. Each region is expressed
+   in its coordinate system (i.e sheet-native-region is expressed in the native
+   coordinate system).
+
+   #+BEGIN_SRC lisp
+   (medium-clipping-region sheet) ; local clip
+   (sheet-region sheet)           ; sheet clip
+   (sheet-native-region sheet)    ; intersection of all sheet regions between the sheet and its mirrored ancestor
+   (sheet-device-region sheet)    ; intersection of the native region and a local clip
+   #+END_SRC
+
+   ~sheet-region~ is setf-able. Moreover ~resize-sheet~ may be called on the
+   sheet to change the sheet's region[fn:2]. The function ~move-and-resize-sheet~
+   modifies both the transformation and the region.
+
+** Sheets and mirrors
+
+   Each mirror also has a transformation and a region, however they are a subject
+   to certain restrictions:
+
+   - a mirror transformation must always be a translation (or the identity)
+   - a mirror region must always be a rectangle starting at the point [0, 0]
+
+   Some backends may impose additional restrictions. For example the X11 protocol
+   specifies that the window position is specified as two int16 coordinates and
+   its size as two uint16 values.
+
+   When a mirrored sheet has a region that is not a rectangle, then the mirror
+   region is a bounding-rectangle of that sheet.
+
+** The sheet geometry modifiers
+
+   The transformation and the region of a sheet are changed with:
+
+   - (setf sheet-transformation)
+   - (setf sheet-region)
+
+   The sheet geometry is also modified with functions ~resize-sheet~,
+   ~move-sheet~ and ~move-and-resize-sheet~. The last function is just a
+   composition of the former two.
+
+   The CLIM specification proposes the following implementations:
+
+   #+BEGIN_SRC lisp
+     (defmethod move-sheet ((sheet basic-sheet) x y)
+       (let ((transform (sheet-transformation sheet)))
+         (multiple-value-bind (old-x old-y)
+             (transform-position transform 0 0)
+           (setf (sheet-transformation sheet)
+                 (compose-translation-with-transformation
+                   transform (- x old-x) (- y old-y))))))
+
+     (defmethod resize-sheet ((sheet basic-sheet) width height)
+       (setf (sheet-region sheet)
+             (make-bounding-rectangle 0 0 width height)))
+
+     (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
+       (move-sheet sheet x y)
+       (resize-sheet sheet width height))
+   #+END_SRC
+
+   Proposed definitions of functions ~move-sheet~ and ~resize-sheet~ have a
+   problem, because they assume that a sheet is a rectangle [0 0 width height]
+   and that its transformation is a translation.
+
+   We could define these functions by operating on the bounding rectangle of
+   the sheet region in the coordinate system of the parent:
+
+   #+BEGIN_SRC lisp
+     (defmethod move-sheet ((sheet basic-sheet) x y)
+       (let ((transf (sheet-transformation sheet))
+             (region (sheet-region sheet)))
+         (multiple-value-bind (old-x old-y)
+             (bounding-rectangle-position (transform-region transf region))
+           (unless (and (coordinate= old-x x)
+                        (coordinate= old-y y))
+             (let ((dx (- x old-x))
+                   (dy (- y old-y)))
+               (setf (sheet-transformation sheet)
+                     (compose-transformation-with-translation transf dx dy)))))))
+
+     ;;; RESIZE-SHEET dimensions WIDTH and HEIGHT are expressed in the device
+     ;;; coordinates. When we resize the sheet its region is scaled without changing
+     ;;; the transformation except for the following situations:
+     ;;;
+     ;;; - old-width=0 or old-height=0 we can't compute sx or sy
+     ;;;
+     ;;; - new-width=0 or new-height=0 we can't transform the region because it will
+     ;;;   be canonicalized to +nowhere+ and the sheet position will be lost.
+     ;;;
+     ;;; In both cases we throw in the towel and replace the old region with a
+     ;;; bounding rectangle (to preserve a position of the sheet). -- jd 2021-02-24
+     (defmethod resize-sheet ((sheet basic-sheet) width height)
+       (let* ((region (sheet-region sheet))
+              (transf (sheet-device-transformation sheet))
+              (region* (transform-region transf region)))
+         (with-bounding-rectangle* (x1 y1 x2 y2) region*
+           (let ((new-width (max width 0))
+                 (new-height (max height 0))
+                 (old-width (- x2 x1))
+                 (old-height (- y2 y1)))
+             (setf (sheet-region sheet)
+                   (if (or (= old-width 0) (= old-height 0)
+                           (= new-width 0) (= new-height 0))
+                       (multiple-value-bind (x1 y1)
+                           (bounding-rectangle-position region)
+                         (make-bounding-rectangle
+                          x1 y1 (+ x1 new-width) (+ y1 new-height)))
+                       (let* ((sx (/ new-width old-width))
+                              (sy (/ new-height old-height))
+                              (transf* (make-scaling-transformation* sx sy x1 y1))
+                              (resized-region* (transform-region transf* region*)))
+                         (untransform-region transf resized-region*))))))))
+   #+END_SRC
+
+   Note, that ~resize-sheet~ does not affect the ~sheet-transformation~.
+
+   - position ~[x, y]~ is expressed in the parent coordinate system
+   - dimensions ~[width, height]~ are expressed in device units[fn:5]
+
+
+* Sheet geometry for panes
+
+  Panes are special sheet classes[fn:6]. Pane is specified to be a rectangular
+  object and all CLIM-specified panes are indeed rectangular. Composite panes
+  are
+
+
+  McCLIM does its best to handle non-rectangular panes by operating on their
+  bounding rectangles during composition.
+
+** The layout protocol
+
+   The layout protocol is specified for panes. Functions ~compose-space~ and
+   ~allocate-space~ are called with arguments ~width~ and ~height~.
+   
+   The function ~compose-space~ returns an instance of the class
+   ~space-requirement~.  This instance also encapsulates width and height
+   components (minimum, maximum and suggested values for each dimension).
+
+   All distances are specified in device units, hence are uniform under the same
+   graft. Each sheet must do necessary computations at its own accord to account
+   for its transformation (with ~sheet-device-transformation~).
+
+   McCLIM defines to important mixins helping to implement this protocol:
+
+   - layout-protocol-mixin :: caches the space requirements and resizes panes
+
+        #+BEGIN_SRC lisp
+          (defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
+            (unless (top-level-sheet-pane-p pane)
+              (resize-sheet pane width height))
+            (call-next-method))
+
+          (defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
+            (declare (ignore width height))
+            (or (pane-space-requirement pane)
+                (setf (pane-space-requirement pane)
+                      (call-next-method))))
+        #+END_SRC
+
+   - space-requirement-options-mixin :: implements 29.3.1 (layout pane options)
+        by adding initargs mentioned in "29.3.1 Layout Pane Options":
+
+        - ~:width :min-width :max-width~
+        - ~:height :min-height :max-height~
+        - ~:align-x :align-y~
+        - ~:spacing :x-spacing :y-spacing~
+     
+        ~:contents~ initarg is handled by individual initialize-instance
+        methods. The alignment[fn:7] and the spacing values are relating to
+        arrangement of the pane contents within its region (when applicable).
+
+        ~compose-space~ ~:around~ method is defined to merge options specified
+        by the user and pane's own space requirements:
+
+        #+BEGIN_SRC lisp
+          (defmethod compose-space :around ((pane space-requirement-options-mixin)
+                                            &key width height)
+            (let ((sr (call-next-method)))
+              (unless sr
+                (warn "~S has no idea about its space-requirements." pane)
+                (setf sr (make-space-requirement :width width :height height)))
+              (merge-user-specified-options pane sr)))
+        #+END_SRC
+
+** basic-pane
+
+   A class ~basic-pane~ is "the basic class on which all CLIM panes are built."
+   It is not specified what are "CLIM panes"; McCLIM interpretes this that all
+   generic panes (as opposed to the adaptive panes) must subclass the class
+   ~basic-pane~ and that this class is a subclass of the class ~basic-sheet~,
+   ~layout-protocol-mixin~ and ~space-requirement-options-mixin~.
+
+** clim-stream-pane
+
+   The CLIM stream is a rectangular pane with the output history. Its size is
+   determined by three factors:
+
+   - a preference expressed during the pane creation with initargs
+   - its output history bounding rectangle
+   - the point [0,0] is always part of the sheet region
+
+** composite-pane
+
+   ~allocate-space~ method defined on a composite pane should first change the
+   child transformation so its bounding rectangle is located at the appropriate
+   position and then call ~allocate-space~ on the child.
+
+   #+BEGIN_SRC lisp
+     (defmethod allocate-space ((pane dummy-composite-pane) width height)
+       (resize-sheet pane width height)
+       (let ((child (sheet-child pane))
+             (tansf (sheet-device-transformation pane)))
+         (move-sheet child 0 0)
+         (allocate-space child width height)))
+   #+END_SRC
+
+   The key takeaway points from this section are:
+   - the layout protocol measurements are specified in device units
+   - allocate-space callee is responsible for changing its own region
+   - allocate-space caller is responsible for changing the sheet transformation
+
+** scroller-pane
+
+   The viewport pane is a composition pane with one child. It provides a "hole"
+   through which we may see part of the child. The scrolling is performed by
+   modifying the scrollee ~sheet-transformation~ - this operation does not
+   change its local coordinate system.
+
+   The scrolled sheet may have non-rectangular region extending below the point
+   (0, 0) and a transformation that is not a translation. Scrolling modifies the
+   translation so the bounding rectangle of the scrolled sheet in the viewport
+   coordiantes is _not constant_. To make scrolling possible:
+   
+   - scroll minimum value is always 0
+   - scroll maximum value is always the size (either the width or height) of the
+     bounding rectangle of the scrollee in the viewport coordinate system[fn:8]
+
+   When the scroll bar is at the initial position then the position of the
+   bounding rectangle in the viewport coordinate system of the scrollee is
+   located at the viewport coordinate 0.
+
+* Footnotes
+
+[fn:8] The bounding rectangle of the scrollee in the viewport coordinate system:
+
+#+BEGIN_SRC lisp
+  (bounding-rectangle* (transform-region
+                        (sheet-delta-transformation scrollee vewport)
+                        (sheet-region scrollee))
+#+END_SRC
+
+
+[fn:7] Specification does a good job with confusing the implementer by hinting
+that the alignment values are used to specify the content alignment within the
+pane, yet at the same time that the alignment works similar to formatting-cell.
+The latter is specified to layout the cell within its column - not the cell
+content! After looking into CLIM UG and the source code of CLIM-TOS it seems
+that the specification of the macro ~formatting-cell~ is botched and the
+alignment applies to the pane's content (i.e the composite pane children), not
+to the pane's position within its parent.
+
+[fn:6] It is not specified whether a basic-pane is a subclass of a basic-sheet
+or not - in McCLIM we assume that it is.
+
+[fn:5] CLIM does not specify the coordinate system of dimensions. We use device
+units for easier interop with the layout protocol (defined for panes).
+
+[fn:4] Technically speaking the mirrored ancestor sheet region should be
+clipped by the mirror region, however we stipulate that the mirror is big
+enough to contain whole mirrored sheet region, thus the following is true:
+
+#+BEGIN_SRC lisp
+  (let ((mirror (sheet-direct-mirror msheet))
+        (region (transform-region (sheet-native-transformation msheet)
+                                  (sheet-region msheet))))
+    (region-equal region
+                  (region-intersection region (mirror-region mirror))))
+#+END_SRC
+
+[fn:3] The sheet region is also known as a "drawing plane"
+
+[fn:1] Don't do that though.
+
+[fn:2] It is not clear what shoudl happen when the current region is not a
+rectangle - replace it with a rectangle or maybe rather scale it so the
+bounding rectangle has a matching width and height?
