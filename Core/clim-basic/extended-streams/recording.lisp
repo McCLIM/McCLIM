@@ -1192,7 +1192,13 @@ were added."
                  (with-slots (stream ink clipping-region line-style text-style ,@slot-names)
                      graphic
                    (let ((medium (sheet-medium stream)))
-                     (setf (rectangle-edges* graphic) (progn ,@body)))))))
+                     (setf (rectangle-edges* graphic)
+                           (progn ,@body)))
+                   (when (bounding-rectangle-p clipping-region)
+                     (let* ((rect (bounding-rectangle clipping-region))
+                            (clip (region-intersection rect graphic)))
+                       (setf (rectangle-edges* graphic)
+                             (bounding-rectangle* clip))))))))
          ,@(when medium-fn
              `((defmethod ,method-name :around ((stream output-recording-stream) ,@arg-names)
                  ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
