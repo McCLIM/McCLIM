@@ -93,11 +93,28 @@
   (region-intersection b a))
 
 ;;; standard-region-intersection
+(defmethod region-intersection ((a standard-region-intersection) (b standard-region-intersection))
+  (make-instance 'standard-region-intersection
+                 :regions (remove-duplicates
+                           (append (standard-region-set-regions a)
+                                   (standard-region-set-regions b))
+                           :test #'region-equal)))
+
 (defmethod region-intersection ((a bounding-rectangle) (b standard-region-intersection))
-  (map-over-region-set-regions
-   (lambda (r)
-     (setf a (region-intersection a r))) b)
-  a)
+  (collect (results)
+    (loop for region in (standard-region-set-regions b)
+          when (or (region-equal a +nowhere+)
+                   (region-equal a region))
+            do (return-from region-intersection a)
+          do (let ((intersection (region-intersection a region)))
+               (typecase intersection
+                 (nowhere-region
+                  (return-from region-intersection +nowhere+))
+                 (standard-region-intersection
+                  (results region))
+                 (otherwise
+                  (results intersection)))))
+    (make-instance 'standard-region-intersection :regions (results))))
 
 (defmethod region-intersection ((a standard-region-intersection) (b bounding-rectangle))
   (region-intersection b a))
