@@ -230,7 +230,6 @@ cause the activate callback to be called."))
                                :disarmed-callback disarmed-callback
                                :activation-gestures activation-gestures
                                :activate-callback activate-callback
-                               ;:scroll-bars scroll-bars
                                :ncolumns ncolumns
                                :nlines nlines
                                :value-changed-callback
