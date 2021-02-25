@@ -1151,7 +1151,7 @@ alive.")
                               *application-frame*
                               stream
                               x y
-                              :for-menu t))
+                              :for-menu :for-documentation))
             (other-modifiers nil))
         (loop for (translator) in all-translators
               for gesture = (gesture translator)
