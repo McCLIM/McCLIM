@@ -496,7 +496,7 @@ and used to ensure that presentation-translators-caches are up to date.")
     ;; Let the translator return an explict ptype of nil to, in effect, abort the
     ;; presentation throw.
     (multiple-value-call
-        #'(lambda (object &optional (ptype context-type) options)
+        #'(lambda (object &optional (ptype (to-type translator)) options)
             (values object ptype options))
       (funcall (translator-function translator) (presentation-object presentation)
                :presentation presentation :context-type context-type
