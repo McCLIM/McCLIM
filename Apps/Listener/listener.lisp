@@ -153,7 +153,8 @@
       ((presentation-subtypep type 'empty-input)
        ;; Do nothing.
        `(com-eval (values)))
-      ((presentation-subtypep type 'command) object)
+      ((presentation-subtypep type 'command)
+       (climi::ensure-complete-command object (frame-command-table frame) stream))
       (t `(com-eval ,object)))))
 
 (defun print-listener-prompt (stream frame)
