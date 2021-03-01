@@ -10,6 +10,7 @@
   :components
   ((:module "basic" :pathname "" :components
             ((:file "package")
+             (:file "utilities")
              (:file "clipboard")
              (:file "basic" :depends-on ("package"))
              (:file "port" :depends-on ("package" "graft" "basic" "mirror"))
