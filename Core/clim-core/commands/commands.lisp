@@ -137,7 +137,8 @@
   (rest command))
 
 (defun partial-command-p (command)
-  (member *unsupplied-argument-marker* command))
+  (and (listp command)
+       (member *unsupplied-argument-marker* command)))
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."

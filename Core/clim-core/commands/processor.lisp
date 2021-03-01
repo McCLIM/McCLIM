@@ -109,12 +109,10 @@
 (defun ensure-complete-command (command command-table stream)
   (unless command
     (return-from ensure-complete-command))
-  (let ((canonical (partial-command-from-name (car command)
-                                              command-table)))
-    ;; When the command has more arguments than its "canonical
-    ;; form", that is the command with all required arguments
-    ;; filled, that means that it has all required arguments *and*
-    ;; some optional arguments.
+  (let ((canonical (partial-command-from-name (car command) command-table)))
+    ;; When the command has more arguments than its "canonical form", that is
+    ;; the command with all required arguments filled, that means that it has
+    ;; all required arguments *and* some optional arguments.
     (unless (> (length command) (length canonical))
       (map-into canonical #'identity command)
       (setf command canonical))
@@ -153,7 +151,7 @@
                            :default-type 'null-command)
                  (if (eq ptype 'null-command)
                      nil
-                     command))
+                     (ensure-complete-command command command-table stream)))
              ((or simple-parse-error input-not-of-required-type)  (c)
                (beep)
                (fresh-line *query-io*)
@@ -177,19 +175,12 @@
         (*command-unparser* command-unparser)
         (*partial-command-parser* partial-command-parser)
         (*accelerator-gestures* keystrokes))
-    (handler-case (read-command command-table :stream stream)
-      (accelerator-gesture (c)
-        ;; If lookup-keystroke-item below returns a partial command, invoke the
-        ;; partial command parser to complete it.
-        (let ((command
-               (lookup-keystroke-command-item (accelerator-gesture-event c)
-                                              command-table)))
-          (if (and (listp command)
-                   (partial-command-p command))
-              (funcall *partial-command-parser*
-                       command-table stream command
-                       (position *unsupplied-argument-marker* command))
-              command))))))
+    (let ((command
+            (handler-case (read-command command-table :stream stream)
+              (accelerator-gesture (c)
+                (lookup-keystroke-command-item (accelerator-gesture-event c)
+                                               command-table)))))
+      (ensure-complete-command command command-table stream))))
 
 
 (defmethod display-command-table-menu ((command-table standard-command-table)
