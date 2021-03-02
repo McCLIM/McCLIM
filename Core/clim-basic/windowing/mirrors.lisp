@@ -178,6 +178,11 @@ infinite recursion on (setf sheet-*).")
                 (invalidate-cached-transformations sheet)
                 (%%set-sheet-native-transformation new-n-tran sheet)
                 (when old-n-tran
-                  ;; native transformation has changed - repaint the sheet
-                  (dispatch-repaint sheet
-                                    (untransform-region new-n-tran mr))))))))))
+                  ;; Native transformation has changed - repaint the sheet.
+                  ;; Normally we would call dispatch-repaint, however the sheet
+                  ;; transformation may change without intervening event reads
+                  ;; (for instance in a display function that causes scrolling),
+                  ;; and dispatching the repaint would not take effect until the
+                  ;; next event read, causing a corrupted output during display.
+                  ;; -- jd 2021-03-02
+                  (repaint-sheet sheet (untransform-region new-n-tran mr))))))))))

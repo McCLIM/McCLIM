@@ -409,7 +409,7 @@ documentation produced by presentations.")
   (when (and (or width height)
              (not (and width height)))
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (with-inhibited-dispatch-repaint ()
+  (with-inhibited-repaint-sheet ()
     (let ((pane (frame-panes frame)))
       (when (and (null width) (null height))
         (let (;;I guess this might be wrong. --GB 2004-06-01
