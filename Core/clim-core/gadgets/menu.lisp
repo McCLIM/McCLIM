@@ -339,7 +339,7 @@
          (make-sub-pane 'menu-divider-leaf-pane))
         ((:command :function)
          (let* ((command (extract-menu-item-command item nil))
-                (command-name (alexandria:ensure-car command)))
+                (command-name (command-name command)))
            (make-sub-pane
             'menu-button-leaf-pane
             :value-changed-callback
