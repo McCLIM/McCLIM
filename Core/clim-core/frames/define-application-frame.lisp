@@ -76,7 +76,7 @@
                                      ,@(cond
                                          ((eq menu-bar t)
                                           `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar ',class-name frame 'hmenu-pane))))
+                                                  (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))))
                                          ((consp menu-bar)
                                           `((setf (frame-menu-bar-pane frame)
                                                   (make-menu-bar
