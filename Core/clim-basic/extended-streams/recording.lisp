@@ -1192,7 +1192,13 @@ were added."
                  (with-slots (stream ink clipping-region line-style text-style ,@slot-names)
                      graphic
                    (let ((medium (sheet-medium stream)))
-                     (setf (rectangle-edges* graphic) (progn ,@body)))))))
+                     (setf (rectangle-edges* graphic)
+                           (progn ,@body)))
+                   (when (bounding-rectangle-p clipping-region)
+                     (let* ((rect (bounding-rectangle clipping-region))
+                            (clip (region-intersection rect graphic)))
+                       (setf (rectangle-edges* graphic)
+                             (bounding-rectangle* clip))))))))
          ,@(when medium-fn
              `((defmethod ,method-name :around ((stream output-recording-stream) ,@arg-names)
                  ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
@@ -2047,20 +2053,25 @@ according to the flags RECORD and DRAW."
           (stream-add-output-record stream new-record))
       new-record)))
 
+(defmethod invoke-with-output-to-output-record :around
+    ((stream standard-page-layout) continuation record-type &rest initargs)
+  (declare (ignore continuation record-type initargs))
+  (with-temporary-margins (stream :left   '(:absolute 0)
+                                  :top    '(:absolute 0)
+                                  :right  '(:relative 0)
+                                  :bottom '(:relative 0))
+    (call-next-method)))
+
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type
      &rest initargs)
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)
-      (with-temporary-margins (stream :left   '(:absolute 0)
-                                      :top    '(:absolute 0)
-                                      :right  '(:relative 0)
-                                      :bottom '(:relative 0))
-        (letf (((stream-current-output-record stream) new-record)
-               ((stream-cursor-position stream) (values 0 0)))
-          (funcall continuation stream new-record)
-          (stream-close-text-output-record stream))))
+      (letf (((stream-current-output-record stream) new-record)
+             ((stream-cursor-position stream) (values 0 0)))
+        (funcall continuation stream new-record)
+        (stream-close-text-output-record stream)))
     new-record))
 
 (defmethod make-design-from-output-record (record)

@@ -425,8 +425,14 @@ and used to ensure that presentation-translators-caches are up to date.")
                       (find-presentation-translators (presentation-type presentation)
                                                      context-ptype
                                                      (frame-command-table frame))))
+               ;; KLUDGE the function FRAME-PRINT-POINTER-DOCUMENTATION passes
+               ;; :MENU :FOR-DOCUMENTATION to match translators that are
+               ;; specified with :MENU NIL. This is to hint other modifiers in
+               ;; the pointer documentation pane. -- jd 2021-02-25
                (loop for translator in maybe-translators
-                     when (and (or (not for-menu) (eql for-menu (menu translator)))
+                     when (and (or (not for-menu)
+                                   (eql for-menu :for-documentation)
+                                   (eql for-menu (menu translator)))
                                (test-presentation-translator
                                 translator presentation context-ptype
                                 frame window x y

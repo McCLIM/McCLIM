@@ -342,7 +342,7 @@ keys read."))
    (cursor :initarg :text-cursor)))
 
 (defmethod handle-event :after
-    ((client standard-extended-input-stream) (event key-press-event))
+    ((client standard-extended-input-stream) (event keyboard-event))
   (stream-append-gesture client event))
 
 (defmethod handle-event :after
