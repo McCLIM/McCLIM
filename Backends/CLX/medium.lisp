@@ -789,10 +789,8 @@ translated, so they begin at different position than [0,0])."))
           (declare (type xlib:array-index i j))
           (setq char (char-code (char src i)))
           (if (or (< char min-char-index) (> char max-char-index))
-              (progn
-                (warn "Character ~S not representable in font ~S"
-                      (char src i) afont)
-                (return i))
+              ;; Character is not representable in the font.
+              (return i)
               (setf (aref dst j) char)))
         (do ((i src-start (xlib::index+ i 1))
              (j dst-start (xlib::index+ j 1))
@@ -806,10 +804,8 @@ translated, so they begin at different position than [0,0])."))
           (if (or (not (integerp elt))
                   (< elt min-char-index)
                   (> elt max-char-index))
-              (progn
-                (warn "Thing ~S not representable in font ~S"
-                      (elt src i) afont)
-                (return i))
+              ;; Thing is not representable in the font.
+              (return i)
               (setf (aref dst j) elt))))))
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y

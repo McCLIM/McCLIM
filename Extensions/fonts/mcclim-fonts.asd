@@ -16,10 +16,6 @@
                            (s (eql (find-system :mcclim-fonts/truetype))))
   (uiop:symbol-call :mcclim-truetype :autoconfigure-fonts))
 
-(defsystem #:mcclim-fonts/clx-truetype
-  :depends-on (#:mcclim-fonts/truetype #:mcclim-clx)
-  :components ((:file "xrender-fonts")))
-
 (defsystem #:mcclim-fonts/clx-freetype
   :depends-on (#:mcclim-fonts #:mcclim-clx #:cl-freetype2 #:mcclim-fontconfig #:mcclim-harfbuzz)
   :components ((:file "freetype")))
