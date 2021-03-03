@@ -52,6 +52,27 @@
                    ;; order, so they are in reverse order.
                    (reverse (sheet-children rack)))))
 
+;;; This function is called when a command has been enabled or disabled for the
+;;; frame. We assume that the command is accessible in the command table, so we
+;;; skip calling COMMAND-ENABLED. Also we traverse all leaf buttons in case the
+;;; same command is assigned to multiple buttons. -- jd 2021-03-03
+(defun menu-bar-refresh-command (frame command-name enabledp)
+  (labels ((rack (client)
+             (and (typep client 'menu-button-submenu-pane)
+                  (submenu-pane client)))
+           (cmdp (client)
+             (and (typep client 'menu-button-leaf-pane)
+                  (eq command-name (slot-value client 'command-name))))
+           (map-leaf-buttons (rack)
+             (when rack
+               (loop for child in (sheet-children rack)
+                     do (if (cmdp child)
+                            (if enabledp
+                                (activate-gadget child)
+                                (deactivate-gadget child))
+                            (map-leaf-buttons (rack child)))))))
+    (map-leaf-buttons (frame-menu-bar-pane frame))))
+
 (define-gesture-name :menu-exit  :keyboard :escape)
 (define-gesture-name :menu-left  :keyboard :left)
 (define-gesture-name :menu-right :keyboard :right)
@@ -219,7 +240,7 @@
           (draw-polygon* gadget shape))))))
 
 (defclass menu-button-leaf-pane (menu-button-pane)
-  ((command :initform nil :initarg :command)))
+  ((command-name :initform nil :initarg :command-name)))
 
 (defclass menu-divider-leaf-pane (sheet-leaf-mixin basic-gadget)
   ((label :initform nil :initarg :label)))
@@ -327,7 +348,8 @@
               (throw-object-ptype item 'menu-item))
             :armed-callback 'arm-menu-button-callback
             :disarmed-callback 'disarm-menu-button-callback
-            :active (command-enabled command-name frame))))
+            :active (command-enabled command-name frame)
+            :command-name command-name)))
         (:menu
          (let* ((sub-pane (make-sub-pane
                            'menu-button-submenu-pane
