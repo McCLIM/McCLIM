@@ -280,46 +280,45 @@
                (the (unsigned-byte 32)
                     (mcclim-truetype:font-glyph-id font (char-code char))))
          (incf origin-x (climb:font-glyph-dx font (char-code char))))
-    (multiple-value-bind (new-x new-y) (clim:transform-position transformation x y)
+    (multiple-value-bind (x y) (transform-position transformation x y)
       (setq x (ecase align-x
                 (:left
-                 (truncate (+ new-x 0.5)))
+                 (truncate (+ x 0.5)))
                 (:center
-                 (truncate (+ (- new-x (/ origin-x 2.0)) 0.5)))
+                 (truncate (+ (- x (/ origin-x 2.0)) 0.5)))
                 (:right
-                 (truncate (+ (- new-x origin-x) 0.5)))))
+                 (truncate (+ (- x origin-x) 0.5)))))
       (setq y (ecase align-y
                 (:top
-                 (truncate (+ new-y (climb:font-ascent font) 0.5)))
+                 (truncate (+ y (climb:font-ascent font) 0.5)))
                 (:baseline
-                 (truncate (+ new-y 0.5)))
+                 (truncate (+ y 0.5)))
                 (:center
                  (let* ((ascent (climb:font-ascent font))
                         (descent (climb:font-descent font))
                         (height (+ ascent descent))
                         (middle (- ascent (/ height 2.0s0))))
-                   (truncate (+ new-y middle 0.5))))
+                   (truncate (+ y middle 0.5))))
                 (:baseline*
-                 (truncate (+ new-y 0.5)))
+                 (truncate (+ y 0.5)))
                 (:bottom
-                 (truncate (+ new-y (- (climb:font-descent font)) 0.5)))))
-      (unless (and (typep x '(signed-byte 16))
-                   (typep y '(signed-byte 16)))
-        (warn "Trying to render string outside the mirror.")
-        (return-from draw-glyphs)))
-    (destructuring-bind (source-picture source-pixmap) (gcontext-picture mirror gc)
-      (declare (ignore source-pixmap))
-      ;; Sync the picture-clip-mask with that of the gcontext.
-      (unless  (eq (xlib:picture-clip-mask (drawable-picture mirror))
-                   (xlib:gcontext-clip-mask gc))
-        (setf (xlib:picture-clip-mask (drawable-picture mirror))
-              (xlib:gcontext-clip-mask gc)))
-      (xlib:render-composite-glyphs (drawable-picture mirror)
-                                    glyph-set
-                                    source-picture
-                                    x y
-                                    glyph-ids
-                                    :end (- end start)))))
+                 (truncate (+ y (- (climb:font-descent font)) 0.5)))))
+      (when (and (typep x '(signed-byte 16))
+                 (typep y '(signed-byte 16)))
+        (destructuring-bind (source-picture source-pixmap)
+            (gcontext-picture mirror gc)
+          (declare (ignore source-pixmap))
+          ;; Sync the picture-clip-mask with that of the gcontext.
+          (unless  (eq (xlib:picture-clip-mask (drawable-picture mirror))
+                       (xlib:gcontext-clip-mask gc))
+            (setf (xlib:picture-clip-mask (drawable-picture mirror))
+                  (xlib:gcontext-clip-mask gc)))
+          (xlib:render-composite-glyphs (drawable-picture mirror)
+                                        glyph-set
+                                        source-picture
+                                        x y
+                                        glyph-ids
+                                        :end (- end start)))))))
 
 (defun %font-generate-glyph (font code transformation glyph-set)
   (let ((glyph-id (draw-glyph-id (port font)))
@@ -337,11 +336,6 @@
              (compose-transformations
               #1=(make-scaling-transformation 1.0 -1.0)
               (compose-transformations transformation #1#))))
-      (let ((fixed-width (climb:font-fixed-width font)))
-        (when (and (numberp fixed-width) (/= fixed-width dx))
-          (setf (slot-value font 'mcclim-truetype::fixed-width) t)
-          (warn "Font ~A is fixed width, but the glyph width appears to vary.
-Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)))
       (when (= (array-dimension arr 0) 0)
         (setf arr (make-array (list 1 1)
                               :element-type '(unsigned-byte 8)
@@ -412,12 +406,12 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
              (the (unsigned-byte 32)
                   (mcclim-truetype:glyph-info-id glyph-info)))
     do ;; rendering one glyph at a time
-       (multiple-value-bind (current-x current-y)
-           (transform-position tr current-x current-y)
-         (xlib:render-composite-glyphs picture glyph-set source-picture
-                                       (truncate (+ current-x 0.5))
-                                       (truncate (+ current-y 0.5))
-                                       glyph-ids :start i* :end (1+ i*)))
+       (with-round-positions (tr current-x current-y)
+         (when (and (typep current-x '(signed-byte 16))
+                    (typep current-y '(signed-byte 16)))
+           (xlib:render-composite-glyphs picture glyph-set source-picture
+                                         current-x current-y
+                                         glyph-ids :start i* :end (1+ i*))))
        ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
        (incf current-x (mcclim-truetype:glyph-info-advance-width* glyph-info))
        (incf current-y (mcclim-truetype:glyph-info-advance-height* glyph-info))
@@ -432,12 +426,12 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
                                          glyph-tr glyph-set))))
     finally
        ;; rendering one glyph at a time (last glyph)
-       (multiple-value-bind (current-x current-y)
-           (transform-position tr current-x current-y)
-         (xlib:render-composite-glyphs picture glyph-set source-picture
-                                       (truncate (+ current-x 0.5))
-                                       (truncate (+ current-y 0.5))
-                                       glyph-ids :start i* :end (1+ i*)))
+       (with-round-positions (tr current-x current-y)
+         (when (and (typep current-x '(signed-byte 16))
+                    (typep current-y '(signed-byte 16)))
+           (xlib:render-composite-glyphs picture glyph-set source-picture
+                                         current-x current-y
+                                         glyph-ids :start i* :end (1+ i*))))
        (xlib:render-free-glyphs glyph-set (subseq glyph-ids 0 (1+ i*)))
     #+ (or) ;; rendering all glyphs at once
        (destructuring-bind (source-picture source-pixmap)
@@ -448,12 +442,13 @@ Disabling fixed width optimization for this font. ~A vs ~A" font dx fixed-width)
          ;; hold the line for longer text in case of rotations and other
          ;; hairy transformations. That's why we take our time and
          ;; render one glyph at a time. -- jd 2018-10-04
-         (multiple-value-bind (x y) (clim:transform-position tr x y)
-           (xlib:render-composite-glyphs (drawable-picture mirror)
-                                         glyph-set
-                                         source-picture
-                                         (truncate (+ x 0.5))
-                                         (truncate (+ y 0.5))
-                                         glyph-ids :start 0 :end end)))
+         (with-round-positions (tr x y)
+           (when (and (typep x '(signed-byte 16))
+                      (typep y '(signed-byte 16)))
+             (xlib:render-composite-glyphs (drawable-picture mirror)
+                                           glyph-set
+                                           source-picture
+                                           x y
+                                           glyph-ids :start 0 :end end)))n)
     finally
        (xlib:render-free-glyph-set glyph-set)))
