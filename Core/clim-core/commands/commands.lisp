@@ -131,10 +131,14 @@
       (:command value))))
 
 (defun command-name (command)
-  (first command))
+  (if (listp command)
+      (first command)
+      command))
 
 (defun command-arguments (command)
-  (rest command))
+  (if (listp command)
+      (rest command)
+      nil))
 
 (defun partial-command-p (command)
   (and (listp command)

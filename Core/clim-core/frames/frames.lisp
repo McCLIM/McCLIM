@@ -73,14 +73,15 @@
   (declare (ignore frame))
   t)
 
-;;; XXX These should force the redisplay of the menu bar. They don't yet.
-
 (defmethod note-command-enabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name t)
   nil)
 
 (defmethod note-command-disabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+                                        ;(declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name nil)
   nil)
 
 (declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
