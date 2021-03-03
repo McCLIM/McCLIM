@@ -34,9 +34,11 @@
                    :command-table command-table))
 
 (defun update-menu-bar (menu-bar client command-table)
-  (setf (%pane-contents menu-bar)
-        (and command-table (make-menu-buttons command-table client)))
-  (change-space-requirements menu-bar))
+  (changing-space-requirements ()
+    (setf (slot-value menu-bar 'command-table) command-table)
+    (setf (%pane-contents menu-bar)
+          (and command-table (make-menu-buttons command-table client)))
+    (change-space-requirements menu-bar)))
 
 (defun menu-children (client)
   (when-let ((rack (typecase client
