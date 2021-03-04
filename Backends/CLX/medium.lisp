@@ -65,8 +65,11 @@
     (when gc
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
-          (setf (xlib:gcontext-font gc)
-                (text-style-mapping (port medium) (medium-text-style medium))))))))
+          (let ((fn (text-style-mapping (port medium) (medium-text-style medium))))
+            ;;  This hack is really ugly. There really should be a better way to
+            ;;  handle this.
+            (when (typep fn 'xlib:font)
+              (setf (xlib:gcontext-font gc) fn))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
 (defun translate-cap-shape (clim-shape)
@@ -152,6 +155,7 @@
             (setf (xlib:gcontext-line-style gc) :solid)))))))
 
 (defmethod (setf medium-transformation) :around (transformation (medium clx-medium))
+  (declare (ignore transformation))
   (let ((old-tr     (medium-transformation medium))
         (line-style (medium-line-style medium))
         (new-tr     (call-next-method)))
@@ -289,6 +293,7 @@ specialized on class too. Keep in mind, that inks may be transformed (i.e
 translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
+  (declare (ignore ink))
   (let ((mirror (clx-drawable medium)))
     (with-slots (gc) medium
       (unless gc
@@ -599,6 +604,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-draw-rectangle* :around ((medium clx-medium) left top right bottom filled
                                            &aux (ink (medium-ink medium)))
+  (declare (ignore left top right bottom filled))
   (if (clime:indirect-ink-p ink)
       (with-drawing-options (medium :ink (clime:indirect-ink-ink ink))
         (call-next-method))
@@ -702,7 +708,7 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
                                  rdx1 rdy1 rdx2 rdy2
                                  start-angle end-angle filled)
-  (let ((tr (medium-native-transformation medium) center-x center-y))
+  (let ((tr (medium-native-transformation medium)))
     (with-transformed-position (tr center-x center-y)
       (climi::with-transformed-distance (tr rdx2 rdy2)
         (climi::with-transformed-distance (tr rdx1 rdy1)
@@ -875,14 +881,4 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
 
-;;;  This hack is really ugly. There really should be a better way to
-;;;  handle this.
-(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
-  (with-slots (gc) medium
-    (when gc
-      (let ((old-text-style (medium-text-style medium)))
-        (unless (eq text-style old-text-style)
-          (let ((fn (text-style-mapping (port medium) (medium-text-style medium))))
-            (when (typep fn 'xlib:font)
-              (setf (xlib:gcontext-font gc)
-                    fn))))))))
+
