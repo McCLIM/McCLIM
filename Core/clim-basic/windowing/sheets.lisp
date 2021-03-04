@@ -717,7 +717,14 @@ might be different from the sheet's native region."
      do (invalidate-cached-transformations child)))
 
 ;;; Coordinate swizzling
+
+;;; UPDATE-MIRROR-REGION is responsible for setting the native region and the
+;;; native transformation of the mirrored sheet. The native transformation is
+;;; NIL when the mirror is not visible.
+
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
+  (unless (%%sheet-native-transformation sheet)
+    (return-from sheet-native-region +nowhere+))
   (with-slots (native-region) sheet
     (unless native-region
       (let ((this-region (transform-region (sheet-native-transformation sheet)
@@ -733,19 +740,8 @@ might be different from the sheet's native region."
                   this-region))))
     native-region))
 
-#+ (or) ;; XXX: is this needed?
 (defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
-  ;; XXX hm...
-  (with-slots (native-transformation) sheet
-    (unless native-transformation
-      (setf native-transformation
-            (compose-transformations
-             (invert-transformation
-              (%sheet-mirror-transformation sheet))
-             (compose-transformations
-              (sheet-native-transformation (sheet-parent sheet))
-              (sheet-transformation sheet)))))
-    native-transformation))
+  (or (%%sheet-native-transformation sheet) +identity-transformation+))
 
 ;;; Top-level sheets
 
