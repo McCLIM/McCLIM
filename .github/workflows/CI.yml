@@ -16,7 +16,7 @@ jobs:
     - name: setup roswell
       env:
         LISP: sbcl.bin
-      run: curl -L https://raw.githubusercontent.com/roswell/roswell/master/scripts/install-for-ci.sh | sh
+      run: curl -L https://raw.githubusercontent.com/3b/roswell/master/scripts/install-for-ci.sh | sh
     
     - name: run McCLIM Tests
       shell: bash
