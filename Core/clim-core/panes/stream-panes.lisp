@@ -250,12 +250,11 @@
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
-      (multiple-value-bind (viewport viewport-child)
-          (find-viewport-for-scroll stream)
-        (when viewport
-          (scroll-extent viewport-child
+      (when-let ((viewport (pane-viewport stream)))
+        (let ((child (sheet-child viewport)))
+          (scroll-extent child
                          0
-                         (max 0 (- (bounding-rectangle-height viewport-child)
+                         (max 0 (- (bounding-rectangle-height child)
                                    (bounding-rectangle-height viewport)))))))))
 
 ;;; INTERACTOR PANES
