@@ -486,12 +486,6 @@
         (slot-value scroll-bar 'value) value)
   (scroll-bar/update-display scroll-bar))
 
-;;;; geometry
-
-
-
-
-
 ;;;; event handler
 
 (defmethod handle-event ((sb scroll-bar-pane) (event pointer-button-press-event))

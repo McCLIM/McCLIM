@@ -1125,6 +1125,14 @@
 
 (defclass viewport-pane (single-child-composite-pane) ())
 
+(defmethod initialize-instance :after ((pane viewport-pane) &key)
+  (let ((child (sheet-child pane)))
+    (if (panep child)
+        (setf (pane-background pane) (pane-background child))
+        (setf (pane-background pane) *background-ink*)))
+  #+ (or) ;; useful for debugging
+  (setf (pane-background pane) +deep-pink+))
+
 (defmethod compose-space ((pane viewport-pane) &key width height)
   (declare (ignorable width height))
   ;; I _think_ this is right, it certainly shouldn't be the
@@ -1452,38 +1460,33 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
   (sheet-adopt-child pane (first contents))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
-    ;; make the background of the viewport match the background of the
-    ;; things scrolled.
-    ;; This doesn't appear to work, hence the "gray space" bugs. Actually
-    ;; handy for observing when the space requirements get messed up.. -Hefner
-    (alexandria:when-let ((child (sheet-child viewport)))
-      (setf (slot-value pane 'background)  ;### hmm ...
-            (pane-background child)))
     ;; make sure that we have ok options for the scroll-bar argument...
-    (check-type scroll-bar scroll-bar-spec) ; (member :vertical :horizontal :both t nil))
+    (check-type scroll-bar scroll-bar-spec)
     (when (member scroll-bar '(:vertical :both t))
       (setq vscrollbar
             (make-pane 'scroll-bar
                        :orientation :vertical
                        :client (sheet-child viewport)
-                       :drag-callback (lambda (gadget new-value)
-                                        (declare (ignore gadget))
-                                        (scroller-pane/vertical-drag-callback pane new-value))
+                       :drag-callback
+                       (lambda (gadget new-value)
+                         (declare (ignore gadget))
+                         (scroller-pane/vertical-drag-callback pane new-value))
                        :scroll-up-page-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-page-callback scroll-bar 1))
+                       (lambda (scroll-bar)
+                         (scroll-page-callback scroll-bar 1))
                        :scroll-down-page-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-page-callback scroll-bar -1))
+                       (lambda (scroll-bar)
+                         (scroll-page-callback scroll-bar -1))
                        :scroll-up-line-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-line-callback scroll-bar 1))
+                       (lambda (scroll-bar)
+                         (scroll-line-callback scroll-bar 1))
                        :scroll-down-line-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-line-callback scroll-bar -1))
-                       :value-changed-callback (lambda (gadget new-value)
-                                                 (declare (ignore gadget))
-                                                 (scroller-pane/vertical-drag-callback pane new-value))
+                       (lambda (scroll-bar)
+                         (scroll-line-callback scroll-bar -1))
+                       :value-changed-callback
+                       (lambda (gadget new-value)
+                         (declare (ignore gadget))
+                         (scroller-pane/vertical-drag-callback pane new-value))
                        :min-value 0
                        :max-value 1))
       (sheet-adopt-child pane vscrollbar))
@@ -1542,29 +1545,29 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
            (gadget-min-value scroll-bar)
            (gadget-max-value scroll-bar)))))
 
-(defmethod pane-viewport ((pane basic-pane))
+(defmethod pane-viewport ((pane sheet))
   (when-let ((parent (sheet-parent pane)))
-    (when (typep parent 'viewport-pane)
-      parent)))
+    (if (typep parent 'viewport-pane)
+        parent
+        (pane-viewport parent))))
 
-;;; Default for streams that aren't even panes.
-
-(defmethod pane-viewport-region ((pane t))
-  nil)
-
-(defmethod pane-viewport-region ((pane basic-pane))
+(defmethod pane-viewport-region ((pane sheet))
   (when-let ((viewport (pane-viewport pane)))
     (untransform-region (sheet-delta-transformation pane viewport)
                         (sheet-region viewport))))
 
-(defmethod pane-scroller ((pane basic-pane))
+(defmethod pane-scroller ((pane sheet))
   (when-let ((viewport (pane-viewport pane)))
     (sheet-parent viewport)))
 
-(defmethod scroll-extent ((pane basic-pane) x y)
-  (when (pane-viewport pane)
-    (move-sheet pane (- x) (- y))
-    (when-let  ((scroller (pane-scroller pane)))
+(defmethod scroll-extent ((pane sheet) x y)
+  (when-let ((viewport (pane-viewport pane)))
+    (let* ((scroller (sheet-parent viewport))
+           (scrollee (sheet-child viewport))
+           (transf (sheet-delta-transformation pane viewport)))
+      (multiple-value-bind (x y)
+          (transform-position transf x y)
+        (move-sheet scrollee (- x) (- y)))
       (scroller-pane/update-scroll-bars scroller))))
 
 
@@ -1736,10 +1739,16 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defmethod handle-event ((sheet mouse-wheel-scroll-mixin)
                          (event pointer-scroll-event))
   (if (zerop (event-modifier-state event))
-      (multiple-value-bind (viewport sheet*)
-          (find-viewport-for-scroll sheet)
-        (when viewport
-          (scroll-sheet sheet*
-                        (pointer-event-delta-x event)
-                        (pointer-event-delta-y event))))
+      (when-let ((viewport (pane-viewport sheet)))
+        (scroll-sheet (sheet-child viewport)
+                      (pointer-event-delta-x event)
+                      (pointer-event-delta-y event)))
+      (call-next-method)))
+
+(defmethod handle-event ((viewport viewport-pane)
+                         (event pointer-scroll-event))
+  (if (zerop (event-modifier-state event))
+      (scroll-sheet (sheet-child viewport)
+                    (pointer-event-delta-x event)
+                    (pointer-event-delta-y event))
       (call-next-method)))
