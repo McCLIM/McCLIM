@@ -21,6 +21,11 @@
   #+sbcl (sb-ext:package-locked-p package)
   #-sbcl nil)
 
+(defun symbol-package-locked-p (symbol)
+  (if-let ((package (symbol-package symbol)))
+    (package-locked-p package)
+    nil))
+
 ;;; Places
 
 ;;; `symbol-slot-place'
@@ -28,11 +33,8 @@
 (defclass symbol-slot-place (basic-place)
   ())
 
-#+sbcl
 (defmethod supportsp :around ((place symbol-slot-place) (operation t))
-  (and (if-let ((package (symbol-package (container place))))
-         (not (package-locked? package))
-         t)
+  (and (not (symbol-package-locked-p (container place)))
        (call-next-method)))
 
 (defmethod supportsp ((place symbol-slot-place) (operation (eql 'remove-value)))
@@ -132,10 +134,20 @@
   (make-instance (object-state-class object place) :place place
                                                    :style :name-only))
 
+;; Object states
+
+;;; `inspected-symbol'
+
+(defclass inspected-symbol (inspected-object)
+  ())
+
+(defmethod object-state-class ((object symbol) (place t))
+  'inspected-symbol)
+
 ;;; Object inspection methods
 
 (defmethod inspect-object-using-state :after ((object symbol)
-                                              (state  inspected-object)
+                                              (state  inspected-symbol)
                                               (style  (eql :badges))
                                               (stream t))
   (write-char #\Space stream)
@@ -148,7 +160,7 @@
            (badge stream "~(~A~)" kind)))
 
 (defmethod inspect-object-using-state ((object symbol)
-                                       (state  inspected-object)
+                                       (state  inspected-symbol)
                                        (style  (eql :expanded-body))
                                        (stream t))
   (formatting-table (stream)
@@ -165,3 +177,30 @@
     (formatting-row (stream)
       (format-place-cells stream object 'symbol-type-place nil
                           :label "Type"))))
+
+;;; Commands
+
+(flet ((mutable-and-state-is-p (object required-state)
+         (when-let* ((symbol  (object object))
+                     (package (symbol-package symbol))
+                     (state   (symbol-state symbol package)))
+           (and (not (symbol-package-locked-p symbol))
+                (eq state required-state)))))
+
+  (macrolet
+      ((define (name required-state documentation function)
+         `(define-command (,name :command-table inspector-command-table
+                                 :name          t)
+              ((object 'inspected-symbol
+                       :gesture (:select
+                                 :priority -1
+                                 :tester ((object)
+                                          (mutable-and-state-is-p
+                                           object ,required-state))
+                                 :documentation ,documentation
+                                 :pointer-documentation ,documentation)))
+            (let* ((symbol  (object object))
+                   (package (symbol-package symbol)))
+              (,function symbol package)))))
+    (define com-export   :internal "Export symbol"   export)
+    (define com-unexport :external "Unexport symbol" unexport)))
