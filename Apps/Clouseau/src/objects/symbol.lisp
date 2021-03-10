@@ -165,7 +165,7 @@
                                        (stream t))
   (formatting-table (stream)
     (formatting-row (stream)
-      (format-place-cells stream object 'reader-place 'symbol-name
+      (format-place-cells stream object 'deep-reader-place 'symbol-name
                           :label "Name")
       (format-place-cells stream object 'symbol-package-place nil
                           :label "Package"))
