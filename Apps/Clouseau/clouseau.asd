@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; System definition for the Clouseau inspector application.
-;;;
 
 ;;; This is a complete rewrite which does not share any code or
 ;;; architecture with the old inspector also called "clouseau". It
@@ -91,6 +90,7 @@
                 :serial     t
                 :components ((:file        "util")
                              (:file        "sequence")
-                             (:file        "list"))))
+                             (:file        "list")
+                             (:file        "array"))))
   :perform    (test-op (operation component)
                 (uiop:symbol-call '#:clouseau.test '#:run-tests)))

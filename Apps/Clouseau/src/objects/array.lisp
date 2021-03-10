@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Places and inspection methods for vectors and other arrays.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -80,6 +79,9 @@
 
 (defclass array-element-place (sequence-element-place)
   ())
+
+(defmethod accepts-value-p ((place array-element-place) (value t))
+  (typep value (array-element-type (container place))))
 
 (defmethod value ((place array-element-place))
   (row-major-aref (container place) (cell place)))
@@ -183,7 +185,6 @@
   (with-output-as-presentation (stream state 'sequence-range)
     (print-sequence-header stream (array-total-size object) (start state) (end state)))) ; TODO if inspect-sequence could take length from state, we wouldn't need this
 
-;; TODO displacement
 (defmethod inspect-object-using-state ((object vector)
                                        (state  inspected-vector)
                                        (style  (eql :expanded-body))
@@ -213,14 +214,16 @@
                  (loop :for i :from start :below end
                        :do (formatting-row (stream)
                              (formatting-place
-                                 (object place-class i present inspect)
+                                 (object place-class i
+                                         present-place present-object)
                                (formatting-cell (stream :align-x :right)
-                                 (present stream))
+                                 (with-style (stream :slot-like)
+                                   (present-place stream)))
                                (formatting-cell (stream)
                                  (if (and fill-pointer (>= i fill-pointer))
                                      (with-style (stream :inactive)
-                                       (inspect stream))
-                                     (inspect stream))))))))
+                                       (present-object stream))
+                                     (present-object stream))))))))
              (when truncated?
                (note-truncated stream length (- end start))))))))))
 
@@ -263,7 +266,9 @@
                                   :for i = (array-row-major-index object row column)
                                   :do (formatting-cell (stream)
                                         (formatting-place
-                                            (object 'array-element-place i present inspect)
-                                          (present stream)
+                                            (object 'array-element-place i
+                                                    present-place present-object)
+                                          (with-style (stream :slot-like)
+                                            (present-place stream))
                                           (write-char #\Space stream)
-                                          (inspect stream)))))))))))))))
+                                          (present-object stream)))))))))))))))
