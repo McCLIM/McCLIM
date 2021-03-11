@@ -232,7 +232,18 @@
     :initarg :y-spacing
     :initform 0
     :reader   pane-y-spacing
-    :type     (or null spacing-value)))
+    :type     (or null spacing-value))
+   (align-x
+    :initarg :align-x
+    :reader pane-align-x
+    :type (member :left :center :right :expand))
+   (align-y
+    :initarg :align-y
+    :reader pane-align-y
+    :type (member :top :center :bottom :expand)))
+  (:default-initargs
+   :align-x :left
+   :align-y :top)
   (:documentation
    "Mixin class for panes which offer the standard user space requirements options."))
 
@@ -364,8 +375,10 @@
 
 (defmethod change-space-requirements :before
     ((pane space-requirement-options-mixin)
-     &key (width :nochange) (min-width :nochange) (max-width :nochange)
+     &key
+       (width :nochange) (min-width :nochange) (max-width :nochange)
        (height :nochange) (min-height :nochange) (max-height :nochange)
+       (align-x :nochange) (align-y :nochange)
        (x-spacing :nochange) (y-spacing :nochange)
      &allow-other-keys)
   (macrolet ((update (parameter slot-name)
@@ -377,8 +390,10 @@
     (update height user-height)
     (update min-height user-min-height)
     (update max-height user-max-height)
-    (update x-spacing user-x-spacing)
-    (update y-spacing user-y-spacing)))
+    (update align-x align-x)
+    (update align-y align-y)
+    (update x-spacing x-spacing)
+    (update y-spacing y-spacing)))
 
 
 ;;; Layout protocol mixin

@@ -149,21 +149,13 @@ returned or error is signaled depending on the argument ERRORP.")
    (text-style        :initarg :text-style
                       :reader pane-text-style
                       :initform nil)
-   (align-x           :initarg :align-x
-                      :type (member :left :center :right)
-                      :reader pane-align-x)
-   (align-y           :initarg :align-y
-                      :type (member :top :center :bottom)
-                      :reader pane-align-y)
    ;; Display state
    (redisplay-needed  :accessor pane-redisplay-needed
                       :initarg :redisplay-needed :initform nil))
   (:default-initargs
    :foreground +black+
    :background *3d-normal-color*
-   :text-style *default-text-style*
-   :align-x :left
-   :align-y :top))
+   :text-style *default-text-style*))
 
 (defmethod initialize-instance :after ((obj basic-pane) &key text-style)
   (when (consp text-style)
