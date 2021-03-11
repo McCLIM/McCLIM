@@ -2,13 +2,12 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Basic classes implementing the place protocol in different
 ;;; ways. Intended as superclasses for specific place classes.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -62,8 +61,27 @@
         existing
         (setf (state place) (funcall thunk)))))
 
+(defmethod supportsp ((place     basic-place)
+                      (operation (eql 'modify-descendants)))
+  (if-let ((parent (parent place)))
+    (supportsp parent 'modify-descendants)
+    t))
+
+(defmethod supportsp :around ((place basic-place) (operation (eql 'setf)))
+  (and (call-next-method)
+       (if-let ((parent (parent place)))
+         (supportsp parent 'modify-descendants)
+         t)))
+
 (defmethod supportsp ((place basic-place) (operation (eql 'setf)))
   t)
+
+(defmethod supportsp :around ((place     basic-place)
+                              (operation (eql 'remove-value)))
+  (and (call-next-method)
+       (if-let ((parent (parent place)))
+         (supportsp parent 'modify-descendants)
+         t)))
 
 (defmethod supportsp ((place basic-place) (operation (eql 'remove-value)))
   nil)
@@ -78,6 +96,15 @@
   (when-let ((parent (parent place)))
     (note-changed parent)))
 
+;;; `read-only-descendants-mixin'
+
+(defclass read-only-descendants-mixin ()
+  ())
+
+(defmethod supportsp ((place     read-only-descendants-mixin)
+                      (operation (eql 'modify-descendants)))
+  nil)
+
 ;;; `read-only-place'
 
 (defclass read-only-place (basic-place)
@@ -85,6 +112,12 @@
 
 (defmethod supportsp ((place read-only-place) (operation (eql 'setf)))
   nil)
+
+;;; `deep-read-only-place'
+
+(defclass deep-read-only-place (read-only-descendants-mixin
+                                read-only-place)
+  ())
 
 ;;; `sequence-element-place'
 
@@ -125,8 +158,12 @@
 
 ;;; `reader-place'
 
-(defclass reader-place (function-backed-place
-                        read-only-place)
+(defclass reader-place (read-only-place
+                        function-backed-place)
+  ())
+
+(defclass deep-reader-place (deep-read-only-place
+                             function-backed-place)
   ())
 
 ;;; `accessor-place'
@@ -142,8 +179,16 @@
 ;;; A place that is in some way computed or derived and not backed by
 ;;; a concrete location such as an instance slot or array element.
 
-(defclass pseudo-place (read-only-place)
+(defclass pseudo-place-mixin ()
   ((%cell :reader value)))
+
+(defclass pseudo-place (read-only-place
+                        pseudo-place-mixin)
+  ())
+
+(defclass deep-pseudo-place (deep-read-only-place
+                             pseudo-place-mixin)
+  ())
 
 ;;; `root-place'
 

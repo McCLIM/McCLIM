@@ -14,7 +14,7 @@
 
 ;;; `package-data-place-mixin'
 
-(defclass package-data-place-mixin ()
+(defclass package-data-place-mixin (read-only-descendants-mixin)
   ())
 
 (defmethod supportsp :around ((place     package-data-place-mixin)

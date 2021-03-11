@@ -23,7 +23,8 @@
 
 ;;; `array-dimensions-place'
 
-(defclass array-dimensions-place (basic-place)
+(defclass array-dimensions-place (read-only-descendants-mixin
+                                  basic-place)
   ())
 
 (defmethod supportsp ((place array-dimensions-place) (operation (eql 'setf)))
@@ -151,7 +152,7 @@
 
 (defun inspect-element-type-and-total-size (object stream)
   (formatting-row (stream)
-    (format-place-cells stream object 'reader-place 'array-element-type
+    (format-place-cells stream object 'deep-reader-place 'array-element-type
                         :label "Element type")
     (multiple-value-bind (class cell)
         (if (vectorp object)
