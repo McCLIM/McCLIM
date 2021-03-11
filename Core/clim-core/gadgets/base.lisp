@@ -150,9 +150,9 @@
   (defmethod draw-label ((pane labelled-gadget) (label string) x y)
     (draw-text* pane label
                 x y
-                :align-x (gadget-label-align-x pane)
-                :align-y (gadget-label-align-y pane)
-                :text-style (gadget-label-text-style pane))))
+                :align-x (pane-align-x pane)
+                :align-y (pane-align-y pane)
+                :text-style (pane-text-style pane))))
 
 
 (defclass basic-gadget (;; sheet-leaf-mixin ; <- this cannot go here...
@@ -308,20 +308,7 @@
 (defclass labelled-gadget ()
   ((label       :initarg :label
                 :initform ""
-                :accessor gadget-label)
-   ;; These slots are defined in BASIC-PANE (which is a superclass of
-   ;; basic-gadget). Should we provide different names? Check the
-   ;; meaning etc etc.
-   #+nil
-   (align-x     :initarg :align-x
-                :accessor gadget-label-align-x)
-   #+nil
-   (align-y     :initarg :align-y
-                :accessor gadget-label-align-y)
-   #+nil
-   (text-style  :initform *default-text-style*
-                :initarg :text-style
-                :accessor gadget-text-style)))
+                :accessor gadget-label)))
 
 (defclass labelled-gadget-mixin (labelled-gadget)
   ;; Try to be compatible with Lispworks' CLIM.

@@ -34,8 +34,7 @@
 ;;; - LAYOUT-PANE is mentioned in the spec's example, but not in the
 ;;;   text.
 ;;;
-;;; - Behaviour of :align-x, :align-y is uncertain.
-;;;   (Should it be specifed on the childs? on the parents?)
+;;; - Behaviour of :align-x and :align-y applies to the pane content
 ;;;
 ;;; - BORDER-PANE is not in the spec and just a different name of
 ;;;   OUTLINED-PANE, where is it from? --GB
@@ -617,13 +616,13 @@
         (box-layout-mixin/xically-allocate-space-aux* pane real-width real-height)
       (loop with spacing = (slot-value pane 'major-spacing)
             with x = 0
+            with align-x = (pane-align-x pane)
+            with align-y = (pane-align-y pane)
             for child in (box-layout-mixin-clients pane)
             for major in majors
             for minor in minors
             do (when-let ((pane (box-client-pane child)))
-                 (layout-child pane
-                               (pane-align-x (box-client-pane child))
-                               (pane-align-y (box-client-pane child))
+                 (layout-child pane align-x align-y
                                ((lambda (major minor) height width) x 0)
                                ((lambda (major minor) width height) x 0)
                                ((lambda (major minor) height width) width real-width)
@@ -916,7 +915,9 @@
            (cols (allot-space-horizontally
                   (loop for j from 0 below col-count
                         collect (table-pane-col-space-requirement pane j))
-                  (- width (* x-spacing (1- col-count))))))
+                  (- width (* x-spacing (1- col-count)))))
+           (align-x (pane-align-x pane))
+           (align-y (pane-align-y pane)))
       ;; now finally layout each child
       (loop for y = 0 then (+ y h y-spacing)
             for h in rows
@@ -925,10 +926,7 @@
                      for w in cols
                      for j from 0
                      for child = (aref array i j)
-                     do (layout-child child
-                                      (pane-align-x child)
-                                      (pane-align-y child)
-                                      x y w h))))))
+                     do (layout-child child align-x align-y x y w h))))))
 
 (defun table-pane-p (pane)
   (typep pane 'table-pane))
