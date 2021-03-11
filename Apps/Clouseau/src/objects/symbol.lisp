@@ -38,6 +38,25 @@
 (defmethod supportsp ((place symbol-slot-place) (operation (eql 'remove-value)))
   t)
 
+;;; `symbol-package-place'
+
+(defclass symbol-package-place (symbol-slot-place)
+  ())
+
+(defmethod accepts-value-p ((place symbol-package-place) (value t))
+  (typep value '(or null package)))
+
+(defmethod value ((place symbol-package-place))
+  (symbol-package (container place)))
+
+(defmethod (setf value) ((new-value t) (place symbol-package-place))
+  (let ((symbol  (container place)))
+    (when-let ((package (value place)))
+      (unintern symbol package))
+    (when new-value
+      (import symbol new-value))
+    new-value))
+
 ;;; `symbol-value-place'
 ;;;
 ;;; TODO show type
@@ -136,7 +155,7 @@
     (formatting-row (stream)
       (format-place-cells stream object 'reader-place 'symbol-name
                           :label "Name")
-      (format-place-cells stream object 'reader-place 'symbol-package ; TODO should be mutable
+      (format-place-cells stream object 'symbol-package-place nil
                           :label "Package"))
     (formatting-row (stream)
       (format-place-cells stream object 'symbol-value-place nil
