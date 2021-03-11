@@ -56,6 +56,7 @@
                               (:file       "array")
                               (:file       "instance")
                               (:file       "symbol")
+                              (:file       "package")
                               (:file       "pathname")
                               (:file       "hash-table")
                               (:file       "function")
