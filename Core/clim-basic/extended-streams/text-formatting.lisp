@@ -21,8 +21,8 @@
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))
    (margins :accessor stream-text-margins :type margin-spec))
-  (:default-initargs :text-margins '(:left   (:relative 0)
-                                     :top    (:relative 0)
+  (:default-initargs :text-margins '(:left   (:absolute 0)
+                                     :top    (:absolute 0)
                                      :right  (:relative 0)
                                      :bottom (:relative 0))))
 
@@ -32,8 +32,8 @@
                           `(:absolute ,text-margin)
                           `(:relative 0))))
     (setf (slot-value instance 'margins)
-          (normalize-margin-spec text-margins `(:left   (:relative 0)
-                                                :top    (:relative 0)
+          (normalize-margin-spec text-margins `(:left   (:absolute 0)
+                                                :top    (:absolute 0)
                                                 :right  ,right-margin
                                                 :bottom (:relative 0))))))
 
