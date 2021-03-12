@@ -106,7 +106,7 @@ returned or error is signaled depending on the argument ERRORP.")
   (make-space-requirement :width width :height height))
 
 (defmethod allocate-space ((pane pane) width height)
-  (declare (ignorable pane width height)))
+  (resize-sheet pane width height))
 
 (defmethod pane-needs-redisplay ((pane pane))
   (let ((do-redisplay (pane-redisplay-needed pane)))

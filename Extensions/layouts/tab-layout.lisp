@@ -464,6 +464,7 @@ that the frame manager can customize the implementation."))
             :min-height 0 :height 1 :max-height +fill+))))
 
 (defmethod allocate-space ((pane tab-layout-pane) width height)
+  (resize-sheet pane width height)
   (let* ((header (tab-layout-header-pane pane))
          (y (space-requirement-height (compose-space header))))
     (move-and-resize-sheet header 0 0 width y)

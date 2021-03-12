@@ -252,6 +252,7 @@
     (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
+  (resize-sheet pane width height)
   (when-let ((child (sheet-child pane)))
     (allocate-space child width height)))
 
@@ -432,6 +433,7 @@
       (box-layout-mixin/horizontally-compose-space pane)))
 
 (defmethod allocate-space ((pane box-layout-mixin) width height)
+  (resize-sheet pane width height)
   (if (eq (box-layout-orientation pane) :vertical)
       (box-layout-mixin/vertically-allocate-space pane width height)
       (box-layout-mixin/horizontally-allocate-space pane width height)))
@@ -904,6 +906,7 @@
          :max-height (+ (space-requirement-max-height c) ys))))))
 
 (defmethod allocate-space ((pane table-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (array x-spacing y-spacing) pane
     ;; allot rows
     (let* ((row-count (array-dimension array 0))
@@ -972,10 +975,11 @@
                      :min-width (* min-width nb-children-pl)
                      :min-height (* min-height nb-children-pc))))))
 
-(defmethod allocate-space ((grid grid-pane) width height)
-  (with-slots (array) grid
-    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number grid)
-          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children grid)) nb-kids-p-l)
+(defmethod allocate-space ((pane grid-pane) width height)
+  (resize-sheet pane width height)
+  (with-slots (array) pane
+    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number pane)
+          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children pane)) nb-kids-p-l)
           for c from nb-kids-p-c downto 1
           for row-index from 0 by 1
           for tmp-height = height then (decf tmp-height new-height)
@@ -1018,6 +1022,7 @@
        :max-height (+ (* 2 border-width) (space-requirement-max-height sr))))))
 
 (defmethod allocate-space ((pane spacing-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (border-width) pane
     (let ((child (sheet-child pane))
           (new-width  (- width border-width border-width))
@@ -1132,6 +1137,7 @@
     (make-space-requirement)))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
+  (resize-sheet pane width height)
   (let* ((parent       (sheet-parent pane))
          (child        (sheet-child pane))
          (child-space  (compose-space child))
@@ -1290,6 +1296,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (viewport vscrollbar hscrollbar x-spacing y-spacing vertical-scroll-bar-position) pane
     (let* ((vsbar-width (if vscrollbar (space-requirement-width (compose-space vscrollbar)) 0))
            (hsbar-height (if hscrollbar (space-requirement-height (compose-space hscrollbar)) 0))
@@ -1641,6 +1648,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                 :max-height padded-height)))))
 
 (defmethod allocate-space ((pane label-pane) width height)
+  (resize-sheet pane width height)
   (when-let ((child (sheet-child pane)))
     (multiple-value-bind (left top right bottom) (label-pane-margins pane)
       (move-sheet child left top)
