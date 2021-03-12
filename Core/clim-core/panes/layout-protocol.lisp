@@ -421,11 +421,6 @@
 ;;;
 ;;; --GB 2003-03-16
 
-(defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
-  (unless (top-level-sheet-pane-p pane)
-    (resize-sheet pane width height))
-  (call-next-method))
-
 (defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
   (declare (ignore width height))
   (or (pane-space-requirement pane)
