@@ -132,6 +132,18 @@
 #+sbcl (defmethod value ((place package-locally-nicknamed-by-list-place))
          (sb-ext:package-locally-nicknamed-by-list (container place)))
 
+;;; `symbol-in-package-place'
+
+(defclass symbol-in-package-place (package-data-place-mixin
+                                   pseudo-place)
+  ())
+
+(defmethod make-object-state ((object symbol) (place symbol-in-package-place))
+  (make-instance (object-state-class object place)
+                 :place           place
+                 :context-package (container place)
+                 :style           :name-only))
+
 ;;; Object states
 
 ;;; `inspected-package'
@@ -167,17 +179,17 @@
 
 ;;; Object inspection methods
 
-(defun package-symbols (package &key filter)
+(defun map-package-symbols (function package &key filter)
   (let ((result (make-array 100 :adjustable t :fill-pointer 0)))
     (do-external-symbols (symbol package)
-      (when (and (eq (symbol-package symbol) package)
-                 (or (not filter)
-                     (funcall filter symbol)))
+      (when (or (not filter)
+                (funcall filter symbol))
         (vector-push-extend symbol result)))
-    (sort result #'string-lessp :key #'symbol-name)))
+    (sort result #'string-lessp :key #'symbol-name)
+    (map nil function result)))
 
 (defmethod inspect-object-using-state :after ((object package)
-                                              (state  inspected-object)
+                                              (state  inspected-package)
                                               (style  (eql :badges))
                                               (stream t))
   (when (package-locked-p object)
@@ -223,8 +235,8 @@
 
         (flet ((symbol-row (symbol)
                  (formatting-row (stream)
-                   (formatting-place (object 'pseudo-place symbol nil inspect* :place-var place)
-                     (formatting-cell (stream) (inspect* stream))
+                   (formatting-place (object 'symbol-in-package-place symbol nil present-object)
+                     (formatting-cell (stream) (present-object stream))
                      ;; Value slot
                      (formatting-place (symbol 'symbol-value-place nil present inspect)
                        (formatting-cell (stream) (present stream) (inspect stream)))
@@ -234,6 +246,6 @@
                      ;; Type slot
                      (formatting-place (symbol 'symbol-type-place nil present inspect)
                        (formatting-cell (stream) (present stream) (inspect stream)))))))
-          (map nil #'symbol-row (package-symbols object :filter (symbol-filter state))))))))
+          (map-package-symbols #'symbol-row object :filter (symbol-filter state)))))))
 
 ;; TODO command: trace all symbols
