@@ -110,8 +110,8 @@
 (defmethod object-state-class ((object generic-function) (place t))
   'inspected-generic-function)
 
-(defclass inspected-method (inspected-instance
-                            remembered-collapsed-style-mixin)
+(defclass inspected-method (remembered-collapsed-style-mixin
+                            inspected-instance)
   ()
   (:default-initargs
    :slot-style nil))
