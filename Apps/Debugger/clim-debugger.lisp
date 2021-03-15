@@ -224,7 +224,8 @@
 ;;; Display debugging info
 
 (defun display-debugger (frame pane)
-  (let ((info (condition-info pane)))
+  (let ((info (condition-info pane))
+        (thread (bt:current-thread)))
     (formatting-table (pane)
       (formatting-row (pane)
         (formatting-cell (pane)
@@ -245,7 +246,13 @@
             (with-text-face (pane :bold) (write-string "Extra" pane)))
           (formatting-cell (pane)
             (with-text-family (pane :fix)
-              (princ extra pane))))))
+              (princ extra pane)))))
+      (formatting-row (pane)
+        (formatting-cell (pane)
+          (with-text-face (pane :bold) (write-string "Thread" pane)))
+        (formatting-cell (pane)
+          (with-output-as-presentation (pane thread 'inspectable)
+            (princ thread pane)))))
     (fresh-line pane)
 
     (with-text-face (pane :bold) (write-string "Restarts" pane))
