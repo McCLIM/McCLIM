@@ -107,11 +107,24 @@
                                       :root condition
                                       :condition-info condition
                                       :end-of-line-action :allow
-                                      :end-of-page-action :scroll))))
+                                      :end-of-page-action :scroll)))
+          (interactor    :interactor :min-height 100 :height 100))
   (:layouts
-   (default (scrolling () debugger-pane)))
+   (without-interactor
+     (scrolling (:height 480 :width #.(* 480 slim:+golden-ratio+))
+       debugger-pane))
+   (with-interactor
+     (vertically ()
+       (:fill (scrolling (:height 380 :width #.(* 480 slim:+golden-ratio+))
+                debugger-pane))
+       (make-pane 'clime:box-adjuster-gadget)
+       interactor)))
   (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+))
   (:command-table (clim-debugger :inherit-from (clouseau:inspector-command-table))))
+
+(defmethod frame-standard-output ((frame clim-debugger))
+  (or (find-pane-named frame 'interactor)
+      (call-next-method)))
 
 ;;; Presentation types
 
@@ -216,6 +229,16 @@
   (let ((dbg-pane (find-pane-named *application-frame* 'debugger-pane)))
     (com-toggle-stack-frame-view
      (nth (active-frame dbg-pane) (backtrace (condition-info dbg-pane))))))
+
+(define-clim-debugger-command (clim-toggle-interactor
+                               :name      "Toggle interactor"
+                               :keystroke (#\i :control))
+    ()
+  (let ((frame *application-frame*))
+    (setf (frame-current-layout frame)
+          (case (frame-current-layout frame)
+            (without-interactor 'with-interactor)
+            (with-interactor    'without-interactor)))))
 
 ;;; Command translators
 
