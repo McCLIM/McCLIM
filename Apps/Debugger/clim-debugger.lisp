@@ -93,7 +93,7 @@
 
 ;;; CLIM stuff
 
-(defclass debugger-pane (application-pane)
+(defclass debugger-pane (clouseau:inspector-pane)
   ((condition-info :reader  condition-info :initarg :condition-info)
    (active-frame :accessor active-frame :initform 0)
    (shown-frames :accessor shown-frames :initform 5)))
@@ -102,14 +102,16 @@
   ((condition        :initform nil :accessor the-condition)
    (returned-restart :initform nil :accessor returned-restart))
   (:pointer-documentation t)
-  (:panes (debugger-pane (make-pane 'debugger-pane
-                                    :condition-info (the-condition *application-frame*)
-                                    :display-function 'display-debugger
-                                    :end-of-line-action :allow
-                                    :end-of-page-action :scroll)))
+  (:panes (debugger-pane (let ((condition (the-condition *application-frame*)))
+                           (make-pane 'debugger-pane
+                                      :root condition
+                                      :condition-info condition
+                                      :end-of-line-action :allow
+                                      :end-of-page-action :scroll))))
   (:layouts
    (default (scrolling () debugger-pane)))
-  (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
+  (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+))
+  (:command-table (clim-debugger :inherit-from (clouseau:inspector-command-table))))
 
 ;;; Presentation types
 
@@ -151,9 +153,10 @@
     (setf #1=(shown-frames pane)
           (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
 
-(define-clim-debugger-command (com-invoke-inspector
-                               :name "Invoke inspector")
-    ((obj inspectable :gesture :select))
+(define-clim-debugger-command (com-invoke-inspector :name "Inspect in new frame")
+    ((obj inspectable :gesture (:select
+                                :documentation "Inspect in new frame"
+                                :pointer-documentation "Inspect in new frame")))
   (clouseau:inspect obj :new-process t))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
@@ -223,61 +226,71 @@
 
 ;;; Display debugging info
 
-(defun display-debugger (frame pane)
-  (let ((info (condition-info pane))
-        (thread (bt:current-thread)))
-    (formatting-table (pane)
-      (formatting-row (pane)
-        (formatting-cell (pane)
-          (with-text-face (pane :bold) (write-string "Description" pane)))
-        (formatting-cell (pane)
-          (princ (condition-message info) pane)))
-      (formatting-row (pane)
-        (formatting-cell (pane)
-          (with-text-face (pane :bold) (write-string "Condition" pane)))
-        (formatting-cell (pane)
-          (with-drawing-options (pane :ink +red+)
-            (with-output-as-presentation
-                (pane (the-condition info) 'inspectable)
-              (princ (type-of-condition info) pane)))))
-      (when-let ((extra (condition-extra info)))
-        (formatting-row (pane)
-          (formatting-cell (pane)
-            (with-text-face (pane :bold) (write-string "Extra" pane)))
-          (formatting-cell (pane)
-            (with-text-family (pane :fix)
-              (princ extra pane)))))
-      (formatting-row (pane)
-        (formatting-cell (pane)
-          (with-text-face (pane :bold) (write-string "Thread" pane)))
-        (formatting-cell (pane)
-          (with-output-as-presentation (pane thread 'inspectable)
-            (princ thread pane)))))
-    (fresh-line pane)
+(defmethod redisplay-frame-pane ((frame application-frame)
+                                 (pane debugger-pane)
+                                 &key force-p)
+  (declare (ignore force-p))
+  (clouseau:call-with-root-place
+   (lambda ()
+     (let ((info (condition-info pane))
+           (thread (bt:current-thread)))
+       (formatting-table (pane)
+         (formatting-row (pane)
+           (formatting-cell (pane)
+             (with-text-face (pane :bold) (write-string "Description" pane)))
+           (formatting-cell (pane) (princ (condition-message info) pane)))
+         (with-output-as-presentation
+             (pane thread 'inspectable :single-box t)
+           (formatting-row (pane)
+             (formatting-cell (pane)
+               (with-text-face (pane :bold) (write-string "Condition" pane)))
+             (formatting-cell (pane)
+               (with-drawing-options (pane :ink +red+)
+                 (clouseau:formatting-place
+                     (nil 'clouseau:pseudo-place (the-condition info) nil present-value)
+                   (present-value pane))))))
+         (when-let ((extra (condition-extra info)))
+           (formatting-row (pane)
+             (formatting-cell (pane)
+               (with-text-face (pane :bold) (write-string "Extra" pane)))
+             (formatting-cell (pane)
+               (with-text-family (pane :fix)
+                 (princ extra pane)))))
+         (with-output-as-presentation
+             (pane thread 'inspectable :single-box t)
+           (formatting-row (pane)
+             (formatting-cell (pane)
+               (with-text-face (pane :bold) (write-string "Thread" pane)))
+             (formatting-cell (pane)
+               (clouseau:formatting-place
+                   (nil 'clouseau:pseudo-place thread nil present-value)
+                 (present-value pane))))))
+       (fresh-line pane)
 
-    (with-text-face (pane :bold) (write-string "Restarts" pane))
-    (fresh-line pane)
-  (indenting-output (pane ">")
-    (formatting-table (pane :x-spacing 10)
-      (do* ((restarts (restarts info) (cdr restarts))
-            (r #1=(car restarts) #1#)
-            (n 0 (1+ n)))
-           ((null restarts) t)
-        (with-output-as-presentation (pane r 'restart :single-box t)
-          (formatting-row (pane)
-            (formatting-cell (pane)
-              (with-text-face (pane :bold) (princ n pane)))
-            (formatting-cell (pane)
-              (with-drawing-options (pane :ink +dark-violet+)
-                (princ (restart-name r) pane)))
-            (formatting-cell (pane) (princ r pane)))))))
-    (fresh-line pane)
-    (display-backtrace frame pane)
+       (with-text-face (pane :bold) (write-string "Restarts" pane))
+       (fresh-line pane)
+       (indenting-output (pane ">")
+         (formatting-table (pane :x-spacing 10)
+           (do* ((restarts (restarts info) (cdr restarts))
+                 (r #1=(car restarts) #1#)
+                 (n 0 (1+ n)))
+                ((null restarts) t)
+             (with-output-as-presentation (pane r 'restart :single-box t)
+               (formatting-row (pane)
+                 (formatting-cell (pane)
+                   (with-text-face (pane :bold) (princ n pane)))
+                 (formatting-cell (pane)
+                   (with-drawing-options (pane :ink +dark-violet+)
+                     (princ (restart-name r) pane)))
+                 (formatting-cell (pane) (princ r pane)))))))
+       (fresh-line pane)
+       (display-backtrace frame pane)
 
-    (let ((history (stream-output-history pane)))
-      (change-space-requirements
-       pane :width (bounding-rectangle-width history)
-            :height (bounding-rectangle-height history)))))
+       (let ((history (stream-output-history pane)))
+         (change-space-requirements
+          pane :width (bounding-rectangle-width history)
+          :height (bounding-rectangle-height history)))))
+   (clouseau:root-place pane) pane))
 
 (defun display-backtrace (frame pane)
   (declare (ignore frame))
@@ -323,6 +336,12 @@
   (declare (ignore acceptably for-context-type))
   (print-stack-frame-header object stream))
 
+(defclass frame-local-place (clouseau:pseudo-place)
+  ())
+
+(defmethod clouseau:value ((place frame-local-place))
+  (getf (clouseau:cell place) :value))
+
 (define-presentation-method present (object (type stack-frame) stream
                                             (view maximized-stack-frame-view)
                                             &key acceptably for-context-type)
@@ -336,11 +355,13 @@
         (fresh-line stream)
         (indenting-output (stream ">")
           (formatting-table (stream)
-            (loop for (name n identifier id value val) in (frame-variables object)
-                  do (formatting-row (stream)
-                       (formatting-cell (stream) (princ n stream))
-                       (formatting-cell (stream) (write-string "=" stream))
-                       (formatting-cell (stream) (present val 'inspectable :stream stream :single-box t))))))))
+            (loop for info in (frame-variables object)
+                  for name = (getf info :name)
+                  for value = (getf info :value)
+                  do (with-output-as-presentation
+                         (stream value 'inspectable :single-box t)
+                       (clouseau:format-place-row
+                        stream object 'frame-local-place info :label name)))))))
   (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
