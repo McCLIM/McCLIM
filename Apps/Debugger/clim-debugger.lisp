@@ -1,9 +1,18 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2004 Peter Mechlenborg <metch@daimi.au.dk>
+;;;  (c) copyright 2016,2017 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2017 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; This is the beginning of a Common Lisp debugger implemented in
 ;;; McCLIM. It uses the portable debugger interface developed for the
 ;;; Slime project, and the graphical layout is also heavily inspired
 ;;; by Slime. Because of Slime I hope that this works on other
 ;;; implementations than SBCL.
-
 ;;;
 ;;; Test:
 ;;;
@@ -16,7 +25,6 @@
 ;;;
 ;;; (clim-debugger:with-debugger ()
 ;;;   (clim-listener:run-listener :new-process t))
-
 ;;;
 ;;; Problems/todo:
 ;;;
@@ -28,7 +36,6 @@
 ;;;   done through slime.
 ;;;
 ;;; - Frames could be navigable with arrow keys as well. How to do that?
-;;;
 
 (defpackage #:clim-debugger
   (:use #:clim #:clim-lisp #:clim-extensions)
@@ -36,20 +43,14 @@
 
 (in-package :clim-debugger)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Misc   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;; Misc
 
 ;;; Borrowed from Andy Hefner
 (defmacro bold ((stream) &body body)
   `(with-text-face (,stream :bold)
      ,@body))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Data model    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Data model
 
 (defclass debugger-info ()
   ((the-condition :accessor the-condition
@@ -84,18 +85,16 @@
 
 (defun compute-backtrace (start end)
   (loop for frame    in   (swank-backend::compute-backtrace start end)
-     for frame-no from 0
-     collect (make-instance
-              'stack-frame
-              :frame-string    (let ((*print-pretty* nil))
-                                 (with-output-to-string (stream)
-                                   (swank-backend::print-frame frame stream)))
-              :frame-no        frame-no
-              :frame-variables (swank-backend::frame-locals frame-no))))
+        for frame-no from 0
+        collect (make-instance
+                 'stack-frame
+                 :frame-string    (let ((*print-pretty* nil))
+                                    (with-output-to-string (stream)
+                                      (swank-backend::print-frame frame stream)))
+                 :frame-no        frame-no
+                 :frame-variables (swank-backend::frame-locals frame-no))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   CLIM stuff   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; CLIM stuff
 
 (defclass debugger-pane (application-pane)
   ((condition-info :reader  condition-info :initarg :condition-info)
@@ -120,19 +119,15 @@
    (default (scrolling () debugger-pane)))
   (:geometry :height 480 :width #.(* 480 slim:+golden-ratio+)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Presentation types   ;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Presentation types
 
 (define-presentation-type stack-frame () :inherit-from 't)
 (define-presentation-type restart     ())
 (define-presentation-type more-type   ())
 (define-presentation-type inspect     ())
 
+;;; Gestures
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Gestures   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-gesture-name :prev    :keyboard (#\p :meta))
 (define-gesture-name :next    :keyboard (#\n :meta))
 (define-gesture-name :more    :keyboard (#\m))
@@ -140,7 +135,8 @@
 (define-gesture-name :eval    :keyboard (#\e))
 (define-gesture-name :toggle  :keyboard #\tab)
 
-;;; restart keyboard shortcuts
+;;; Restart keyboard shortcuts
+
 (macrolet ((invoke-x (x)
              (let* ((char (aref (format nil "~A" x) 0))
                     (name (alexandria:symbolicate "INVOKE-RESTART-" char)))
@@ -154,9 +150,7 @@
   (invoke-x 0) (invoke-x 1) (invoke-x 2) (invoke-x 3) (invoke-x 4)
   (invoke-x 5) (invoke-x 6) (invoke-x 7) (invoke-x 8) (invoke-x 9))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Commands   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Commands
 
 (define-clim-debugger-command (com-more :name "More backtraces"
                                         :keystroke :more)
@@ -225,9 +219,7 @@
     (com-toggle-stack-frame-view
      (nth (active-frame dbg-pane) (backtrace (condition-info dbg-pane))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Command translators   ;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Command translators
 
 (define-presentation-to-command-translator more-backtraces
     (more-type com-more clim-debugger :gesture :select)
@@ -249,10 +241,7 @@
     (object)
   (list object))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Display debugging info   ;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Display debugging info
 
 (defun display-debugger (frame pane)
   (let ((*standard-output* pane))
@@ -295,7 +284,6 @@
      pane
      :width (bounding-rectangle-width (stream-output-history pane))
      :height (bounding-rectangle-height (stream-output-history pane)))))
-
 
 (defun display-backtrace (frame pane)
   (declare (ignore frame))
@@ -351,10 +339,10 @@
         (format stream "     ")
         (slim:with-table (stream)
           (loop for (name n identifier id value val) in (frame-variables object)
-             do (slim:row
-                  (slim:cell (princ n))
-                  (slim:cell (princ "="))
-                  (slim:cell (present val 'inspect :single-box t)))))))
+                do (slim:row
+                    (slim:cell (princ n))
+                    (slim:cell (princ "="))
+                    (slim:cell (present val 'inspect :single-box t)))))))
   (fresh-line stream))
 
 (define-presentation-method present (object (type restart) stream
@@ -375,10 +363,7 @@
   (declare (ignore acceptably for-context-type))
   (format stream "~A" object))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   Starting the debugger   ;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Starting the debugger
 
 (defun run-debugger-frame ()
   (run-frame-top-level
@@ -404,7 +389,6 @@
                (let ((*debugger-hook* me-or-my-encapsulation))
                  (invoke-restart-interactively restart))
                (abort))))))))
-
 
 (defvar *debugger-bindings*
   `((*debugger-hook*                      . #'debugger)
@@ -432,9 +416,7 @@
   #+ecl  (setf ext:*invoke-debugger-hook*    #'debugger)
   #+sbcl (setf sb-ext:*invoke-debugger-hook* #'debugger))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;   For testing   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; For testing
 
 (defun simple-break ()
   (with-simple-restart  (continue "Continue from interrupt.")

@@ -1,6 +1,12 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; Copyright (c) 2004, Peter Mechlenborg (metch@daimi.au.dk)
+;;; Copyright (c) 2004 Peter Mechlenborg <metch@daimi.au.dk>
 ;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; System definition for the McCLIM debugger.
 
 (defsystem #:clim-debugger
   :description "CLIM debugger application."
