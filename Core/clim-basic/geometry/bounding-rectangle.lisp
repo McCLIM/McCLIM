@@ -1,3 +1,15 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 1998 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Bounding rectangle class and protocol implementation.
+
 (in-package #:climi)
 
 ;;; 4.1 Bounding rectangles

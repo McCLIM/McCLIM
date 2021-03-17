@@ -1,8 +1,20 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2003 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2005 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Methods for computing bounding rectangles or various region classes.
+
 (in-package #:climi)
 
-;;; Implementation for various types of regions.
-
-;;; fixme: is this right? nowhere-region is unbound. -- jd 2019-09-30
+;;; FIXME is this right? nowhere-region is unbound. -- jd 2019-09-30
 (defmethod bounding-rectangle* ((x nowhere-region))
   (values 0 0 0 0))
 
@@ -21,8 +33,8 @@
     (values x1 y1 x2 y2)))
 
 (defun ellipse-bounding-rectangle (el)
-  ;; returns bounding rectangle of ellipse centered at (0, 0) with radii h and v
-  ;; rotated by the angle phi.
+  ;; Return bounding rectangle of ellipse centered at (0, 0) with
+  ;; radii h and v rotated by the angle phi.
   (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
     (let* ((sin (sin phi))
            (cos (cos phi))
@@ -63,7 +75,7 @@
       a
     (values x1 y1 x2 y2)))
 
-;;; - STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
+;;; STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
 (defmethod bounding-rectangle* ((region standard-rectangle-set))
   (with-slots (bands bounding-rectangle) region
     (values-list (or bounding-rectangle

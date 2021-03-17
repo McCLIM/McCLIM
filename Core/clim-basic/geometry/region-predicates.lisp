@@ -1,13 +1,21 @@
-(in-package #:climi)
-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2002 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; This file contains implementation of the region predicate protocol
 ;;; for several region classes. A few rules to follow:
 ;;;
 ;;; - use coordinate functions for comparisons
-;;; - when possible provide a method for a protocol class, and when
-;;;   beneficial provide, also provide a method for standard class
-;;; - all "region" arguments must be specialized
-;;; - the most general specialization is bounding-rectangle
+;;; - when possible, provide a method for a protocol class, and when
+;;;   beneficial, also provide a method for standard class
+;;; - all "region" parameters must be specialized
+;;; - the most general specialization is BOUNDING-RECTANGLE
 ;;;
 ;;; Regions which must be handled:
 ;;;
@@ -16,15 +24,16 @@
 ;;;   - 2 dimensions: polygon, ellipse
 ;;;
 ;;; Additionally a line and a rectangle should be handled (they are
-;;; frequently used special cases of a polyline and a polygon).
+;;; frequently used as special cases of a polyline and a polygon).
 ;;;
 ;;; Methods should be defined from the most general to the most
-;;; specific. Methods specialized on REGION, methods being a
+;;; specific. Methods specialized to REGION, methods being a
 ;;; consequence of the dimensionality rule and finally methods
 ;;; specific to a particular region type. Unbounded regions and region
 ;;; sets have their methods defined elsewhere.
 
-
+(in-package #:climi)
+
 (defmethod region-contains-position-p ((region point) x y)
   (multiple-value-bind (px py) (point-position region)
     (and (coordinate= px x)
@@ -118,16 +127,15 @@
            (position-contains-p (polar->screen region)))
       (position-contains-p (polar->screen region)))))
 
-
-;;   REGION-INTERSECTS-REGION-P region1 region2
-;;
-;;        Returns nil if region-intersection of the two regions region1 and
-;;        region2 would be +nowhere+; otherwise, it returns t.
-;;
-;;        aka region1 and region2 are not disjoint, aka A ∩ B ≠ ∅
-;;
+;;;   REGION-INTERSECTS-REGION-P region1 region2
+;;;
+;;;        Returns nil if region-intersection of the two regions region1 and
+;;;        region2 would be +nowhere+; otherwise, it returns t.
+;;;
+;;;        aka region1 and region2 are not disjoint, aka A ∩ B ≠ ∅
+;;;
 
-;; "generic" version
+;;; "generic" version
 (defmethod region-intersects-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (not (region-equal +nowhere+ (region-intersection a b))))
 
@@ -146,14 +154,13 @@
   ;; wind up here, we can just return T.
   t)
 
-
-;;   REGION-CONTAINS-REGION-P region1 region2
-;;
-;;        Returns T if all points in the region REGION1 are members of
-;;        the region REGION2; otherwise, it returns NIL.
-;;
-;;        aka region2 is a subset of region1, aka B\A = ∅
-;;
+;;;   REGION-CONTAINS-REGION-P region1 region2
+;;;
+;;;        Returns T if all points in the region REGION1 are members of
+;;;        the region REGION2; otherwise, it returns NIL.
+;;;
+;;;        aka region2 is a subset of region1, aka B\A = ∅
+;;;
 
 ;;; "generic" version
 (defmethod region-contains-region-p ((a bounding-rectangle) (b bounding-rectangle))
@@ -205,13 +212,12 @@
 (defmethod region-contains-region-p ((a bounding-rectangle) (b point))
   (region-contains-position-p a (point-x b) (point-y b)))
 
-
-
-;; "generic" version
+;;; "generic" version
 (defmethod region-equal ((a bounding-rectangle) (b bounding-rectangle))
   (region-equal +nowhere+ (region-exclusive-or a b)))
 
-;;; dimensionality rule
+;;; Dimensionality rule
+
 (defmethod region-equal ((a point) (b path))  nil)
 (defmethod region-equal ((a point) (b area))  nil)
 (defmethod region-equal ((a path)  (b point)) nil)
@@ -244,4 +250,3 @@
            (region-equal (line-end-point a) (line-end-point b)))
       (and (region-equal (line-start-point a) (line-end-point b))
            (region-equal (line-end-point a) (line-start-point b)))))
-

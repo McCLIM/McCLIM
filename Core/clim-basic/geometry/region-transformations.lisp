@@ -1,3 +1,18 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2003 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2002 Alexey Dejneka
+;;;  (c) copyright 2005 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Methods on TRANSFORM-REGION for different transformation and region classes.
+
 (in-package #:climi)
 
 (defmethod transform-region (transformation (region standard-point))
@@ -32,8 +47,7 @@
 
 (defmethod transform-region (transformation (rect standard-rectangle))
   (cond ((rectilinear-transformation-p transformation)
-         (with-standard-rectangle (x1 y1 x2 y2)
-               rect
+         (with-standard-rectangle (x1 y1 x2 y2) rect
            (multiple-value-bind (x1* y1*)
                (transform-position transformation x1 y1)
              (multiple-value-bind (x2* y2*)
@@ -54,10 +68,9 @@
                              (untransform-angle transformation end-angle))))
       (when (reflection-transformation-p transformation)
         (rotatef start-angle* end-angle*))
-      (make-instance (type-of region)
-        :tr (compose-transformations transformation tr)
-        :start-angle start-angle*
-        :end-angle end-angle*))))
+      (make-instance (type-of region) :tr (compose-transformations transformation tr)
+                                      :start-angle start-angle*
+                                      :end-angle end-angle*))))
 
 (defmethod transform-region (tr (region standard-rectangle-set))
   (cond ((scaling-transformation-p tr)
@@ -68,19 +81,19 @@
                  (rev-y-p (< myy 0)))
              (flet ((correct (bands)
                       (loop for ((y . nil) (nil . xs)) on (nreverse bands)
-                         collect `(,y . ,xs))))
+                            collect `(,y . ,xs))))
                (make-standard-rectangle-set
                 (loop for band in (standard-rectangle-set-bands region)
-                   for new-band = (loop for x in (cdr band)
-                                     collect (+ (* mxx x) tx) into new-xs
-                                     finally (return (cons (+ (* myy (car band)) ty)
-                                                           (if rev-x-p
-                                                               (nreverse new-xs)
-                                                               new-xs))))
-                   collect new-band into new-bands
-                   finally (return (if rev-y-p
-                                       (correct new-bands)
-                                       new-bands))))))))
+                      for new-band = (loop for x in (cdr band)
+                                           collect (+ (* mxx x) tx) into new-xs
+                                           finally (return (cons (+ (* myy (car band)) ty)
+                                                                 (if rev-x-p
+                                                                     (nreverse new-xs)
+                                                                     new-xs))))
+                      collect new-band into new-bands
+                      finally (return (if rev-y-p
+                                          (correct new-bands)
+                                          new-bands))))))))
         (t
          ;; We have insufficient knowledge about the transformation,
          ;; so we have to take the union of all transformed rectangles.
@@ -102,9 +115,8 @@
 
 (defmethod transform-region (tr (region standard-region-difference))
   (with-slots (a b) region
-    (make-instance 'standard-region-difference
-      :a (transform-region tr a)
-      :b (transform-region tr b))))
+    (make-instance 'standard-region-difference :a (transform-region tr a)
+                                               :b (transform-region tr b))))
 
 (defmethod transform-region (tr (region standard-region-union))
   (with-slots (regions) region
