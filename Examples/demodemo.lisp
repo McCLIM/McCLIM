@@ -244,27 +244,32 @@ name."))
           (foo :application-pane :display-function #'scroll-test-display)
           (qux :application-pane :display-function #'scroll-test-display))
   (:layouts (default
-                (vertically ()
-                  (horizontally ()
-                    (labelling (:label "bam") (scrolling () bam))
-                    (labelling (:label "foo") (scrolling () foo))
-                    (labelling (:label "qux") (scrolling () qux)))
-                  (labelling (:label "Description") out)))))
+                (horizontally ()
+                  (labelling (:label "bam") (scrolling () bam))
+                  (labelling (:label "foo") (scrolling () foo))
+                  (labelling (:label "qux") (scrolling () qux))))))
 
 (defmethod scroll-test-display ((frame scroll-test-2) pane)
-  (when (member (pane-name pane) '(bam qux))
-    (draw-rectangle* pane -100 -100 +100 +100 :filled nil
-                     :ink +red+ :line-thickness 5 :line-dashes t))
-  (when (member (pane-name pane) '(foo qux))
-    (draw-rectangle* pane +300 +300 +500 +500 :filled nil
-                     :ink +red+ :line-thickness 5 :line-dashes t))
-
-  (when (member (pane-name pane) '(out))
-    (format pane "In this test we draw three panes: bam, foo and qux. You may try resizing the window and see what happens. If viewports are small enough, scroll-bars should appear to show bottom-right rectangle on \"foo\" and \"qux\". Upper-left rectangle has starting point having negative coordinates of its sheet, so scroll-bars won't update to uncover it (this may be supported in the future - in such case please change description of this test). Only bottom-right rectangle must be seen in full.
-
-\"bam\" should have only partially drawn rectangle (upper-left corner).
-\"foo\" is similar, but rectangle is drawn in bottom-right corner. This draw should extend scroll-bars, so user may see whole rectangle.
-\"qux\" combines both previous panes. Part of the rectangle in the upper-left corner and (after scrolling) full rectangle on the bottom-right corner.")))
+  (flet ((draw-rectangle (x1 y1 x2 y2)
+           (draw-rectangle* pane x1 y1 x2 y2
+                            :filled nil
+                            :ink +red+
+                            :line-thickness 3
+                            :line-dashes t)
+           (draw-point* pane x1 y1 :line-thickness 7 :ink +blue+)
+           (draw-point* pane x2 y2 :line-thickness 7 :ink +blue+)
+           (draw-text* pane (format nil "(~s, ~s)" x1 y1)
+                       (+ x1 5) (+ 5 y1)
+                       :align-x :left
+                       :align-y :top)
+           (draw-text* pane (format nil "(~s, ~s)" x2 y2)
+                       (- x2 5) (- y2 5)
+                       :align-x :right
+                       :align-y :bottom)))
+    (when (member (pane-name pane) '(bam qux))
+      (draw-rectangle -100 -100 +100 +100))
+    (when (member (pane-name pane) '(foo qux))
+      (draw-rectangle +300 +300 +500 +500))))
 
 (define-application-frame list-test ()
   ()
