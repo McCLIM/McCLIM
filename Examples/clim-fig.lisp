@@ -151,7 +151,8 @@
         (stream-add-output-record pane output-record)
         (setf (redo-list *application-frame*) nil)
         (disable-commands frame 'com-redo)
-        (enable-commands frame 'com-undo 'com-clear)))))
+        (enable-commands frame 'com-undo 'com-clear))
+      (change-space-requirements pane))))
 
 (defun handle-move-object (pane figure first-point-x first-point-y)
   (multiple-value-bind (figure-x figure-y)

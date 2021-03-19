@@ -307,7 +307,7 @@
     (let ((y1 (+ miny (- maxx minx) 1))
           (y3 (- maxy (- maxx minx) 1)))
       (let ((ts (scroll-bar-thumb-size sb))
-            (minimum-thumb-size 30))
+            (minimum-thumb-size *minimum-thumb-size*))
         ;; This is the right spot to handle ts = :none or perhaps NIL
         (multiple-value-bind (range) (gadget-range sb)
           ;; handle range + ts = 0
@@ -485,12 +485,6 @@
         (slot-value scroll-bar 'thumb-size) thumb-size
         (slot-value scroll-bar 'value) value)
   (scroll-bar/update-display scroll-bar))
-
-;;;; geometry
-
-
-
-
 
 ;;;; event handler
 

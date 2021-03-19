@@ -1787,7 +1787,7 @@ were added."
 
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:y1 y1)
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
       text-record
     (with-slots (max-height left right) text-record
       (setf (rectangle-edges* text-record)

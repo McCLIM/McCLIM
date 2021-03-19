@@ -329,10 +329,8 @@
         foo     (clamp user-foo min-foo max-foo))
   (values foo min-foo max-foo))
 
-(defgeneric merge-user-specified-options (pane sr))
-
-(defmethod merge-user-specified-options ((pane space-requirement-options-mixin)
-                                         sr)
+(defun merge-user-specified-options (pane sr)
+  (check-type pane space-requirement-options-mixin)
   ;; ### I want proper error checking and in case there is an error we
   ;;     should just emit a warning and move on. CLIM should not die from
   ;;     garbage passed in here.
@@ -422,11 +420,6 @@
 ;;;   CHANGING-SPACE-REQUIREMENTS.
 ;;;
 ;;; --GB 2003-03-16
-
-(defmethod allocate-space :around ((pane layout-protocol-mixin) width height)
-  (unless (top-level-sheet-pane-p pane)
-    (resize-sheet pane width height))
-  (call-next-method))
 
 (defmethod compose-space :around ((pane layout-protocol-mixin) &key width height)
   (declare (ignore width height))

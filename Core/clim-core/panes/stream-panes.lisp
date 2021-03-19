@@ -131,13 +131,13 @@
             (eql :compute (pane-user-max-height pane)))
         (multiple-value-bind (width height)
             (let ((record
-                    (if (slot-value pane 'incremental-redisplay)
+                    (if (pane-incremental-redisplay pane)
                         (stream-output-history pane)
                         (with-output-to-output-record (pane)
                           (invoke-display-function *application-frame* pane)))))
               (with-bounding-rectangle* (min-x min-y max-x max-y) record
-                (declare (ignore min-x min-y))
-                (values max-x max-y)))
+                (values (max max-x (- max-x min-x))
+                        (max max-y (- max-y min-y)))))
           (unless (> width 0) (setf width 1))
           (unless (> height 0) (setf height 1))
           (setf (stream-width pane) width)
@@ -158,23 +158,30 @@
             (call-next-method)))
         (call-next-method))))
 
-;;; XXX if we decide to handle sheets starting from position different than
-;;; [0,0] in the future we should take here bounding-rectangle-width/height and
-;;; set sheet region to bounding-rectangle-min-x/y. Such approach may require
-;;; change in more places.
-(defmethod compose-space ((pane clim-stream-pane) &key width height)
-  (declare (ignorable width height))
-  (let* ((w (bounding-rectangle-max-x (stream-output-history pane)))
-         (h (bounding-rectangle-max-y (stream-output-history pane)))
-         (width (max w (stream-width pane)))
-         (height (max h (stream-height pane))))
-    (make-space-requirement
-     :min-width (clamp w 0 width)
-     :width width
-     :max-width +fill+
-     :min-height (clamp h 0 height)
-     :height height
-     :max-height +fill+)))
+(defmethod compose-space ((pane clim-stream-pane) &key (width 100) (height 100))
+  (with-bounding-rectangle* (min-x min-y max-x max-y)
+      (stream-output-history pane)
+    (let* ((w (max max-x (- max-x min-x)))
+           (h (max max-y (- max-y min-y)))
+           (width (max w width (stream-width pane)))
+           (height (max h height (stream-height pane))))
+      (make-space-requirement
+       :min-width (clamp w 0 width)
+       :width width
+       :max-width +fill+
+       :min-height (clamp h 0 height)
+       :height height
+       :max-height +fill+))))
+
+(defmethod allocate-space ((pane clim-stream-pane) width height)
+  (multiple-value-bind (w h)
+      (untransform-distance (sheet-device-transformation pane) width height)
+    (multiple-value-bind (min-x min-y)
+        (bounding-rectangle-position (stream-output-history pane))
+      (let* ((x0 (clamp min-x (- w) 0))
+             (y0 (clamp min-y (- h) 0)))
+        (setf (sheet-region pane)
+              (make-rectangle* x0 y0 (+ x0 w) (+ y0 h)))))))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
@@ -243,12 +250,11 @@
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
-      (multiple-value-bind (viewport viewport-child)
-          (find-viewport-for-scroll stream)
-        (when viewport
-          (scroll-extent viewport-child
+      (when-let ((viewport (pane-viewport stream)))
+        (let ((child (sheet-child viewport)))
+          (scroll-extent child
                          0
-                         (max 0 (- (bounding-rectangle-height viewport-child)
+                         (max 0 (- (bounding-rectangle-height child)
                                    (bounding-rectangle-height viewport)))))))))
 
 ;;; INTERACTOR PANES

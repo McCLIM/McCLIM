@@ -252,6 +252,7 @@
     (make-space-requirement)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
+  (resize-sheet pane width height)
   (when-let ((child (sheet-child pane)))
     (allocate-space child width height)))
 
@@ -432,6 +433,7 @@
       (box-layout-mixin/horizontally-compose-space pane)))
 
 (defmethod allocate-space ((pane box-layout-mixin) width height)
+  (resize-sheet pane width height)
   (if (eq (box-layout-orientation pane) :vertical)
       (box-layout-mixin/vertically-allocate-space pane width height)
       (box-layout-mixin/horizontally-allocate-space pane width height)))
@@ -904,6 +906,7 @@
          :max-height (+ (space-requirement-max-height c) ys))))))
 
 (defmethod allocate-space ((pane table-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (array x-spacing y-spacing) pane
     ;; allot rows
     (let* ((row-count (array-dimension array 0))
@@ -972,10 +975,11 @@
                      :min-width (* min-width nb-children-pl)
                      :min-height (* min-height nb-children-pc))))))
 
-(defmethod allocate-space ((grid grid-pane) width height)
-  (with-slots (array) grid
-    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number grid)
-          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children grid)) nb-kids-p-l)
+(defmethod allocate-space ((pane grid-pane) width height)
+  (resize-sheet pane width height)
+  (with-slots (array) pane
+    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number pane)
+          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children pane)) nb-kids-p-l)
           for c from nb-kids-p-c downto 1
           for row-index from 0 by 1
           for tmp-height = height then (decf tmp-height new-height)
@@ -1018,6 +1022,7 @@
        :max-height (+ (* 2 border-width) (space-requirement-max-height sr))))))
 
 (defmethod allocate-space ((pane spacing-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (border-width) pane
     (let ((child (sheet-child pane))
           (new-width  (- width border-width border-width))
@@ -1120,6 +1125,14 @@
 
 (defclass viewport-pane (single-child-composite-pane) ())
 
+(defmethod initialize-instance :after ((pane viewport-pane) &key)
+  (let ((child (sheet-child pane)))
+    (if (panep child)
+        (setf (pane-background pane) (pane-background child))
+        (setf (pane-background pane) *background-ink*)))
+  #+ (or) ;; useful for debugging
+  (setf (pane-background pane) +deep-pink+))
+
 (defmethod compose-space ((pane viewport-pane) &key width height)
   (declare (ignorable width height))
   ;; I _think_ this is right, it certainly shouldn't be the
@@ -1132,16 +1145,17 @@
     (make-space-requirement)))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
+  (resize-sheet pane width height)
   (let* ((parent       (sheet-parent pane))
          (child        (sheet-child pane))
-         (child-space  (compose-space child))
+         (child-space  (compose-space child :width width :height height))
          (child-width  (space-requirement-width child-space))
          (child-height (space-requirement-height child-space)))
     ;; This must update (and perform the required repaints) the
     ;; transformation and region of the child and the scrollbars.
     ;;
     ;; Step 1: Allocate space of CHILD. This will resize but not move CHILD.
-    (allocate-space child (max child-width width) (max child-height height))
+    (allocate-space child child-width child-height)
     ;; Step 2: Update the scroll bars. This looks at the bounding
     ;; rectangle of CHILD which should already be updated.
     (scroller-pane/update-scroll-bars parent)
@@ -1175,7 +1189,8 @@
 ;;; The scroll-bar's min/max values match the min/max arguments to
 ;;; scroll-extent. The thumb-size is then calculated accordingly.
 
-(defparameter *scrollbar-thickness* 17)
+(defparameter *scrollbar-thickness* 24)
+(defparameter *minimum-thumb-size* 36)
 
 (defvar clim-extensions:*default-vertical-scroll-bar-position*
   :right
@@ -1290,6 +1305,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         (make-space-requirement))))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
+  (resize-sheet pane width height)
   (with-slots (viewport vscrollbar hscrollbar x-spacing y-spacing vertical-scroll-bar-position) pane
     (let* ((vsbar-width (if vscrollbar (space-requirement-width (compose-space vscrollbar)) 0))
            (hsbar-height (if hscrollbar (space-requirement-height (compose-space hscrollbar)) 0))
@@ -1410,73 +1426,69 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                             (align-subpixel (- (gadget-value vscrollbar)) old-y)
                             0))))))))
 
+(defun scroller-pane/scroll-boundaries (viewport)
+  (let* ((scrollee (sheet-child viewport))
+         (scrollee-tr (sheet-transformation scrollee))
+         (scrollee-sr (transform-region scrollee-tr (sheet-region scrollee))))
+    (multiple-value-bind (min-x min-y)
+        (bounding-rectangle-position scrollee-sr)
+      (multiple-value-bind (sheet-size-x sheet-size-y)
+          (bounding-rectangle-size scrollee-sr)
+        (multiple-value-bind (viewport-size-x viewport-size-y)
+            (bounding-rectangle-size viewport)
+          (let ((scroll-max-x (max (- sheet-size-x viewport-size-x) 0))
+                (scroll-max-y (max (- sheet-size-y viewport-size-y) 0)))
+            (values 0 scroll-max-x
+                    0 scroll-max-y
+                    viewport-size-x viewport-size-y
+                    (clamp (- min-x) 0 scroll-max-x)
+                    (clamp (- min-y) 0 scroll-max-y))))))))
+
 (defun scroller-pane/update-scroll-bars (pane)
   (check-type pane scroller-pane)
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (let* ((scrollee (sheet-child viewport))
-           (scrollee-sr (sheet-region scrollee))
-           (viewport-sr (sheet-region viewport)))
-      ;;
+    (unless (or hscrollbar vscrollbar)
+      (return-from scroller-pane/update-scroll-bars))
+    (multiple-value-bind (min-x max-x min-y max-y thb-x thb-y cur-x cur-y)
+        (scroller-pane/scroll-boundaries viewport)
       (when hscrollbar
-        (let* ((min-value (bounding-rectangle-min-x scrollee-sr))
-               (max-value (max (- (bounding-rectangle-max-x scrollee-sr)
-                                  (bounding-rectangle-width viewport-sr))
-                               (bounding-rectangle-min-x scrollee-sr)))
-               (thumb-size (bounding-rectangle-width viewport-sr))
-               (value (min (- (nth-value 0 (transform-position
-                                            (sheet-transformation scrollee) 0 0)))
-                           max-value)))
-          (setf (scroll-bar-values hscrollbar)
-                (values min-value max-value thumb-size value))))
-      ;;
+        (setf (scroll-bar-values hscrollbar)
+              (values min-x max-x thb-x cur-x)))
       (when vscrollbar
-        (let* ((min-value (bounding-rectangle-min-y scrollee-sr))
-               (max-value (max (- (bounding-rectangle-max-y scrollee-sr)
-                                  (bounding-rectangle-height viewport-sr))
-                               (bounding-rectangle-min-y scrollee-sr)))
-               (thumb-size (bounding-rectangle-height viewport-sr))
-               (value (min (- (nth-value 1 (transform-position
-                                            (sheet-transformation scrollee) 0 0)))
-                           max-value)))
-          (setf (scroll-bar-values vscrollbar)
-                (values min-value max-value thumb-size value)))))))
+        (setf (scroll-bar-values vscrollbar)
+              (values min-y max-y thb-y cur-y))))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))
   (with-slots (scroll-bar viewport vscrollbar hscrollbar) pane
     (setq viewport (first (sheet-children pane)))
-    ;; make the background of the viewport match the background of the
-    ;; things scrolled.
-    ;; This doesn't appear to work, hence the "gray space" bugs. Actually
-    ;; handy for observing when the space requirements get messed up.. -Hefner
-    (alexandria:when-let ((child (sheet-child viewport)))
-      (setf (slot-value pane 'background)  ;### hmm ...
-            (pane-background child)))
     ;; make sure that we have ok options for the scroll-bar argument...
-    (check-type scroll-bar scroll-bar-spec) ; (member :vertical :horizontal :both t nil))
+    (check-type scroll-bar scroll-bar-spec)
     (when (member scroll-bar '(:vertical :both t))
       (setq vscrollbar
             (make-pane 'scroll-bar
                        :orientation :vertical
                        :client (sheet-child viewport)
-                       :drag-callback (lambda (gadget new-value)
-                                        (declare (ignore gadget))
-                                        (scroller-pane/vertical-drag-callback pane new-value))
+                       :drag-callback
+                       (lambda (gadget new-value)
+                         (declare (ignore gadget))
+                         (scroller-pane/vertical-drag-callback pane new-value))
                        :scroll-up-page-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-page-callback scroll-bar 1))
+                       (lambda (scroll-bar)
+                         (scroll-page-callback scroll-bar 1))
                        :scroll-down-page-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-page-callback scroll-bar -1))
+                       (lambda (scroll-bar)
+                         (scroll-page-callback scroll-bar -1))
                        :scroll-up-line-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-line-callback scroll-bar 1))
+                       (lambda (scroll-bar)
+                         (scroll-line-callback scroll-bar 1))
                        :scroll-down-line-callback
-                       #'(lambda (scroll-bar)
-                           (scroll-line-callback scroll-bar -1))
-                       :value-changed-callback (lambda (gadget new-value)
-                                                 (declare (ignore gadget))
-                                                 (scroller-pane/vertical-drag-callback pane new-value))
+                       (lambda (scroll-bar)
+                         (scroll-line-callback scroll-bar -1))
+                       :value-changed-callback
+                       (lambda (gadget new-value)
+                         (declare (ignore gadget))
+                         (scroller-pane/vertical-drag-callback pane new-value))
                        :min-value 0
                        :max-value 1))
       (sheet-adopt-child pane vscrollbar))
@@ -1535,30 +1547,34 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
            (gadget-min-value scroll-bar)
            (gadget-max-value scroll-bar)))))
 
-(defmethod pane-viewport ((pane basic-pane))
+(defmethod pane-viewport ((pane sheet))
   (when-let ((parent (sheet-parent pane)))
-    (when (typep parent 'viewport-pane)
-      parent)))
+    (if (typep parent 'viewport-pane)
+        parent
+        (pane-viewport parent))))
 
-;;; Default for streams that aren't even panes.
-
-(defmethod pane-viewport-region ((pane t))
-  nil)
-
-(defmethod pane-viewport-region ((pane basic-pane))
+(defmethod pane-viewport-region ((pane sheet))
   (when-let ((viewport (pane-viewport pane)))
     (untransform-region (sheet-delta-transformation pane viewport)
                         (sheet-region viewport))))
 
-(defmethod pane-scroller ((pane basic-pane))
+(defmethod pane-scroller ((pane sheet))
   (when-let ((viewport (pane-viewport pane)))
     (sheet-parent viewport)))
 
-(defmethod scroll-extent ((pane basic-pane) x y)
-  (when (pane-viewport pane)
-    (move-sheet pane (- x) (- y))
-    (when-let  ((scroller (pane-scroller pane)))
-      (scroller-pane/update-scroll-bars scroller))))
+(defmethod scroll-extent ((pane sheet) x y)
+  (when-let ((viewport (pane-viewport pane)))
+    (multiple-value-bind (min-x max-x min-y max-y thb-x thb-y cur-x cur-y)
+        (scroller-pane/scroll-boundaries viewport)
+      (declare (ignore thb-x thb-y))
+      (with-transformed-position
+          ((sheet-delta-transformation pane viewport) x y)
+        (setf x (- cur-x x))
+        (setf y (- cur-y y))
+        (clampf x min-x max-x)
+        (clampf y min-y max-y)
+        (move-sheet (sheet-child viewport) (- x) (- y))))
+    (scroller-pane/update-scroll-bars (sheet-parent viewport))))
 
 
 ;;; LABEL PANE
@@ -1641,6 +1657,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                 :max-height padded-height)))))
 
 (defmethod allocate-space ((pane label-pane) width height)
+  (resize-sheet pane width height)
   (when-let ((child (sheet-child pane)))
     (multiple-value-bind (left top right bottom) (label-pane-margins pane)
       (move-sheet child left top)
@@ -1692,7 +1709,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defgeneric* (setf window-viewport-position) (x y clim-stream-pane))
 
-;;; Mixin for panes which want the mouse wheel to scroll vertically
+;;; Mixin for panes which want the mouse wheel to scroll.
 
 (defclass mouse-wheel-scroll-mixin () ())
 
@@ -1709,29 +1726,33 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         ((pane-viewport pane) (values (pane-viewport pane) pane))
         (t (find-viewport-for-scroll (sheet-parent pane)))))
 
+;;; Distances are specified in the viewport coordinates. -- jd 2021-03-17
 (defun scroll-sheet (sheet horizontal vertical)
-  (with-bounding-rectangle* (vx0 vy0 vx1 vy1) (pane-viewport-region sheet)
-    (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region sheet)
-      (let ((viewport-width  (- vx1 vx0))
-            (viewport-height (- vy1 vy0))
-            (delta (* *mouse-scroll-distance*
-                      (scroll-quantum sheet))))
-        ;; The coordinates (x,y) of the new upper-left corner of the viewport
-        ;; must be "sx0 < x < sx1 - viewport-width"  and
-        ;;         "sy0 < y < sy1 - viewport-height"
-        (scroll-extent sheet
-                       (max sx0 (min (- sx1 viewport-width)
-                                     (+ vx0 (* delta horizontal))))
-                       (max sy0 (min (- sy1 viewport-height)
-                                     (+ vy0 (* delta vertical)))))))))
+  (let ((delta (* *mouse-scroll-distance* (scroll-quantum sheet))))
+    (setf horizontal (* delta horizontal))
+    (setf vertical (* delta vertical)))
+  (when-let ((viewport (pane-viewport sheet)))
+    (let ((transf (sheet-delta-transformation sheet viewport)))
+      (multiple-value-bind (current-x current-y)
+          (untransform-position transf 0 0)
+        (with-transformed-distance (transf horizontal vertical)
+          (scroll-extent sheet
+                         (- current-x horizontal)
+                         (- current-y vertical)))))))
 
 (defmethod handle-event ((sheet mouse-wheel-scroll-mixin)
                          (event pointer-scroll-event))
   (if (zerop (event-modifier-state event))
-      (multiple-value-bind (viewport sheet*)
-          (find-viewport-for-scroll sheet)
-        (when viewport
-          (scroll-sheet sheet*
-                        (pointer-event-delta-x event)
-                        (pointer-event-delta-y event))))
+      (when-let ((viewport (pane-viewport sheet)))
+        (scroll-sheet (sheet-child viewport)
+                      (pointer-event-delta-x event)
+                      (pointer-event-delta-y event)))
+      (call-next-method)))
+
+(defmethod handle-event ((viewport viewport-pane)
+                         (event pointer-scroll-event))
+  (if (zerop (event-modifier-state event))
+      (scroll-sheet (sheet-child viewport)
+                    (pointer-event-delta-x event)
+                    (pointer-event-delta-y event))
       (call-next-method)))

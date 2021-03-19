@@ -22,18 +22,18 @@
 
 
 ;;; Motif-ish
-;;;
-;;; (defparameter *3d-dark-color*   (make-gray-color .45))
-;;; (defparameter *3d-normal-color* (make-gray-color .75))
-;;; (defparameter *3d-light-color*  (make-gray-color .92))
-;;; (defparameter *3d-inner-color*  (make-gray-color .65))
+
+(defparameter *3d-dark-color*   (make-gray-color .45))
+(defparameter *3d-normal-color* (make-gray-color .75))
+(defparameter *3d-light-color*  (make-gray-color .92))
+(defparameter *3d-inner-color*  (make-gray-color .65))
 
 ;;; Gtk-ish
 
-(defparameter *3d-dark-color*   (make-gray-color .59))
-(defparameter *3d-normal-color* (make-gray-color .84))
-(defparameter *3d-light-color*  (make-gray-color 1.0))
-(defparameter *3d-inner-color*  (make-gray-color .75))
+;; (defparameter *3d-dark-color*   (make-gray-color .59))
+;; (defparameter *3d-normal-color* (make-gray-color .84))
+;; (defparameter *3d-light-color*  (make-gray-color 1.0))
+;; (defparameter *3d-inner-color*  (make-gray-color .75))
 
 ;;;
 ;;; gadget's colors

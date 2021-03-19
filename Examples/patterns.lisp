@@ -96,6 +96,9 @@ Space: redisplay application")
 
 (defclass my-basic-pane (basic-pane clime:always-repaint-background-mixin) ())
 
+(defmethod compose-space ((pane my-basic-pane) &key (width 100) (height 100))
+  (make-space-requirement :width (max 650 width) :height (max 400 height)))
+
 (define-application-frame pattern-design-test ()
   ()
   (:menu-bar nil)
@@ -110,10 +113,10 @@ Space: redisplay application")
                                        (declare (ignore frame))
                                        (let ((*text-right-margin* 600))
                                          (with-drawing-options (pane :text-family :fix)
-                                          (draw-string pane *options* 20 30)
-                                          (draw-string pane
-                                                       (format nil "Current draw is ~a." *draw*)
-                                                       20 220)))))
+                                           (draw-string pane *options* 20 30)
+                                           (draw-string pane
+                                                        (format nil "Current draw is ~a." *draw*)
+                                                        20 220)))))
           (pane1 :application :display-function 'display :scroll-bars :vertical)
           (pane2 :application :display-function 'display :scroll-bars nil)
           ;; Bug #7: clx-fb backend doesn't work with panes like this one.
