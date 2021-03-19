@@ -2097,7 +2097,6 @@
    #:medium-text-style
    #:note-space-requirements-changed
    #:pointer-button-state
-   #:pointer-modifier-state
    #:pointer-position
    #:realize-mirror
    #:text-size

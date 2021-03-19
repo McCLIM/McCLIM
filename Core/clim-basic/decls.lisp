@@ -1362,6 +1362,9 @@ rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-shrink-sheet (port sheet))
 (defgeneric port-pointer (port))
 
+;;; Defined in Franz user guide sec. 15.1
+(defgeneric port-modifier-state (port))
+
 (defgeneric pointer-update-state (pointer event)
   (:documentation "Called by port event dispatching code to update the modifier
 and button states of the pointer."))

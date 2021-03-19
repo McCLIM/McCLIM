@@ -640,7 +640,6 @@ known gestures."
   ((port :reader port :initarg :port)
    (state-lock :reader state-lock :initform (make-lock "pointer lock"))
    (button-state :initform 0 )
-   (modifier-state :initform 0)
    (sheet :initform nil :initarg :sheet :accessor pointer-sheet)))
 
 (defgeneric pointer-sheet (pointer))
@@ -648,8 +647,6 @@ known gestures."
 (defgeneric (setf pointer-sheet) (sheet pointer))
 
 (defgeneric pointer-button-state (pointer))
-
-(defgeneric pointer-modifier-state (pointer))
 
 (defgeneric pointer-position (pointer))
 
@@ -665,15 +662,6 @@ known gestures."
 (defmethod pointer-button-state ((pointer standard-pointer))
   (with-lock-held ((state-lock pointer))
     (slot-value pointer 'button-state)))
-
-(defmethod pointer-modifier-state ((pointer standard-pointer))
-  (with-lock-held ((state-lock pointer))
-    (slot-value pointer 'modifier-state)))
-
-(defmethod pointer-update-state
-    ((pointer standard-pointer) (event keyboard-event))
-  (with-lock-held ((state-lock pointer))
-    (setf (slot-value pointer 'modifier-state) (event-modifier-state event))))
 
 (defmethod pointer-update-state
     ((pointer standard-pointer) (event pointer-button-press-event))
