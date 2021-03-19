@@ -457,17 +457,11 @@ and used to ensure that presentation-translators-caches are up to date.")
         (loop for context in input-context
               do (mopscp context presentation)))))
 
-(defun window-modifier-state (window)
-  "Provides default modifier state for presentation translator functions."
-  ;; There are many things which may go wrong (NULL window, sheet
-  ;; without a port etc). We clamp errors to 0 meaning "no modifiers".
-  (or (ignore-errors (pointer-modifier-state (port-pointer (port window)))) 0))
-
 (defun find-applicable-translators
     (presentation input-context frame window x y
      &key event modifier-state for-menu fastp)
   (when (and (not modifier-state) (not event))
-    (setf modifier-state (window-modifier-state window)))
+    (setf modifier-state 0))
   (let ((results nil))
     (flet ((fast-func (translator presentation context)
              (declare (ignore translator presentation context))
@@ -647,7 +641,7 @@ and used to ensure that presentation-translators-caches are up to date.")
     (input-context window x y
      &key (frame *application-frame*) modifier-state event)
   (when (and (not modifier-state) (not event))
-    (setf modifier-state (window-modifier-state window)))
+    (setf modifier-state 0))
   (values (find-innermost-presentation-match input-context
                                              (stream-output-history window)
                                              frame
@@ -662,7 +656,7 @@ and used to ensure that presentation-translators-caches are up to date.")
      &key (top-record (stream-output-history window))
        (frame *application-frame*) event modifier-state button)
   (when (and (not modifier-state) (not event))
-    (setf modifier-state (window-modifier-state window)))
+    (setf modifier-state 0))
   (find-innermost-presentation-match input-context
                                      top-record
                                      frame
