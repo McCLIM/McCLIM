@@ -640,12 +640,10 @@ known gestures."
   ((port :reader port :initarg :port)
    (state-lock :reader state-lock :initform (make-lock "pointer lock"))
    (button-state :initform 0 )
-   (modifier-state :initform 0)))
+   (modifier-state :initform 0)
+   (sheet :initform nil :initarg :sheet :accessor pointer-sheet)))
 
 (defgeneric pointer-sheet (pointer))
-
-(defmethod pointer-sheet ((pointer pointer))
-  (port-pointer-sheet (port pointer)))
 
 (defgeneric (setf pointer-sheet) (sheet pointer))
 
