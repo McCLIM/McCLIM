@@ -27,8 +27,8 @@
 
 (defclass null-port (basic-port)
   ((id)
-   (pointer :accessor port-pointer :initform (make-instance 'null-pointer))
-   (window :initform nil :accessor null-port-window)))
+   (window :initform nil :accessor null-port-window))
+  (:default-initargs :pointer (make-instance 'null-pointer)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'null-port 'identity))

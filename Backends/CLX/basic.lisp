@@ -33,8 +33,7 @@
 	   :accessor clx-port-window)
    (font-families :initform nil :accessor font-families)
    (cursor-table :initform (make-hash-table :test #'eq)
-                 :accessor clx-port-cursor-table)
-   (pointer :reader port-pointer)))
+                 :accessor clx-port-cursor-table)))
 
 (defclass clx-basic-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
