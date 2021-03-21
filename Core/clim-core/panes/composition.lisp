@@ -1569,8 +1569,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
       (declare (ignore thb-x thb-y))
       (with-transformed-position
           ((sheet-delta-transformation pane viewport) x y)
-        (setf x (- cur-x x))
-        (setf y (- cur-y y))
+        (setf x (+ cur-x x))
+        (setf y (+ cur-y y))
         (clampf x min-x max-x)
         (clampf y min-y max-y)
         (move-sheet (sheet-child viewport) (- x) (- y))))
@@ -1737,8 +1737,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
           (untransform-position transf 0 0)
         (with-transformed-distance (transf horizontal vertical)
           (scroll-extent sheet
-                         (- current-x horizontal)
-                         (- current-y vertical)))))))
+                         (+ current-x horizontal)
+                         (+ current-y vertical)))))))
 
 (defmethod handle-event ((sheet mouse-wheel-scroll-mixin)
                          (event pointer-scroll-event))
