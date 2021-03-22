@@ -34,6 +34,7 @@
                    :command-table command-table))
 
 (defun update-menu-bar (menu-bar client command-table)
+  (assert menu-bar)
   (changing-space-requirements ()
     (setf (slot-value menu-bar 'command-table) command-table)
     (setf (%pane-contents menu-bar)
