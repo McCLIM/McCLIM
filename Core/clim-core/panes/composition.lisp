@@ -1146,16 +1146,18 @@
 
 (defmethod allocate-space ((pane viewport-pane) width height)
   (resize-sheet pane width height)
-  (let* ((parent       (sheet-parent pane))
-         (child        (sheet-child pane))
-         (child-space  (compose-space child :width width :height height))
-         (child-width  (space-requirement-width child-space))
-         (child-height (space-requirement-height child-space)))
+  (let ((parent       (sheet-parent pane))
+         (child        (sheet-child pane)))
     ;; This must update (and perform the required repaints) the
     ;; transformation and region of the child and the scrollbars.
     ;;
     ;; Step 1: Allocate space of CHILD. This will resize but not move CHILD.
-    (allocate-space child child-width child-height)
+    (when (typep child 'layout-protocol-mixin)
+      (setf (pane-space-requirement child) nil))
+    (let* ((child-space (compose-space child :width width :height height))
+           (child-width  (space-requirement-width child-space))
+           (child-height (space-requirement-height child-space)))
+      (allocate-space child child-width child-height))
     ;; Step 2: Update the scroll bars. This looks at the bounding
     ;; rectangle of CHILD which should already be updated.
     (scroller-pane/update-scroll-bars parent)
