@@ -35,7 +35,9 @@
              :display-default nil))
   (if (eq kind 'keyboard)
       (format *query-io* "Input editor commands are like Emacs.~%")
-      (let ((command-table (frame-command-table *application-frame*))
+      (let ((command-table (if *application-frame*
+                               (frame-command-table *application-frame*)
+                               'global-command-table))
             (command-names nil))
         (map-over-command-table-names #'(lambda (name command)
                                           (push (cons name command)
@@ -45,13 +47,13 @@
         (setf command-names (sort command-names #'(lambda (a b)
                                                     (string-lessp (car a)
                                                                   (car b)))))
-        (formatting-item-list (*query-io*)
-          (loop
-             for (nil . command) in command-names
-             do (formatting-cell (*query-io*)
-                 (present command
+        (flet ((show (command stream)
+                 (present (cdr command)
                           `(command-name :command-table ,command-table)
-                          :stream *query-io*)))))))
+                          :stream stream)))
+          (format-textual-list command-names #'show :stream *query-io*)
+          (princ "." *query-io*)
+          nil))))
 
 
 ;;; Describe command.  I don't know if this should go in the global command
