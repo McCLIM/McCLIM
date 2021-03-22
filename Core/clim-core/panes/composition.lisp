@@ -1147,7 +1147,7 @@
 (defmethod allocate-space ((pane viewport-pane) width height)
   (resize-sheet pane width height)
   (let ((parent       (sheet-parent pane))
-         (child        (sheet-child pane)))
+        (child        (sheet-child pane)))
     ;; This must update (and perform the required repaints) the
     ;; transformation and region of the child and the scrollbars.
     ;;
