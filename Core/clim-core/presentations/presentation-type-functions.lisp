@@ -94,8 +94,9 @@ otherwise return false."
 
 (define-presentation-method presentation-typep (object (type standard-object))
   (declare (ignore object))
-  (error "The presentation type ~s doesn't implement a ~s method."
-         type 'presentation-typep))
+  (or (presentation-type-class-p (find-presentation-type-class type))
+      (error "The presentation type ~s doesn't implement a ~s method."
+             type 'presentation-typep)))
 
 (defun presentation-typep (object type)
   (with-presentation-type-decoded (name parameters) type

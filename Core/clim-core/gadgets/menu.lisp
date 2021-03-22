@@ -21,12 +21,10 @@
 (defun make-menu-buttons (table client)
   (setf table (find-command-table table))
   (collect (items)
-    (map-over-command-table-menu
-     (lambda (item table)
-       (declare (ignore table))
-       (with-slots (menu-name keystroke type) item
-         (when (or menu-name (eq type :divider))
-           (items (make-menu-button-from-menu-item item client)))))
+    (map-over-command-table-menu-items
+     (lambda (name keystroke item)
+       (declare (ignore name keystroke))
+       (items (make-menu-button-from-menu-item item client)))
      table
      :inherited (inherit-menu table))
     (items +fill+)))
@@ -36,9 +34,12 @@
                    :command-table command-table))
 
 (defun update-menu-bar (menu-bar client command-table)
-  (setf (%pane-contents menu-bar)
-        (and command-table (make-menu-buttons command-table client)))
-  (change-space-requirements menu-bar))
+  (assert menu-bar)
+  (changing-space-requirements ()
+    (setf (slot-value menu-bar 'command-table) command-table)
+    (setf (%pane-contents menu-bar)
+          (and command-table (make-menu-buttons command-table client)))
+    (change-space-requirements menu-bar)))
 
 (defun menu-children (client)
   (when-let ((rack (typecase client
@@ -51,6 +52,27 @@
                    ;; Composite panes adopt children in
                    ;; order, so they are in reverse order.
                    (reverse (sheet-children rack)))))
+
+;;; This function is called when a command has been enabled or disabled for the
+;;; frame. We assume that the command is accessible in the command table, so we
+;;; skip calling COMMAND-ENABLED. Also we traverse all leaf buttons in case the
+;;; same command is assigned to multiple buttons. -- jd 2021-03-03
+(defun menu-bar-refresh-command (frame command-name enabledp)
+  (labels ((rack (client)
+             (and (typep client 'menu-button-submenu-pane)
+                  (submenu-pane client)))
+           (cmdp (client)
+             (and (typep client 'menu-button-leaf-pane)
+                  (eq command-name (slot-value client 'command-name))))
+           (map-leaf-buttons (rack)
+             (when rack
+               (loop for child in (sheet-children rack)
+                     do (if (cmdp child)
+                            (if enabledp
+                                (activate-gadget child)
+                                (deactivate-gadget child))
+                            (map-leaf-buttons (rack child)))))))
+    (map-leaf-buttons (frame-menu-bar-pane frame))))
 
 (define-gesture-name :menu-exit  :keyboard :escape)
 (define-gesture-name :menu-left  :keyboard :left)
@@ -219,7 +241,7 @@
           (draw-polygon* gadget shape))))))
 
 (defclass menu-button-leaf-pane (menu-button-pane)
-  ((command :initform nil :initarg :command)))
+  ((command-name :initform nil :initarg :command-name)))
 
 (defclass menu-divider-leaf-pane (sheet-leaf-mixin basic-gadget)
   ((label :initform nil :initarg :label)))
@@ -318,7 +340,7 @@
          (make-sub-pane 'menu-divider-leaf-pane))
         ((:command :function)
          (let* ((command (extract-menu-item-command item nil))
-                (command-name (alexandria:ensure-car command)))
+                (command-name (command-name command)))
            (make-sub-pane
             'menu-button-leaf-pane
             :value-changed-callback
@@ -327,7 +349,8 @@
               (throw-object-ptype item 'menu-item))
             :armed-callback 'arm-menu-button-callback
             :disarmed-callback 'disarm-menu-button-callback
-            :active (command-enabled command-name frame))))
+            :active (command-enabled command-name frame)
+            :command-name command-name)))
         (:menu
          (let* ((sub-pane (make-sub-pane
                            'menu-button-submenu-pane

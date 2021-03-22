@@ -73,14 +73,15 @@
   (declare (ignore frame))
   t)
 
-;;; XXX These should force the redisplay of the menu bar. They don't yet.
-
 (defmethod note-command-enabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name t)
   nil)
 
 (defmethod note-command-disabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+                                        ;(declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name nil)
   nil)
 
 (declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
@@ -339,7 +340,8 @@ documentation produced by presentations.")
 (defmethod (setf frame-command-table) :after (new-command-table frame)
   ;; Update the menu-bar even if its command-table doesn't change to ensure
   ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
-  (when-let ((bar-command-table (slot-value frame 'menu-bar)))
+  (when-let* ((menu-bar (frame-menu-bar-pane frame))
+              (bar-command-table (slot-value frame 'menu-bar)))
     (if (eq bar-command-table t)
         (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
         (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
@@ -408,7 +410,7 @@ documentation produced by presentations.")
   (when (and (or width height)
              (not (and width height)))
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (with-inhibited-dispatch-repaint ()
+  (with-inhibited-repaint-sheet ()
     (let ((pane (frame-panes frame)))
       (when (and (null width) (null height))
         (let (;;I guess this might be wrong. --GB 2004-06-01
@@ -1151,7 +1153,7 @@ alive.")
                               *application-frame*
                               stream
                               x y
-                              :for-menu t))
+                              :for-menu :for-documentation))
             (other-modifiers nil))
         (loop for (translator) in all-translators
               for gesture = (gesture translator)

@@ -616,6 +616,10 @@ used as value of `:possibility-printer' in calls to
 (define-presentation-type possibility ()
   :inherit-from t)
 
+(define-presentation-method presentation-typep (object (type possibility))
+  (declare (ignore object))
+  t)
+
 (defun print-possibilities (possibilities possibility-printer stream)
   "Write `possibitilies' to `stream', using
 `possibility-printer'. `Possibilities' must be a list of

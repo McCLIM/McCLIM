@@ -2,14 +2,16 @@
 
 (defsystem #:mcclim-clx
   :depends-on (#:alexandria
-               #:clx
                #:cl-unicode
-               #:mcclim-backend-common
-               #:mcclim-fonts)
+               #:zpb-ttf
+               #:clx
+               #:mcclim-fonts/truetype
+               #:mcclim-backend-common)
   :serial t
   :components
   ((:module "basic" :pathname "" :components
             ((:file "package")
+             (:file "utilities")
              (:file "clipboard")
              (:file "basic" :depends-on ("package"))
              (:file "port" :depends-on ("package" "graft" "basic" "mirror"))
@@ -24,13 +26,10 @@
             ((:file "bidi" :depends-on ())
              (:file "fonts" :depends-on ("bidi"))
              (:file "medium" :depends-on ("fonts"))
-             (:file "medium-xrender" :depends-on ("medium"))
+             (:file "fonts-xrender")
+             (:file "medium-xrender" :depends-on ("medium" "fonts-xrender"))
              (:file "pixmap" :depends-on ("medium"))))
    (:file "input")))
-
-(defsystem #:mcclim-clx/truetype
-  :depends-on (#:mcclim-clx
-               #:mcclim-fonts/clx-truetype))
 
 (defsystem #:mcclim-clx/freetype
   :depends-on (#:mcclim-clx

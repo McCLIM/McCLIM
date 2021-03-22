@@ -43,15 +43,6 @@
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
   ((redisplay-needed :initarg :display-time)
-   (scroll-bars :initform :obsolete
-                :initarg :scroll-bar
-                :initarg :scroll-bars
-                :accessor pane-scroll-bars)
-
-                                        ; Should inherit from label-pane for this one ??
-   (label :initform :obsolete
-          :initarg :label
-          :reader pane-label)
    (text-margin :initarg :text-margin
                 :reader pane-text-margin)
    (vertical-spacing :initarg :vertical-spacing
@@ -76,18 +67,6 @@
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
-
-(defmethod initialize-instance :after ((instance clim-stream-pane) &rest initargs)
-  (declare (ignore initargs))
-  (with-slots (scroll-bars label) instance
-    (when (not (eql :obsolete scroll-bars))
-      (warn "~@<The SCROLL-BARS slot in CLIM-STREAM-PANE is obsolete, ~
-             don't use it but use the keyword :SCROLL-BARS in function ~
-             MAKE-CLIM-STREAM-PANE.~@:>"))
-    (when (not (eql :obsolete label))
-      (warn "~@<The LABEL slot in CLIM-STREAM-PANE is obsolete, don't use ~
-             it but use the keyword :LABEL in function ~
-             MAKE-CLIM-STREAM-PANE.~@:>"))))
 
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))
@@ -152,13 +131,13 @@
             (eql :compute (pane-user-max-height pane)))
         (multiple-value-bind (width height)
             (let ((record
-                    (if (slot-value pane 'incremental-redisplay)
+                    (if (pane-incremental-redisplay pane)
                         (stream-output-history pane)
                         (with-output-to-output-record (pane)
                           (invoke-display-function *application-frame* pane)))))
               (with-bounding-rectangle* (min-x min-y max-x max-y) record
-                (declare (ignore min-x min-y))
-                (values max-x max-y)))
+                (values (max max-x (- max-x min-x))
+                        (max max-y (- max-y min-y)))))
           (unless (> width 0) (setf width 1))
           (unless (> height 0) (setf height 1))
           (setf (stream-width pane) width)
@@ -179,23 +158,30 @@
             (call-next-method)))
         (call-next-method))))
 
-;;; XXX if we decide to handle sheets starting from position different than
-;;; [0,0] in the future we should take here bounding-rectangle-width/height and
-;;; set sheet region to bounding-rectangle-min-x/y. Such approach may require
-;;; change in more places.
-(defmethod compose-space ((pane clim-stream-pane) &key width height)
-  (declare (ignorable width height))
-  (let* ((w (bounding-rectangle-max-x (stream-output-history pane)))
-         (h (bounding-rectangle-max-y (stream-output-history pane)))
-         (width (max w (stream-width pane)))
-         (height (max h (stream-height pane))))
-    (make-space-requirement
-     :min-width (clamp w 0 width)
-     :width width
-     :max-width +fill+
-     :min-height (clamp h 0 height)
-     :height height
-     :max-height +fill+)))
+(defmethod compose-space ((pane clim-stream-pane) &key (width 100) (height 100))
+  (with-bounding-rectangle* (min-x min-y max-x max-y)
+      (stream-output-history pane)
+    (let* ((w (max max-x (- max-x min-x)))
+           (h (max max-y (- max-y min-y)))
+           (width (max w width (stream-width pane)))
+           (height (max h height (stream-height pane))))
+      (make-space-requirement
+       :min-width (clamp w 0 width)
+       :width width
+       :max-width +fill+
+       :min-height (clamp h 0 height)
+       :height height
+       :max-height +fill+))))
+
+(defmethod allocate-space ((pane clim-stream-pane) width height)
+  (multiple-value-bind (w h)
+      (untransform-distance (sheet-device-transformation pane) width height)
+    (multiple-value-bind (min-x min-y)
+        (bounding-rectangle-position (stream-output-history pane))
+      (let* ((x0 (clamp min-x (- w) 0))
+             (y0 (clamp min-y (- h) 0)))
+        (setf (sheet-region pane)
+              (make-rectangle* x0 y0 (+ x0 w) (+ y0 h)))))))
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
@@ -264,12 +250,12 @@
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
-      (scroll-extent stream
-                     0
-                     (max 0 (- new-height
-                               (bounding-rectangle-height
-                                (or (pane-viewport stream)
-                                    stream))))))))
+      (when-let ((viewport (pane-viewport stream)))
+        (let ((child (sheet-child viewport)))
+          (scroll-extent child
+                         0
+                         (max 0 (- (bounding-rectangle-height child)
+                                   (bounding-rectangle-height viewport)))))))))
 
 ;;; INTERACTOR PANES
 
@@ -471,10 +457,10 @@ current background message was set."))
                  (if (or scroll-bar-p scroll-bars-p)
                      options
                      (list* :scroll-bars ,default-scroll-bar options))))))
-  (define make-clim-interactor-pane            interactor-pane            :vertical)
-  (define make-clim-application-pane           application-pane           t)
+  (define make-clim-interactor-pane interactor-pane :vertical)
+  (define make-clim-application-pane application-pane t)
   (define make-clim-pointer-documentation-pane pointer-documentation-pane nil)
-  (define make-clim-command-menu-pane          command-menu-pane          t))
+  (define make-clim-command-menu-pane command-menu-pane t))
 
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window

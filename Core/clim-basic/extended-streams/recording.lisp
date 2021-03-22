@@ -377,7 +377,8 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
                           (bounding-rectangle record)
                           (region-difference (bounding-rectangle record)
                                              (make-rectangle* (1+ x1) (1+ y1) (1- x2) (1- y2))))
-                      :ink +foreground-ink+)))
+                      :ink +foreground-ink+))
+       (medium-force-output stream))
       (:unhighlight
        (repaint-sheet stream (bounding-rectangle record))
        ;; Using queue-repaint should be faster in apps (such as clouseau) that
@@ -385,12 +386,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
        ;; should merge these into a single larger repaint. Unfortunately, since
        ;; an enqueued repaint does not occur immediately, and highlight
        ;; rectangles are not recorded, newer highlighting gets wiped out shortly
-       ;; after being drawn. So, we aren't ready for this yet.  ..Actually, it
+       ;; after being drawn. So, we aren't ready for this yet... Actually, it
        ;; isn't necessarily faster. Depends on the app.
        #+ (or)
-       (queue-repaint stream (make-instance 'window-repaint-event
-                                            :sheet stream
-                                            :region (bounding-rectangle record)))))))
+       (queue-repaint stream
+                      (make-instance 'window-repaint-event
+                                     :sheet stream
+                                     :region (bounding-rectangle record)))))))
 
 ;;; XXX Should this only be defined on recording streams?
 (defmethod highlight-output-record ((record output-record) stream state)
@@ -1190,7 +1192,13 @@ were added."
                  (with-slots (stream ink clipping-region line-style text-style ,@slot-names)
                      graphic
                    (let ((medium (sheet-medium stream)))
-                     (setf (rectangle-edges* graphic) (progn ,@body)))))))
+                     (setf (rectangle-edges* graphic)
+                           (progn ,@body)))
+                   (when (bounding-rectangle-p clipping-region)
+                     (let* ((rect (bounding-rectangle clipping-region))
+                            (clip (region-intersection rect graphic)))
+                       (setf (rectangle-edges* graphic)
+                             (bounding-rectangle* clip))))))))
          ,@(when medium-fn
              `((defmethod ,method-name :around ((stream output-recording-stream) ,@arg-names)
                  ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
@@ -1779,7 +1787,7 @@ were added."
 
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:y1 y1)
+  (with-standard-rectangle* (:x1 x1 :y1 y1)
       text-record
     (with-slots (max-height left right) text-record
       (setf (rectangle-edges* text-record)
@@ -2039,11 +2047,20 @@ according to the flags RECORD and DRAW."
       (letf (((stream-current-output-record stream) new-record))
         ;; Should we switch on recording? -- APD
         (funcall continuation stream new-record)
-        (force-output stream))
+        (stream-close-text-output-record stream))
       (if parent
           (add-output-record new-record parent)
           (stream-add-output-record stream new-record))
       new-record)))
+
+(defmethod invoke-with-output-to-output-record :around
+    ((stream standard-page-layout) continuation record-type &rest initargs)
+  (declare (ignore continuation record-type initargs))
+  (with-temporary-margins (stream :left   '(:absolute 0)
+                                  :top    '(:absolute 0)
+                                  :right  '(:relative 0)
+                                  :bottom '(:relative 0))
+    (call-next-method)))
 
 (defmethod invoke-with-output-to-output-record
     ((stream output-recording-stream) continuation record-type
@@ -2051,14 +2068,10 @@ according to the flags RECORD and DRAW."
   (stream-close-text-output-record stream)
   (let ((new-record (apply #'make-instance record-type initargs)))
     (with-output-recording-options (stream :record t :draw nil)
-      (with-temporary-margins (stream :left   '(:absolute 0)
-                                      :top    '(:absolute 0)
-                                      :right  '(:relative 0)
-                                      :bottom '(:relative 0))
-        (letf (((stream-current-output-record stream) new-record)
-               ((stream-cursor-position stream) (values 0 0)))
-          (funcall continuation stream new-record)
-          (force-output stream))))
+      (letf (((stream-current-output-record stream) new-record)
+             ((stream-cursor-position stream) (values 0 0)))
+        (funcall continuation stream new-record)
+        (stream-close-text-output-record stream)))
     new-record))
 
 (defmethod make-design-from-output-record (record)

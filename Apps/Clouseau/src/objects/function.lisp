@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -177,7 +177,7 @@
                             :label "Name")
           ;; Lambda list
           (formatting-row (stream)
-            (formatting-place (object 'pseudo-place lambda-list present inspect)
+            (formatting-place (object 'deep-pseudo-place lambda-list present inspect)
               (with-style (stream :slot-like)
                 (formatting-cell (stream) (write-string "Lambda list" stream))
                 (formatting-cell (stream) (present stream)))
@@ -189,7 +189,7 @@
                    (inspect stream)))))))
         ;; Type
         #+sbcl
-        (format-place-row stream object 'reader-place 'sb-introspect:function-type
+        (format-place-row stream object 'deep-reader-place 'sb-introspect:function-type
                           :label "Type")))
     ;; Documentation
     (print-documentation object stream)

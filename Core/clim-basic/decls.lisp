@@ -591,6 +591,8 @@ and right margin for text output."))
 
 (defgeneric medium-buffering-output-p (medium))
 (defgeneric (setf medium-buffering-output-p) (buffer-p medium))
+;;; with-output-buffered (medium &optional (buffer-p t)) &body body [Macro]
+(defgeneric invoke-with-output-buffered (medium cont &optional buffered-p))
 
 
 ;;; 16.2.1. The Basic Output Record Protocol
