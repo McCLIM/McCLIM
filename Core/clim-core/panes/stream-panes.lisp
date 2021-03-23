@@ -175,7 +175,7 @@
 
 (defmethod allocate-space ((pane clim-stream-pane) width height)
   (multiple-value-bind (w h)
-      (untransform-distance (sheet-device-transformation pane) width height)
+      (untransform-distance (sheet-native-transformation pane) width height)
     (multiple-value-bind (min-x min-y)
         (bounding-rectangle-position (stream-output-history pane))
       (let* ((x0 (clamp min-x (- w) 0))
