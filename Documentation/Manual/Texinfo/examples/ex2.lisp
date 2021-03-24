@@ -14,9 +14,9 @@
    ;; Let's add an additional pane
    (app :application
 
-        ;; When should this pane be displayed in the command loop.
-        ;; Note that the refresh is pane-specific, not
-        ;; application-wide.
+        ;; :DISPLAY-TIME specifies when this pane should be displayed
+        ;; in the command loop. Note that the refresh is
+        ;; pane-specific, not application-wide.
         :display-time nil
         :height 400
         :width 600)

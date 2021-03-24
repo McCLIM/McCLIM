@@ -400,7 +400,7 @@ for different actions on the pointer device. This was done by
 including @t{(:pointer-documentation t)} in the frame definition.
 
 If you execute this example, you will find that you now have three
-different panes, the application pane, the interactor pane and the
+different panes—the application pane, the interactor pane, and the
 pointer documentation pane.  In the pointer documentation pane, you will
 see the text @samp{R possibilities} which indicates that if you click the
 right mouse button, you will automatically see a popup menu that lets
@@ -434,10 +434,10 @@ effect will be the same as when the initial output was created.  It does
 that by making sure that the order between (partially) overlapping
 output records is respected.
 
-Not all panes support output recording, but certainly application panes
-do, so it is good to use some subclass of @class{application-pane} to
-display application-specific object, because output recording is then
-automatic.
+Not all panes support output recording, but application panes certainly
+do, so it is recommended that you use some subclass of
+@class{application-pane} to display application-specific objects, so
+that output recording is done automatically.
 
 @node An application displaying a data structure
 @subsection An application displaying a data structure
@@ -758,10 +758,10 @@ while accessing the sub-menus.
 
 @lisp
 (clim:define-application-frame foo ()
-  ;; ...
-  (:menu-bar t)
-  ;; ...
-  )
+      ;; ...
+      (:menu-bar t)
+      ;; ...
+      )
 @end lisp
 
 The only argument for @t{:menu-bar} can be:
