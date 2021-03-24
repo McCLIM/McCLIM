@@ -502,8 +502,7 @@ menu item to see if it is `:menu'."
                          (otherwise nil))))
     ;; Return a literal command, or create a partial command from a
     ;; command-name.
-    (when (or (null *application-frame*)
-              (command-enabled (command-name command) *application-frame*))
+    (when (command-enabled (command-name command) *application-frame*)
       (return-from lookup-keystroke-command-item
         (substitute-numeric-argument-marker
          (if (symbolp command)

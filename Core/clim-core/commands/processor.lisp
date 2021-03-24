@@ -338,8 +338,7 @@
 (define-presentation-method presentation-typep (object (type command))
   (and (consp object)
        (command-accessible-in-command-table-p (car object) command-table)
-       (or (null *application-frame*)
-           (command-enabled (car object) *application-frame*))))
+       (command-enabled (car object) *application-frame*)))
 
 (define-presentation-method presentation-subtypep
     ((type command) maybe-supertype)

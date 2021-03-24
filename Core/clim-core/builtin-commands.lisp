@@ -35,9 +35,7 @@
              :display-default nil))
   (if (eq kind 'keyboard)
       (format *query-io* "Input editor commands are like Emacs.~%")
-      (let ((command-table (if *application-frame*
-                               (frame-command-table *application-frame*)
-                               'global-command-table))
+      (let ((command-table (frame-command-table *application-frame*))
             (command-names nil))
         (map-over-command-table-names #'(lambda (name command)
                                           (push (cons name command)
