@@ -31,7 +31,7 @@
     ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
              :value-key cadr)
              :prompt "with"
-             :default 'keyboard
+             :default 'commands
              :display-default nil))
   (if (eq kind 'keyboard)
       (format *query-io* "Input editor commands are like Emacs.~%")
@@ -52,6 +52,10 @@
           (format-textual-list command-names #'show :stream *query-io*)
           (princ "." *query-io*)
           nil))))
+
+(define-command (com-quit :command-table global-command-table :name "Quit")
+    ()
+  (frame-exit *application-frame*))
 
 
 ;;; Describe command.  I don't know if this should go in the global command
