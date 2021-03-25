@@ -229,7 +229,6 @@
           :current-layout    ',current-layout
           :layouts           ',layouts
           :resize-frame      ',resize-frame
-          :top-level         (list ',(car top-level) ,@(cdr top-level))
           :top-level-lambda  (lambda (,frame-arg)
                                (,(car top-level) ,frame-arg
                                 ,@(cdr top-level)))

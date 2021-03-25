@@ -146,9 +146,6 @@
    (properties :accessor %frame-properties
                :initarg :properties
                :initform nil)
-   (top-level :initform '(default-frame-top-level)
-              :initarg :top-level
-              :reader frame-top-level)
    (top-level-lambda :initarg :top-level-lambda
                      :reader frame-top-level-lambda)
    (highlited-presentation :initform nil
