@@ -120,7 +120,8 @@
 
 (defgeneric tell-window-manager-about-space-requirements (pane))
 
-(defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
+(defmethod adopt-frame :after
+    ((fm clx-frame-manager) (frame standard-application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
            (mirror (sheet-direct-mirror top-level-sheet))

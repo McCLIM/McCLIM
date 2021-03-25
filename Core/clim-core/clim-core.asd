@@ -30,10 +30,11 @@
    (:module "frames"
     :depends-on ("commands" "presentations" "standard-presentations" "incremental-redisplay")
     :serial t
-    :components ((:file "frame-managers")
+    :components ((:file "define-application-frame")
                  (:file "frames")
-                 (:file "define-application-frame")
-                 (:file "default-frame")))
+                 (:file "menu-frame")
+                 (:file "default-frame")
+                 (:file "frame-managers")))
    (:file "dialog-views" :depends-on ("presentations" "incremental-redisplay" "bordered-output" "standard-presentations" "gadgets" "dialog"))
    (:module "panes"
     :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing" "frames" "theming")
