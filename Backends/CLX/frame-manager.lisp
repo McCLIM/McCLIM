@@ -17,7 +17,7 @@
 
 ;;; CLX-FRAME-MANAGER class
 
-(defclass clx-frame-manager (frame-manager)
+(defclass clx-frame-manager (standard-frame-manager)
   ((mirroring :initarg :mirroring
               :initform :full
               :reader mirroring)

@@ -19,7 +19,7 @@
 
 (in-package :clim-null)
 
-(defclass null-frame-manager (frame-manager)
+(defclass null-frame-manager (standard-frame-manager)
   ())
 
 (defmethod adopt-frame :after

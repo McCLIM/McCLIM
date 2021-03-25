@@ -1332,6 +1332,7 @@
    #:standard-encapsulating-stream      ;class
    #:standard-extended-input-stream     ;class
    #:standard-extended-output-stream    ;class
+   #:standard-frame-manager             ;class
    #:standard-graph-node-output-record  ;class
    #:standard-graph-output-record       ;class
    #:standard-input-editing-stream      ;class

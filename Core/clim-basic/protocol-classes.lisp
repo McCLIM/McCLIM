@@ -225,19 +225,12 @@
 (define-protocol-class application-frame ())
 
 ;;; 28.5 Frame Managers
-;;; XXX The slot definitions shouldn't be here, but there is no
-;;; standard-frame-manager and I don't want to add these slots to all the frame
-;;; manager classes right now.
-(define-protocol-class frame-manager ()
-  ((port :initarg :port :reader port)
-   (frames :initform nil :reader frame-manager-frames)))
+(define-protocol-class frame-manager () ())
 
 ;;; 29.2 Basic Pane Construction
-
 (define-protocol-class pane (sheet))
 
 ;;; 30.3 Basic Gadget Classes
-;;; XXX Slots definitions should be banished.
 (define-protocol-class gadget (pane))
 
 
