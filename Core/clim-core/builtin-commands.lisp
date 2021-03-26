@@ -418,30 +418,34 @@
                (unread-gesture gesture :stream stream))
              (return (values object ptype))))))
 
+(defun substitute-read-with-accept-p (stream)
+  (not (null (compute-applicable-methods #'stream-accept (list stream t)))))
 
+;;; FIXME shouldn't we patch these symbols instead of redefining functions?
+;;; -- jd 2021-03-26
 (with-system-redefinition-allowed
-    (defun read (&optional (stream *standard-input*)
-                   (eof-error-p t)
-                   (eof-value nil)
-                   (recursivep nil))
-      (if (typep stream 'input-editing-stream)
-          (let ((*eof-error-p* eof-error-p)
-                (*eof-value* eof-value)
-                (*recursivep* recursivep))
-            (accept '((expression) :auto-activate t :preserve-whitespace nil)
-                    :stream stream :prompt nil))
-          (funcall *sys-read* stream eof-error-p eof-value recursivep)))
+
+  (defun read (&optional (stream *standard-input*)
+                 (eof-error-p t)
+                 (eof-value nil)
+                 (recursivep nil))
+    (if (substitute-read-with-accept-p stream)
+        (let ((*eof-error-p* eof-error-p)
+              (*eof-value* eof-value)
+              (*recursivep* recursivep))
+          (accept '((expression) :auto-activate t :preserve-whitespace nil)
+                  :stream stream :prompt nil))
+        (funcall *sys-read* stream eof-error-p eof-value recursivep)))
 
   (defun read-preserving-whitespace (&optional (stream *standard-input*)
                                        (eof-error-p t)
                                        (eof-value nil)
                                        (recursivep nil))
-    (if (typep stream 'input-editing-stream)
+    (if (substitute-read-with-accept-p stream)
         (let ((*eof-error-p* eof-error-p)
               (*eof-value* eof-value)
               (*recursivep* recursivep))
           (accept '((expression) :auto-activate t :preserve-whitespace t)
                   :stream stream :prompt nil))
         (funcall *sys-read-preserving-whitespace*
-                 stream eof-error-p eof-value recursivep)))
-) ; with-system-redefinition-allowed
+                 stream eof-error-p eof-value recursivep))))
