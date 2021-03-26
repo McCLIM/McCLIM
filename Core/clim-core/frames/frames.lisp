@@ -222,20 +222,9 @@ documentation produced by presentations.")
               (make-instance 'simple-event-queue)))))
 
 (defmethod (setf frame-pretty-name) :after (new-value frame)
-  ;; If there is a top-level sheet, set its pretty name. The port can
-  ;; reflect this change in the window title.
-  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-pretty-name top-level-sheet) new-value))
-  ;; Let client code know.
   (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
 
 (defmethod (setf frame-icon) :after (new-value frame)
-  ;; If there is a top-level sheet, set its icon. The port can reflect
-  ;; this change by telling the window manager which might display the
-  ;; new icon somewhere.
-  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-icon top-level-sheet) new-value))
-  ;; Let client code know.
   (note-frame-icon-changed (frame-manager frame) frame new-value))
 
 (defmethod frame-all-layouts ((frame application-frame))
@@ -629,16 +618,11 @@ documentation produced by presentations.")
     (if enabled
         (progn
           (setf disabled-commands (delete command-name disabled-commands))
-          (note-command-enabled (frame-manager frame)
-                                frame
-                                command-name)
-          enabled)
+          (note-command-enabled (frame-manager frame) frame command-name))
         (progn
           (pushnew command-name disabled-commands)
-          (note-command-disabled (frame-manager frame)
-                                 frame
-                                 command-name)
-          nil))))
+          (note-command-disabled (frame-manager frame) frame command-name)))
+    enabled))
 
 (defmethod display-command-menu (frame (stream fundamental-output-stream)
                                  &rest args &key
@@ -654,23 +638,18 @@ documentation produced by presentations.")
 (defmethod enable-frame ((frame application-frame))
   (ecase (slot-value frame 'state)
     (:disabled
-     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
      (note-frame-enabled (frame-manager frame) frame))
     (:shrunk
-     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
      (note-frame-deiconified (frame-manager frame) frame))
     (:enabled))
   (setf (slot-value frame 'state) :enabled))
 
 (defmethod disable-frame ((frame application-frame))
-  (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-enabled-p top-level-sheet) nil))
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
 
 (defmethod shrink-frame ((frame application-frame))
   (unless (eq (slot-value frame 'state) :disabled)
-    (shrink-sheet (frame-top-level-sheet frame))
     (setf (slot-value frame 'state) :shrunk)
     (note-frame-iconified (frame-manager frame) frame))
   (frame-state frame))

@@ -107,7 +107,7 @@
   (declare (ignore fm frame new-value)))
 
 
-;;; Standard application frame methods
+;;; standard-frame-manager and standard-application-frame methods
 
 (defmethod make-pane-1 :around
     ((fm standard-frame-manager) (frame standard-application-frame)
@@ -159,6 +159,54 @@
   (setf (%frame-manager frame) nil)
   (setf (slot-value frame 'state) :disowned)
   frame)
+
+(defmethod note-frame-enabled
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t))
+
+(defmethod note-frame-disabled
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-enabled-p top-level-sheet) nil)))
+
+(defmethod note-frame-iconified
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (shrink-sheet (frame-top-level-sheet frame)))
+
+(defmethod note-frame-deiconified
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t))
+
+(defmethod note-command-enabled
+    ((fm standard-frame-manager) (frame standard-application-frame) command-name)
+  (declare (ignore fm))
+  (menu-bar-refresh-command frame command-name t))
+
+(defmethod note-command-disabled
+    ((fm standard-frame-manager) (frame standard-application-frame) command-name)
+  (declare (ignore fm))
+  (menu-bar-refresh-command frame command-name nil))
+
+(defmethod note-frame-pretty-name-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-value)
+  (declare (ignore fm))
+  ;; If there is a top-level sheet, set its pretty name. The port can reflect
+  ;; this change in the window title.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-pretty-name top-level-sheet) new-value)))
+
+(defmethod note-frame-icon-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-value)
+  (declare (ignore fm))
+  ;; If there is a top-level sheet, set its icon. The port can reflect
+  ;; this change by telling the window manager which might display the
+  ;; new icon somewhere.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-icon top-level-sheet) new-value)))
 
 ;;; Menu frame methods
 
