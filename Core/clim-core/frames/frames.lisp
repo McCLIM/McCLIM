@@ -276,47 +276,6 @@ documentation produced by presentations.")
             (frame-standard-input frame) (or interactor (frame-standard-output frame))
             (frame-pointer-documentation-output frame) pointer-documentation))))
 
-(defmethod generate-panes :before (fm  (frame application-frame))
-  (declare (ignore fm))
-  (when (and (frame-panes frame)
-             (eq (sheet-parent (frame-panes frame))
-                 (frame-top-level-sheet frame)))
-    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
-  (loop for (nil . pane) in (frame-panes-for-layout frame)
-        for parent = (sheet-parent pane)
-        if  parent
-        do (sheet-disown-child parent pane)))
-
-(defmethod generate-panes (fm (frame application-frame))
-  (with-look-and-feel-realization (fm frame)
-    (unless (frame-panes-for-layout frame)
-      (setf (frame-panes-for-layout frame)
-            `((single-pane . ,(make-clim-interactor-pane :name 'single-pane)))))
-    (let ((single-pane
-            (alexandria:assoc-value (frame-panes-for-layout frame)
-                                    'single-pane :test #'eq)))
-      (setf (frame-panes frame) single-pane)))
-  (update-frame-pane-lists frame))
-
-(defmethod generate-panes :after (fm (frame application-frame))
-  (declare (ignore fm))
-  (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (sheet-adopt-child top-level-sheet (frame-panes frame))
-    (unless (sheet-parent top-level-sheet)
-      (sheet-adopt-child (graft frame) top-level-sheet))
-    ;; Find the size of the new frame
-    (multiple-value-bind (w h) (frame-geometry* frame)
-      ;; automatically generates a window-configuation-event
-      ;; which then calls allocate-space
-      ;;
-      ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
-      ;; window is mapped and do the space allocation now, so that all
-      ;; sheets will have their correct geometry at once. --GB
-      (change-space-requirements top-level-sheet :width w :height h
-                                                 :resize-frame t)
-      (setf (sheet-region top-level-sheet) (make-bounding-rectangle 0 0 w h))
-      (allocate-space top-level-sheet w h))))
-
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (when (and (or width height)
              (not (and width height)))

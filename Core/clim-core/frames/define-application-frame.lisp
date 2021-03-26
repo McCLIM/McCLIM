@@ -51,7 +51,7 @@
     (setf panes (append panes
                         '((%pointer-documentation%
                            pointer-documentation-pane)))))
-  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+  `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
