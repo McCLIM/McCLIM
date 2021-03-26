@@ -535,9 +535,10 @@ documentation produced by presentations.")
     ;; next iteration. -- jd 2020-12-09
     (event-queue-append (frame-command-queue frame) command)))
 
-(defmethod execute-frame-command ((frame application-frame) command)
+(defmethod execute-frame-command ((frame standard-application-frame) command)
   (check-type command cons)
-  (if (and (eq (frame-process frame) (current-process))
+  (if (and (or (null (frame-process frame))
+               (eq (frame-process frame) (current-process)))
            (not (frame-reading-command-p frame)))
       (let ((name (command-name command))
             (args (command-arguments command)))
@@ -552,6 +553,10 @@ documentation produced by presentations.")
                                                  :sheet sheet
                                                  :frame frame
                                                  :command command)))))
+
+(defmethod execute-frame-command ((frame application-frame) command)
+  (check-type command cons)
+  (apply (car command) (cdr command)))
 
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
