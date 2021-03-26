@@ -419,7 +419,8 @@
              (return (values object ptype))))))
 
 (defun substitute-read-with-accept-p (stream)
-  (not (null (compute-applicable-methods #'stream-accept (list stream t)))))
+  (or (typep stream 'input-editing-stream)
+      (typep stream 'extended-input-stream)))
 
 ;;; FIXME shouldn't we patch these symbols instead of redefining functions?
 ;;; -- jd 2021-03-26
