@@ -400,7 +400,9 @@ produces no more than one line of output i.e., doesn't wrap."))
           (seos-write-string stream string seg-start i)
           (seos-write-newline stream)
           (setq seg-start (1+ i))))
-      (seos-write-string stream string seg-start end))))
+      (seos-write-string stream string seg-start end)))
+  ;; Need to return the string
+  string)
 
 (defmethod stream-character-width ((stream standard-extended-output-stream) char
                                    &key (text-style nil))
