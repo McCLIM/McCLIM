@@ -178,7 +178,7 @@
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
-   (graft-y :reader pointer-event-native-graft-y) ))
+   (graft-y :reader pointer-event-native-graft-y)))
 
 (defmethod print-object ((event pointer-event) stream)
   (print-unreadable-object (event stream :type t :identity nil)
