@@ -1890,6 +1890,8 @@
    #:event-listen-or-wait
    #:schedule-event
    #:window-manager-focus-event
+   ;; frame managers
+   #:headless-frame-manager
    ;; frames
    #:frame-icon
    ;; sheets

@@ -56,70 +56,83 @@
       (when new-manager
         (adopt-frame new-manager frame)))))
 
+
+;;; HEADLESS-FRAME-MANAGER class
+
+(defclass headless-frame-manager (frame-manager)
+  ((frames
+    :initform nil
+    :reader frame-manager-frames)))
+
+(defmethod adopt-frame :after
+    ((fm headless-frame-manager) (frame application-frame))
+  (push frame (slot-value fm 'frames)))
+
+(defmethod disown-frame :before
+    ((fm headless-frame-manager) (frame application-frame))
+  (alexandria:removef (slot-value fm 'frames) frame))
+
+(defmethod adopt-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod disown-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod find-pane-for-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod make-pane-1
+    ((fm headless-frame-manager) (frame application-frame) type &rest args)
+  (declare (ignore fm frame type args)))
+
+(defmethod generate-panes
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-enabled
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-disabled
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-iconified
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-deiconified
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-command-enabled
+    ((fm headless-frame-manager) (frame application-frame) command-name)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-command-disabled
+    ((fm headless-frame-manager) (frame application-frame) command-name)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-frame-pretty-name-changed
+    ((fm headless-frame-manager) (frame application-frame) new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-icon-changed
+    ((fm headless-frame-manager) (frame application-frame) new-value)
+  (declare (ignore fm frame new-value)))
+
 ;;; STANDARD-FRAME-MANAGER class
 
-(defclass standard-frame-manager (frame-manager)
+(defclass standard-frame-manager (headless-frame-manager)
   ((port
     :initarg :port
     :reader port)
    (frames
     :initform nil
     :reader frame-manager-frames)))
-
-(defmethod adopt-frame
-    ((fm standard-frame-manager) (frame application-frame))
-  (push frame (slot-value fm 'frames)))
-
-(defmethod disown-frame
-    ((fm standard-frame-manager) (frame application-frame))
-  (alexandria:removef (slot-value fm 'frames) frame))
-
-(defmethod find-pane-for-frame
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod make-pane-1
-    ((fm standard-frame-manager) (frame application-frame) type &rest args)
-  (declare (ignore fm frame type args)))
-
-(defmethod generate-panes
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-enabled
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-disabled
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-iconified
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-deiconified
-    ((fm standard-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-command-enabled
-    ((fm standard-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-command-disabled
-    ((fm standard-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-frame-pretty-name-changed
-    ((fm standard-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
-
-(defmethod note-frame-icon-changed
-    ((fm standard-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
-
-
-;;; standard-frame-manager and standard-application-frame methods
 
 (defmethod adopt-frame
     ((fm standard-frame-manager) (frame standard-application-frame))
