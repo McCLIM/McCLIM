@@ -22,7 +22,41 @@
 (defvar *default-icon-large* nil)
 (defvar *default-icon-small* nil)
 
+(defclass frame-geometry-mixin ()
+  ((geometry-left :initarg :left :initform nil)
+   (geometry-right :initarg :right :initform nil)
+   (geometry-top :initarg :top :initform nil)
+   (geometry-bottom :initarg :bottom :initform nil)
+   (geometry-width :initarg :width :initform nil)
+   (geometry-height :initarg :height :initform nil)))
+
+(defun frame-geometry* (frame)
+  "(values width height &optional top left)"
+  (check-type frame frame-geometry-mixin)
+  (let ((pane (frame-top-level-sheet frame)))
+    (with-slots (geometry-left geometry-top geometry-right
+                 geometry-bottom geometry-width geometry-height)
+        frame
+      ;; Find width and height from looking at the respective options first,
+      ;; then at left/right and top/bottom and finally at what compose-space
+      ;; says.
+      (let* ((width (or geometry-width
+                        (and geometry-left geometry-right
+                             (- geometry-right geometry-left))
+                        (space-requirement-width (compose-space pane))))
+             (height (or geometry-height
+                         (and geometry-top geometry-bottom
+                              (- geometry-bottom geometry-top))
+                         (space-requirement-height (compose-space pane))))
+             ;; See if a position is wanted and return left, top.
+             (left (or geometry-left
+                       (and geometry-right (- geometry-right geometry-width))))
+             (top (or geometry-top
+                      (and geometry-bottom (- geometry-bottom geometry-height)))))
+        (values width height left top)))))
+
 (defclass standard-application-frame (application-frame
+                                      frame-geometry-mixin
                                       presentation-history-mixin)
   ((port :initform nil
          :initarg :port
@@ -136,24 +170,7 @@ frame, if any")
                          :initform nil
                          :documentation "updating output record for pointer
 documentation produced by presentations.")
-   (geometry-left :accessor geometry-left
-                  :initarg :left
-                  :initform nil)
-   (geometry-right :accessor geometry-right
-                   :initarg :right
-                   :initform nil)
-   (geometry-top :accessor geometry-top
-                 :initarg :top
-                 :initform nil)
-   (geometry-bottom :accessor geometry-bottom
-                    :initarg :bottom
-                    :initform nil)
-   (geometry-width :accessor geometry-width
-                   :initarg :width
-                   :initform nil)
-   (geometry-height :accessor geometry-height
-                    :initarg :height
-                    :initform nil)))
+   ))
 
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
@@ -162,32 +179,6 @@ documentation produced by presentations.")
 (defmethod frame-query-io ((frame standard-application-frame))
   (or (frame-standard-input frame)
       (frame-standard-output frame)))
-
-(defgeneric frame-geometry* (frame))
-
-(defmethod frame-geometry* ((frame standard-application-frame))
-  "-> width height &optional top left"
-  (let ((pane (frame-top-level-sheet frame)))
-    ;(destructuring-bind (&key left top right bottom width height) (frame-geometry frame)
-    (with-slots (geometry-left geometry-top geometry-right
-                               geometry-bottom geometry-width
-                               geometry-height) frame
-      ;; Find width and height from looking at the respective options
-      ;; first, then at left/right and top/bottom and finally at what
-      ;; compose-space says.
-      (let* ((width (or geometry-width
-                        (and geometry-left geometry-right
-                             (- geometry-right geometry-left))
-                        (space-requirement-width (compose-space pane))))
-             (height (or geometry-height
-                         (and geometry-top geometry-bottom (- geometry-bottom geometry-top))
-                         (space-requirement-height (compose-space pane))))
-             ;; See if a position is wanted and return left, top.
-             (left (or geometry-left
-                       (and geometry-right (- geometry-right geometry-width))))
-             (top (or geometry-top
-                      (and geometry-bottom (- geometry-bottom geometry-height)))))
-      (values width height left top)))))
 
 ;;; This method causes related frames share the same queue by default (on both
 ;;; SMP and non-SMP systems). Thanks to that we have a single loop processing
