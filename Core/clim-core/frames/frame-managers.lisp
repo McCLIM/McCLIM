@@ -138,8 +138,6 @@
     ((fm standard-frame-manager) (frame standard-application-frame))
   (call-next-method)
   (setf (%frame-manager frame) fm)
-  (setf (port frame) (port fm))
-  (setf (graft frame) (find-graft :port (port frame)))
   (let ((*application-frame* frame)
         (event-queue (frame-event-queue frame)))
     (setf (slot-value frame 'top-level-sheet)
@@ -219,11 +217,10 @@
 
 (defmethod generate-panes :after
     ((fm standard-frame-manager) (frame standard-application-frame))
-  (declare (ignore fm))
   (let ((top-level-sheet (frame-top-level-sheet frame)))
     (sheet-adopt-child top-level-sheet (frame-panes frame))
     (unless (sheet-parent top-level-sheet)
-      (sheet-adopt-child (graft frame) top-level-sheet))
+      (sheet-adopt-child (find-graft :port (port fm)) top-level-sheet))
     ;; Find the size of the new frame
     (multiple-value-bind (w h) (frame-geometry* frame)
       ;; automatically generates a window-configuation-event
@@ -299,8 +296,7 @@
     (setf (slot-value frame 'top-level-sheet) t-l-s)
     (sheet-adopt-child t-l-s (frame-panes frame))
     (let ((graft (find-graft :port (port fm))))
-      (sheet-adopt-child graft t-l-s)
-      (setf (graft frame) graft))
+      (sheet-adopt-child graft t-l-s))
     (let ((pre-space (compose-space t-l-s))
           (frame-min-width (slot-value frame 'min-width)))
       (multiple-value-bind (width min-width max-width height min-height max-height)
@@ -329,5 +325,5 @@
   (call-next-method)
   (let ((tps (frame-top-level-sheet frame)))
     (sheet-disown-child tps (frame-panes frame))
-    (sheet-disown-child (graft frame) tps))
+    (sheet-disown-child (sheet-parent tps) tps))
   (setf (%frame-manager frame) nil))

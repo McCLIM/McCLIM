@@ -58,13 +58,7 @@
 (defclass standard-application-frame (application-frame
                                       frame-geometry-mixin
                                       presentation-history-mixin)
-  ((port :initform nil
-         :initarg :port
-         :accessor port)
-   (graft :initform nil
-          :initarg :graft
-          :accessor graft)
-   (name :initarg :name
+  ((name :initarg :name
          :reader frame-name)
    (pretty-name :initarg :pretty-name
                 :accessor frame-pretty-name)
@@ -169,8 +163,12 @@ frame, if any")
    (documentation-record :accessor documentation-record
                          :initform nil
                          :documentation "updating output record for pointer
-documentation produced by presentations.")
-   ))
+documentation produced by presentations.")))
+
+(defmethod port ((frame standard-application-frame))
+  (if-let ((manager (frame-manager frame)))
+    (port manager)
+    nil))
 
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
