@@ -25,7 +25,6 @@
                 ;;
                 #:clamp
                 #:get-environment-variable
-                #:port-pointer-sheet
                 #:map-repeated-sequence
                 #:do-sequence
                 #:with-transformed-position

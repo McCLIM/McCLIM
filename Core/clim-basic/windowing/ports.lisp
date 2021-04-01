@@ -110,8 +110,8 @@
    (focused-sheet :initform nil :accessor port-focused-sheet
                   :reader port-keyboard-input-focus
                   :documentation "The sheet for the keyboard events, if any")
-   (pointer-sheet :initform nil :accessor port-pointer-sheet
-		  :documentation "The sheet the pointer is over, if any")
+   (pointer :initform nil :initarg :pointer :accessor port-pointer
+		  :documentation "The pointer of the port")
    ;; The difference between grabbed-sheet and pressed-sheet is that
    ;; the former takes all pointer events while pressed-sheet receives
    ;; replicated pointer motion events. -- jd 2019-08-21
@@ -275,14 +275,15 @@ is a McCLIM extension.")
 ;;; as part of this process.
 (defun synthesize-boundary-events (port event)
   (let* ((event-sheet (event-sheet event))
-         (old-pointer-sheet (port-pointer-sheet port))
+         (pointer (pointer-event-pointer event))
+         (old-pointer-sheet (pointer-sheet pointer))
          (new-pointer-sheet old-pointer-sheet)
          (dispatch-event-p nil))
     ;; First phase: compute new pointer sheet for PORT.
     (flet ((update-pointer-sheet (new-sheet)
              (when new-sheet
                (unless (eql old-pointer-sheet new-sheet)
-                 (setf (port-pointer-sheet port) new-sheet
+                 (setf (pointer-sheet pointer) new-sheet
                        new-pointer-sheet new-sheet)))))
       (typecase event
         ;; Ignore grab-enter and ungrab-leave boundary events.

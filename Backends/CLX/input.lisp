@@ -149,7 +149,7 @@
              ;; release event. We ignore the latter. -- jd 2019-09-01
              (when (eq event-key :button-press)
                (make-instance 'climi::pointer-scroll-event
-                              :pointer 0
+                              :pointer (port-pointer *clx-port*)
                               :button button :x x :y y
                               :graft-x root-x
                               :graft-y root-y
@@ -167,7 +167,7 @@
              (make-instance (if (eq event-key :button-press)
                                 'pointer-button-press-event
                                 'pointer-button-release-event)
-                            :pointer 0
+                            :pointer (port-pointer *clx-port*)
                             :button button :x x :y y
                             :graft-x root-x
                             :graft-y root-y
@@ -199,7 +199,7 @@
                                            (:grab 'pointer-grab-enter-event)
                                            (:ungrab 'pointer-ungrab-enter-event)
                                            (t 'pointer-enter-event))))
-                        :pointer 0 :button code
+                        :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
@@ -244,7 +244,7 @@
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
                                                                    state)))
          (make-instance 'pointer-motion-event
-                        :pointer 0 :button code
+                        :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
@@ -389,8 +389,8 @@
 
 (defmethod synthesize-pointer-motion-event ((pointer clx-basic-pointer))
   (when-let* ((port (port pointer))
-              ;; XXX Should we rely on port-pointer-sheet being correct? -- moore
-              (sheet (port-pointer-sheet port))
+              ;; XXX Should we rely on pointer-sheet being correct? -- moore
+              (sheet (pointer-sheet pointer))
               (ancestor (sheet-mirrored-ancestor sheet))
               (mirror (sheet-direct-mirror ancestor)))
     (multiple-value-bind (x y same-screen-p child mask root-x root-y)
@@ -402,7 +402,7 @@
                 (values x y)
                 (untransform-position (sheet-native-transformation sheet) x y))
           (make-instance 'pointer-motion-event
-                         :pointer 0 :button (button-from-state mask)
+                         :pointer pointer :button (button-from-state mask)
                          :x x :y y :graft-x root-x :graft-y root-y
                          :sheet sheet
                          :modifier-state (clim-xcommon:x-event-state-modifiers

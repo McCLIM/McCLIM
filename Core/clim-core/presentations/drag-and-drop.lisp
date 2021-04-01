@@ -115,8 +115,7 @@
                              (collect-translator trans)))
                          from-presentation (list context-type) frame
                          window x y
-                         :modifier-state (and (null event)
-                                              (window-modifier-state window))
+                         :modifier-state (and (null event) 0)
                          :event event)
                         (collect-translator)))
          ;; Default feedback and highlight functions are those of the
