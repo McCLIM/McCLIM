@@ -249,7 +249,7 @@
   (declare (ignore width height))
   (if-let ((child (sheet-child pane)))
     (apply #'compose-space child args)
-    (make-space-requirement)))
+    (call-next-method)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
   (resize-sheet pane width height)
@@ -287,10 +287,6 @@
                       (multiple-value-bind (width height)
                           (bounding-rectangle-size pane)
                         (layout-frame frame width height)))))))))
-
-(defmethod compose-space ((pane top-level-sheet-pane) &key width height)
-  (declare (ignore width height))
-  (compose-space (sheet-child pane)))
 
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
   (unless (pane-space-requirement pane)

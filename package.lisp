@@ -1332,6 +1332,7 @@
    #:standard-encapsulating-stream      ;class
    #:standard-extended-input-stream     ;class
    #:standard-extended-output-stream    ;class
+   #:standard-frame-manager             ;class
    #:standard-graph-node-output-record  ;class
    #:standard-graph-output-record       ;class
    #:standard-input-editing-stream      ;class
@@ -1889,6 +1890,8 @@
    #:event-listen-or-wait
    #:schedule-event
    #:window-manager-focus-event
+   ;; frame managers
+   #:headless-frame-manager
    ;; frames
    #:frame-icon
    ;; sheets
