@@ -170,6 +170,16 @@ documentation produced by presentations.")))
     (port manager)
     nil))
 
+(defmethod (setf frame-manager)
+    (new-manager (frame standard-application-frame))
+  (let ((old-manager (frame-manager frame)))
+    (unless (eq new-manager old-manager)
+      (when old-manager
+        (disown-frame old-manager frame))
+      (when new-manager
+        (adopt-frame new-manager frame))
+      (setf (%frame-manager frame) new-manager))))
+
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
       (frame-manager frame)))

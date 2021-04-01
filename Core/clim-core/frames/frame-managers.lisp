@@ -47,15 +47,6 @@
         (t (loop for p in *all-ports*
                  do (map-over-frames function :port p)))))
 
-(defmethod (setf frame-manager)
-    ((new-manager frame-manager) (frame application-frame))
-  (let ((old-manager (frame-manager frame)))
-    (unless (eq new-manager old-manager)
-      (when old-manager
-        (disown-frame old-manager frame))
-      (when new-manager
-        (adopt-frame new-manager frame)))))
-
 
 ;;; HEADLESS-FRAME-MANAGER class
 
