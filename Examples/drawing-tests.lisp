@@ -1600,20 +1600,24 @@ outside the clipping area should be grey.")
   (declare (ignore frame))
   (let ((scale 1.2)
         (from-head t)
-        (to-head t))
+        (to-head t)
+        (head-filled nil)
+        (num-arrows 17))
     (with-room-for-graphics (stream :first-quadrant nil)
       (with-scaling (stream scale scale)
-        (loop for theta from 0.0 below (* 2 pi) by (/ (* 2 pi) 17)
+        (loop for theta from 0.0 by (/ (* 2 pi) num-arrows)
+              repeat num-arrows
               do (let* ((x2 (* 250 (sin theta)))
                         (y2 (* 250 (cos theta)))
                         (x1 (* 0.2 x2))
                         (y1 (* 0.2 y2)))
                    (draw-arrow* stream x1 y1 x2 y2
-                                :line-thickness (1+ (* 8 theta))
+                                :line-thickness (1+ (* 4 theta))
                                 :head-width (* 5 (1+ theta))
                                 :to-head to-head
                                 :from-head from-head
-                                :head-length (* 10 (1+ theta)) )
+                                :head-length (* 10 (1+ theta))
+                                :head-filled head-filled)
                    (draw-point* stream x1 y1 :ink +red+ :line-thickness 5)
                    (draw-point* stream x2 y2 :ink +green+ :line-thickness 5)))))))
 
