@@ -590,6 +590,7 @@ known gestures."
 
 (define-gesture-name :newline :keyboard (#\newline))
 (define-gesture-name :newline :keyboard (#\return) :unique nil)
+(define-gesture-name :newline :keyboard (:kp-enter) :unique nil)
 
 (define-gesture-name :return :keyboard (#\return))
 
