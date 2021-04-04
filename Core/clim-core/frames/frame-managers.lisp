@@ -1,0 +1,320 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2021 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Frame managers.
+;;;
+
+(in-package #:clim-internals)
+
+(defvar *default-frame-manager* nil)
+(defvar *pane-realizer* nil)
+
+;; FIXME: The spec says the port must "conform to options".  I've added a check
+;; that the ports match, but we've no protocol for testing the other
+;; options. -Hefner
+(defun find-frame-manager (&rest options &key port &allow-other-keys)
+  (declare (special *frame-manager*))
+  (if (and (boundp '*frame-manager*)
+           (or (null port) (eql port (port *frame-manager*))))
+      *frame-manager*
+      (if (and *default-frame-manager*
+               (frame-manager-p *default-frame-manager*)
+               (or (null port) (eql port (port *default-frame-manager*))))
+          *default-frame-manager*
+          (first (frame-managers (or port (apply #'find-port options)))))))
+
+(defmacro with-frame-manager ((frame-manager) &body body)
+  `(let ((*frame-manager* ,frame-manager))
+     (declare (special *frame-manager*))
+     (locally ,@body)))
+
+(defmacro with-look-and-feel-realization ((frame-manager frame) &body body)
+  `(let ((*pane-realizer* ,frame-manager)
+         (*application-frame* ,frame))
+     (locally ,@body)))
+
+(defun map-over-frames (function &key port frame-manager)
+  (cond (frame-manager
+         (mapc function (frame-manager-frames frame-manager)))
+        (port
+         (loop for manager in (frame-managers port)
+               do (map-over-frames function :frame-manager manager)))
+        (t (loop for p in *all-ports*
+                 do (map-over-frames function :port p)))))
+
+
+;;; HEADLESS-FRAME-MANAGER class
+
+(defclass headless-frame-manager (frame-manager)
+  ((frames
+    :initform nil
+    :reader frame-manager-frames)))
+
+(defmethod adopt-frame :after
+    ((fm headless-frame-manager) (frame application-frame))
+  (push frame (slot-value fm 'frames)))
+
+(defmethod disown-frame :before
+    ((fm headless-frame-manager) (frame application-frame))
+  (alexandria:removef (slot-value fm 'frames) frame))
+
+(defmethod adopt-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod disown-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod find-pane-for-frame
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod make-pane-1
+    ((fm headless-frame-manager) (frame application-frame) type &rest args)
+  (declare (ignore fm frame type args)))
+
+(defmethod generate-panes
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-enabled
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-disabled
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-iconified
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-deiconified
+    ((fm headless-frame-manager) (frame application-frame))
+  (declare (ignore fm frame)))
+
+(defmethod note-command-enabled
+    ((fm headless-frame-manager) (frame application-frame) command-name)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-command-disabled
+    ((fm headless-frame-manager) (frame application-frame) command-name)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-frame-pretty-name-changed
+    ((fm headless-frame-manager) (frame application-frame) new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-icon-changed
+    ((fm headless-frame-manager) (frame application-frame) new-value)
+  (declare (ignore fm frame new-value)))
+
+;;; STANDARD-FRAME-MANAGER class
+
+(defclass standard-frame-manager (headless-frame-manager)
+  ((port
+    :initarg :port
+    :reader port)
+   (frames
+    :initform nil
+    :reader frame-manager-frames)))
+
+(defmethod adopt-frame
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (call-next-method)
+  (setf (%frame-manager frame) fm)
+  (let ((*application-frame* frame)
+        (event-queue (frame-event-queue frame)))
+    (setf (slot-value frame 'top-level-sheet)
+          (find-pane-for-frame fm frame))
+    (generate-panes fm frame)
+    (setf (slot-value frame 'state) :disabled)
+    (when (typep event-queue 'event-queue)
+      (setf (event-queue-port event-queue) (port fm)))
+    frame))
+
+(defmethod disown-frame
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (call-next-method)
+  (when-let* ((event-queue (frame-event-queue frame))
+              (calling-frame (frame-calling-frame frame))
+              (calling-queue (frame-event-queue calling-frame))
+              (another-queue-p (not (eql calling-queue event-queue))))
+    (setf (event-queue-port event-queue) nil))
+  (let ((tpl-sheet (frame-top-level-sheet frame)))
+    (sheet-disown-child (sheet-parent tpl-sheet) tpl-sheet))
+  (setf (frame-panes frame) nil)
+  (setf (frame-panes-for-layout frame) nil)
+  (setf (slot-value frame 'layouts) nil)
+  (setf (%frame-manager frame) nil)
+  (setf (slot-value frame 'state) :disowned)
+  frame)
+
+(defmethod make-pane-1
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     type &rest args)
+  (apply #'make-instance (find-concrete-pane-class fm type)
+         :frame frame :manager fm :port (port fm) args))
+
+(defmethod make-pane-1 :around
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     type &rest args &key (event-queue nil evq-p) &allow-other-keys)
+  ;; Default event-queue to the frame event queue.
+  (declare (ignore event-queue))
+  (if (null evq-p)
+      (let ((evq (frame-event-queue frame))
+            (*input-buffer* (frame-input-buffer frame)))
+        (apply #'call-next-method fm frame type :event-queue evq args))
+      (call-next-method)))
+
+(defmethod find-pane-for-frame
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (make-pane-1 fm frame 'top-level-sheet-pane
+               :name (frame-name frame)
+               :pretty-name (frame-pretty-name frame)
+               :icon (frame-icon frame)
+               ;; sheet is enabled from enable-frame
+               :enabled-p nil))
+
+(defmethod generate-panes :before
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (when (and (frame-panes frame)
+             (eq (sheet-parent (frame-panes frame))
+                 (frame-top-level-sheet frame)))
+    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
+  (loop for (nil . pane) in (frame-panes-for-layout frame)
+        for parent = (sheet-parent pane)
+        if  parent
+          do (sheet-disown-child parent pane)))
+
+(defmethod generate-panes
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (with-look-and-feel-realization (fm frame)
+    (unless (frame-panes-for-layout frame)
+      (setf (frame-panes-for-layout frame)
+            `((single-pane . ,(make-clim-interactor-pane :name 'single-pane)))))
+    (let ((single-pane
+            (alexandria:assoc-value (frame-panes-for-layout frame)
+                                    'single-pane :test #'eq)))
+      (setf (frame-panes frame) single-pane)))
+  (update-frame-pane-lists frame))
+
+(defmethod generate-panes :after
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (let ((top-level-sheet (frame-top-level-sheet frame)))
+    (sheet-adopt-child top-level-sheet (frame-panes frame))
+    (unless (sheet-parent top-level-sheet)
+      (sheet-adopt-child (find-graft :port (port fm)) top-level-sheet))
+    ;; Find the size of the new frame
+    (multiple-value-bind (w h) (frame-geometry* frame)
+      ;; automatically generates a window-configuation-event
+      ;; which then calls allocate-space
+      ;;
+      ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
+      ;; window is mapped and do the space allocation now, so that all
+      ;; sheets will have their correct geometry at once. --GB
+      (change-space-requirements top-level-sheet :width w :height h
+                                                 :resize-frame t)
+      (setf (sheet-region top-level-sheet) (make-bounding-rectangle 0 0 w h))
+      (allocate-space top-level-sheet w h))))
+
+(defmethod note-frame-enabled
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t))
+
+(defmethod note-frame-disabled
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-enabled-p top-level-sheet) nil)))
+
+(defmethod note-frame-iconified
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (shrink-sheet (frame-top-level-sheet frame)))
+
+(defmethod note-frame-deiconified
+    ((fm standard-frame-manager) (frame standard-application-frame))
+  (declare (ignore fm))
+  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t))
+
+(defmethod note-command-enabled
+    ((fm standard-frame-manager) (frame standard-application-frame) command-name)
+  (declare (ignore fm))
+  (menu-bar-refresh-command frame command-name t))
+
+(defmethod note-command-disabled
+    ((fm standard-frame-manager) (frame standard-application-frame) command-name)
+  (declare (ignore fm))
+  (menu-bar-refresh-command frame command-name nil))
+
+(defmethod note-frame-pretty-name-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-value)
+  (declare (ignore fm))
+  ;; If there is a top-level sheet, set its pretty name. The port can reflect
+  ;; this change in the window title.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-pretty-name top-level-sheet) new-value)))
+
+(defmethod note-frame-icon-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-value)
+  (declare (ignore fm))
+  ;; If there is a top-level sheet, set its icon. The port can reflect
+  ;; this change by telling the window manager which might display the
+  ;; new icon somewhere.
+  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
+    (setf (sheet-icon top-level-sheet) new-value)))
+
+;;; Menu frame methods
+
+(defmethod adopt-frame
+    ((fm standard-frame-manager) (frame menu-frame))
+  (call-next-method)
+  (setf (%frame-manager frame) fm)
+  (let* ((t-l-s (make-pane-1 fm *application-frame*
+                             'menu-unmanaged-top-level-sheet-pane
+                             :name 'top-level-sheet
+                             ;; enabling should be left to enable-frame
+                             :enabled-p nil)))
+    (setf (slot-value frame 'top-level-sheet) t-l-s)
+    (sheet-adopt-child t-l-s (frame-panes frame))
+    (let ((graft (find-graft :port (port fm))))
+      (sheet-adopt-child graft t-l-s))
+    (let ((pre-space (compose-space t-l-s))
+          (frame-min-width (slot-value frame 'min-width)))
+      (multiple-value-bind (width min-width max-width height min-height max-height)
+          (space-requirement-components pre-space)
+        (flet ((foomax (x y) (max (or x 1) (or y 1))))
+          (let ((space (make-space-requirement
+                        :min-width  (foomax frame-min-width min-width)
+                        :width      (foomax frame-min-width width)
+                        :max-width  (foomax frame-min-width max-width)
+                        :min-height min-height
+                        :height     height
+                        :max-height max-height)))
+            (allocate-space (frame-panes frame)
+                            (space-requirement-width space)
+                            (space-requirement-height space))
+            (setf (sheet-region t-l-s)
+                  (make-bounding-rectangle 0 0
+                                           (space-requirement-width space)
+                                           (space-requirement-height space))))
+          (setf (sheet-transformation t-l-s)
+                (make-translation-transformation (slot-value frame 'left)
+                                                 (slot-value frame 'top))))))))
+
+(defmethod disown-frame
+    ((fm standard-frame-manager) (frame menu-frame))
+  (call-next-method)
+  (let ((tps (frame-top-level-sheet frame)))
+    (sheet-disown-child tps (frame-panes frame))
+    (sheet-disown-child (sheet-parent tps) tps))
+  (setf (%frame-manager frame) nil))

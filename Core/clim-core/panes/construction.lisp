@@ -79,12 +79,6 @@ returned or error is signaled depending on the argument ERRORP.")
                     (error "Concrete class for a pane ~s not found." pane-type)))))
           (find-class pane-type errorp)))))
 
-(defmethod make-pane-1
-    ((fm frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance (find-concrete-pane-class fm type)
-         :frame frame :manager fm :port (port frame)
-         args))
-
 (defun make-pane (type &rest args)
   (apply #'make-pane-1 (or *pane-realizer*
                            (frame-manager *application-frame*))
@@ -106,7 +100,7 @@ returned or error is signaled depending on the argument ERRORP.")
   (make-space-requirement :width width :height height))
 
 (defmethod allocate-space ((pane pane) width height)
-  (declare (ignorable pane width height)))
+  (resize-sheet pane width height))
 
 (defmethod pane-needs-redisplay ((pane pane))
   (let ((do-redisplay (pane-redisplay-needed pane)))
@@ -149,21 +143,13 @@ returned or error is signaled depending on the argument ERRORP.")
    (text-style        :initarg :text-style
                       :reader pane-text-style
                       :initform nil)
-   (align-x           :initarg :align-x
-                      :type (member :left :center :right)
-                      :reader pane-align-x)
-   (align-y           :initarg :align-y
-                      :type (member :top :center :bottom)
-                      :reader pane-align-y)
    ;; Display state
    (redisplay-needed  :accessor pane-redisplay-needed
                       :initarg :redisplay-needed :initform nil))
   (:default-initargs
    :foreground +black+
    :background *3d-normal-color*
-   :text-style *default-text-style*
-   :align-x :left
-   :align-y :top))
+   :text-style *default-text-style*))
 
 (defmethod initialize-instance :after ((obj basic-pane) &key text-style)
   (when (consp text-style)

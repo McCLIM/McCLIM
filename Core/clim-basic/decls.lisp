@@ -1149,18 +1149,19 @@ and `cell-align-y' are as for `formatting-item-list'."))
   (:documentation "McMCLIM extension: Notify client that the pretty
 name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
 FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change.")
-  (:method (frame-manager frame new-name)))
+the time of the change."))
+
 (defgeneric note-frame-icon-changed (frame-manager frame new-icon)
   (:documentation "McMCLIM extension: Notify client that the icon of
 FRAME, managed by FRAME-MANAGER, changed to NEW-ICON.
 FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change.")
-  (:method (frame-manager frame new-icon)))
+the time of the change."))
 
 (defgeneric frame-manager-notify-user
-    (framem message-string &key frame associated-window title
-            documentation exit-boxes name style text-style))
+    (framem message-string
+     &key frame associated-window title
+          documentation exit-boxes name style text-style))
+
 (defgeneric generate-panes (frame-manager frame))
 (defgeneric find-pane-for-frame (frame-manager frame))
 
@@ -1361,6 +1362,9 @@ rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-disable-sheet (port sheet))
 (defgeneric port-shrink-sheet (port sheet))
 (defgeneric port-pointer (port))
+
+;;; Defined in Franz user guide sec. 15.1
+(defgeneric port-modifier-state (port))
 
 (defgeneric pointer-update-state (pointer event)
   (:documentation "Called by port event dispatching code to update the modifier

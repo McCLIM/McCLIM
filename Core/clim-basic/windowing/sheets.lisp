@@ -240,19 +240,49 @@
   (error "Attempting to set the TRANSFORMATION of a SHEET that doesn't contain one"))
 
 (defmethod move-sheet ((sheet basic-sheet) x y)
-  (let ((transform (sheet-transformation sheet)))
+  (let ((transf (sheet-transformation sheet))
+        (region (sheet-region sheet)))
     (multiple-value-bind (old-x old-y)
-        (transform-position transform 0 0)
-      (let ((dx (- x old-x))
-            (dy (- y old-y)))
-        (unless (and (zerop dx) (zerop dy))
-          (setf (sheet-transformation sheet)
-                (compose-transformation-with-translation
-                 transform (- x old-x) (- y old-y))))))))
+        (bounding-rectangle-position (transform-region transf region))
+      (unless (and (coordinate= old-x x)
+                   (coordinate= old-y y))
+        (let ((dx (- x old-x))
+              (dy (- y old-y)))
+         (setf (sheet-transformation sheet)
+               (compose-transformation-with-translation transf dx dy)))))))
 
+;;; RESIZE-SHEET dimensions WIDTH and HEIGHT are expressed in the device
+;;; coordinates. When we resize the sheet its region is scaled without changing
+;;; the transformation except for the following situations:
+;;;
+;;; - old-width=0 or old-height=0 we can't compute sx or sy
+;;;
+;;; - new-width=0 or new-height=0 we can't transform the region because it will
+;;;   be canonicalized to +nowhere+ and the sheet position will be lost.
+;;;
+;;; In both cases we throw in the towel and replace the old region with a
+;;; bounding rectangle (to preserve a position of the sheet). -- jd 2021-02-24
 (defmethod resize-sheet ((sheet basic-sheet) width height)
-  (setf (sheet-region sheet)
-        (make-bounding-rectangle 0 0 width height)))
+  (let* ((region (sheet-region sheet))
+         (transf (sheet-device-transformation sheet))
+         (region* (transform-region transf region)))
+    (with-bounding-rectangle* (x1 y1 x2 y2) region*
+      (let ((new-width (max width 0))
+            (new-height (max height 0))
+            (old-width (- x2 x1))
+            (old-height (- y2 y1)))
+        (setf (sheet-region sheet)
+              (if (or (= old-width 0) (= old-height 0)
+                      (= new-width 0) (= new-height 0))
+                  (multiple-value-bind (x1 y1)
+                      (bounding-rectangle-position region)
+                    (make-bounding-rectangle
+                     x1 y1 (+ x1 new-width) (+ y1 new-height)))
+                  (let* ((sx (/ new-width old-width))
+                         (sy (/ new-height old-height))
+                         (transf* (make-scaling-transformation* sx sy x1 y1))
+                         (resized-region* (transform-region transf* region*)))
+                    (untransform-region transf resized-region*))))))))
 
 (defmethod move-and-resize-sheet ((sheet basic-sheet) x y width height)
   (let ((transform (sheet-transformation sheet)))

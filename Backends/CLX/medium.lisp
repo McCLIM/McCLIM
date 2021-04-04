@@ -274,7 +274,10 @@
            (setf (xlib:gcontext-foreground mask-gc) 1)
            (%clip-region-pixmap medium mask mask-gc clipping-region x1 y1 width height)
            (xlib:free-gcontext mask-gc)
-           (push #'(lambda () (xlib:free-pixmap mask)) ^cleanup)
+           (push #'(lambda ()
+                     (xlib:free-pixmap mask)
+                     (setf (last-medium-device-region medium) nil))
+                 ^cleanup)
            (setf (xlib:gcontext-clip-mask gc :yx-banded) mask)))))))
 
 

@@ -57,7 +57,10 @@
           (funcall continuation))
         ;; Merge and execute recorded repaint requests.
         (maphash (lambda (sheet regions)
-                   (repaint-sheet sheet (reduce #'region-union regions)))
+                   ;; FIXME calling repaint-sheet confuses drei when the
+                   ;; interactor doesn't have a mirror. -- jd 2021-03-19
+                   #+ (or) (repaint-sheet sheet (reduce #'region-union regions))
+                   #- (or) (dispatch-repaint sheet (reduce #'region-union regions)))
                  delayed-repaints))))
 
 (defmacro with-inhibited-repaint-sheet (() &body body)

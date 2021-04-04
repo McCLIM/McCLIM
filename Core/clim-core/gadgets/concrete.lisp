@@ -117,34 +117,32 @@
      :min-height 0
      :height 0)))
 
-(defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2))
-
-(defmethod draw-toggle-button-indicator ((gadget toggle-button-pane) (type (eql :one-of)) value x1 y1 x2 y2)
-  (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
-    (let ((radius (/ (- y2 y1) 2)))
-      (draw-circle* gadget cx cy radius
-                    :start-angle (* 1/4 pi)
-                    :end-angle (* 5/4 pi)
-                    :ink *3d-dark-color*)
-      (draw-circle* gadget cx cy radius
-                    :start-angle (* 5/4 pi)
-                    :end-angle (* 9/4 pi)
-                    :ink *3d-light-color*)
-      (draw-circle* gadget cx cy (max 1 (- radius 2))
-                    :ink (effective-gadget-input-area-color gadget))
-      (when value
-        (draw-circle* gadget cx cy (max 1 (- radius 4))
-                      :ink (effective-gadget-foreground gadget))))))
-
-(defmethod draw-toggle-button-indicator ((pane toggle-button-pane) (type (eql :some-of)) value
-                                         x1 y1 x2 y2)
-  (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-input-area-color pane))
-  (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :inset)
-  (when value
-    (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 3) (+ y1 3)
-                                               (- x2 3) (- y2 3))
-      (draw-line* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane) :line-thickness 2)
-      (draw-line* pane x2 y1 x1 y2 :ink (effective-gadget-foreground pane) :line-thickness 2))))
+(defgeneric draw-toggle-button-indicator (gadget type value x1 y1 x2 y2)
+  (:method ((gadget toggle-button-pane) (type (eql :one-of)) value x1 y1 x2 y2)
+    (multiple-value-bind (cx cy) (values (/ (+ x1 x2) 2) (/ (+ y1 y2) 2))
+      (let ((radius (/ (- y2 y1) 2)))
+        (draw-circle* gadget cx cy radius
+                      :start-angle (* 1/4 pi)
+                      :end-angle (* 5/4 pi)
+                      :ink *3d-dark-color*)
+        (draw-circle* gadget cx cy radius
+                      :start-angle (* 5/4 pi)
+                      :end-angle (* 9/4 pi)
+                      :ink *3d-light-color*)
+        (draw-circle* gadget cx cy (max 1 (- radius 2))
+                      :ink (effective-gadget-input-area-color gadget))
+        (when value
+          (draw-circle* gadget cx cy (max 1 (- radius 4))
+                        :ink (effective-gadget-foreground gadget))))))
+  (:method ((pane toggle-button-pane) (type (eql :some-of)) value
+            x1 y1 x2 y2)
+    (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-input-area-color pane))
+    (draw-bordered-rectangle* pane x1 y1 x2 y2 :style :inset)
+    (when value
+      (multiple-value-bind (x1 y1 x2 y2) (values (+ x1 3) (+ y1 3)
+                                                 (- x2 3) (- y2 3))
+        (draw-line* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane) :line-thickness 2)
+        (draw-line* pane x2 y1 x1 y2 :ink (effective-gadget-foreground pane) :line-thickness 2)))))
 
 (defmethod handle-repaint ((pane toggle-button-pane) region)
   (declare (ignore region))
@@ -262,24 +260,105 @@
                               :min-width (* 3 *scrollbar-thickness*)
                               :width (* 4 *scrollbar-thickness*))))
 
+;;;; Utilities
+
+;; We think all scroll bars as vertically oriented, therefore we have
+;; SCROLL-BAR-TRANSFORMATION, which should make every scroll bar
+;; look like being vertically oriented -- simplifies much code.
+
+(defun scroll-bar-transformation (sb)
+  (check-type sb scroll-bar)
+  (ecase (gadget-orientation sb)
+    (:vertical   +identity-transformation+)
+    (:horizontal (make-transformation 0 1 1 0 0 0))))
+
+(defun translate-range-value (a mina maxa mino maxo
+                              &optional (empty-result (/ (+ mino maxo) 2)))
+  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
+   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
+  (if (zerop (- maxa mina))
+      empty-result
+      (+ mino (* (/ (- a mina)
+                    (- maxa mina))
+                 (- maxo mino)))))
+
+
+
+(defun scroll-bar-up-region (sb)
+  (check-type sb scroll-bar-pane)
+  (with-bounding-rectangle* (minx miny maxx maxy)
+      (transform-region (scroll-bar-transformation sb) (pane-inner-region sb))
+    (declare (ignore maxy))
+    (make-rectangle* minx miny
+                     maxx (+ miny (- maxx minx)))))
+
+(defun scroll-bar-down-region (sb)
+  (check-type sb scroll-bar-pane)
+  (with-bounding-rectangle* (minx miny maxx maxy)
+      (transform-region (scroll-bar-transformation sb) (pane-inner-region sb))
+    (declare (ignore miny))
+    (make-rectangle* minx (- maxy (- maxx minx))
+                     maxx maxy)))
+
+(defun scroll-bar/thumb-bed* (sb)
+  ;; -> y1 y2 y3
+  (with-bounding-rectangle* (minx miny maxx maxy)
+      (transform-region (scroll-bar-transformation sb) (pane-inner-region sb))
+    (let ((y1 (+ miny (- maxx minx) 1))
+          (y3 (- maxy (- maxx minx) 1)))
+      (let ((ts (scroll-bar-thumb-size sb))
+            (minimum-thumb-size *minimum-thumb-size*))
+        ;; This is the right spot to handle ts = :none or perhaps NIL
+        (multiple-value-bind (range) (gadget-range sb)
+          ;; handle range + ts = 0
+          (let ((ts-in-pixels (round (* (- y3 y1) (/ ts (max 1 (+ range ts)))))))
+            ;; Thumb shouldn't be larger than the thumb bed, but it shouldn't be
+            ;; smaller than some minimal size.
+            (clampf ts-in-pixels minimum-thumb-size (- y3 y1))
+            (values
+             y1
+             (- y3 ts-in-pixels)
+             y3)))))))
+
+(defun scroll-bar/map-coordinate-to-value (sb y)
+  (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
+    (declare (ignore y3))
+    (multiple-value-bind (minv maxv) (gadget-range* sb)
+      (translate-range-value y y1 y2 minv maxv minv))))
+
+(defun scroll-bar/map-value-to-coordinate (sb v)
+  (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
+    (declare (ignore y3))
+    (multiple-value-bind (minv maxv) (gadget-range* sb)
+      (round (translate-range-value v minv maxv y1 y2 y1)))))
+
+(defun scroll-bar-thumb-bed-region (sb)
+  (check-type sb scroll-bar-pane)
+  (with-bounding-rectangle* (minx miny maxx maxy)
+      (transform-region (scroll-bar-transformation sb) (pane-inner-region sb))
+    (declare (ignore miny maxy))
+    (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
+      (declare (ignore y2))
+      (make-rectangle* minx y1
+                       maxx y3))))
+
+(defun scroll-bar-thumb-region (sb &optional (value (gadget-value sb)))
+  (check-type sb scroll-bar-pane)
+  (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
+    (declare (ignore y1 y2))
+    (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
+      (declare (ignore y1))
+      (let ((y4 (scroll-bar/map-value-to-coordinate sb value)))
+        (make-rectangle* x1 y4 x2 (+ y4 (- y3 y2)))))))
+
+
 ;;;; Redisplay
-
-(defgeneric scroll-bar-transformation (scroll-bar))
-
-(defgeneric scroll-bar-up-region (scroll-bar))
-
-(defgeneric scroll-bar-down-region (scroll-bar))
-
-(defgeneric scroll-bar-thumb-bed-region (scroll-bar-pane))
-
-(defgeneric scroll-bar-thumb-region (scroll-bar-pane &optional value))
 
 (defun scroll-bar/update-display (scroll-bar &optional (value (gadget-value scroll-bar)))
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2
                old-up-state old-dn-state old-tb-state old-tb-y1 old-tb-y2
                all-new-p)
       scroll-bar
-    ;;
     (scroll-bar/compute-display scroll-bar value)
     ;; redraw up arrow
     (unless (and (not all-new-p) (eql up-state old-up-state))
@@ -348,7 +427,7 @@
                                           (polygon-points (make-rectangle* x1 y1 x2 y2))
                                           :style :outset
                                           :border-width 2)
-                    ;;;;;;
+                   ;;
                    (let ((y (/ (+ y1 y2) 2)))
                      (draw-bordered-polygon scroll-bar
                                             (polygon-points (make-rectangle* (+ x1 3) (- y 1) (- x2 3) (+ y 1)))
@@ -381,27 +460,6 @@
       (setf tb-y1 y1
             tb-y2 y2))))
 
-;;;; Utilities
-
-;; We think all scroll bars as vertically oriented, therefore we have
-;; SCROLL-BAR-TRANSFORMATION, which should make every scroll bar
-;; look like being vertically oriented -- simplifies much code.
-
-(defmethod scroll-bar-transformation ((sb scroll-bar))
-  (ecase (gadget-orientation sb)
-    (:vertical   +identity-transformation+)
-    (:horizontal (make-transformation 0 1 1 0 0 0))))
-
-(defun translate-range-value (a mina maxa mino maxo
-                              &optional (empty-result (/ (+ mino maxo) 2)))
-  "When \arg{a} is some value in the range from \arg{mina} to \arg{maxa},
-   proportionally translate the value into the range \arg{mino} to \arg{maxo}."
-  (if (zerop (- maxa mina))
-      empty-result
-      (+ mino (* (/ (- a mina)
-                    (- maxa mina))
-                 (- maxo mino)))))
-
 ;;;; SETF :after methods
 
 (defmethod (setf gadget-min-value) :after (new-value (pane scroll-bar-pane))
@@ -427,71 +485,6 @@
         (slot-value scroll-bar 'thumb-size) thumb-size
         (slot-value scroll-bar 'value) value)
   (scroll-bar/update-display scroll-bar))
-
-;;;; geometry
-
-(defparameter +minimum-thumb-size-in-pixels+ 30)
-
-(defmethod scroll-bar-up-region ((sb scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
-                                                                    (pane-inner-region sb))
-    (declare (ignore maxy))
-    (make-rectangle* minx miny
-                     maxx (+ miny (- maxx minx)))))
-
-(defmethod scroll-bar-down-region ((sb scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
-                                                                    (pane-inner-region sb))
-    (declare (ignore miny))
-    (make-rectangle* minx (- maxy (- maxx minx))
-                     maxx maxy)))
-
-(defun scroll-bar/thumb-bed* (sb)
-  ;; -> y1 y2 y3
-  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
-                                                                    (pane-inner-region sb))
-    (let ((y1 (+ miny (- maxx minx) 1))
-          (y3 (- maxy (- maxx minx) 1)))
-      (let ((ts (scroll-bar-thumb-size sb)))
-        ;; This is the right spot to handle ts = :none or perhaps NIL
-        (multiple-value-bind (range) (gadget-range sb)
-          (let ((ts-in-pixels (round (* (- y3 y1) (/ ts (max 1 (+ range ts))))))) ; handle range + ts = 0
-            (setf ts-in-pixels (min (- y3 y1) ;thumb can't be larger than the thumb bed
-                                    (max +minimum-thumb-size-in-pixels+ ;but shouldn't be smaller than this.
-                                         ts-in-pixels)))
-            (values
-             y1
-             (- y3 ts-in-pixels)
-             y3)))))))
-
-(defmethod scroll-bar-thumb-bed-region ((sb scroll-bar-pane))
-  (with-bounding-rectangle* (minx miny maxx maxy) (transform-region (scroll-bar-transformation sb)
-                                                                    (pane-inner-region sb))
-    (declare (ignore miny maxy))
-    (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
-      (declare (ignore y2))
-      (make-rectangle* minx y1
-                       maxx y3))))
-
-(defun scroll-bar/map-coordinate-to-value (sb y)
-  (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
-    (declare (ignore y3))
-    (multiple-value-bind (minv maxv) (gadget-range* sb)
-      (translate-range-value y y1 y2 minv maxv minv))))
-
-(defun scroll-bar/map-value-to-coordinate (sb v)
-  (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
-    (declare (ignore y3))
-    (multiple-value-bind (minv maxv) (gadget-range* sb)
-      (round (translate-range-value v minv maxv y1 y2 y1)))))
-
-(defmethod scroll-bar-thumb-region ((sb scroll-bar-pane) &optional (value (gadget-value sb)))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-bed-region sb)
-    (declare (ignore y1 y2))
-    (multiple-value-bind (y1 y2 y3) (scroll-bar/thumb-bed* sb)
-      (declare (ignore y1))
-      (let ((y4 (scroll-bar/map-value-to-coordinate sb value)))
-        (make-rectangle* x1 y4 x2 (+ y4 (- y3 y2)))))))
 
 ;;;; event handler
 
@@ -957,9 +950,8 @@ response to scroll wheel events."))
                       (mapcar #'(lambda (item) (position item (generic-list-pane-item-values gadget) :test test))
                               (gadget-value gadget))))))))
 
-(defgeneric generic-list-pane-item-strings (generic-list-pane))
-
-(defmethod generic-list-pane-item-strings ((pane generic-list-pane))
+(defun generic-list-pane-item-strings (pane)
+  (check-type pane generic-list-pane)
   (with-slots (item-strings) pane
     (or item-strings
         (setf item-strings
@@ -970,17 +962,15 @@ response to scroll wheel events."))
                                    (princ-to-string s)))) ;defensive programming!
                    (list-pane-items pane))))))
 
-(defgeneric generic-list-pane-item-values (generic-list-pane))
-
-(defmethod generic-list-pane-item-values ((pane generic-list-pane))
+(defun generic-list-pane-item-values (pane)
+  (check-type pane generic-list-pane)
   (with-slots (item-values) pane
     (or item-values
         (setf item-values
               (map 'vector (list-pane-value-key pane) (list-pane-items pane))))))
 
-(defgeneric generic-list-pane-items-width (generic-list-pane))
-
-(defmethod generic-list-pane-items-width ((pane generic-list-pane))
+(defun generic-list-pane-items-width (pane)
+  (check-type pane generic-list-pane)
   (with-slots (items-width) pane
     (or items-width
         (setf items-width
@@ -989,24 +979,24 @@ response to scroll wheel events."))
                                  (generic-list-pane-item-strings pane))
                       :initial-value 0)))))
 
-(defgeneric generic-list-pane-items-length (generic-list-pane))
-
-(defmethod generic-list-pane-items-length ((pane generic-list-pane))
+(defun generic-list-pane-items-length (pane)
+  (check-type pane generic-list-pane)
   (with-slots (items-length) pane
     (or items-length
         (setf items-length
               (length (generic-list-pane-item-strings pane))))))
 
-(defgeneric generic-list-pane-item-height (generic-list-pane))
-
-(defmethod generic-list-pane-item-height ((pane generic-list-pane))
+(defun generic-list-pane-item-height (pane)
+  (check-type pane generic-list-pane)
   (text-style-height (pane-text-style pane) pane))
 
-(defmethod visible-items ((pane generic-list-pane))
+(defun visible-items (pane)
+  (check-type pane generic-list-pane)
   (or (slot-value pane 'visible-items)
       (generic-list-pane-items-length pane)))
 
-(defmethod (setf visible-items) (new-value (pane generic-list-pane))
+(defun (setf visible-items) (new-value pane)
+  (check-type pane generic-list-pane)
   (setf (slot-value pane 'visible-items) new-value)
   (change-space-requirements pane)
   (repaint-sheet pane +everywhere+))
@@ -1330,9 +1320,7 @@ if INVOKE-CALLBACK is given."))
   (setf (slot-value gadget 'current-label)
         (generic-option-pane-compute-label-from-value gadget new-value)))
 
-(defgeneric generic-option-pane-widget-size (pane))
-
-(defmethod generic-option-pane-widget-size (pane)
+(defun generic-option-pane-widget-size (pane)
   ;; We now always make the widget occupying a square.
   (let ((h (bounding-rectangle-height pane)))
     (values h h)))
@@ -1391,9 +1379,7 @@ if INVOKE-CALLBACK is given."))
                             :height total-height
                             :max-height +fill+)))
 
-(defgeneric generic-option-pane-draw-widget (pane))
-
-(defmethod generic-option-pane-draw-widget (pane)
+(defun generic-option-pane-draw-widget (pane)
   (with-bounding-rectangle* (x0 y0 x1 y1) pane
     (declare (ignore x0))
     (multiple-value-bind (widget-width widget-height)

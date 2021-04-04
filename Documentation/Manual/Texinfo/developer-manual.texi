@@ -217,7 +217,6 @@ POINTER (port.lisp or pointer.lisp)
 -----------------------------------
 ;;; Originally in CLIM
 pointer-button-state
-pointer-modifier-state
 pointer-position
 @end verbatim
 

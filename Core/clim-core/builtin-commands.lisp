@@ -31,7 +31,7 @@
     ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
              :value-key cadr)
              :prompt "with"
-             :default 'keyboard
+             :default 'commands
              :display-default nil))
   (if (eq kind 'keyboard)
       (format *query-io* "Input editor commands are like Emacs.~%")
@@ -45,13 +45,17 @@
         (setf command-names (sort command-names #'(lambda (a b)
                                                     (string-lessp (car a)
                                                                   (car b)))))
-        (formatting-item-list (*query-io*)
-          (loop
-             for (nil . command) in command-names
-             do (formatting-cell (*query-io*)
-                 (present command
+        (flet ((show (command stream)
+                 (present (cdr command)
                           `(command-name :command-table ,command-table)
-                          :stream *query-io*)))))))
+                          :stream stream)))
+          (format-textual-list command-names #'show :stream *query-io*)
+          (princ "." *query-io*)
+          nil))))
+
+(define-command (com-quit :command-table global-command-table :name "Quit")
+    ()
+  (frame-exit *application-frame*))
 
 
 ;;; Describe command.  I don't know if this should go in the global command
@@ -414,30 +418,35 @@
                (unread-gesture gesture :stream stream))
              (return (values object ptype))))))
 
+(defun substitute-read-with-accept-p (stream)
+  (or (typep stream 'input-editing-stream)
+      (typep stream 'extended-input-stream)))
 
+;;; FIXME shouldn't we patch these symbols instead of redefining functions?
+;;; -- jd 2021-03-26
 (with-system-redefinition-allowed
-    (defun read (&optional (stream *standard-input*)
-                   (eof-error-p t)
-                   (eof-value nil)
-                   (recursivep nil))
-      (if (typep stream 'input-editing-stream)
-          (let ((*eof-error-p* eof-error-p)
-                (*eof-value* eof-value)
-                (*recursivep* recursivep))
-            (accept '((expression) :auto-activate t :preserve-whitespace nil)
-                    :stream stream :prompt nil))
-          (funcall *sys-read* stream eof-error-p eof-value recursivep)))
+
+  (defun read (&optional (stream *standard-input*)
+                 (eof-error-p t)
+                 (eof-value nil)
+                 (recursivep nil))
+    (if (substitute-read-with-accept-p stream)
+        (let ((*eof-error-p* eof-error-p)
+              (*eof-value* eof-value)
+              (*recursivep* recursivep))
+          (accept '((expression) :auto-activate t :preserve-whitespace nil)
+                  :stream stream :prompt nil))
+        (funcall *sys-read* stream eof-error-p eof-value recursivep)))
 
   (defun read-preserving-whitespace (&optional (stream *standard-input*)
                                        (eof-error-p t)
                                        (eof-value nil)
                                        (recursivep nil))
-    (if (typep stream 'input-editing-stream)
+    (if (substitute-read-with-accept-p stream)
         (let ((*eof-error-p* eof-error-p)
               (*eof-value* eof-value)
               (*recursivep* recursivep))
           (accept '((expression) :auto-activate t :preserve-whitespace t)
                   :stream stream :prompt nil))
         (funcall *sys-read-preserving-whitespace*
-                 stream eof-error-p eof-value recursivep)))
-) ; with-system-redefinition-allowed
+                 stream eof-error-p eof-value recursivep))))

@@ -51,7 +51,7 @@
     (setf panes (append panes
                         '((%pointer-documentation%
                            pointer-documentation-pane)))))
-  `(defmethod generate-panes ((fm frame-manager) (frame ,class-name))
+  `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
@@ -229,7 +229,6 @@
           :current-layout    ',current-layout
           :layouts           ',layouts
           :resize-frame      ',resize-frame
-          :top-level         (list ',(car top-level) ,@(cdr top-level))
           :top-level-lambda  (lambda (,frame-arg)
                                (,(car top-level) ,frame-arg
                                 ,@(cdr top-level)))

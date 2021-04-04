@@ -309,10 +309,9 @@
             (gcontext-picture mirror gc)
           (declare (ignore source-pixmap))
           ;; Sync the picture-clip-mask with that of the gcontext.
-          (unless  (eq (xlib:picture-clip-mask (drawable-picture mirror))
-                       (xlib:gcontext-clip-mask gc))
-            (setf (xlib:picture-clip-mask (drawable-picture mirror))
-                  (xlib:gcontext-clip-mask gc)))
+          (when-let ((clip (xlib:gcontext-clip-mask gc)))
+            (unless (eq (xlib:picture-clip-mask (drawable-picture mirror)) clip)
+              (setf (xlib:picture-clip-mask (drawable-picture mirror)) clip)))
           (xlib:render-composite-glyphs (drawable-picture mirror)
                                         glyph-set
                                         source-picture
@@ -376,8 +375,8 @@
   (declare (ignore align-x align-y))
   ;; Sync the picture-clip-mask with that of the gcontext.
   (when-let ((clip (xlib:gcontext-clip-mask gc)))
-    (unless (eq (xlib:picture-clip-mask (drawable-picture mirror)) clip))
-    (setf (xlib:picture-clip-mask (drawable-picture mirror)) clip))
+    (unless (eq (xlib:picture-clip-mask (drawable-picture mirror)) clip)
+      (setf (xlib:picture-clip-mask (drawable-picture mirror)) clip)))
   (loop
     with glyph-tr = (multiple-value-bind (x0 y0)
                         (transform-position tr 0 0)
