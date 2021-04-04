@@ -20,7 +20,7 @@
 (in-package :clim-null)
 
 (defclass null-medium (basic-medium)
-  ((buffering-output-p :accessor medium-buffering-output-p)))
+  ())
 
 (defmethod (setf medium-text-style) :before (text-style (medium null-medium))
   (declare (ignore text-style))
@@ -34,35 +34,26 @@
   (declare (ignore region))
   nil)
 
-(defmethod medium-copy-area ((from-drawable null-medium)
-			     from-x from-y width height
-                             (to-drawable null-medium)
-			     to-x to-y)
-  (declare (ignore from-x from-y width height to-x to-y))
+(defclass null-pixmap ()
+  ((width  :initarg :width  :reader pixmap-width)
+   (height :initarg :height :reader pixmap-height)
+   (depth  :initarg :depth  :reader pixmap-depth)))
+
+(defmethod allocate-pixmap ((medium null-medium) width height)
+  (make-instance 'null-pixmap :width width :height height :depth 32))
+
+(defmethod deallocate-pixmap ((pixmap null-pixmap))
   nil)
 
-#+nil ; FIXME: PIXMAP class
-(progn
-  (defmethod medium-copy-area ((from-drawable null-medium)
-			       from-x from-y width height
-			       (to-drawable pixmap)
-			       to-x to-y)
-    (declare (ignore from-x from-y width height to-x to-y))
-    nil)
-
-  (defmethod medium-copy-area ((from-drawable pixmap)
-			       from-x from-y width height
-			       (to-drawable null-medium)
-			       to-x to-y)
-    (declare (ignore from-x from-y width height to-x to-y))
-    nil)
-
-  (defmethod medium-copy-area ((from-drawable pixmap)
-			       from-x from-y width height
-			       (to-drawable pixmap)
-			       to-x to-y)
-    (declare (ignore from-x from-y width height to-x to-y))
-    nil))
+(macrolet ((frob (from-class to-class)
+             `(defmethod medium-copy-area ((from-drawable ,from-class)
+                                           from-x from-y width height
+                                           (to-drawable ,to-class)
+                                           to-x to-y))))
+  (frob null-medium null-medium)
+  (frob null-medium null-pixmap)
+  (frob null-pixmap null-medium)
+  (frob null-pixmap null-pixmap))
 
 (defmethod medium-draw-point* ((medium null-medium) x y)
   (declare (ignore x y))
@@ -168,14 +159,6 @@
                               toward-x toward-y transform-glyphs)
   (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
   nil)
-
-#+nil
-(defmethod medium-buffering-output-p ((medium null-medium))
-  t)
-
-#+nil
-(defmethod (setf medium-buffering-output-p) (buffer-p (medium null-medium))
-  buffer-p)
 
 (defmethod medium-finish-output ((medium null-medium))
   nil)

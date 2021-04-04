@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Places, inspection methods and commands for symbols and packages.
-;;;
+;;; Places, inspection methods and commands for symbols.
 
 (cl:in-package #:clouseau)
 
@@ -17,25 +16,48 @@
 (defun symbol-state (symbol package)
   (nth-value 1 (find-symbol (symbol-name symbol) package)))
 
-(declaim (inline package-locked?))
-(defun package-locked? (package)
+(declaim (inline package-locked-p))
+(defun package-locked-p (package)
   #+sbcl (sb-ext:package-locked-p package)
   #-sbcl nil)
+
+(defun symbol-package-locked-p (symbol)
+  (if-let ((package (symbol-package symbol)))
+    (package-locked-p package)
+    nil))
+
+;;; Places
 
 ;;; `symbol-slot-place'
 
 (defclass symbol-slot-place (basic-place)
   ())
 
-#+sbcl
 (defmethod supportsp :around ((place symbol-slot-place) (operation t))
-  (and (if-let ((package (symbol-package (container place))))
-         (not (package-locked? package))
-         t)
+  (and (not (symbol-package-locked-p (container place)))
        (call-next-method)))
 
 (defmethod supportsp ((place symbol-slot-place) (operation (eql 'remove-value)))
   t)
+
+;;; `symbol-package-place'
+
+(defclass symbol-package-place (symbol-slot-place)
+  ())
+
+(defmethod accepts-value-p ((place symbol-package-place) (value t))
+  (typep value '(or null package)))
+
+(defmethod value ((place symbol-package-place))
+  (symbol-package (container place)))
+
+(defmethod (setf value) ((new-value t) (place symbol-package-place))
+  (let ((symbol  (container place)))
+    (when-let ((package (value place)))
+      (unintern symbol package))
+    (when new-value
+      (import symbol new-value))
+    new-value))
 
 ;;; `symbol-value-place'
 ;;;
@@ -112,28 +134,20 @@
   (make-instance (object-state-class object place) :place place
                                                    :style :name-only))
 
-;;; Object states
+;; Object states
 
-(defclass inspected-package (inspected-instance)
-  ((%symbol-filter :initarg  :symbol-filter
-                   :accessor symbol-filter
-                   :initform nil))
-  (:default-initargs
-   :slot-style nil))
+;;; `inspected-symbol'
 
-(defmethod (setf symbol-filter) :after ((new-value t)
-                                        (object    inspected-package))
+(defclass inspected-symbol (inspected-object)
   ())
 
-(defmethod object-state-class ((object package) (place t))
-  'inspected-package)
+(defmethod object-state-class ((object symbol) (place t))
+  'inspected-symbol)
 
 ;;; Object inspection methods
 
-;;; Symbol
-
 (defmethod inspect-object-using-state :after ((object symbol)
-                                              (state  inspected-object)
+                                              (state  inspected-symbol)
                                               (style  (eql :badges))
                                               (stream t))
   (write-char #\Space stream)
@@ -146,14 +160,14 @@
            (badge stream "~(~A~)" kind)))
 
 (defmethod inspect-object-using-state ((object symbol)
-                                       (state  inspected-object)
+                                       (state  inspected-symbol)
                                        (style  (eql :expanded-body))
                                        (stream t))
   (formatting-table (stream)
     (formatting-row (stream)
-      (format-place-cells stream object 'reader-place 'symbol-name
+      (format-place-cells stream object 'deep-reader-place 'symbol-name
                           :label "Name")
-      (format-place-cells stream object 'reader-place 'symbol-package ; TODO should be mutable
+      (format-place-cells stream object 'symbol-package-place nil
                           :label "Package"))
     (formatting-row (stream)
       (format-place-cells stream object 'symbol-value-place nil
@@ -164,71 +178,29 @@
       (format-place-cells stream object 'symbol-type-place nil
                           :label "Type"))))
 
-;;; Package
+;;; Commands
 
-(defun package-symbols (package &key filter)
-  (let ((result (make-array 100 :adjustable t :fill-pointer 0)))
-    (do-external-symbols (symbol package)
-      (when (and (eq (symbol-package symbol) package)
-                 (or (not filter)
-                     (funcall filter symbol)))
-        (vector-push-extend symbol result)))
-    (sort result #'string-lessp :key #'symbol-name)))
+(flet ((mutable-and-state-is-p (object required-state)
+         (when-let* ((symbol  (object object))
+                     (package (symbol-package symbol))
+                     (state   (symbol-state symbol package)))
+           (and (not (symbol-package-locked-p symbol))
+                (eq state required-state)))))
 
-(defmethod inspect-object-using-state :after ((object package)
-                                              (state  inspected-object)
-                                              (style  (eql :badges))
-                                              (stream t))
-  (when (package-locked? object)
-    (write-char #\Space stream)
-    (badge stream "locked")))
-
-;; TODO style symbols grouped by external etc.
-(defmethod inspect-object-using-state ((object package)
-                                       (state  inspected-package)
-                                       (style  (eql :expanded-body))
-                                       (stream t))
-  (with-preserved-cursor-x (stream)
-    (formatting-table (stream)
-      (formatting-row (stream)
-        (format-place-cells stream object 'reader-place 'package-name
-                            :label "Name")
-        (format-place-cells stream object 'reader-place 'package-nicknames
-                            :label "Nicknames")
-        #+sbcl (format-place-cells stream object 'reader-place 'package-locked?
-                                   :label "Locked"))
-      (formatting-row (stream)
-        (format-place-cells stream object 'reader-place 'package-use-list
-                            :label "Uses")
-        (format-place-cells stream object 'reader-place 'package-used-by-list
-                            :label "Used by"))
-      #+sbcl (format-place-row stream object 'reader-place 'sb-ext:package-local-nicknames
-                               :label "Local nicknames")))
-
-  (print-documentation object stream)
-
-  ;; Slots (not displayed by default)
-  (call-next-method)
-
-  ;; Symbols
-  (with-section (stream) "Symbols"
-    (with-drawing-options (stream :text-size :smaller)
-      (formatting-table (stream)
-        (formatting-header (stream) "Symbol" "Value" "Function" "Type")
-
-        (flet ((symbol-row (symbol)
-                 (formatting-row (stream)
-                   (formatting-place (object 'pseudo-place symbol nil inspect* :place-var place)
-                     (formatting-cell (stream) (inspect* stream))
-                     ;; Value slot
-                     (formatting-place (symbol 'symbol-value-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))
-                     ;; Function slot
-                     (formatting-place (symbol 'symbol-function-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))
-                     ;; Type slot
-                     (formatting-place (symbol 'symbol-type-place nil present inspect)
-                       (formatting-cell (stream) (present stream) (inspect stream)))))))
-          (map nil #'symbol-row (package-symbols object :filter (symbol-filter state))))))))
-
-;; TODO command: trace all symbols
+  (macrolet
+      ((define (name required-state documentation function)
+         `(define-command (,name :command-table inspector-command-table
+                                 :name          t)
+              ((object 'inspected-symbol
+                       :gesture (:select
+                                 :priority -1
+                                 :tester ((object)
+                                          (mutable-and-state-is-p
+                                           object ,required-state))
+                                 :documentation ,documentation
+                                 :pointer-documentation ,documentation)))
+            (let* ((symbol  (object object))
+                   (package (symbol-package symbol)))
+              (,function symbol package)))))
+    (define com-export   :internal "Export symbol"   export)
+    (define com-unexport :external "Unexport symbol" unexport)))

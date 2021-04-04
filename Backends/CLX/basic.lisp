@@ -39,24 +39,6 @@
 (defclass clx-basic-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
 
-(declaim (inline round-coordinate))
-(defun round-coordinate (x)
-  "Function used for rounding coordinates."
-  ;; We use "mercantile rounding", instead of the CL round to nearest
-  ;; even number, when in doubt.
-  ;;
-  ;; Reason: As the CLIM drawing model is specified, you quite often
-  ;; want to operate with coordinates, which are multiples of 1/2.
-  ;; Using CL:ROUND gives you "random" results. Using "mercantile
-  ;; rounding" gives you consistent results.
-  ;;
-  ;; Note that CLIM defines pixel coordinates to be at the corners,
-  ;; while in X11 they are at the centers. We don't do much about the
-  ;; discrepancy, but rounding up at half pixel boundaries seems to
-  ;; work well.
-  (floor (+ x .5)))
-
-
 (defun clx-error-handler (display error-name
 			  &rest args
 			  &key major asynchronous &allow-other-keys)

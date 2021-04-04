@@ -367,7 +367,8 @@
           old-tb-state tb-state
           old-tb-y1 tb-y1
           old-tb-y2 tb-y2
-          all-new-p nil) ))
+          all-new-p nil)
+    (medium-force-output scroll-bar)))
 
 (defun scroll-bar/compute-display (scroll-bar value)
   (with-slots (up-state dn-state tb-state tb-y1 tb-y2

@@ -73,14 +73,15 @@
   (declare (ignore frame))
   t)
 
-;;; XXX These should force the redisplay of the menu bar. They don't yet.
-
 (defmethod note-command-enabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name t)
   nil)
 
 (defmethod note-command-disabled (frame-manager frame command-name)
-  (declare (ignore frame-manager frame command-name))
+                                        ;(declare (ignore frame-manager frame command-name))
+  (declare (ignore frame-manager))
+  (menu-bar-refresh-command frame command-name nil)
   nil)
 
 (declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
@@ -408,7 +409,7 @@ documentation produced by presentations.")
   (when (and (or width height)
              (not (and width height)))
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (with-inhibited-dispatch-repaint ()
+  (with-inhibited-repaint-sheet ()
     (let ((pane (frame-panes frame)))
       (when (and (null width) (null height))
         (let (;;I guess this might be wrong. --GB 2004-06-01
@@ -1151,7 +1152,7 @@ alive.")
                               *application-frame*
                               stream
                               x y
-                              :for-menu t))
+                              :for-menu :for-documentation))
             (other-modifiers nil))
         (loop for (translator) in all-translators
               for gesture = (gesture translator)

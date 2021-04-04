@@ -314,9 +314,13 @@ use of this option to @code{make-pane} or to the equivalent keywords
 in the @code{:panes} section of @code{define-application-frame}.
 There is however one instance where the @code{:scroll-bars} option is
 mention for pane creation.  We consider this to be an error in the
-specification.}  The same goes for using this option together with the
-equivalent keyword, i.e., @code{:application} or @code{interactor}, in
-the @code{:panes} section of @code{define-application-frame}.
+specification.}
+
+This does not apply for using this option together with the equivalent
+keyword, i.e., @code{:application} or @code{:interactor}, in the
+@code{:panes} section of @code{define-application-frame}, because they
+are created by the function @code{make-clim-stream-pane} which does
+specify this argument.
 
 Instead, we recommend following the examples of the specification, where
 scroll bars are added in the @code{layouts} section of

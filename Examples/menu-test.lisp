@@ -35,8 +35,20 @@
   (format *standard-output* "You pressed the File button.~%")
   (finish-output *standard-output*))
 
+(define-menu-test-command com-toggle-file ()
+  (format *standard-output* "You toggled the Kenobi button.~%")
+  (setf (command-enabled 'com-file *application-frame*)
+        (not (command-enabled 'com-file *application-frame*)))
+  (finish-output *standard-output*))
+
 (define-menu-test-command com-kenobi ()
   (format *standard-output* "You pressed the General Kenobi button.~%")
+  (finish-output *standard-output*))
+
+(define-menu-test-command com-toggle-kenobi ()
+  (format *standard-output* "You toggled the File button.~%")
+  (setf (command-enabled 'com-kenobi *application-frame*)
+        (not (command-enabled 'com-kenobi *application-frame*)))
   (finish-output *standard-output*))
 
 (define-menu-test-command com-konichiwa ()
@@ -78,6 +90,8 @@
 (define-command-table menubar-command-table
   :menu (("Buffer" :menu buffer-command-table)
          ("File"   :command com-file)
+         ("Toggle File"   :command com-toggle-file)
+         ("Toggle Kenobi" :command com-toggle-kenobi)
          ;; horizontal divider
          ("divider" :divider nil)
          ;; literal submenu (McCLIM extension)

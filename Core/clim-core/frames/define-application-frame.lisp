@@ -22,18 +22,22 @@
 
 (defun generate-pane-creation-form (name form)
   (destructuring-bind (pane &rest options) form
-    (cond ((and (null options) (listp pane)) ; Single form which is a function call
-           `(coerce-pane-name ,pane ',name))
-          ((eq pane :application) ; Standard pane denoted by a keyword (i.e `:application')
-           `(make-clim-application-pane :name ',name ,@options))
-          ((eq pane :interactor)
-           `(make-clim-interactor-pane :name ',name ,@options))
-          ((eq pane :pointer-documentation)
-           `(make-clim-pointer-documentation-pane :name ',name ,@options))
-          ((eq pane :command-menu)
-           `(make-clim-command-menu-pane :name ',name ,@options))
-          (t ; Non-standard pane designator fed to the `make-pane'
-           `(make-pane ',pane :name ',name ,@options)))))
+    (cond
+      ;; Single form which is a function call
+      ((and (null options) (listp pane))
+       `(coerce-pane-name ,pane ',name))
+      ;; Standard panes denoted by a keyword
+      ((eq pane :application)
+       `(make-clim-application-pane :name ',name ,@options :scroll-bars :both))
+      ((eq pane :interactor)
+       `(make-clim-interactor-pane :name ',name ,@options :scroll-bars :vertical))
+      ((eq pane :pointer-documentation)
+       `(make-clim-pointer-documentation-pane :name ',name ,@options))
+      ((eq pane :command-menu)
+       `(make-clim-command-menu-pane :name ',name ,@options))
+      ;; Non-standard pane designator passed to the `make-pane'
+      (t
+       `(make-pane ',pane :name ',name ,@options)))))
 
 ;;; FIXME The menu-bar code in the following function is incorrect.  it
 ;;; needs to be moved to somewhere after the backend, since it depends
@@ -72,7 +76,7 @@
                                      ,@(cond
                                          ((eq menu-bar t)
                                           `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar ',class-name frame 'hmenu-pane))))
+                                                  (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))))
                                          ((consp menu-bar)
                                           `((setf (frame-menu-bar-pane frame)
                                                   (make-menu-bar

@@ -131,13 +131,18 @@
       (:command value))))
 
 (defun command-name (command)
-  (first command))
+  (if (listp command)
+      (first command)
+      command))
 
 (defun command-arguments (command)
-  (rest command))
+  (if (listp command)
+      (rest command)
+      nil))
 
 (defun partial-command-p (command)
-  (member *unsupplied-argument-marker* command))
+  (and (listp command)
+       (member *unsupplied-argument-marker* command)))
 
 (defun make-command-translators (command-name command-table args)
   "Helper function to create command presentation translators for a command."

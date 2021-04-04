@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -214,7 +214,7 @@
                        :do (formatting-row (stream)
                              (formatting-place
                                  (object place-class i present inspect)
-                               (formatting-cell (stream :align-x :right)
+                               (formatting-cell (stream :align-x :right) ; TODO not yellow when read-only
                                  (present stream))
                                (formatting-cell (stream)
                                  (if (and fill-pointer (>= i fill-pointer))

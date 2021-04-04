@@ -44,9 +44,9 @@
 
 ;;; CLX-MEDIUM class
 
-(defclass clx-medium (basic-medium
-                      multiline-text-medium-mixin
-                      font-rendering-medium-mixin)
+(defclass clx-medium (multiline-text-medium-mixin
+                      font-rendering-medium-mixin
+                      basic-medium)
   ((gc :initform nil)
    (last-medium-device-region :initform nil
                               :accessor last-medium-device-region)
@@ -65,8 +65,11 @@
     (when gc
       (let ((old-text-style (medium-text-style medium)))
         (unless (eq text-style old-text-style)
-          (setf (xlib:gcontext-font gc)
-                (text-style-mapping (port medium) (medium-text-style medium))))))))
+          (let ((fn (text-style-mapping (port medium) (medium-text-style medium))))
+            ;;  This hack is really ugly. There really should be a better way to
+            ;;  handle this.
+            (when (typep fn 'xlib:font)
+              (setf (xlib:gcontext-font gc) fn))))))))
 
 ;;; Translate from CLIM styles to CLX styles.
 (defun translate-cap-shape (clim-shape)
@@ -152,6 +155,7 @@
             (setf (xlib:gcontext-line-style gc) :solid)))))))
 
 (defmethod (setf medium-transformation) :around (transformation (medium clx-medium))
+  (declare (ignore transformation))
   (let ((old-tr     (medium-transformation medium))
         (line-style (medium-line-style medium))
         (new-tr     (call-next-method)))
@@ -177,15 +181,13 @@
        (xlib:draw-rectangle mask mask-gc x1 y1 width height t)))
     (clim:standard-polygon
      (let ((coord-seq (climi::expand-point-seq (polygon-points clipping-region))))
-       (with-transformed-positions
-           ((medium-native-transformation medium) coord-seq)
-         (setq coord-seq (map 'vector #'round-coordinate coord-seq))
-         (xlib:draw-lines mask mask-gc
-                          (concatenate 'vector
-                                       coord-seq
-                                       (vector (elt coord-seq 0)
-                                               (elt coord-seq 1)))
-                          :fill-p t))))
+       (setq coord-seq (map 'vector #'round-coordinate coord-seq))
+       (xlib:draw-lines mask mask-gc
+                        (concatenate 'vector
+                                     coord-seq
+                                     (vector (elt coord-seq 0)
+                                             (elt coord-seq 1)))
+                        :fill-p t)))
     (clim:standard-ellipse
      (flet ((%draw-lines (scan-line)
               (map-over-region-set-regions
@@ -242,6 +244,8 @@
     (typecase clipping-region
       (climi::nowhere-region
        (setf (xlib:gcontext-clip-mask gc) #()))
+      (climi::everywhere-region
+       (setf (xlib:gcontext-clip-mask gc) :none))
       (clim:standard-rectangle
        (multiple-value-bind (x1 y1 width height)
            (region->clipping-values clipping-region)
@@ -289,6 +293,7 @@ specialized on class too. Keep in mind, that inks may be transformed (i.e
 translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext :before ((medium clx-medium) ink)
+  (declare (ignore ink))
   (let ((mirror (clx-drawable medium)))
     (with-slots (gc) medium
       (unless gc
@@ -584,190 +589,154 @@ translated, so they begin at different position than [0,0])."))
                                    0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
-  (let ((tr (medium-native-transformation medium)))
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (with-clx-graphics () medium
-          (let ((x1 (round-coordinate x1))
-                (y1 (round-coordinate y1))
-                (x2 (round-coordinate x2))
-                (y2 (round-coordinate y2)))
-            (cond ((and (<= #x-8000 x1 #x7FFF) (<= #x-8000 y1 #x7FFF)
-                        (<= #x-8000 x2 #x7FFF) (<= #x-8000 y2 #x7FFF))
-                   (xlib:draw-line mirror gc x1 y1 x2 y2))
-                  (t
-                   (let ((line (region-intersection (load-time-value
-                                                     (make-rectangle* #x-8000 #x-8000 #x7FFF #x7FFF))
-                                                    (make-line* x1 y1 x2 y2))))
-                     (when (linep line)
-                       (multiple-value-bind (x1 y1) (line-start-point* line)
-                         (multiple-value-bind (x2 y2) (line-end-point* line)
-                           (xlib:draw-line mirror gc
-                                           (clamp (round-coordinate x1) #x-8000 #x7FFF)
-                                           (clamp (round-coordinate y1) #x-8000 #x7FFF)
-                                           (clamp (round-coordinate x2) #x-8000 #x7FFF)
-                                           (clamp (round-coordinate y2) #x-8000 #x7FFF))))))))))))))
+  (multiple-value-bind (x1 y1 x2 y2)
+      (clipped-line (medium-native-transformation medium) x1 y1 x2 y2)
+    (when x1
+      (with-clx-graphics () medium
+        (xlib:draw-line mirror gc x1 y1 x2 y2)))))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
-  ;; TODO:
-  ;; . cons less
-  ;; . clip
   (assert (evenp (length coord-seq)))
-  (with-transformed-positions
-      ((medium-native-transformation medium) coord-seq)
-    (setq coord-seq (map 'vector #'round-coordinate coord-seq))
-    (with-clx-graphics () medium
-      (xlib:draw-lines mirror gc
-                       (if closed
-                           (concatenate 'vector
-                                        coord-seq
-                                        (vector (elt coord-seq 0)
-                                                (elt coord-seq 1)))
-                           coord-seq)
-                       :fill-p filled))))
+  (let ((tr (medium-native-transformation medium)))
+    (when-let ((coords (clipped-poly tr coord-seq closed)))
+      (with-clx-graphics () medium
+        (xlib:draw-lines mirror gc coords :fill-p filled)))))
 
 (defmethod medium-draw-rectangle* :around ((medium clx-medium) left top right bottom filled
                                            &aux (ink (medium-ink medium)))
+  (declare (ignore left top right bottom filled))
   (if (clime:indirect-ink-p ink)
       (with-drawing-options (medium :ink (clime:indirect-ink-ink ink))
         (call-next-method))
       (call-next-method)))
 
-(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled
-                                   &aux (ink (medium-ink medium)))
-  (declare (ignore ink))
+(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
   (let ((tr (medium-native-transformation medium)))
-    (with-transformed-position (tr left top)
-      (with-transformed-position (tr right bottom)
-        (with-clx-graphics () medium
-          (when (< right left) (rotatef left right))
-          (when (< bottom top) (rotatef top bottom))
-          (let ((left   (round-coordinate left))
-                (top    (round-coordinate top))
-                (right  (round-coordinate right))
-                (bottom (round-coordinate bottom)))
-            ;; To clip rectangles, we just need to clamp the coordinates
-            (xlib:draw-rectangle mirror gc
-                                 (clamp left           #x-8000 #x7FFF)
-                                 (clamp top            #x-8000 #x7FFF)
-                                 (clamp (- right left) 0       #xFFFF)
-                                 (clamp (- bottom top) 0       #xFFFF)
-                                 filled)))))))
+    (if (rectilinear-transformation-p tr)
+        (multiple-value-bind (left top width height)
+            (clipped-rect tr left top right bottom)
+          (when (and width height)
+            (with-clx-graphics () medium
+              (xlib:draw-rectangle mirror gc left top width height filled))))
+        (let* ((vector (vector left top right top right bottom left bottom
+                               left top))
+               (coords (clipped-poly tr vector nil)))
+          (with-clx-graphics () medium
+            (xlib:draw-lines mirror gc coords :fill-p filled))))))
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (let ((length (length position-seq)))
     (assert (zerop (mod length 4)))
-    (with-transformed-positions
-        ((medium-native-transformation medium) position-seq)
+    (let ((points (make-array length))
+          (index  0))
+      (do-sequence ((left top right bottom) position-seq)
+        (multiple-value-bind (min-x min-y width height)
+            (clipped-rect (medium-native-transformation medium)
+                          left top right bottom)
+          (setf (aref points (+ index 0)) min-x)
+          (setf (aref points (+ index 1)) min-y)
+          (setf (aref points (+ index 2)) width)
+          (setf (aref points (+ index 3)) height))
+        (incf index 4))
       (with-clx-graphics () medium
-        (let ((points (make-array length))
-              (index  0))
-          (do-sequence ((left top right bottom) position-seq)
-            (let ((min-x (round-coordinate left))
-                  (max-x (round-coordinate right))
-                  (min-y (round-coordinate top))
-                  (max-y (round-coordinate bottom)))
-              (setf (aref points (+ index 0)) min-x)
-              (setf (aref points (+ index 1)) min-y)
-              (setf (aref points (+ index 2)) (- max-x min-x))
-              (setf (aref points (+ index 3)) (- max-y min-y)))
-            (incf index 4))
-          (xlib:draw-rectangles mirror gc points filled))))))
+        (xlib:draw-rectangles mirror gc points filled)))))
 
 (defun %draw-rotated-ellipse (medium center-x center-y
                               radius-1-dx radius-1-dy
                               radius-2-dx radius-2-dy
                               start-angle end-angle filled)
-  (with-transformed-position
-      ((medium-native-transformation medium) center-x center-y)
-    (let ((ellipse (make-ellipse* center-x center-y
-                                  radius-1-dx radius-1-dy
-                                  radius-2-dx radius-2-dy
-                                  :start-angle start-angle :end-angle end-angle)))
-      (with-clx-graphics () medium
-        (multiple-value-bind (x1 y1 width height)
-            (region->clipping-values (bounding-rectangle ellipse))
-          (labels ((ellipse-border-p (ellipse x-orig y-orig)
-                     (with-slots (climi::tr climi::start-angle climi::end-angle) ellipse
-                       (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
-                         (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
-                              (or (null climi::start-angle)
-                                  (climi::arc-contains-angle-p
-                                   (climi::%ellipse-position->angle ellipse x-orig y-orig)
-                                   climi::start-angle climi::end-angle))))))
-                   (draw-point (x y)
-                     (if (< (line-style-thickness line-style) 2)
-                         (let ((x (round-coordinate x))
-                               (y (round-coordinate y)))
-                           (xlib:draw-point mirror gc x y))
-                         (let* ((radius (/ (line-style-thickness line-style) 2))
-                                (min-x (round-coordinate (- x radius)))
-                                (min-y (round-coordinate (- y radius)))
-                                (max-x (round-coordinate (+ x radius)))
-                                (max-y (round-coordinate (+ y radius))))
-                           (xlib:draw-arc mirror gc min-x min-y
-                                          (- max-x min-x) (- max-y min-y)
-                                          0 (* 2 pi) t))))
-                   (maybe-draw-border-points (line)
-                     (multiple-value-bind (lx1 ly1) (line-start-point* line)
-                       (when (ellipse-border-p ellipse lx1 ly1) (draw-point lx1 ly1)))
+  (let ((ellipse (make-ellipse* center-x center-y
+                                radius-1-dx radius-1-dy
+                                radius-2-dx radius-2-dy
+                                :start-angle start-angle :end-angle end-angle)))
+    (with-clx-graphics () medium
+      (multiple-value-bind (x1 y1 width height)
+          (region->clipping-values (bounding-rectangle ellipse))
+        (labels ((ellipse-border-p (ellipse x-orig y-orig)
+                   (with-slots (climi::tr climi::start-angle climi::end-angle) ellipse
+                     (multiple-value-bind (x y) (untransform-position climi::tr x-orig y-orig)
+                       (and (<= (- 1.0 .05) (+ (* x x) (* y y)) (+ 1.0 .05))
+                            (or (null climi::start-angle)
+                                (climi::arc-contains-angle-p
+                                 (climi::%ellipse-position->angle ellipse x-orig y-orig)
+                                 climi::start-angle climi::end-angle))))))
+                 (draw-point (x y)
+                   (if (< (line-style-thickness line-style) 2)
+                       (let ((x (round-coordinate x))
+                             (y (round-coordinate y)))
+                         (xlib:draw-point mirror gc x y))
+                       (let* ((radius (/ (line-style-thickness line-style) 2))
+                              (min-x (round-coordinate (- x radius)))
+                              (min-y (round-coordinate (- y radius)))
+                              (max-x (round-coordinate (+ x radius)))
+                              (max-y (round-coordinate (+ y radius))))
+                         (xlib:draw-arc mirror gc min-x min-y
+                                        (- max-x min-x) (- max-y min-y)
+                                        0 (* 2 pi) t))))
+                 (maybe-draw-border-points (line)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* line)
+                     (when (ellipse-border-p ellipse lx1 ly1) (draw-point lx1 ly1)))
+                   (multiple-value-bind (lx2 ly2) (line-end-point* line)
+                     (when (ellipse-border-p ellipse lx2 ly2) (draw-point lx2 ly2))))
+                 (draw-line-1 (line)
+                   (multiple-value-bind (lx1 ly1) (line-start-point* line)
                      (multiple-value-bind (lx2 ly2) (line-end-point* line)
-                       (when (ellipse-border-p ellipse lx2 ly2) (draw-point lx2 ly2))))
-                   (draw-line-1 (line)
-                     (multiple-value-bind (lx1 ly1) (line-start-point* line)
-                       (multiple-value-bind (lx2 ly2) (line-end-point* line)
-                         (xlib:draw-line mirror gc
-                                         (round-coordinate lx1)
-                                         (round-coordinate ly1)
-                                         (round-coordinate lx2)
-                                         (round-coordinate ly2)))))
-                   (draw-lines (scan-line)
-                     ;; XXX: this linep masks a problem with region-intersection.
-                     (when (linep scan-line)
-                       (cond
-                         ((region-equal scan-line +nowhere+))
-                         (filled (map-over-region-set-regions #'draw-line-1 scan-line))
-                         (t (map-over-region-set-regions #'maybe-draw-border-points scan-line))))))
-            ;; O(n+m) because otherwise we may skip some points (better drawing quality)
-            (progn                      ;if (<= width height)
-              (loop for x from x1 to (+ x1 width) do
-                   (draw-lines (region-intersection
-                                ellipse
-                                (make-line* x y1 x (+ y1 height)))))
-              (loop for y from y1 to (+ y1 height) do
-                   (draw-lines (region-intersection
-                                ellipse
-                                (make-line* x1 y (+ x1 width) y)))))))))))
+                       (xlib:draw-line mirror gc
+                                       (round-coordinate lx1)
+                                       (round-coordinate ly1)
+                                       (round-coordinate lx2)
+                                       (round-coordinate ly2)))))
+                 (draw-lines (scan-line)
+                   ;; XXX: this linep masks a problem with region-intersection.
+                   (when (linep scan-line)
+                     (cond
+                       ((region-equal scan-line +nowhere+))
+                       (filled (map-over-region-set-regions #'draw-line-1 scan-line))
+                       (t (map-over-region-set-regions #'maybe-draw-border-points scan-line))))))
+          ;; O(n+m) because otherwise we may skip some points (better drawing quality)
+          (progn                      ;if (<= width height)
+            (loop for x from x1 to (+ x1 width) do
+              (draw-lines (region-intersection
+                           ellipse
+                           (make-line* x y1 x (+ y1 height)))))
+            (loop for y from y1 to (+ y1 height) do
+              (draw-lines (region-intersection
+                           ellipse
+                           (make-line* x1 y (+ x1 width) y))))))))))
 
 ;;; Round the parameters of the ellipse so that it occupies the expected pixels
 (defmethod medium-draw-ellipse* ((medium clx-medium) center-x center-y
-                                 radius-1-dx radius-1-dy
-                                 radius-2-dx radius-2-dy
+                                 rdx1 rdy1 rdx2 rdy2
                                  start-angle end-angle filled)
-  (if (or (= radius-2-dx radius-1-dy 0) (= radius-1-dx radius-2-dy 0))
-      (with-transformed-position
-          ((medium-native-transformation medium) center-x center-y)
-        (let* ((arc-angle (- end-angle start-angle))
-               (arc-angle (if (< arc-angle 0)
-                              (+ (* pi 2) arc-angle)
-                              arc-angle)))
-          (with-clx-graphics () medium
-            (let* ((radius-dx (abs (+ radius-1-dx radius-2-dx)))
-                   (radius-dy (abs (+ radius-1-dy radius-2-dy)))
-                   (min-x (round-coordinate (- center-x radius-dx)))
-                   (min-y (round-coordinate (- center-y radius-dy)))
-                   (max-x (round-coordinate (+ center-x radius-dx)))
-                   (max-y (round-coordinate (+ center-y radius-dy))))
-              (xlib:draw-arc mirror gc
-                             min-x min-y (- max-x min-x) (- max-y min-y)
-                             (mod start-angle (* 2 pi)) arc-angle
-                             filled)))))
-      ;; Implementation scans for vertial or horizontal lines to get the
-      ;; intersection. That is O(n), which is much better than naive O(n2).
-      (%draw-rotated-ellipse medium center-x center-y
-                             radius-1-dx radius-1-dy
-                             radius-2-dx radius-2-dy
-                             start-angle end-angle filled)))
+  (let ((tr (medium-native-transformation medium)))
+    (with-transformed-position (tr center-x center-y)
+      (climi::with-transformed-distance (tr rdx2 rdy2)
+        (climi::with-transformed-distance (tr rdx1 rdy1)
+          (if (or (= rdx2 rdy1 0) (= rdx1 rdy2 0))
+              (let* ((arc-angle (- end-angle start-angle))
+                     (arc-angle (if (< arc-angle 0)
+                                    (+ (* pi 2) arc-angle)
+                                    arc-angle)))
+                (with-clx-graphics () medium
+                  (let* ((radius-dx (abs (+ rdx1 rdx2)))
+                         (radius-dy (abs (+ rdy1 rdy2)))
+                         (min-x (round-coordinate (- center-x radius-dx)))
+                         (min-y (round-coordinate (- center-y radius-dy)))
+                         (max-x (round-coordinate (+ center-x radius-dx)))
+                         (max-y (round-coordinate (+ center-y radius-dy))))
+                    (xlib:draw-arc mirror gc
+                                   min-x min-y (- max-x min-x) (- max-y min-y)
+                                   (mod start-angle (* 2 pi)) arc-angle
+                                   filled))))
+              ;; Implementation scans for vertial or horizontal lines to get
+              ;; the intersection. That is O(n), which is much better than
+              ;; naive O(n2). This implementation may be numerically unstable
+              ;; due to rounding errors. Until we introduce better rendering
+              ;; mechanism we'll do the best we could without interruptint the
+              ;; user program.
+              (%draw-rotated-ellipse medium center-x center-y
+                                     rdx1 rdy1 rdx2 rdy2
+                                     start-angle end-angle filled)))))))
 
 (defmethod medium-draw-circle* ((medium clx-medium)
                                 center-x center-y radius start-angle end-angle
@@ -826,10 +795,8 @@ translated, so they begin at different position than [0,0])."))
           (declare (type xlib:array-index i j))
           (setq char (char-code (char src i)))
           (if (or (< char min-char-index) (> char max-char-index))
-              (progn
-                (warn "Character ~S not representable in font ~S"
-                      (char src i) afont)
-                (return i))
+              ;; Character is not representable in the font.
+              (return i)
               (setf (aref dst j) char)))
         (do ((i src-start (xlib::index+ i 1))
              (j dst-start (xlib::index+ j 1))
@@ -843,10 +810,8 @@ translated, so they begin at different position than [0,0])."))
           (if (or (not (integerp elt))
                   (< elt min-char-index)
                   (> elt max-char-index))
-              (progn
-                (warn "Thing ~S not representable in font ~S"
-                      (elt src i) afont)
-                (return i))
+              ;; Thing is not representable in the font.
+              (return i)
               (setf (aref dst j) elt))))))
 
 (defmethod medium-draw-text* ((medium clx-medium) string x y
@@ -879,12 +844,6 @@ translated, so they begin at different position than [0,0])."))
           (transform-position merged-transform x y)
         (xlib:draw-glyphs mirror gc (truncate (+ x 0.5)) (truncate (+ y 0.5)) string
                           :start start :end end :translate #'translate :size 16)))))
-
-(defmethod medium-buffering-output-p ((medium clx-medium))
-  t)
-
-(defmethod (setf medium-buffering-output-p) (buffer-p (medium clx-medium))
-  buffer-p)
 
 
 ;;; Other Medium-specific Output Functions
@@ -922,14 +881,4 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
 
-;;;  This hack is really ugly. There really should be a better way to
-;;;  handle this.
-(defmethod (setf medium-text-style) :before (text-style (medium clx-medium))
-  (with-slots (gc) medium
-    (when gc
-      (let ((old-text-style (medium-text-style medium)))
-        (unless (eq text-style old-text-style)
-          (let ((fn (text-style-mapping (port medium) (medium-text-style medium))))
-            (when (typep fn 'xlib:font)
-              (setf (xlib:gcontext-font gc)
-                    fn))))))))
+

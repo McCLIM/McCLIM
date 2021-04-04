@@ -20,4 +20,4 @@ jobs:
     
     - name: run McCLIM Tests
       shell: bash
-      run: ros -e '(ql:quickload :mcclim/test)' -e '(if (clim-tests:run-tests) (uiop:quit 0) (uiop:quit 123))'
+      run: ros -e '(handler-case (ql:quickload :mcclim/test) (error () (uiop:quit 123)))' -e '(if (clim-tests:run-tests) (uiop:quit 0) (uiop:quit 123))'
