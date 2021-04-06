@@ -1,6 +1,6 @@
 (in-package :clim-gtk)
 
-(defclass gtk-frame-manager (frame-manager)
+(defclass gtk-frame-manager (climi::standard-frame-manager)
   ())
 
 (defmethod adopt-frame :after ((fm gtk-frame-manager) (frame application-frame))
