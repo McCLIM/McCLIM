@@ -1005,17 +1005,19 @@
 (defun spacing-p (pane)
   (typep pane 'spacing-pane))
 
-(defmethod compose-space ((pane spacing-pane) &key width height)
-  (declare (ignore width height))
+(defmethod compose-space ((pane spacing-pane) &key (width 100) (height 100))
   (with-slots (border-width) pane
-    (let ((sr (call-next-method)))
+    (let* ((delta (* 2 border-width))
+           (width (max (- width delta) delta))
+           (height (max (- height delta) delta))
+           (sr (call-next-method pane :width width :height height)))
       (make-space-requirement
-       :width (+ (* 2 border-width) (space-requirement-width sr))
-       :height (+ (* 2 border-width) (space-requirement-height sr))
-       :min-width (+ (* 2 border-width) (space-requirement-min-width sr))
-       :min-height (+ (* 2 border-width) (space-requirement-min-height sr))
-       :max-width (+ (* 2 border-width) (space-requirement-max-width sr))
-       :max-height (+ (* 2 border-width) (space-requirement-max-height sr))))))
+       :width (+ delta (space-requirement-width sr))
+       :height (+ delta (space-requirement-height sr))
+       :min-width (+ delta (space-requirement-min-width sr))
+       :min-height (+ delta (space-requirement-min-height sr))
+       :max-width (+ delta (space-requirement-max-width sr))
+       :max-height (+ delta (space-requirement-max-height sr))))))
 
 (defmethod allocate-space ((pane spacing-pane) width height)
   (resize-sheet pane width height)
