@@ -36,7 +36,7 @@
   (finish-output *standard-output*))
 
 (define-menu-test-command com-toggle-file ()
-  (format *standard-output* "You toggled the Kenobi button.~%")
+  (format *standard-output* "You toggled the File button.~%")
   (setf (command-enabled 'com-file *application-frame*)
         (not (command-enabled 'com-file *application-frame*)))
   (finish-output *standard-output*))
@@ -46,7 +46,7 @@
   (finish-output *standard-output*))
 
 (define-menu-test-command com-toggle-kenobi ()
-  (format *standard-output* "You toggled the File button.~%")
+  (format *standard-output* "You toggled the Kenobi button.~%")
   (setf (command-enabled 'com-kenobi *application-frame*)
         (not (command-enabled 'com-kenobi *application-frame*)))
   (finish-output *standard-output*))
