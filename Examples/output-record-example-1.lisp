@@ -78,7 +78,7 @@
   (loop for child in (children record)
         do (clim:with-bounding-rectangle* (min-x min-y max-x max-y) child
              (when (and (<= min-x x max-x) (<= min-y y max-y))
-               (funcall function function-args)))))
+               (apply function child function-args)))))
 
 ;;; For this example application, we define a single type of displayed
 ;;; output record.  It is called CIRCLE-OUTPUT-RECORD because it

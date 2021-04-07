@@ -281,7 +281,7 @@
 (defmethod initialize-instance :after ((table standard-table-output-record)
                                        &rest initargs)
   (declare (ignore initargs))
-  (unless (slot-boundp table 'multiple-columns-x-spacing)
+  (when (null (slot-value table 'multiple-columns-x-spacing))
     (setf (slot-value table 'multiple-columns-x-spacing)
           (slot-value table 'x-spacing))))
 

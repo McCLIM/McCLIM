@@ -11,6 +11,7 @@
 * Tab Layout::
 * Fonts and Extended Text Styles::
 * Raster Images::
+* Additional arguments to drawing functions::
 @end menu
 
 @node Frame and sheet icons
@@ -394,3 +395,11 @@ image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
 An image describing the output to the @code{stream-var} stream will be
 returned as an rgba pattern (of class @code{clime:image-pattern}).
 @end defmac
+
+@node Additional arguments to drawing functions
+@section Additional arguments to drawing functions
+
+Functions @code{draw-arrow} and @code{draw-arrow*} can take a
+@code{:head-filled} keyword argument, which is a generalized boolean,
+and is false by default.  If true, any arrow heads are filled in;
+otherwise, they are drawn as lines.

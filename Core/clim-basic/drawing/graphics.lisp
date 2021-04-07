@@ -576,13 +576,15 @@
 (defun draw-arrow (sheet point-1 point-2
                    &rest args
                    &key ink clipping-region transformation
-                     line-style line-thickness
-                     line-unit line-dashes line-cap-shape
-                     (to-head t) from-head (head-length 10) (head-width 5) angle)
+                        line-style line-thickness
+                        line-unit line-dashes line-cap-shape
+                        (to-head t) from-head (head-length 10) (head-width 5)
+                        (head-filled nil) angle)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape
-                   to-head from-head head-length head-width angle))
+                   to-head from-head head-length head-width
+                   head-filled angle))
   (multiple-value-bind (x1 y1) (point-position point-1)
     (multiple-value-bind (x2 y2) (point-position point-2)
       (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
@@ -592,7 +594,8 @@
                     &key ink clipping-region transformation
                          line-style line-thickness
                          line-unit line-dashes line-cap-shape
-                         (to-head t) from-head (head-length 10) (head-width 5) angle)
+                         (to-head t) from-head (head-length 10) (head-width 5)
+                         (head-filled nil) angle)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
@@ -631,8 +634,9 @@
                (tip-to-peak (+ head-length
                                offset
                                (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
-          (when to-head   (incf p offset))
-          (when from-head (decf q offset))
+          (when (not head-filled)
+            (when to-head   (incf p offset))
+            (when from-head (decf q offset)))
           (if (and to-head
                    from-head
                    (< (abs (- start end)) (* 2 tip-to-peak)))
@@ -644,7 +648,7 @@
                                      (/ start 2) width
                                      start 0
                                      (/ start 2) (- width))
-                               :filled t
+                               :filled head-filled
                                :line-thickness 0))
               (progn
                 (when to-head
@@ -652,17 +656,20 @@
                                  (list (+ p head-length) (- width/2)
                                        p 0
                                        (+ p head-length) width/2)
-                                 :filled nil
+                                 :filled head-filled
                                  :closed nil))
                 (when from-head
                   (draw-polygon* sheet
                                  (list (- q head-length) (- width/2)
                                        q 0
                                        (- q head-length) width/2)
-                                 :filled nil
+                                 :filled head-filled
                                  :closed nil))
 
                 (unless (< q p)
+                  (when head-filled
+                    (when to-head   (incf p offset))
+                    (when from-head (decf q offset)))
                   (draw-line* sheet q 0 p 0)))))))))
 
 (defun draw-oval (sheet center-pt x-radius y-radius

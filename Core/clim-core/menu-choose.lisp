@@ -343,6 +343,13 @@ maximum size according to `frame')."
   ;; Nothing.
   nil)
 
+(define-gesture-name menu-choose-exit :keyboard :escape)
+
+(defvar *menu-choose-abort-gestures*
+  (list 'menu-choose-exit)
+  "A list of gesture names that serve as additional abort gestures for
+`menu-choose-from-drawer'.")
+
 ;; Spec function.
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
@@ -357,7 +364,9 @@ maximum size according to `frame')."
                                       :y-position y-position)
   ;; The menu is enabled (make visible) after the size is adjusted.
   (enable-menu menu)
-  (let ((*pointer-documentation-output* pointer-documentation))
+  (let ((*pointer-documentation-output* pointer-documentation)
+        (*abort-gestures* (append *menu-choose-abort-gestures*
+                                  *abort-gestures*)))
     (handler-case
         (with-input-context (`(or ,presentation-type blank-area) :override t)
             (object type event)
