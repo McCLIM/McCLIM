@@ -745,9 +745,12 @@ is run for the last time"))
   ())
 
 (defun accepting-values-default-command ()
-  (loop
-   (read-gesture :stream *accepting-values-stream*)))
-
+  (let ((queue (frame-event-queue *application-frame*)))
+    (loop
+     (read-gesture :stream *accepting-values-stream*)
+     (loop for event = (event-queue-read-no-hang queue)
+           while event
+           do (handle-event (event-sheet event) event)))))
 
 ;;;; notify-user
 
