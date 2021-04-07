@@ -38,6 +38,10 @@
 (defconstant +clx-clip+
   (load-time-value (make-rectangle* #x-8000 #x-8000 #x7FFF #x7FFF)))
 
+;;; FIXME it is undefined behavior when we provide (valid) coordinates that do
+;;; not fall inside the drawable region. Experiments show that rendering works
+;;; fine for rectangles and breaks for polygons. -- jd 2021-04-07
+
 (defun clipped-line (tr x1 y1 x2 y2)
   (with-round-positions (tr x1 y1 x2 y2)
     (if (and (<= #x-8000 x1 #x7FFF) (<= #x-8000 y1 #x7FFF)
@@ -69,15 +73,24 @@
                          (vector (elt coords 0) (elt coords 1))))
         (let* ((src-poly (make-polygon* coords))
                (dst-poly (region-intersection +clx-clip+ src-poly)))
-          (unless (region-equal dst-poly +nowhere+)
-            (climi::collect (result)
-              (map-over-polygon-coordinates
-               (lambda (x y)
-                 (result (round-coordinate x)
-                         (round-coordinate y)))
-               dst-poly)
-              (when closed
-                (let ((point (elt (polygon-points dst-poly) 0)))
-                  (result (round-coordinate (point-x point))
-                          (round-coordinate (point-y point)))))
-              (result)))))))
+          (flet ((disassemble-polygon (polygon)
+                   (climi::collect (result)
+                     (map-over-polygon-coordinates
+                      (lambda (x y)
+                        (result (round-coordinate x)
+                                (round-coordinate y)))
+                      polygon)
+                     (when closed
+                       (let ((point (elt (polygon-points polygon) 0)))
+                         (result (round-coordinate (point-x point))
+                                 (round-coordinate (point-y point)))))
+                     (result))))
+            (etypecase dst-poly
+              (polygon
+               (disassemble-polygon dst-poly))
+              (climi::nowhere-region
+               nil)
+              (standard-region-union
+               (loop for r in (region-set-regions dst-poly :normalize t)
+                     collect (disassemble-polygon r) into result
+                     finally (return (values result t))))))))))

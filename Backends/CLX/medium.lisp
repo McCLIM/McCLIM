@@ -601,12 +601,19 @@ translated, so they begin at different position than [0,0])."))
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((tr (medium-native-transformation medium)))
-    (when-let ((coords (clipped-poly tr coord-seq closed)))
-      (with-clx-graphics () medium
-        (xlib:draw-lines mirror gc coords :fill-p filled)))))
+    (multiple-value-bind (coords unionp)
+        (clipped-poly tr coord-seq closed)
+      (when coords
+        (with-clx-graphics () medium
+          (flet ((draw-it (coords)
+                   (xlib:draw-lines mirror gc coords :fill-p filled)))
+            (if unionp
+                (mapcar #'draw-it coords)
+                (draw-it coords))))))))
 
-(defmethod medium-draw-rectangle* :around ((medium clx-medium) left top right bottom filled
-                                           &aux (ink (medium-ink medium)))
+(defmethod medium-draw-rectangle* :around
+    ((medium clx-medium) left top right bottom filled
+     &aux (ink (medium-ink medium)))
   (declare (ignore left top right bottom filled))
   (if (clime:indirect-ink-p ink)
       (with-drawing-options (medium :ink (clime:indirect-ink-ink ink))
