@@ -11,7 +11,7 @@
 ;;; Package definitions for the DREI editing component.
 
 (cl:defpackage #:drei-buffer
-  (:use #:clim-lisp #:flexichain #:binseq #:esa-utils)
+  (:use #:clim-lisp #:flexichain #:binseq #:esa-utils #:esa-io)
   (:import-from #:esa #:esa-command-table)
   (:export #:buffer #:standard-buffer
            #:mark #:left-sticky-mark #:right-sticky-mark
@@ -167,7 +167,7 @@ characters."))
   contents."))
 
 (cl:defpackage #:drei
-  (:use #:clim-lisp #:clim-sys #:clim #:drei-buffer #:drei-base #:drei-abbrev
+  (:use #:clim-lisp #:clim-sys #:clim #:drei-buffer #:drei-base #:drei-abbrev #:drei-undo
         #:drei-syntax #:flexichain #:esa-buffer #:esa
         #:esa-utils #:drei-kill-ring)
   (:import-from #:climi #:change-stream-space-requirements)
