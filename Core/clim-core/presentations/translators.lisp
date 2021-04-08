@@ -693,13 +693,14 @@ a presentation"
 
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
-  (when-let ((event (stream-gesture-available-p stream)))
-    (let ((sheet (event-sheet event)))
-      (when (or (and (typep event 'pointer-event)
-                     (or prefer-pointer-window
-                         (eq stream sheet)))
-                (typep event 'keyboard-event))
-        (frame-input-context-track-pointer frame input-context sheet event)))))
+  (when-let* ((event (stream-gesture-available-p stream))
+              (sheet (typecase event
+                       (pointer-event
+                        (event-sheet event))
+                       (keyboard-event
+                        (pointer-sheet (port-pointer (port stream)))))))
+    (when (or prefer-pointer-window (eq stream sheet))
+      (frame-input-context-track-pointer frame input-context sheet event))))
 
 ;;; FIXME missing functions
 ;;;
