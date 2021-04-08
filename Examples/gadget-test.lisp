@@ -215,7 +215,7 @@
                            (list 0.20 0.09 0.60 0.20)))))
 
 (defmethod note-sheet-grafted ((sheet radar-pane))
-  (clim-internals::schedule-timer-event sheet 'radiate 0.1))
+  (clime:schedule-event sheet (make-instance 'timer-event :sheet sheet) 0.1))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
   (with-slots (points) pane
@@ -251,4 +251,4 @@
                                  rx 0
                                  :ink +black+ :filled nil)))))))))
   (when (sheet-grafted-p pane)
-    (clim-internals::schedule-timer-event pane 'radiate 0.1)))
+    (clime:schedule-event pane (make-instance 'timer-event :sheet pane) 0.1)))

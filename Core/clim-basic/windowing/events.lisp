@@ -271,9 +271,7 @@
 (define-event-class window-manager-focus-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
-  ((token
-    :initarg :token
-    :reader  event-token)))
+  ())
 
 ;;; Constants dealing with events
 

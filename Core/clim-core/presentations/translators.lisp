@@ -131,8 +131,8 @@ and used to ensure that presentation-translators-caches are up to date.")
               (declare (ignore ,object-arg))
               ,@body)))
         (t
-         `(lambda (,(car args) &key ,@(cdr args) &allow-other-keys)
-            (declare (ignorable ,(car args)))
+         `(lambda (,(first args) &key ,@(rest args) &allow-other-keys)
+            (declare (ignorable ,(first args)))
             ,@body))))
 
 (defun make-documentation-fun (doc-arg)
@@ -150,16 +150,44 @@ and used to ensure that presentation-translators-caches are up to date.")
                      :stream stream :sensitive nil)))
         (t (error "Can't handle doc-arg ~S" doc-arg))))
 
+(defun compute-translator-or-action-initargs
+    (name from-type to-type gesture tester tester-definitive
+     documentation documentationp pointer-documentation pointer-documentation-p
+     menu priority arglist body)
+  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
+         (real-to-type (expand-presentation-type-abbreviation to-type)))
+    `(:name ',name
+      :from-type ',real-from-type
+      :to-type ',real-to-type
+      :gesture ,(if (eq gesture t)
+                    t
+                    `(find-gesture ',gesture))
+      :tester ,(if (symbolp tester)
+                   `',tester
+                   `(function ,(make-translator-fun (car tester) (cdr tester))))
+      :tester-definitive ',tester-definitive
+      :documentation (function ,(make-documentation-fun
+                                 (if documentationp
+                                     documentation
+                                     (command-name-from-symbol name))))
+      ,@(when pointer-documentation-p
+          `(:pointer-documentation
+            (function ,(make-documentation-fun pointer-documentation))))
+      :menu ',menu
+      :priority ,priority
+      :translator-function (function ,(make-translator-fun arglist body)))))
+
 (defmacro define-presentation-translator
-    (name (from-type to-type command-table &rest translator-options &key
-           (gesture :select)
-           (tester 'default-translator-tester testerp)
-           (tester-definitive (if testerp nil t))
-           (documentation nil documentationp)
-           (pointer-documentation nil pointer-documentation-p)
-           (menu t)
-           (priority 0)
-           (translator-class 'presentation-translator)
+    (name (from-type to-type command-table
+           &rest translator-options
+           &key (gesture :select)
+                (tester 'default-translator-tester testerp)
+                (tester-definitive (if testerp nil t))
+                (documentation nil documentationp)
+                (pointer-documentation nil pointer-documentation-p)
+                (menu t)
+                (priority 0)
+                (translator-class 'presentation-translator)
            &allow-other-keys)
      arglist
      &body body)
@@ -167,87 +195,47 @@ and used to ensure that presentation-translators-caches are up to date.")
   (unless tester
     (setq tester 'default-translator-tester)
     (setq tester-definitive t))
-  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
-         (real-to-type (expand-presentation-type-abbreviation to-type)))
+  (let ((initargs (compute-translator-or-action-initargs
+                   name from-type to-type gesture tester tester-definitive
+                   documentation documentationp
+                   pointer-documentation pointer-documentation-p
+                   menu priority arglist body)))
     (with-keywords-removed (translator-options
                             (:gesture :tester :tester-definitive :documentation
                              :pointer-documentation :menu :priority
                              :translator-class))
-      `(add-translator (presentation-translators (find-command-table ',command-table))
-                       (make-instance
-                        ',translator-class
-                        :name ',name
-                        :from-type ',real-from-type
-                        :to-type ',real-to-type
-                        :gesture ,(if (eq gesture t)
-                                      t
-                                      `(gethash ',gesture *gesture-names*))
-                        :tester ,(if (symbolp tester)
-                                     `',tester
-                                     `#',(make-translator-fun (car tester)
-                                                              (cdr tester)))
-                        :tester-definitive ',tester-definitive
-                        :documentation #',(make-documentation-fun
-                                           (if documentationp
-                                               documentation
-                                               (command-name-from-symbol
-                                                name)))
-                        ,@(when pointer-documentation-p
-                            `(:pointer-documentation
-                              #',(make-documentation-fun
-                                  pointer-documentation)))
-                        :menu ',menu
-                        :priority ,priority
-                        :translator-function #',(make-translator-fun arglist body)
-                        ,@translator-options)))))
+      `(add-translator
+        (presentation-translators (find-command-table ',command-table))
+        (make-instance ',translator-class ,@initargs ,@translator-options)))))
 
 (defmacro define-presentation-action
-    (name (from-type to-type command-table &key
-                                             (gesture :select)
-                                             (tester 'default-translator-tester)
-                                             (documentation nil documentationp)
-                                             (pointer-documentation nil pointer-documentation-p)
-                                             (menu t)
-                                             (priority 0))
+    (name (from-type to-type command-table
+           &key (gesture :select)
+                (tester 'default-translator-tester)
+                (documentation nil documentationp)
+                (pointer-documentation nil pointer-documentation-p)
+                (menu t)
+                (priority 0))
      arglist
      &body body)
-  (let* ((real-from-type (expand-presentation-type-abbreviation from-type))
-         (real-to-type (expand-presentation-type-abbreviation to-type)))
+  (let ((initargs (compute-translator-or-action-initargs
+                   name from-type to-type gesture tester t
+                   documentation documentationp
+                   pointer-documentation pointer-documentation-p
+                   menu priority arglist body)))
     `(add-translator
       (presentation-translators (find-command-table ',command-table))
-      (make-instance 'presentation-action
-                     :name ',name
-                     :from-type ',real-from-type
-                     :to-type ',real-to-type
-                     :gesture ,(if (eq gesture t)
-                                   t
-                                   `(gethash ',gesture *gesture-names*))
-                     :tester ,(if (symbolp tester)
-                                  `',tester
-                                  `#',(make-translator-fun (car tester)
-                                                           (cdr tester)))
-                     :tester-definitive t
-                     :documentation #',(make-documentation-fun
-                                        (if documentationp
-                                            documentation
-                                            (command-name-from-symbol name)))
-                     ,@(when pointer-documentation-p
-                         `(:pointer-documentation
-                           #',(make-documentation-fun pointer-documentation)))
-                     :menu ',menu
-                     :priority ,priority
-                     :translator-function #',(make-translator-fun arglist body)))))
+      (make-instance 'presentation-action ,@initargs))))
 
 (defmacro define-presentation-to-command-translator
     (name (from-type command-name command-table
-           &key
-             (gesture :select)
-             (tester 'default-translator-tester)
-             (documentation nil documentationp)
-             (pointer-documentation (command-name-from-symbol command-name))
-             (menu t)
-             (priority 0)
-             (echo t))
+           &key (gesture :select)
+                (tester 'default-translator-tester)
+                (documentation nil documentationp)
+                (pointer-documentation (command-name-from-symbol command-name))
+                (menu t)
+                (priority 0)
+                (echo t))
      arglist
      &body body)
   (let ((command-args (gensym "COMMAND-ARGS")))
@@ -271,11 +259,12 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defmacro define-selection-translator
     (name (from-type to-type command-table &rest args &key &allow-other-keys)
      arglist &body body)
-  (let* ((forbidden-args '(context-type frame event window x y))
-         (intersection (intersection arglist forbidden-args :test #'string=)))
-    (unless (null intersection)
-      (error "Selection translator ~s arglist can't have args ~a but has ~a."
-             name forbidden-args intersection)))
+  (with-current-source-form (arglist)
+    (let* ((forbidden-args '(context-type frame event window x y))
+           (intersection (intersection arglist forbidden-args :test #'string=)))
+      (unless (null intersection)
+        (error "Selection translator ~s arglist can't have args ~a but has ~a."
+               name forbidden-args intersection))))
   (with-keywords-removed (args (:translator-class :tester-definitive :gesture))
     `(define-presentation-translator ,name
          (,from-type ,to-type ,command-table
@@ -370,23 +359,20 @@ and used to ensure that presentation-translators-caches are up to date.")
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
      &key event modifier-state for-menu button)
-  (flet ((match-gesture (gesture)
-           (when (or for-menu (eq gesture t))
-             (return-from match-gesture t))
-           (if (or modifier-state button (null event))
-               (setf modifier-state (or modifier-state 0))
-               (setf modifier-state (event-modifier-state event)
-                     button (pointer-event-button event)))
-           (loop for g in gesture
-                   thereis (and (eql modifier-state (caddr g))
-                                (or (null button)
-                                    (eql button (cadr g)))))))
+  (if (or modifier-state button (null event))
+      (setf modifier-state (or modifier-state 0))
+      (setf modifier-state (event-modifier-state event)
+            button (pointer-event-button event)))
+  (when (event-data-matches-gesture-p
+         nil ; ignore type
+         (if for-menu nil button)
+         (if for-menu nil modifier-state)
+         (gesture translator))
     (let ((from-type (from-type translator))
           (to-type (to-type translator))
           (ptype (presentation-type presentation))
           (object (presentation-object presentation)))
-      (and (match-gesture (gesture translator))
-           ;; We call PRESENTATION-SUBTYPEP because applicable translators are
+      (and ;; We call PRESENTATION-SUBTYPEP because applicable translators are
            ;; matched only by the presentation type's name.
            ;;
            ;; - we are liberal with FROM-TYPE to allow translators from types
@@ -707,13 +693,14 @@ a presentation"
 
 (defun highlight-applicable-presentation (frame stream input-context
                                           &optional (prefer-pointer-window t))
-  (when-let ((event (stream-gesture-available-p stream)))
-    (let ((sheet (event-sheet event)))
-      (when (or (and (typep event 'pointer-event)
-		     (or prefer-pointer-window
-			 (eq stream sheet)))
-		(typep event 'keyboard-event))
-	(frame-input-context-track-pointer frame input-context sheet event)))))
+  (when-let* ((event (stream-gesture-available-p stream))
+              (sheet (typecase event
+                       (pointer-event
+                        (event-sheet event))
+                       (keyboard-event
+                        (pointer-sheet (port-pointer (port stream)))))))
+    (when (or prefer-pointer-window (eq stream sheet))
+      (frame-input-context-track-pointer frame input-context sheet event))))
 
 ;;; FIXME missing functions
 ;;;
