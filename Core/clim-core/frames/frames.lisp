@@ -885,25 +885,21 @@ alive.")
                                                        :pointer))
                 finally (when new-translators
                           (write-char #\. pstream))))
-      ;; Wasteful to do this after doing
-      ;; find-innermost-presentation-context above... look at doing this
-      ;; first and then doing the innermost test.
-      (let ((all-translators (find-applicable-translators
-                              (stream-output-history stream)
-                              input-context
-                              *application-frame*
-                              stream
-                              x y
-                              :for-menu :for-documentation))
-            (other-modifiers nil))
-        (loop for (translator) in all-translators
-              for gesture = (gesture translator)
-              unless (eq gesture t)
-              do (loop for (name type modifier) in gesture
-                       unless (or (eql modifier current-modifier)
-                                  ;; T means "the wildcard modifier"
-                                  (eql modifier t))
-                         do (pushnew modifier other-modifiers)))
+      ;; Wasteful to do this after doing find-innermost-presentation-context
+      ;; above... look at doing this first and then doing the innermost test.
+      (let ((other-modifiers nil))
+        (map-applicable-translators
+         (lambda (translator presentation context)
+           (declare (ignore presentation context))
+           (let ((gesture (gesture translator)))
+             (unless (eq gesture t)
+               (loop for (name type modifier) in gesture
+                     unless (or (eql modifier current-modifier)
+                                ;; T means "the wildcard modifier"
+                                (eql modifier t))
+                       do (pushnew modifier other-modifiers)))))
+         (stream-output-history stream) input-context
+         *application-frame* stream x y :for-menu :for-documentation)
         (when other-modifiers
           (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
           (terpri pstream)
