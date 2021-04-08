@@ -6,6 +6,7 @@
                "mcclim-fonts")
   :components
   ((:file "packages")
+   (:file "protocol")
    (:file "buffer" :depends-on ("packages"))
    (:file "delegating-buffer" :depends-on ("packages" "buffer"))
    (:file "motion" :depends-on ("packages" "buffer" "syntax"))
@@ -15,9 +16,10 @@
    (:file "syntax" :depends-on ("packages" "buffer" "base"))
    (:file "modes" :depends-on ("packages" "syntax"))
    (:file "views" :depends-on ("packages" "buffer" "base" "syntax" "Persistent/persistent-undo"
-                                          "Persistent/persistent-buffer" "undo" "abbrev"
-                                          "delegating-buffer" "modes"))
-   (:file "drei" :depends-on ("packages" "views" "motion" "editing"))
+                               "Persistent/persistent-buffer" "undo" "abbrev"
+                               "delegating-buffer" "modes"
+                               "protocol"))
+   (:file "drei" :depends-on ("packages" "views" "motion" "editing" "protocol"))
    (:file "drei-clim" :depends-on ("drei"))
    (:file "drei-redisplay" :depends-on ("drei-clim"))
    (:file "drawing-options" :depends-on ("drei-redisplay"))

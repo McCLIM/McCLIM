@@ -1,22 +1,12 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
-
-;;;  (c) copyright 2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2007,2008 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2008 Dave Murray <dmurray@common-lisp.net>
+;;;  (c) copyright 2009 Robert Strandh <rstrandh@common-lisp.net>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; This file contains definitions for Dreis "views", objects that are
 ;;; used as the actual content of a Drei instance. Drei displays a
@@ -26,10 +16,8 @@
 ;;; highlighting. The special buffer classes used by views are also
 ;;; defined in this file.
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Conditions.
 
 (define-condition user-condition-mixin ()
@@ -39,8 +27,6 @@ command loop and their report displayed to the user in the
 minibuffer, instead of being propagated further (and possibly
 invoking the debugger)."))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Tabify
 
 (defvar *use-tabs-for-indentation* nil
@@ -109,14 +95,12 @@ on `stream' in device units (most likely pixels).")
   (:documentation "Set the TAB-STOPS of view at the character column offsets
 in `column-list'.")
   (:method (column-list (tabify tabify-mixin))
-    (setf (tab-stops tabify) 
+    (setf (tab-stops tabify)
           (and column-list
                (sort (mapcar (lambda (col) (* col (space-width (recorded-stream tabify) tabify)))
-                             column-list) 
+                             column-list)
                      #'<)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Undo
 
 (defgeneric undo-tree (buffer)
@@ -141,7 +125,7 @@ false, so that no undo information is added as a result of an
 undo operation."))
 
 (defclass undo-mixin ()
-  ((tree :initform (make-instance 'standard-undo-tree)
+  ((tree :initform (make-instance 'drei-undo:standard-undo-tree)
          :reader undo-tree
          :documentation "Returns the undo-tree of the buffer.")
    (undo-accumulate :initform '()
@@ -157,7 +141,7 @@ inherit from. It contains an undo tree, an undo accumulator and a
 flag specifyng whether or not it is currently performing
 undo. The undo tree and undo accumulators are initially empty."))
 
-(defclass drei-undo-record (standard-undo-record)
+(defclass drei-undo-record (drei-undo:standard-undo-record)
   ((buffer :initarg :buffer
            :documentation "The buffer to which the record
 belongs."))
@@ -191,12 +175,12 @@ undo tree."))
 
 (defclass change-record (simple-undo-record)
   ((objects :initarg :objects
-            :documentation "The sequence of objects that are to 
-replace the records that are currently in the buffer at the 
-offset whenever flip-undo-record is called on an instance of 
+            :documentation "The sequence of objects that are to
+replace the records that are currently in the buffer at the
+offset whenever flip-undo-record is called on an instance of
 change-record"))
-  (:documentation "Whenever objects are modified, a 
-`change-record' containing a mark is created and added to the 
+  (:documentation "Whenever objects are modified, a
+`change-record' containing a mark is created and added to the
 undo tree."))
 
 (defclass compound-record (drei-undo-record)
@@ -270,22 +254,23 @@ all."
          (dolist (,buffer ,get-buffers-exp)
            (cond ((null (undo-accumulate ,buffer)) nil)
                  ((null (cdr (undo-accumulate ,buffer)))
-                  (add-undo (car (undo-accumulate ,buffer))
-                            (undo-tree ,buffer)))
+                  (drei-undo:add-undo (car (undo-accumulate ,buffer))
+                                      (undo-tree ,buffer)))
                  (t
-                  (add-undo (make-instance 'compound-record
-                                           :buffer ,buffer
-                                           :records (undo-accumulate ,buffer))
-                            (undo-tree ,buffer)))))))))
+                  (drei-undo:add-undo
+                   (make-instance 'compound-record
+                                  :buffer ,buffer
+                                  :records (undo-accumulate ,buffer))
+                   (undo-tree ,buffer)))))))))
 
-(defmethod flip-undo-record :around ((record drei-undo-record))
+(defmethod drei-undo:flip-undo-record :around ((record drei-undo-record))
   (with-slots (buffer) record
     (let ((performing-undo (performing-undo buffer)))
       (setf (performing-undo buffer) t)
       (unwind-protect (call-next-method)
         (setf (performing-undo buffer) performing-undo)))))
 
-(defmethod flip-undo-record ((record insert-record))
+(defmethod drei-undo:flip-undo-record ((record insert-record))
   (with-slots (buffer offset objects) record
     (let ((%buffer buffer)
           (%offset offset)
@@ -294,7 +279,7 @@ all."
                     :length (length %objects))
       (insert-buffer-sequence %buffer %offset %objects))))
 
-(defmethod flip-undo-record ((record delete-record))
+(defmethod drei-undo:flip-undo-record ((record delete-record))
   (with-slots (buffer offset length) record
     (let ((%buffer buffer)
           (%offset offset)
@@ -303,14 +288,14 @@ all."
                     :objects (buffer-sequence %buffer %offset (+ %offset %length)))
       (delete-buffer-range %buffer %offset %length))))
 
-(defmethod flip-undo-record ((record change-record))
+(defmethod drei-undo:flip-undo-record ((record change-record))
   (with-slots (buffer offset objects) record
     (loop for i from 0 below (length objects)
           do (rotatef (aref objects i) (buffer-object buffer (+ i offset))))))
 
-(defmethod flip-undo-record ((record compound-record))
+(defmethod drei-undo:flip-undo-record ((record compound-record))
   (with-slots (records) record
-    (mapc #'flip-undo-record records)
+    (mapc #'drei-undo:flip-undo-record records)
     (setf records (nreverse records))))
 
 (defgeneric clear-undo-history (undo-maintainer)
@@ -320,7 +305,7 @@ preventing the undoing to before the state of whatever
 
 (defmethod clear-undo-history ((undo-maintainer undo-mixin))
   (setf (slot-value undo-maintainer 'tree)
-        (make-instance 'standard-undo-tree)
+        (make-instance 'drei-undo:standard-undo-tree)
         (undo-accumulate undo-maintainer) '()))
 
 ;;; undo-mixin delegation (here because of the package)
@@ -343,8 +328,6 @@ preventing the undoing to before the state of whatever
 (defmethod clear-undo-history ((buffer delegating-buffer))
   (clear-undo-history (implementation buffer)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Readonly
 
 (defclass read-only-mixin ()
@@ -386,8 +369,6 @@ is made to alter a buffer which has been set read only."))
 (defmethod (setf read-only-p) (flag (buffer delegating-buffer))
   (setf (read-only-p (implementation buffer)) flag))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Single-line buffer.
 
 (defclass single-line-mixin ()
@@ -417,8 +398,6 @@ single-line buffer."))
   (when (single-line-p buffer)
     (error 'buffer-single-line :buffer buffer)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The Drei buffer.
 
 (defclass extended-standard-buffer (single-line-mixin
@@ -467,8 +446,6 @@ single-line buffer."))
   ;; state would set it to false.
   (setf (needs-saving buffer) t))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; View classes.
 
 (defclass drei-view (tabify-mixin subscriptable-name-mixin)
@@ -585,8 +562,6 @@ page up."))
   (:documentation "Scroll `view', which is displayed on `pane', a
 page up."))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Buffer view
 
 (defclass drei-buffer-view (drei-view)
@@ -897,8 +872,6 @@ must be a `drei-buffer-view'."
     (with-accessors ((lines lines)) view
       (element* lines (index-of-line-containing-offset view offset)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Syntax views
 
 (defclass drei-syntax-view (drei-buffer-view)
@@ -993,7 +966,7 @@ buffer."))
 
 (defun needs-resynchronization (view)
   "Return true if the view of the buffer of `view' is
-potentially out of date. Return false otherwise."  
+potentially out of date. Return false otherwise."
   (not (= (prefix-size view) (suffix-size view)
           (buffer-size view) (size (buffer view)))))
 

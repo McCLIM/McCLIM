@@ -1,37 +1,24 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
-
-;;;  (c) copyright 2001 by 
-;;;           Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2001 Tim Moore <moore@bricoworks.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Implementation of various bits and parts needed for Drei to
 ;;; function as the input-editor of McCLIM. Meaning, this is an
 ;;; interface between input-editing-streams and Drei instances. We
 ;;; also try not to mess too much with CLIM-INTERNALS to be somewhat
 ;;; portable (but not too much).
 
-(in-package :drei)
+(in-package #:drei)
 
-;; Note that we use `stream-scan-pointer' to access the scan pointer
-;; of the stream in the protocol methods, despite the fact that the
-;; `drei-input-editing-mixin' class does not have a scan pointer. We
-;; assume that the subclass defines a scan pointer.
+;;; Note that we use `stream-scan-pointer' to access the scan pointer
+;;; of the stream in the protocol methods, despite the fact that the
+;;; `drei-input-editing-mixin' class does not have a scan pointer. We
+;;; assume that the subclass defines a scan pointer.
 (defclass drei-input-editing-mixin ()
   ((%drei-instance :accessor drei-instance-of
                    :initarg :drei-instance)
@@ -52,9 +39,9 @@ input-editing streams. This class should not be directly
 instantiated."))
 
 (defmethod initialize-instance :after ((obj drei-input-editing-mixin)
-				       &rest args
-				       &key stream
-				       (cursor-visibility t)
+                                       &rest args
+                                       &key stream
+                                       (cursor-visibility t)
                                        (min-width 0))
   (declare (ignore min-width))
   ;;(check-type min-width (or (integer 0) (eql t)))
@@ -63,16 +50,16 @@ instantiated."))
       (stream-cursor-position stream)
     (let ((max-width (- (stream-text-margin stream) cx)))
       (with-keywords-removed (args (:initial-contents))
-	(setf (drei-instance obj)
-	      (apply #'make-instance
-		     'drei-area
-		     :editor-pane stream
-		     :x-position cx
-		     :y-position cy
-		     :active cursor-visibility
-		     :max-width max-width
+        (setf (drei-instance obj)
+              (apply #'make-instance
+                     'drei-area
+                     :editor-pane stream
+                     :x-position cx
+                     :y-position cy
+                     :active cursor-visibility
+                     :max-width max-width
                      :allow-other-keys t
-		     args)))
+                     args)))
       ;; XXX Really add it here?
       (stream-add-output-record stream (drei-instance obj)))))
 
@@ -179,9 +166,9 @@ be used outside the input-editor."))
   ;; want to permit the user to undo input for this context.
   (clear-undo-history (buffer (view (drei-instance stream)))))
 
-(defun buffer-array-mismatch (sequence1 sequence2 
+(defun buffer-array-mismatch (sequence1 sequence2
                               &key (from-end nil)
-                              (start1 0) 
+                              (start1 0)
                               (start2 0))
   "Like `cl:mismatch', but supporting fewer keyword arguments,
 and the two sequences can be Drei buffers instead."
@@ -288,15 +275,15 @@ undoable. When this function returns, the `input-buffer-array' of
     (synchronize-drei-buffer stream))
   (setf (input-buffer-array stream) nil))
 
-;; While the CLIM spec says that user-commands are not allowed to do
-;; much with the input buffer, the Franz User Guide provides some
-;; examples that hint to the opposite. How do we make modifications of
-;; the input-buffer, which must be a standard array with a fill
-;; pointer, to be applied to the "real" buffer? This is how: when this
-;; method is called, we store the object in the stream object. In the
-;; command loop, we check the stream object and update the buffer
-;; (using `update-drei-buffer') to reflect the changes done to the
-;; buffer.
+;;; While the CLIM spec says that user-commands are not allowed to do
+;;; much with the input buffer, the Franz User Guide provides some
+;;; examples that hint to the opposite. How do we make modifications of
+;;; the input-buffer, which must be a standard array with a fill
+;;; pointer, to be applied to the "real" buffer? This is how: when this
+;;; method is called, we store the object in the stream object. In the
+;;; command loop, we check the stream object and update the buffer
+;;; (using `update-drei-buffer') to reflect the changes done to the
+;;; buffer.
 (defmethod stream-input-buffer ((stream drei-input-editing-mixin))
   ;; NOTE: This is very slow (consing up a whole new array - twice!),
   ;; please do not use it unless you want to be compatible with other
@@ -308,11 +295,11 @@ undoable. When this function returns, the `input-buffer-array' of
   (input-buffer-array stream))
 
 (defmethod replace-input ((stream drei-input-editing-mixin) (new-input array)
-			  &key
-			  (start 0)
-			  (end (length new-input))
-			  (buffer-start (input-position stream))
-			  (rescan nil rescan-supplied-p))
+                          &key
+                          (start 0)
+                          (end (length new-input))
+                          (buffer-start (input-position stream))
+                          (rescan nil rescan-supplied-p))
   (check-type start integer)
   (check-type end integer)
   (check-type buffer-start integer)
@@ -359,20 +346,20 @@ and an object. The second value will be NIL if the string is
 \"acceptable\", that is, acceptable as input to the accept method
 for `type', or `object' if it isn't."
   (flet ((present-it (acceptably)
-	   (present-to-string object type
-			      :view view
-			      :acceptably acceptably
-			      :for-context-type for-context-type)))
+           (present-to-string object type
+                              :view view
+                              :acceptably acceptably
+                              :for-context-type for-context-type)))
     (let* ((acceptably t)
-	   (printed-rep nil))
+           (printed-rep nil))
       (handler-case
-	  (setq printed-rep (present-it t))
-	(error ()
-	  (setq acceptably nil)
-	  (setq printed-rep (present-it nil))))
+          (setq printed-rep (present-it t))
+        (error ()
+          (setq acceptably nil)
+          (setq printed-rep (present-it nil))))
       (values printed-rep (if acceptably
-			      nil
-			      object)))))
+                              nil
+                              object)))))
 
 (defmethod presentation-replace-input
     ((stream drei-input-editing-mixin) object type view
@@ -397,9 +384,9 @@ for `type', or `object' if it isn't."
                  printed-rep)
              args))))
 
-;; The purpose of this method is to ensure that things such as lists
-;; should are not completely inserted as literal objects if they have
-;; unreadable elements.
+;;; The purpose of this method is to ensure that things such as lists
+;;; should are not completely inserted as literal objects if they have
+;;; unreadable elements.
 (defmethod presentation-replace-input
     ((stream drei-input-editing-mixin) object (type (eql 'expression)) view
      &rest args &key
@@ -474,8 +461,8 @@ input-editing-stream. Bound when executing a command.")
 ;;; activation gesture. This kind of game seems to be needed for
 ;;; reading forms properly. -- moore
 (defmethod stream-read-gesture ((stream drei-input-editing-mixin)
-				&rest rest-args &key peek-p
-				&allow-other-keys)
+                                &rest rest-args &key peek-p
+                                &allow-other-keys)
   (with-keywords-removed (rest-args (:peek-p))
     (rescan-if-necessary stream)
     (with-accessors ((insertion-pointer stream-insertion-pointer)
@@ -535,7 +522,7 @@ input-editing-stream. Bound when executing a command.")
                do (loop-finish)))))))
 
 (defmethod stream-unread-gesture ((stream drei-input-editing-mixin)
-				  gesture)
+                                  gesture)
   (with-accessors ((scan-pointer stream-scan-pointer)
                    (activation-gesture activation-gesture)) stream
     (when (> scan-pointer 0)
@@ -615,7 +602,7 @@ if stuff is inserted after the insertion pointer."
                (values first-gesture type)))))))
 
 (defmethod stream-process-gesture ((stream drei-input-editing-mixin)
-				   gesture type)
+                                   gesture type)
   ;; Drei is not interested in the pointer gestures.
   (when (typep gesture 'pointer-event)
     (return-from stream-process-gesture
@@ -642,12 +629,12 @@ if stuff is inserted after the insertion pointer."
   (read-gestures-and-act stream gesture type))
 
 (defmethod reset-scan-pointer ((stream drei-input-editing-mixin)
-			       &optional (scan-pointer 0))
+                               &optional (scan-pointer 0))
   (setf (stream-scan-pointer stream) scan-pointer
         (stream-rescanning stream) t
         (input-position stream) (min scan-pointer (input-position stream))))
 
-;; This has been cribbed from SPLIT-SEQUENCE and lightly modified.
+;;; This has been cribbed from SPLIT-SEQUENCE and lightly modified.
 (defun split-sequence (delimiter seq &key
                                        (count nil)
                                        (remove-empty-subseqs nil)
@@ -664,20 +651,20 @@ other keywords work analogously to those for CL:SUBSTITUTE. The
 second return value is an index suitable as an argument to
 CL:SUBSEQ into the sequence indicating where processing stopped."
   (let ((len (length seq))
-        (other-keys (nconc (when test-supplied 
+        (other-keys (nconc (when test-supplied
                              (list :test test))
-                           (when test-not-supplied 
+                           (when test-not-supplied
                              (list :test-not test-not))
-                           (when key-supplied 
+                           (when key-supplied
                              (list :key key)))))
     (unless end (setq end len))
     (loop for left = start then (+ right 1)
-       for right = (min (or (apply #'position delimiter seq 
+       for right = (min (or (apply #'position delimiter seq
                                    :start left
                                    other-keys)
                             len)
                         end)
-       unless (and (= right left) 
+       unless (and (= right left)
                    remove-empty-subseqs) ; empty subseq we don't want
        if (and count (>= nr-elts count))
        ;; We can't take any more. Return now.
@@ -689,8 +676,8 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
        finally (return (values subseqs right)))))
 
 (defmethod input-editor-format ((stream drei-input-editing-mixin)
-				format-string
-				&rest format-args)
+                                format-string
+                                &rest format-args)
   "Insert a noise string at the insertion-pointer of `stream'."
   ;; Since everything inserted with this method is noise strings, we
   ;; do not bother to modify the scan pointer or queue rescans.
@@ -727,9 +714,7 @@ CL:SUBSEQ into the sequence indicating where processing stopped."
   ;; No-op, just to save older CLIM programs from dying.
   nil)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
-;;; `Add-input-editor-command'
+;;; `add-input-editor-command'
 ;;;
 ;;; The CLIM spec requires us to define a completely unusable function
 ;;; for mapping gestures to functions in the input editor. Since the
@@ -757,8 +742,6 @@ invoke the command, and the accumulated numeric argument."
            'exclusive-input-editor-table
            gestures))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Presentation type specialization.
 
 ;;; When starting out with reading `command-or-form', we use Lisp
@@ -797,7 +780,7 @@ invoke the command, and the accumulated numeric argument."
 (define-presentation-method accept ((type expression)
                                     (stream drei-input-editing-mixin)
                                     (view textual-view)
-				    &key)
+                                    &key)
   (let ((*completion-gestures* nil)
         (*possibilities-gestures* nil))
     (with-delimiter-gestures (nil :override t)

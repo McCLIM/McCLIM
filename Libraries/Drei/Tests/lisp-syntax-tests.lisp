@@ -1,24 +1,14 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2006-2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Tests for the lisp syntax.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite lisp-syntax-tests :description "The test suite for
 tests related to the Lisp syntax module. The parser is not
@@ -53,6 +43,7 @@ self-compilation test, of course).")
                       (get-object (&rest args)
                         (apply #'form-to-object (current-syntax)
                                (get-form) args)))
+               (declare (ignorable #'get-form #'get-object))
                (update-parse (current-syntax))
                ,@body)))))))
 
@@ -304,32 +295,33 @@ correct, even counting packages that cannot be found."
 (test form-to-object-7
   "Test that numbers are recognized and handled properly by the
 Lisp syntax."
-  (testing-lisp-syntax ("123")
-    (is (= 123 (get-object))))
-  (testing-lisp-syntax ("-123")
-    (is (= -123 (get-object))))
-  (testing-lisp-syntax (".123")
-    (is (= .123 (get-object))))
-  (testing-lisp-syntax ("-.123")
-    (is (= -.123 (get-object))))
-  (testing-lisp-syntax ("1.234")
-    (is (= 1.234 (get-object))))
-  (testing-lisp-syntax ("-1.234")
-    (is (= -1.234 (get-object))))
-  (testing-lisp-syntax ("1e7")
-    (is (= 1e7 (get-object))))
-  (testing-lisp-syntax ("1E7")
-    (is (= 1e7 (get-object))))
-  (testing-lisp-syntax ("1.123E7")
-    (is (= 1.123e7 (get-object))))
-  (testing-lisp-syntax ("-1.123E7")
-    (is (= -1.123e7 (get-object))))
-  (testing-lisp-syntax (".123E7")
-    (is (= .123e7 (get-object))))
-  (testing-lisp-syntax ("-.123E7")
-    (is (= -.123e7 (get-object))))
-  (testing-lisp-syntax ("1.34e-7")
-    (is (= 1.34e-7 (get-object)))))
+  (let ((*read-default-float-format* 'single-float))
+    (testing-lisp-syntax ("123")
+      (is (= 123 (get-object))))
+    (testing-lisp-syntax ("-123")
+      (is (= -123 (get-object))))
+    (testing-lisp-syntax (".123")
+      (is (= .123f0 (get-object))))
+    (testing-lisp-syntax ("-.123")
+      (is (= -.123f0 (get-object))))
+    (testing-lisp-syntax ("1.234")
+      (is (= 1.234f0 (get-object))))
+    (testing-lisp-syntax ("-1.234")
+      (is (= -1.234f0 (get-object))))
+    (testing-lisp-syntax ("1e7")
+      (is (= 1f7 (get-object))))
+    (testing-lisp-syntax ("1E7")
+      (is (= 1f7 (get-object))))
+    (testing-lisp-syntax ("1.123E7")
+      (is (= 1.123f7 (get-object))))
+    (testing-lisp-syntax ("-1.123E7")
+      (is (= -1.123f7 (get-object))))
+    (testing-lisp-syntax (".123E7")
+      (is (= .123f7 (get-object))))
+    (testing-lisp-syntax ("-.123E7")
+      (is (= -.123f7 (get-object))))
+    (testing-lisp-syntax ("1.34e-7")
+      (is (= 1.34f-7 (get-object))))))
 
 (test form-to-object-8
   "Test that the standard reader macros for numbers are
@@ -986,7 +978,7 @@ vectors."
                           &body forms-decls) ; with-output-to-string
   (declare (ignore var string element-type forms-decls)))
 
-(defmacro lisp-syntax-m2 (&key ((:a (a b c &key d))))
+(defmacro lisp-syntax-m2 (&key ((:a (a b c &key d)) '(nil nil nil)))
   (declare (ignore a b c d)))
 
 (defclass lisp-syntax-c1 ()

@@ -1,34 +1,20 @@
-;;; -*- Mode: Lisp; Package: DREI-BUFFER -*-
-
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh at labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson at fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve at free.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh at labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson at fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve at free.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; A not-so-stupid implementation of the buffer protocol.  This
 ;;; implementation serves two purposes: First, so that higher-level
 ;;; functionality can be built on top of a working implementation of
 ;;; the buffer protocol, and second, to use as a comparison for
 ;;; testing a new, better implementation of the buffer protocol.
 
-(in-package :drei-buffer)
+(in-package #:drei-buffer)
 
 (defclass buffer () ()
   (:documentation "The base class for all buffers. A buffer
@@ -81,7 +67,7 @@ offset is greater than the size of the buffer."))
 (define-condition no-such-offset (simple-error)
   ((offset :reader condition-offset :initarg :offset))
   (:report (lambda (condition stream)
-	     (format stream "No such offset: ~a" (condition-offset condition))))
+             (format stream "No such offset: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt
 is made to access buffer contents that is before the beginning or
 after the end of the buffer."))
@@ -89,21 +75,21 @@ after the end of the buffer."))
 (define-condition offset-before-beginning (no-such-offset)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Offset before beginning: ~a" (condition-offset condition))))
+             (format stream "Offset before beginning: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt is
 made to access buffer contents that is before the beginning of the buffer."))
 
 (define-condition offset-after-end (no-such-offset)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Offset after end: ~a" (condition-offset condition))))
+             (format stream "Offset after end: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt is
 made to access buffer contents that is after the end of the buffer."))
 
 (define-condition invalid-motion (simple-error)
   ((offset :reader condition-offset :initarg :offset))
   (:report (lambda (condition stream)
-	     (format stream "Invalid motion to offset: ~a" (condition-offset condition))))
+             (format stream "Invalid motion to offset: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt is
 made to move a mark before the beginning or after the end of the
 buffer."))
@@ -111,22 +97,22 @@ buffer."))
 (define-condition motion-before-beginning (invalid-motion)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Motion before beginning: ~a" (condition-offset condition))))
+             (format stream "Motion before beginning: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt is
 made to move a mark before the beginning of the buffer."))
 
 (define-condition motion-after-end (invalid-motion)
   ()
   (:report (lambda (condition stream)
-	     (format stream "Motion after end: ~a" (condition-offset condition))))
+             (format stream "Motion after end: ~a" (condition-offset condition))))
   (:documentation "This condition is signaled whenever an attempt is
 made to move a mark after the end of the buffer."))
 
 (defmethod (setf offset) (new-offset (mark mark-mixin))
   (assert (<= 0 new-offset) ()
-	  (make-condition 'motion-before-beginning :offset new-offset))
+          (make-condition 'motion-before-beginning :offset new-offset))
   (assert (<= new-offset (size (buffer mark))) ()
-	  (make-condition 'motion-after-end :offset new-offset))
+          (make-condition 'motion-after-end :offset new-offset))
   (setf (cursor-pos (cursor mark)) new-offset))
 
 (defgeneric backward-object (mark &optional count)
@@ -161,7 +147,7 @@ of the mark is greater than the size of the buffer. Returns
 
 (defclass standard-left-sticky-mark (left-sticky-mark mark-mixin) ()
   (:documentation "A left-sticky-mark subclass suitable for use in a standard-buffer"))
- 
+
 (defclass standard-right-sticky-mark (right-sticky-mark mark-mixin) ()
   (:documentation "A right-sticky-mark subclass suitable for use in a standard-buffer"))
 
@@ -169,25 +155,25 @@ of the mark is greater than the size of the buffer. Returns
   "Associates a created mark with the buffer it was created for."
   (declare (ignore args))
   (assert (<= 0 offset) ()
-	  (make-condition 'motion-before-beginning :offset offset))
+          (make-condition 'motion-before-beginning :offset offset))
   (assert (<= offset (size (buffer mark))) ()
-	  (make-condition 'motion-after-end :offset offset))
+          (make-condition 'motion-after-end :offset offset))
   (setf (slot-value mark 'cursor)
-	(make-instance 'left-sticky-flexicursor
-	   :chain (slot-value (buffer mark) 'contents)
-	   :position offset)))
+        (make-instance 'left-sticky-flexicursor
+           :chain (slot-value (buffer mark) 'contents)
+           :position offset)))
 
 (defmethod initialize-instance :after ((mark standard-right-sticky-mark) &rest args &key (offset 0))
   "Associates a created mark with the buffer it was created for."
   (declare (ignore args))
   (assert (<= 0 offset) ()
-	  (make-condition 'motion-before-beginning :offset offset))
+          (make-condition 'motion-before-beginning :offset offset))
   (assert (<= offset (size (buffer mark))) ()
-	  (make-condition 'motion-after-end :offset offset))
+          (make-condition 'motion-after-end :offset offset))
   (setf (slot-value mark 'cursor)
-	(make-instance 'right-sticky-flexicursor
-	   :chain (slot-value (buffer mark) 'contents)
-	   :position offset)))
+        (make-instance 'right-sticky-flexicursor
+           :chain (slot-value (buffer mark) 'contents)
+           :position offset)))
 
 (defgeneric make-buffer-mark (buffer &optional offset stick-to)
   (:documentation "Create a mark with the provided `offset' and
@@ -212,21 +198,21 @@ right-sticky mark should be created."))
 
 (defmethod clone-mark ((mark standard-left-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :left))
-	 (make-instance 'standard-left-sticky-mark
-	    :buffer (buffer mark) :offset (offset mark)))
-	((eq stick-to :right)
-	 (make-instance 'standard-right-sticky-mark
-	    :buffer (buffer mark) :offset (offset mark)))
-	(t (error "invalid value for stick-to"))))
+         (make-instance 'standard-left-sticky-mark
+            :buffer (buffer mark) :offset (offset mark)))
+        ((eq stick-to :right)
+         (make-instance 'standard-right-sticky-mark
+            :buffer (buffer mark) :offset (offset mark)))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod clone-mark ((mark standard-right-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :right))
-	 (make-instance 'standard-right-sticky-mark
-	    :buffer (buffer mark) :offset (offset mark)))
-	((eq stick-to :left)
-	 (make-instance 'standard-left-sticky-mark
-	    :buffer (buffer mark) :offset (offset mark)))
-	(t (error "invalid value for stick-to"))))
+         (make-instance 'standard-right-sticky-mark
+            :buffer (buffer mark) :offset (offset mark)))
+        ((eq stick-to :left)
+         (make-instance 'standard-left-sticky-mark
+            :buffer (buffer mark) :offset (offset mark)))
+        (t (error "invalid value for stick-to"))))
 
 (defgeneric size (buffer)
   (:documentation "Return the number of objects in the buffer."))
@@ -240,7 +226,7 @@ newline characters."))
 
 (defmethod number-of-lines ((buffer standard-buffer))
   (loop for offset from 0 below (size buffer)
-	count (eql (buffer-object buffer offset) #\Newline)))
+        count (eql (buffer-object buffer offset) #\Newline)))
 
 (defgeneric mark< (mark1 mark2)
   (:documentation "Return T if the offset of `mark1' is strictly
@@ -392,7 +378,7 @@ no preceding newline character exists. Returns `mark'."))
 
 (defmethod beginning-of-line ((mark mark-mixin))
   (loop until (beginning-of-line-p mark)
-	do (backward-object mark)))
+        do (backward-object mark)))
 
 (defgeneric end-of-line (mark)
   (:documentation "Move the mark to the end of the line. The mark
@@ -406,11 +392,11 @@ following newline character exists. Returns `mark'."))
 
 (defmethod end-of-line ((mark mark-mixin))
   (let* ((offset (offset mark))
-	 (buffer (buffer mark))
-	 (size (size buffer)))
+         (buffer (buffer mark))
+         (size (size buffer)))
     (loop until (or (= offset size)
-		    (eql (buffer-object buffer offset) #\Newline))
-	  do (incf offset))
+                    (eql (buffer-object buffer offset) #\Newline))
+          do (incf offset))
     (setf (offset mark) offset)))
 
 (defgeneric buffer-line-number (buffer offset)
@@ -419,7 +405,7 @@ are numbered from zero."))
 
 (defmethod buffer-line-number ((buffer standard-buffer) (offset integer))
   (loop for i from 0 below offset
-	count (eql (buffer-object buffer i) #\Newline)))
+        count (eql (buffer-object buffer i) #\Newline)))
 
 (defgeneric buffer-column-number (buffer offset)
   (:documentation "Return the column number of the offset. The
@@ -429,9 +415,9 @@ buffer if the offset is on the first line of the buffer."))
 
 (defmethod buffer-column-number ((buffer standard-buffer) (offset integer))
   (loop for i downfrom offset
-	while (> i 0)
-	until (eql (buffer-object buffer (1- i)) #\Newline)
-	count t))
+        while (> i 0)
+        until (eql (buffer-object buffer (1- i)) #\Newline)
+        count t))
 
 (defgeneric line-number (mark)
   (:documentation "Return the line number of the mark.  Lines are
@@ -471,20 +457,20 @@ inserted object."))
 
 (defmethod insert-buffer-object ((buffer standard-buffer) offset object)
   (assert (<= 0 offset) ()
-	  (make-condition 'offset-before-beginning :offset offset))
+          (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset))
+          (make-condition 'offset-after-end :offset offset))
   (insert* (contents buffer) offset object))
 
 (defgeneric insert-buffer-sequence (buffer offset sequence)
   (:documentation "Like calling insert-buffer-object on each of
 the objects in the sequence."))
-      
+
 (defmethod insert-buffer-sequence ((buffer standard-buffer) offset sequence)
   (assert (<= 0 offset) ()
-	  (make-condition 'offset-before-beginning :offset offset))
+          (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset))
+          (make-condition 'offset-after-end :offset offset))
   (insert-vector* (contents buffer) offset sequence))
 
 (defgeneric insert-object (mark object)
@@ -511,9 +497,9 @@ signaled."))
 
 (defmethod delete-buffer-range ((buffer standard-buffer) offset n)
   (assert (<= 0 offset) ()
-	  (make-condition 'offset-before-beginning :offset offset))
+          (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset))
+          (make-condition 'offset-after-end :offset offset))
   (assert (<= (+ offset n) (size buffer)) ()
           (make-condition 'offset-after-end :offset (+ offset n)))
   (delete-elements* (contents buffer) offset n))
@@ -525,8 +511,8 @@ delete-buffer-range, provided that `n' is not zero."))
 
 (defmethod delete-range ((mark mark-mixin) &optional (n 1))
   (cond ((plusp n) (delete-buffer-range (buffer mark) (offset mark) n))
-	((minusp n) (delete-buffer-range (buffer mark) (+ (offset mark) n) (- n)))
-	(t nil)))
+        ((minusp n) (delete-buffer-range (buffer mark) (+ (offset mark) n) (- n)))
+        (t nil)))
 
 (defgeneric delete-region (mark1 mark2)
   (:documentation "Delete the objects in the buffer that are
@@ -563,9 +549,9 @@ greater than or equal to the size of the buffer, a
 
 (defmethod buffer-object ((buffer standard-buffer) offset)
   (assert (<= 0 offset) ()
-	  (make-condition 'offset-before-beginning :offset offset))
+          (make-condition 'offset-before-beginning :offset offset))
   (assert (<= offset (1- (size buffer))) ()
-	  (make-condition 'offset-after-end :offset offset))
+          (make-condition 'offset-after-end :offset offset))
   (element* (contents buffer) offset))
 
 (defgeneric (setf buffer-object) (object buffer offset)
@@ -591,19 +577,19 @@ sequence will be returned."))
 
 (defmethod buffer-sequence ((buffer standard-buffer) offset1 offset2)
   (assert (<= 0 offset1) ()
-	  (make-condition 'offset-before-beginning :offset offset1))
+          (make-condition 'offset-before-beginning :offset offset1))
   (assert (<= offset1 (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset1))
+          (make-condition 'offset-after-end :offset offset1))
   (assert (<= 0 offset2) ()
-	  (make-condition 'offset-before-beginning :offset offset2))
+          (make-condition 'offset-before-beginning :offset offset2))
   (assert (<= offset2 (size buffer)) ()
-	  (make-condition 'offset-after-end :offset offset2))
+          (make-condition 'offset-after-end :offset offset2))
   (if (< offset1 offset2)
       (loop with result = (make-array (- offset2 offset1))
-	    for offset from offset1 below offset2
-	    for i upfrom 0
-	    do (setf (aref result i) (buffer-object buffer offset))
-	    finally (return result))
+            for offset from offset1 below offset2
+            for i upfrom 0
+            do (setf (aref result i) (buffer-object buffer offset))
+            finally (return result))
       (make-array 0)))
 
 (defun buffer-substring (buffer start end)
@@ -643,7 +629,7 @@ an offset in place of one of the marks. This function calls
 (defmethod region-to-sequence ((mark1 mark-mixin) (mark2 mark-mixin))
   (assert (eq (buffer mark1) (buffer mark2)))
   (let ((offset1 (offset mark1))
-	(offset2 (offset mark2)))
+        (offset2 (offset mark2)))
     (when (> offset1 offset2)
       (rotatef offset1 offset2))
     (buffer-sequence (buffer mark1) offset1 offset2)))

@@ -1,34 +1,22 @@
-;;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX; -*-
-
-;;;  (c) copyright 2005-2007 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;           David Murray (splittist@yahoo.com)
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005-2007 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2005-2007 David Murray <splittist@yahoo.com>
+;;;  (c) copyright 2005-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; An implementation of some of the editor-centric functionality of
 ;;; the Lisp syntax using calls to Swank functions.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
 (defclass swank-local-image ()
   ())
 
-;; We need these modules loaded.
+;;; We need these modules loaded.
 (eval-when (:compile-toplevel :load-toplevel :execute)
   ;; Oh my! This is so we "gracefully" handle older Swanks that do not
   ;; have `swank-require'. We just hope they have the symbols we need
@@ -36,8 +24,8 @@
   (ignore-errors (swank::swank-require :swank-c-p-c)
                  (swank::swank-require :swank-arglists)))
 
-;; If this file is loaded, make local Swank the default way of
-;; interacting with the image.
+;;; If this file is loaded, make local Swank the default way of
+;;; interacting with the image.
 
 (defmethod shared-initialize :after
     ((obj lisp-syntax) slot-names &key)
@@ -97,9 +85,9 @@ anything itself (for example if it is not a Lisp syntax)."
 
 (defmethod get-class-keyword-parameters ((image swank-local-image) class)
   (declare (ignore image))
-  (loop for arg in (swank::extra-keywords/make-instance 'make-instance class)
-     collect (list (list (swank::keyword-arg.keyword arg) (swank::keyword-arg.arg-name arg))
-                   (swank::keyword-arg.default-arg arg))))
+  (loop for arg in (swank::extra-keywords/make-instance 'make-instance (list class))
+        collect (list (list (swank::keyword-arg.keyword arg) (swank::keyword-arg.arg-name arg))
+                      (swank::keyword-arg.default-arg arg))))
 
 (defmethod arglist ((image swank-local-image) (symbol symbol))
   (declare (ignore image))

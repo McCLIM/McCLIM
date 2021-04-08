@@ -1,30 +1,18 @@
-;;; -*- Mode: Lisp; Package: DREI-CORE -*-
-
-;;;  (c) copyright 2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2007,2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Facilities and protocols for iterating through view objects, the
 ;;; point being that the view may be magically exchanged for some
 ;;; other view, permitting easy iteration through multiple views as a
 ;;; single sequence. This is meant to support Climacs' Group-facility,
 ;;; I'm not sure what else it could be used for.
 
-(in-package :drei-core)
+(in-package #:drei-core)
 
 (defclass target-specification ()
   ((%drei :reader drei-instance-of
@@ -75,7 +63,7 @@ if `preceding-targets-p' is false."))
   ()
   (:report (lambda (condition stream)
              (declare (ignore condition))
-	     (format stream "No more targets available for iteration")))
+             (format stream "No more targets available for iteration")))
   (:documentation "Signal that there are no more targets
 available for iteration, either forward or backwards in the
 sequence of targets."))

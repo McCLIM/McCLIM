@@ -1,26 +1,14 @@
-;;; -*- mode: lisp -*-
-;;; 
-;;; (c) copyright 2005 by Aleksandar Bakic (a_bakic@yahoo.com)
-;;; 
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Part of the Undo protocol that works with persistent buffers
 
-(in-package :drei-undo)
+(in-package #:drei-undo)
 
 (defclass p-undo-mixin ()
   ((tree :initform (make-instance 'standard-undo-tree) :reader undo-tree)
@@ -33,9 +21,9 @@
 (defun save-p-undo-record (buffer)
   (unless (performing-undo buffer)
     (push (make-instance
-	   'p-undo-record
-	   :buffer buffer
-	   :contents (slot-value buffer 'drei-buffer::contents))
+           'p-undo-record
+           :buffer buffer
+           :contents (slot-value buffer 'drei-buffer::contents))
      (undo-accumulate buffer))))
 
 (defmethod insert-buffer-object :before ((buffer p-undo-mixin) offset object)
@@ -61,5 +49,5 @@
      (drei-buffer::cursors buffer)
      #'(lambda (c) (flexichain::weak-pointer-value c))
      #'(lambda (wpc)
-	 (setf (cursor-pos wpc)
-	       (max 0 (min (cursor-pos wpc) (1- (size buffer)))))))))
+         (setf (cursor-pos wpc)
+               (max 0 (min (cursor-pos wpc) (1- (size buffer)))))))))

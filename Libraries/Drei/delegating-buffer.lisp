@@ -1,26 +1,15 @@
-;;; -*- mode: lisp -*-
-;;; 
-;;; (c) copyright 2005 by Aleksandar Bakic (a_bakic@yahoo.com)
-;;; 
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; A buffer class that allows for specifying buffer implementation at
+;;; run time.
 
-;;; Buffer class that allows for specifying buffer implementation at run time.
-
-(in-package :drei-buffer)
+(in-package #:drei-buffer)
 
 (defclass delegating-buffer (buffer)
   ((%implementation :reader implementation
@@ -77,7 +66,7 @@ in the `implementation' slot."))
   ()
   (:documentation "A `left-sticky-mark' subclass suitable for use
 in a `delegating-buffer'."))
- 
+
 (defclass delegating-right-sticky-mark (right-sticky-mark delegating-mark)
   ()
   (:documentation "A `right-sticky-mark' subclass suitable for
@@ -85,25 +74,25 @@ use in a `delegating-buffer'."))
 
 (defmethod clone-mark ((mark delegating-left-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :left))
-	 (make-instance 'delegating-left-sticky-mark
+         (make-instance 'delegating-left-sticky-mark
           :implementation (clone-mark (implementation mark) :left)
           :buffer (buffer mark)))
-	((eq stick-to :right)
-	 (make-instance 'delegating-right-sticky-mark
+        ((eq stick-to :right)
+         (make-instance 'delegating-right-sticky-mark
           :implementation (clone-mark (implementation mark) :right)
           :buffer (buffer mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod clone-mark ((mark delegating-right-sticky-mark) &optional stick-to)
   (cond ((or (null stick-to) (eq stick-to :right))
          (make-instance 'delegating-right-sticky-mark
           :implementation (clone-mark (implementation mark) :right)
           :buffer (buffer mark)))
-	((eq stick-to :left)
-	 (make-instance 'delegating-left-sticky-mark
+        ((eq stick-to :left)
+         (make-instance 'delegating-left-sticky-mark
           :implementation (clone-mark (implementation mark) :left)
           :buffer (buffer mark)))
-	(t (error "invalid value for stick-to"))))
+        (t (error "invalid value for stick-to"))))
 
 (defmethod make-buffer-mark ((buffer delegating-buffer)
                              &optional (offset 0) (stick-to :left))

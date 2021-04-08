@@ -1,26 +1,15 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Tests for the editing functionality.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite editing-tests :description "The test suite for
 DREI-EDITING related tests." :in drei-tests)
@@ -91,7 +80,7 @@ DREI-EDITING related tests." :in drei-tests)
                                   ,initial-offset ,initial-contents
                                   ,after-contents
                                   ',kill-ring-end-contents)))
-      `(progn 
+      `(progn
          (test ,forward-delete
            (with-drei-environment (:initial-contents ,initial-contents)
              (with-buffer-action-test-functions
@@ -245,7 +234,7 @@ And it should be fixed.
 
 This is the last paragraph." ("I am testing paragraphs.
 
-Paragraphs are seperated by double newlines."))) 
+Paragraphs are seperated by double newlines.")))
                        (("I am testing paragraphs.
 
 Paragraphs are seperated by double newlines.
@@ -332,7 +321,7 @@ This is the last paragraph.")
                ,initial-offset ,stickto ,initial-contents
                ,after-contents
                ',kill-ring-end-contents)))
-      `(progn 
+      `(progn
          (test ,transpose
            (with-buffer-action-test-functions
              ,(make-transposition-test-function-case transpose 0 at-beginning-contents nil)

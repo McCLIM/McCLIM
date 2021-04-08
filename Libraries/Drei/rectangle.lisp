@@ -1,26 +1,14 @@
-;;; -*- Mode: Lisp; Package: DREI-CORE -*-
-
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Implementation of rectangle editing.
 
-(in-package :drei-core)
+(in-package #:drei-core)
 
 (defvar *killed-rectangle* nil
   "The killed rectangle as a list of lines.")
@@ -126,7 +114,7 @@ inhabited by it with the contents of `string'."
   "Yank the killed rectangle, positioning the upper left corner at
 current point."
   (let ((insert-column (column-number mark)))
-    (dolist (line rectangle) 
+    (dolist (line rectangle)
       (move-to-column mark insert-column t)
       (insert-sequence mark line)
       (unless (forward-line mark (syntax view) 1 nil)

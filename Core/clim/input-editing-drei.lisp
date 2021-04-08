@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
 
-;;;  (c) copyright 2001 by 
+;;;  (c) copyright 2001 by
 ;;;           Tim Moore (moore@bricoworks.com)
 ;;;  (c) copyright 2006 by
 ;;;           Troels Henriksen (athas@sigkill.dk)
@@ -18,8 +18,8 @@
 ;;; Library General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+;;; License along with this library; if not, write to the
+;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;;; Boston, MA  02111-1307  USA.
 
 ;;; Finalize input editing code by defining the stuff that actually
@@ -74,9 +74,6 @@ activated with GESTURE"))
 
 (defmethod activate-stream ((stream standard-input-editing-stream) gesture)
   (setf (drei::activation-gesture stream) gesture))
-
-(define-condition rescan-condition (condition)
-  ())
 
 (defmethod finalize ((stream drei:drei-input-editing-mixin)
                      input-sensitizer)
@@ -136,7 +133,7 @@ activated with GESTURE"))
   (drei:drei-instance stream))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Presentation type history support
 ;;;
 ;;; Presentation histories are pretty underspecified, so we have to

@@ -1,34 +1,18 @@
-;;; -*- Mode: Lisp; Package: DREI-COMMANDS -*-
-
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2007,2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Search commands for Drei.
 
-;;; Search commands for Drei. 
-
-(in-package :drei-commands)
+(in-package #:drei-commands)
 
 (defun simple-search (drei-instance search-function
                       targets more-targets-predicate more-targets-fn)
@@ -53,8 +37,6 @@
   (simple-search drei-instance search-function targets
                  #'preceding-targets-p #'previous-target))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; String search
 
 (define-command (com-string-search :name t :command-table search-table)
@@ -75,8 +57,6 @@ If found, leaves point before string. If not, leaves point where it is."
                             (search-backward mark string
                              :test (case-relevant-test string)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Word search
 
 (define-command (com-word-search :name t :command-table search-table)
@@ -95,8 +75,6 @@ If found, leaves point before the word. If not, leaves point where it is."
                         #'(lambda (mark)
                             (search-backward mark word))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Incremental search
 
 (make-command-table 'isearch-drei-table :errorp nil)
@@ -127,10 +105,10 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (defun isearch-from-mark (drei-instance mark string forwardp)
   (let* ((mark2 (clone-mark mark))
-	 (success (funcall (if forwardp #'search-forward #'search-backward)
-			   mark2
-			   string
-			   :test (case-relevant-test string)))
+         (success (funcall (if forwardp #'search-forward #'search-backward)
+                           mark2
+                           string
+                           :test (case-relevant-test string)))
          (state (first (isearch-states drei-instance))))
     (if success
         (setf (offset (point)) (offset mark2)
@@ -152,14 +130,14 @@ If found, leaves point before the word. If not, leaves point where it is."
                      (setf (offset (point)) (offset (search-mark state)))
                      nil))))
     (display-message "~:[Failing ~;~]Isearch~:[ backward~;~]: ~A"
-		     success forwardp (display-string string))
+                     success forwardp (display-string string))
     (push (make-instance 'isearch-state
            :search-string string
            :search-mark mark
            :search-forward-p forwardp
            :search-success-p success
            :targets (targets state))
-	  (isearch-states drei-instance))
+          (isearch-states drei-instance))
     (unless success
       (beep))
     success))
@@ -169,16 +147,16 @@ If found, leaves point before the word. If not, leaves point where it is."
   (isearch-command-loop (drei-instance) t))
 
 (set-key 'com-isearch-forward
-	 'search-table
-	 '((#\s :control)))
+         'search-table
+         '((#\s :control)))
 
 (define-command (com-isearch-backward :name t :command-table search-table) ()
   (display-message "Isearch backward: ")
   (isearch-command-loop (drei-instance) nil))
 
 (set-key 'com-isearch-backward
-	 'search-table
-	 '((#\r :control)))
+         'search-table
+         '((#\r :control)))
 
 (defun isearch-append-char (char)
   (let* ((states (isearch-states (drei-instance)))
@@ -199,19 +177,19 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (defun isearch-append-text (movement-function)
   (let* ((states (isearch-states (drei-instance)))
-	 (start (clone-mark (point)))
-	 (mark (clone-mark (search-mark (first states))))
-	 (forwardp (search-forward-p (first states))))
+         (start (clone-mark (point)))
+         (mark (clone-mark (search-mark (first states))))
+         (forwardp (search-forward-p (first states))))
     (funcall movement-function (point))
     (let* ((start-offset (offset start))
-	   (point-offset (offset (point)))
-	   (string (concatenate 'string
-				(search-string (first states))
-				(buffer-substring (current-buffer)
-						  start-offset
-						  point-offset))))
+           (point-offset (offset (point)))
+           (string (concatenate 'string
+                                (search-string (first states))
+                                (buffer-substring (current-buffer)
+                                                  start-offset
+                                                  point-offset))))
       (unless (or forwardp (end-of-buffer-p mark))
-	(incf (offset mark) (- point-offset start-offset)))
+        (incf (offset mark) (- point-offset start-offset)))
       (isearch-from-mark (drei-instance) mark string forwardp))))
 
 (define-command (com-isearch-append-word :name t :command-table isearch-drei-table) ()
@@ -222,14 +200,14 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (define-command (com-isearch-append-kill :name t :command-table isearch-drei-table) ()
   (let* ((states (isearch-states (drei-instance)))
-	 (yank (handler-case (kill-ring-yank *kill-ring*)
+         (yank (handler-case (kill-ring-yank *kill-ring*)
                  (empty-kill-ring ()
                    "")))
-	 (string (concatenate 'string
-			      (search-string (first states))
-			      yank))
-	 (mark (clone-mark (search-mark (first states))))
-	 (forwardp (search-forward-p (first states))))
+         (string (concatenate 'string
+                              (search-string (first states))
+                              yank))
+         (mark (clone-mark (search-mark (first states))))
+         (forwardp (search-forward-p (first states))))
     (unless (or forwardp (end-of-buffer-p mark))
       (incf (offset mark) (length yank)))
     (isearch-from-mark (drei-instance) mark string forwardp)))
@@ -272,19 +250,19 @@ If found, leaves point before the word. If not, leaves point where it is."
 
 (define-command (com-isearch-exit :name t :command-table isearch-drei-table) ()
   (let* ((states (isearch-states (drei-instance)))
-	 (string (search-string (first states)))
-	 (search-forward-p (search-forward-p (first states))))
+         (string (search-string (first states)))
+         (search-forward-p (search-forward-p (first states))))
     (setf (isearch-mode (drei-instance)) nil)
     (when (string= string "")
       (execute-frame-command *application-frame*
-			     (funcall
-			      *partial-command-parser*
-			      (frame-command-table *application-frame*)
-			      (frame-standard-input *application-frame*)
-			      (if search-forward-p
-				  `(com-string-search ,*unsupplied-argument-marker*)
-				  `(com-reverse-string-search ,*unsupplied-argument-marker*))
-			      0)))))
+                             (funcall
+                              *partial-command-parser*
+                              (frame-command-table *application-frame*)
+                              (frame-standard-input *application-frame*)
+                              (if search-forward-p
+                                  `(com-string-search ,*unsupplied-argument-marker*)
+                                  `(com-reverse-string-search ,*unsupplied-argument-marker*))
+                              0)))))
 
 (defun isearch-set-key (gesture command)
   (add-command-to-command-table command 'isearch-drei-table
@@ -302,8 +280,6 @@ If found, leaves point before the word. If not, leaves point where it is."
 (isearch-set-key '(#\y :control) 'com-isearch-append-line)
 (isearch-set-key '(#\y :meta) 'com-isearch-append-kill)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Unconditional replace
 
 (define-command (com-replace-string :name t :command-table search-table)
@@ -312,20 +288,18 @@ If found, leaves point before the word. If not, leaves point where it is."
   (require-minibuffer)
   ;; We have to do it this way if we want to refer to STRING in NEWSTRING
   (let* ((string (accept 'string :prompt "Replace String"))
-	 (newstring (accept'string :prompt (format nil "Replace ~A with" string))))
+         (newstring (accept'string :prompt (format nil "Replace ~A with" string))))
     (loop with point = (point)
-	  with length = (length string)
-	  with use-region-case = (no-upper-p string)
-	  for occurrences from 0
-	  while (let ((offset-before (offset point)))
+          with length = (length string)
+          with use-region-case = (no-upper-p string)
+          for occurrences from 0
+          while (let ((offset-before (offset point)))
                   (search-forward point string :test (case-relevant-test string))
                   (/= (offset point) offset-before))
-	  do (backward-object point length)
-	     (replace-one-string point length newstring use-region-case)
-	  finally (display-message "Replaced ~A occurrence~:P" occurrences))))
+          do (backward-object point length)
+             (replace-one-string point length newstring use-region-case)
+          finally (display-message "Replaced ~A occurrence~:P" occurrences))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Query replace
 
 (make-command-table 'query-replace-drei-table :errorp nil)
@@ -349,7 +323,7 @@ If found, leaves point before the word. If not, leaves point where it is."
          (old-state (query-replace-state drei))
          (old-string1 (when old-state (string1 old-state)))
          (old-string2 (when old-state (string2 old-state)))
-         (string1 (handler-case 
+         (string1 (handler-case
                       (if old-string1
                           (accept 'string
                                   :prompt "Query Replace"
@@ -359,7 +333,7 @@ If found, leaves point before the word. If not, leaves point where it is."
                     (error () (progn (beep)
                                      (display-message "Empty string")
                                      (return-from com-query-replace nil)))))
-         (string2 (handler-case 
+         (string2 (handler-case
                       (if old-string2
                           (accept 'string
                                   :prompt (format nil "Replace ~A with"
@@ -392,8 +366,8 @@ If found, leaves point before the word. If not, leaves point where it is."
       (display-message "Replaced 0 occurences"))))
 
 (set-key 'com-query-replace
-	 'search-table
-	 '((#\% :meta)))
+         'search-table
+         '((#\% :meta)))
 
 (define-command (com-query-replace-replace :name t :command-table query-replace-drei-table) ()
   (let ((state (query-replace-state (drei-instance))))
@@ -415,8 +389,8 @@ If found, leaves point before the word. If not, leaves point where it is."
             (setf (query-replace-mode (drei-instance)) nil))))))
 
 (define-command (com-query-replace-replace-and-quit
-		 :name t
-		 :command-table query-replace-drei-table)
+                 :name t
+                 :command-table query-replace-drei-table)
     ()
   (let ((state (query-replace-state (drei-instance))))
     (with-accessors ((string1 string1)
@@ -434,8 +408,8 @@ If found, leaves point before the word. If not, leaves point where it is."
         (setf (query-replace-mode (drei-instance)) nil)))))
 
 (define-command (com-query-replace-replace-all
-		 :name t
-		 :command-table query-replace-drei-table)
+                 :name t
+                 :command-table query-replace-drei-table)
     ()
   (let ((state (query-replace-state (drei-instance))))
     (with-accessors ((string1 string1)
@@ -479,8 +453,6 @@ If found, leaves point before the word. If not, leaves point where it is."
 (query-replace-set-key '(#\.) 'com-query-replace-replace-and-quit)
 (query-replace-set-key '(#\!) 'com-query-replace-replace-all)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Regex search
 
 (defparameter *whitespace-regex* (format nil "[~@{~A~}]+" #\Space #\Tab))
@@ -489,17 +461,17 @@ If found, leaves point before the word. If not, leaves point where it is."
   "Massages the regex STRING given to the minibuffer."
   (with-output-to-string (result)
     (loop for char across string
-	  if (char= char #\Space)
-	    do (princ *whitespace-regex* result)
-	  else
-	    do (princ char result))))
+          if (char= char #\Space)
+            do (princ *whitespace-regex* result)
+          else
+            do (princ char result))))
 
 (define-command (com-regex-search-forward :name t :command-table search-table) ()
   (require-minibuffer)
   (let ((string (accept 'string :prompt "RE search"
-			:delimiter-gestures nil
-			:activation-gestures
-			'(:newline :return))))
+                        :delimiter-gestures nil
+                        :activation-gestures
+                        '(:newline :return))))
     (simple-search-forward (drei-instance)
                         #'(lambda (mark)
                             (re-search-forward mark (normalise-minibuffer-regex string))))))
@@ -507,9 +479,9 @@ If found, leaves point before the word. If not, leaves point where it is."
 (define-command (com-regex-search-backward :name t :command-table search-table) ()
   (require-minibuffer)
   (let ((string (accept 'string :prompt "RE search backward"
-			:delimiter-gestures nil
-			:activation-gestures
-			'(:newline :return))))
+                        :delimiter-gestures nil
+                        :activation-gestures
+                        '(:newline :return))))
     (simple-search-backward (drei-instance)
                         #'(lambda (mark)
                             (re-search-backward mark (normalise-minibuffer-regex string))))))
@@ -517,8 +489,8 @@ If found, leaves point before the word. If not, leaves point where it is."
 (define-command (com-how-many :name t :command-table search-table)
     ((regex 'string :prompt "How many matches for"))
   (let* ((re (normalise-minibuffer-regex regex))
-	 (mark (clone-mark (point)))
-	 (occurrences (loop for count from 0
-			    while (re-search-forward mark re)
-			    finally (return count))))
+         (mark (clone-mark (point)))
+         (occurrences (loop for count from 0
+                            while (re-search-forward mark re)
+                            finally (return count))))
     (display-message "~A occurrence~:P" occurrences)))

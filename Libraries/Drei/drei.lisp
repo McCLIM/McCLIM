@@ -1,28 +1,13 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
-
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006-2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Drei is an editing substrate designed for use in CLIM, and used to
 ;;; implement text-editor gadgets and input-editing-streams in
@@ -57,66 +42,8 @@
 ;;;
 ;;; * Drei Erhbar Emacs Ist
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Convenience stuff.
-
-(defgeneric drei-instance-of (object)
-  (:documentation "Return the Drei instance of `object'. For an
-editor frame, this would be the active editor instance. If
-`object' itself is a Drei instance, this function should just
-return `object'."))
-
-(defun drei-instance (&optional (object *esa-instance*))
-  "Return the Drei instance of `object'. If `object' is not
-provided, the currently running Drei instance will be returned."
-  (drei-instance-of object))
-
-(defun (setf drei-instance) (new-instance &optional (object *esa-instance*))
-  (setf (drei-instance-of object) new-instance))
-
-(defun current-view (&optional (object (drei-instance)))
-  "Return the view of the provided object. If no object is
-provided, the currently running Drei instance will be used."
-  (view object))
-
-(defun (setf current-view) (new-view &optional (object (drei-instance)))
-  (setf (view object) new-view))
-
-(defun point (&optional (object (current-view)))
-  "Return the point of the provided object. If no object is
-provided, the current view will be used."
-  (point-of object))
-
-(defun (setf point) (new-point object)
-  (setf (point-of object) new-point))
-
-(defgeneric point-of (object)
-  (:documentation "Return the mark object that is the point of
-`object'. Some objects have their own points, for example Drei
-buffer-views and buffers."))
-
-(defun mark (&optional (object (current-view)))
-  "Return the mark of the provided object. If no object is
-provided, the current view will be used."
-  (mark-of object))
-
-(defun (setf mark) (new-mark object)
-  (setf (mark-of object) new-mark))
-
-(defgeneric mark-of (object)
-  (:documentation "Return the mark object that is the mark of
-`object'. Some objects have their own points, for example Drei
-instances."))
-
-(defun current-syntax ()
-  "Return the syntax of the current buffer."
-  (syntax (current-view)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Isearch
 
 (defclass isearch-state ()
@@ -126,8 +53,6 @@ instances."))
    (search-success-p :initarg :search-success-p :accessor search-success-p)
    (targets :initarg :targets :accessor targets )))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Query replace
 
 (defclass query-replace-state ()
@@ -136,8 +61,6 @@ instances."))
    (targets :initarg :targets :accessor targets)
    (occurences :initform 0 :accessor occurrences)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei command tables.
 
 ;;; Commenting.
@@ -229,8 +152,6 @@ and specialise a method for it."
           (when (use-editor-commands-p (current-view))
             '(editor-table))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The basic Drei class.
 
 (defclass drei ()
@@ -378,7 +299,7 @@ the Drei instance."
 (defmethod command-for-unbound-gestures ((drei drei) gestures)
   (command-for-unbound-gestures (view drei) gestures))
 
-;; Main redisplay entry point.
+;;; Main redisplay entry point.
 (defgeneric display-drei (drei &key redisplay-minibuffer)
   (:documentation "`Drei' must be an object of type `drei' and
 `frame' must be a CLIM frame containing the editor pane of
@@ -411,8 +332,6 @@ error of type `no-available-minibuffer'."
   (unless *minibuffer*
     (no-available-minibuffer drei-instance)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Some standard building block machinery.
 
 (defgeneric handle-drei-condition (drei condition)
