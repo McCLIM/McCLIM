@@ -246,7 +246,9 @@ Factor to reduce the size of the circles")
 
 (define-town-example-command (com-get-distance :name t :menu t
                                                :keystroke (#\d :meta))
-    ((town-a town :prompt "Town a")
+    ((town-a town :prompt "Town a"
+                  :gesture (:describe
+                            :documentation "Get distance from this town to another."))
      (town-b town :prompt "Town b"))
   (notify-user *application-frame*
                (format nil "It's ~d pixels from ~a to ~a."
@@ -256,33 +258,3 @@ Factor to reduce the size of the circles")
                        (town-name town-b))
                :title "Distance"
                :text-style '(:serif :roman 15)))
-
-;;; get distance on :describe gesture (middle click)
-;;; (ask via accept for the second town)
-
-;;; Defunct and not really nice. Note that the version below is simpler,
-;;; working, more elegant, and more intuitive, as the user sees the same
-;;; as if he had entered the com-get-distance command via the keyboard.
-;;;
-;;; (define-presentation-to-command-translator distance-between-two-towns
-;;;     (town com-get-distance town-example
-;;;           :gesture :describe
-;;;           :documentation "Get distance from this town to another.")
-;;;     (object)
-;;;   (list object
-;;;         (let (town-b)
-;;;           (accepting-values-with-style-and-title (stream)
-;;;             (format stream "~&Get distance~%")
-;;;             (format stream "~%From ~a to: " (town-name object))
-;;;             (setf town-b (accept 'town :prompt nil :stream stream :query-identifier 'tag)))
-;;;           town-b)))
-
-(define-presentation-to-command-translator distance-between-two-towns
-    (town com-get-distance town-example
-          :gesture :describe
-          :documentation "Get distance from this town to another.")
-    (object)
-  (list object
-        (let ((stream *query-io*))
-          (format stream "  Get distance (Town a) ~a (Town b) " (town-name object))
-          (accept 'town :prompt nil :stream stream :query-identifier 'tag))))

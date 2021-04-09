@@ -137,8 +137,16 @@
   (and (listp command)
        (member *unsupplied-argument-marker* command)))
 
+(defun make-unsupplied-arguments (count)
+ (make-list count :initial-element '*unsupplied-argument-marker*))
+
+(defun make-command-function-name (command-name &rest suffixes)
+  (intern (format nil "~A~{%~A~}" command-name suffixes)
+          (symbol-package command-name)))
+
+;;; Helper function to create command presentation translators for a
+;;; command.
 (defun make-command-translators (command-name command-table args)
-  "Helper function to create command presentation translators for a command."
   (let ((readable-command-name
           ;; XXX or :NAME
           (command-name-from-symbol command-name)))
@@ -150,25 +158,21 @@
                           :stream stream
                           :acceptably nil
                           :sensitive nil)))
-             (make-define-gesture-translator (gesture ptype arg-index)
-               (let ((command-args (loop for a in args
-                                         for i from 0
-                                         if (eql i arg-index)
-                                           collect 'object
-                                         else
-                                           collect (getf (cddr a) :default)
-                                         end))
-                     (translator-name (intern (format nil
-                                                      ".~A-ARG~D."
-                                                      command-name
-                                                      arg-index)
-                                              (symbol-package command-name))))
+             (make-define-gesture-translator (gesture-arg name ptype gesture)
+               (let ((command-args
+                       (loop for arg in args
+                             for (name ptype . options) = args
+                             collect (if (eq arg gesture-arg)
+                                         'object
+                                         (getf options :default
+                                               '*unsupplied-argument-marker*)))))
                  (multiple-value-bind (gesture translator-options)
                      (if (listp gesture)
                          (values (car gesture) (cdr gesture))
                          (values gesture nil))
                    `(define-presentation-to-command-translator
-                        ,translator-name
+                        ,(make-command-function-name
+                          command-name ':translate name)
                         (,(eval ptype) ,command-name ,command-table
                          :gesture ,gesture
                          ,@(unless (getf translator-options :documentation)
@@ -176,11 +180,12 @@
                          ,@translator-options)
                         (object)
                       (list ,@command-args))))))
-      (loop for (name ptype . options) in args
+      (loop for arg in args
+            for (name ptype . options) = arg
             for gesture = (getf options :gesture)
-            for arg-index from 0
             when gesture
-              append (make-define-gesture-translator gesture ptype arg-index)))))
+            collect (make-define-gesture-translator
+                     arg name ptype gesture)))))
 
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
@@ -189,18 +194,16 @@
 (defmacro %define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
-  (destructuring-bind (func &key command-table name menu keystroke)
+  (destructuring-bind (command-name &key command-table name menu keystroke)
       name-and-options
     (multiple-value-bind (required-args keyword-args)
-        (loop for arg-tail on args
-              for (arg) = arg-tail
-              until (eq arg '&key)
-              collect arg into required
-              finally (return (values required (cdr arg-tail))))
-      (let* ((command-func-args
-               `(,@(mapcar #'car required-args)
-                 ,@(and
-                    keyword-args
+        (loop for (first-arg . rest-args) on args
+              until (eq first-arg '&key)
+              collect first-arg into required
+              finally (return (values required rest-args)))
+      (let ((command-func-args
+              `(,@(mapcar #'car required-args)
+                ,@(when keyword-args
                     `(&key ,@(mapcar #'(lambda (arg-clause)
                                          (destructuring-bind (arg-name ptype
                                                               &key default
@@ -209,46 +212,39 @@
                                            (declare (ignore ptype))
                                            `(,arg-name ,default)))
                                      keyword-args)))))
-             (accept-fun-name (gentemp (format nil "~A%ACCEPTOR%"
-                                               (symbol-name func))
-                                       (symbol-package func)))
-             (partial-parser-fun-name (gentemp (format nil "~A%PARTIAL%"
-                                                       (symbol-name func))
-                                               (symbol-package func)))
-             (arg-unparser-fun-name (gentemp (format nil "~A%unparser%"
-                                                     (symbol-name func))
-                                             (symbol-package func))))
+            (accept-fun-name (make-command-function-name
+                              command-name '#:acceptor))
+            (partial-parser-fun-name (make-command-function-name
+                                      command-name '#:partial))
+            (arg-unparser-fun-name (make-command-function-name
+                                    command-name '#:unparse)))
         `(progn
-           (defun ,func ,command-func-args
+           (defun ,command-name ,command-func-args
              ,@body)
            ,(when command-table
               `(add-command-to-command-table
-                ',func ',command-table
+                ',command-name ',command-table
                 :name ,name :menu ',menu
                 :keystroke ',keystroke :errorp nil
-                ,@(and (or menu keystroke)
-                       `(:menu-command
-                         (list ',func
-                               ,@(make-list (length required-args)
-                                            :initial-element
-                                            '*unsupplied-argument-marker*))))))
-           ,(make-argument-accept-fun accept-fun-name
-                                      required-args
-                                      keyword-args)
+                ,@(when (or menu keystroke)
+                    `(:menu-command
+                      (list ',command-name ,@(make-unsupplied-arguments
+                                              (length required-args)))))))
+           ,(make-argument-accept-fun
+             accept-fun-name required-args keyword-args)
            ,(make-partial-parser-fun partial-parser-fun-name required-args)
-           ,(make-unprocessor-fun arg-unparser-fun-name
-                                  required-args
-                                  keyword-args)
-           ,(and command-table
-                 (make-command-translators func command-table required-args))
-           (setf (gethash ',func *command-parser-table*)
+           ,(make-unprocessor-fun
+             arg-unparser-fun-name required-args keyword-args)
+           ,@(when command-table
+               (make-command-translators command-name command-table required-args))
+           (setf (gethash ',command-name *command-parser-table*)
                  (make-instance 'command-parsers
                                 :parser #',accept-fun-name
                                 :partial-parser #',partial-parser-fun-name
                                 :required-args ',required-args
                                 :keyword-args  ',keyword-args
                                 :argument-unparser #',arg-unparser-fun-name))
-           ',func)))))
+           ',command-name)))))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix
 ;;; some unfortunate problems with completion, defaulting, and keyword
