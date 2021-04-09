@@ -14,38 +14,17 @@
 (defun close-path (path )
   (setf (paths::path-type path) :closed-polyline))
 
-;;; XXX: this should be refactored into a reusable protocol in clim-backend with
-;;; specialization on medium. -- jd 2018-10-31
-(defun line-style-scale (line-style medium)
-  (let ((unit (line-style-unit line-style)))
-    (ecase unit
-      (:normal 1)
-      (:point (let ((graft (graft medium)))
-                (/ (graft-width graft)
-                   (graft-width graft :units :inches)
-                   72)))
-      (:coordinate (multiple-value-bind (x y)
-                       (transform-distance (medium-transformation medium) 0.71 0.71)
-                     (sqrt (+ (expt x 2) (expt y 2))))))))
-
-(defun line-style-effective-thickness (line-style medium)
-  (* (line-style-thickness line-style)
-     (line-style-scale line-style medium)))
-
-(defun line-style-effective-dashes (line-style medium)
-  (let ((scale (line-style-scale line-style medium)))
-    (map 'vector (lambda (dash) (* dash scale))
-         (line-style-dashes line-style))))
-
 (defun stroke-path (path line-style medium)
-  (let ((effective-thickness (line-style-effective-thickness line-style medium))
-        (joint-shape (line-style-joint-shape line-style))
-        (cap-shape (line-style-cap-shape line-style)))
-    (when-let ((dashes (clim:line-style-dashes line-style)))
-      (setf path (paths:dash-path path
-                                  (case dashes
-                                    ((t) (vector (* (line-style-scale line-style medium) 3)))
-                                    (otherwise (line-style-effective-dashes line-style medium))))))
+  (let* ((effective-thickness (line-style-effective-thickness line-style medium))
+         (effective-dashes (line-style-effective-dashes line-style medium))
+         (dashes-vector (typecase effective-dashes
+                          (null nil)
+                          (list (coerce effective-dashes 'vector))
+                          (t (vector effective-dashes))))
+         (joint-shape (line-style-joint-shape line-style))
+         (cap-shape (line-style-cap-shape line-style)))
+    (when dashes-vector
+      (setf path (paths:dash-path path dashes-vector)))
     (paths:stroke-path path (max 1 effective-thickness)
                        :joint (if (eq joint-shape :bevel)
                                   :none

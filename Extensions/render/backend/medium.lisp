@@ -121,10 +121,9 @@
     (%medium-stroke-paths medium (list path))))
 
 (defmethod medium-draw-point* ((medium render-medium-mixin) x y)
-  (let ((path (arc x y
-                   (max 1 (/ (line-style-thickness (medium-line-style medium)) 2))
-                   pi
-                   (+ pi (* 2 pi)))))
+  (let* ((line-style (medium-line-style medium))
+         (thickness (line-style-effective-thickness line-style medium))
+         (path (arc x y (max 1 (/ thickness 2)) pi (+ pi (* 2 pi)))))
     (%medium-fill-paths medium (list path))))
 
 (defmethod clime:medium-draw-circle* ((medium render-medium-mixin)

@@ -99,7 +99,7 @@
     (climi::gs-line-style-mixin translatable-record-mixin)
     (design)
   (let ((transformed-design (transform-region (medium-transformation medium) design))
-        (border (climi::graphics-state-line-style-border climi::graphic medium)))
+        (border (/ (climi::fix-line-style-unit climi::graphic medium) 2)))
     (declare (ignore border))
     (setf design transformed-design)
     (bounding-rectangle* design)))

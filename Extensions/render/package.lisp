@@ -39,7 +39,7 @@
    #:gray->alpha))
 
 (defpackage #:mcclim-render-internals
-  (:use #:clim #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
+  (:use #:clim #:clime #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
   (:import-from #:alexandria
                 #:minf
                 #:maxf

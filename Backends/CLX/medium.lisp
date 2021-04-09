@@ -94,83 +94,62 @@
      (prog1 :miter
        (warn "Unknown join style ~s, using :MITER." clim-shape)))))
 
+(defmethod line-style-effective-dashes (line-style (medium clx-medium))
+  (when-let ((dashes (call-next-method)))
+    ;; X limits individual dash lengths to the range [0,255].
+    (flet ((clamp-to-255 (length)
+             (min length 255)))
+      (declare (dynamic-extent #'clamp-to-255))
+      (if (realp dashes)
+          (clamp-to-255 dashes)
+          (map 'list #'clamp-to-255 dashes)))))
 
-;;; XXX: this should be refactored into a reusable protocol in clim-backend
-;;; with specialization on medium. -- jd 2018-10-31
-(defun line-style-scale (line-style medium)
-  (let ((unit (line-style-unit line-style)))
-    (ecase unit
-      (:normal 1)
-      (:point (/ (graft-width (graft medium))
-                 (graft-width (graft medium) :units :inches)
-                 72))
-      (:coordinate (multiple-value-bind (x y)
-                       (transform-distance (medium-transformation medium) 0.71 0.71)
-                     (sqrt (+ (expt x 2) (expt y 2))))))))
+(defun update-dash-pattern (gc line-style medium)
+  (if-let ((dash-pattern (line-style-effective-dashes line-style medium)))
+    (setf (xlib:gcontext-line-style gc) :dash
+          (xlib:gcontext-dashes gc) (if (atom dash-pattern)
+                                        (round dash-pattern)
+                                        (mapcar #'round dash-pattern)))
+    (setf (xlib:gcontext-line-style gc) :solid)))
 
-(defun line-style-effective-thickness (line-style medium)
-  (* (line-style-thickness line-style)
-     (line-style-scale line-style medium)))
-
-(defun line-style-effective-dashes (line-style medium)
-  (when-let ((dashes (line-style-dashes line-style)))
-    (let ((scale (line-style-scale line-style medium)))
-      ;; X limits individual dash lengths to the range [0,255].
-      (flet ((scale-and-clamp (length)
-               (min (* scale length) 255)))
-        (declare (dynamic-extent #'scale-and-clamp))
-        (if (eq dashes t)
-            (scale-and-clamp 3)
-            (map 'list #'scale-and-clamp dashes))))))
-
-(defmethod (setf medium-line-style) :before (line-style (medium clx-medium))
-  (with-slots (gc) medium
-    (when gc
-      (let ((old-line-style (medium-line-style medium)))
-        (unless (and (eql (line-style-thickness line-style)
-                          (line-style-thickness old-line-style))
-                     (eq (line-style-unit line-style)
-                         (line-style-unit old-line-style)))
-          (setf (xlib:gcontext-line-width gc)
-                (round (line-style-effective-thickness line-style medium))))
-        (unless (eq (line-style-cap-shape line-style)
-                    (line-style-cap-shape old-line-style))
-          (setf (xlib:gcontext-cap-style gc)
-                (translate-cap-shape (line-style-cap-shape line-style))))
-        (unless (eq (line-style-joint-shape line-style)
-                    (line-style-joint-shape old-line-style))
-          (setf (xlib:gcontext-join-style gc)
-                (translate-join-shape (line-style-joint-shape line-style))))
-        ;; we could do better here by comparing elements of the vector
-        ;; -RS 2001-08-24
-        (unless (and (eq (line-style-dashes line-style)
-                         (line-style-dashes old-line-style))
-                     (eq (line-style-unit line-style)
-                         (line-style-unit old-line-style)))
-          (if-let ((dash-pattern (line-style-effective-dashes line-style medium)))
-            (setf (xlib:gcontext-line-style gc) :dash
-                  (xlib:gcontext-dashes gc) (if (atom dash-pattern)
-                                                (round dash-pattern)
-                                                (mapcar #'round dash-pattern)))
-            (setf (xlib:gcontext-line-style gc) :solid)))))))
-
-(defmethod (setf medium-transformation) :around (transformation (medium clx-medium))
-  (declare (ignore transformation))
-  (let ((old-tr     (medium-transformation medium))
-        (line-style (medium-line-style medium))
-        (new-tr     (call-next-method)))
-    (unless (and (eq :coordinate (line-style-unit line-style))
-                 (not (transformation-equal old-tr new-tr)))
-      (when-let ((gc (slot-value medium 'gc)))
+(defmethod (setf medium-line-style) :before (new-value (medium clx-medium))
+  (when-let ((gc (slot-value medium 'gc)))
+    (let* ((old-line-style (medium-line-style medium))
+           (old-unit (line-style-unit old-line-style))
+           (new-unit (line-style-unit new-value))
+           (new-cap-shape (line-style-cap-shape new-value))
+           (new-joint-shape (line-style-joint-shape new-value)))
+      (unless (and (eq new-unit old-unit)
+                   (eql (line-style-thickness new-value)
+                        (line-style-thickness old-line-style)))
         (setf (xlib:gcontext-line-width gc)
-              (round (line-style-effective-thickness line-style medium)))
-        (if-let ((dash-pattern (line-style-effective-dashes line-style medium)))
-          (setf (xlib:gcontext-line-style gc) :dash
-                (xlib:gcontext-dashes gc) (if (atom dash-pattern)
-                                              (round dash-pattern)
-                                              (mapcar #'round dash-pattern)))
-          (setf (xlib:gcontext-line-style gc) :solid))))
-    new-tr))
+              (round (line-style-effective-thickness new-value medium))))
+      (unless (eq new-cap-shape (line-style-cap-shape old-line-style))
+        (setf (xlib:gcontext-cap-style gc)
+              (translate-cap-shape new-cap-shape)))
+      (unless (eq new-joint-shape (line-style-joint-shape old-line-style))
+        (setf (xlib:gcontext-join-style gc)
+              (translate-join-shape new-joint-shape)))
+      ;; we could do better here by comparing elements of the vector
+      ;; -RS 2001-08-24
+      (unless (and new-unit old-unit
+                   (eq (line-style-dashes new-value)
+                       (line-style-dashes old-line-style)))
+        (update-dash-pattern gc new-value medium)))))
+
+(defmethod (setf medium-transformation) :around (new-value (medium clx-medium))
+  (let ((old-value (medium-transformation medium))
+        (new-value (call-next-method)))
+    (when-let ((gc (slot-value medium 'gc)))
+      (unless (transformation-equal old-value new-value)
+        (let ((line-style (medium-line-style medium)))
+          (when (eq :coordinate (line-style-unit line-style))
+            ;; The following code uses the medium transformation of MEDIUM and
+            ;; must there be called after the CALL-NEXT-METHOD call.
+            (setf (xlib:gcontext-line-width gc)
+                  (round (line-style-effective-thickness line-style medium)))
+            (update-dash-pattern gc line-style medium)))))
+    new-value))
 
 (defun %clip-region-pixmap (medium mask mask-gc clipping-region x1 y1 width height)
   (typecase clipping-region
