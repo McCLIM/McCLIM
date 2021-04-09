@@ -105,19 +105,6 @@
 		 ;; :graft (find-graft :port port)
 		 :sheet sheet))
 
-(defmethod make-graft ((port clx-fb-port) &key (orientation :default) (units :device))
-  (let* ((mirror (make-instance 'clx-mirror :window (clx-port-window port)))
-         (graft (make-instance 'clx-graft :port port :mirror mirror
-                                          :orientation orientation :units units))
-         (width (xlib:screen-width (clx-port-screen port)))
-         (height (xlib:screen-height (clx-port-screen port))))
-    (let ((region (make-bounding-rectangle 0 0 width height)))
-      (climi::%%set-sheet-region region graft))
-    graft))
-
-(defmethod graft ((port clx-fb-port))
-  (first (port-grafts port)))
-
 (defmethod port-force-output ((port clx-fb-port))
   (maphash-values (lambda (image)
                     (when (typep image 'clx-fb-mirror)

@@ -108,10 +108,9 @@
 
 (defclass basic-sheet (sheet)
   ((region :type region
-	   :initarg :region
-	   :initform (make-bounding-rectangle 0 0 100 100)
-	   :accessor sheet-region
-           :writer %%set-sheet-region)
+           :initarg :region
+           :initform (make-bounding-rectangle 0 0 100 100)
+           :accessor sheet-region)
    (native-transformation :type (or null transformation)
 			  :initform nil
                           :writer %%set-sheet-native-transformation

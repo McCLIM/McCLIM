@@ -1,14 +1,17 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; Copyright (c) 2017, Cyrus Harmon (ch-lisp@bobobeach.com)
+;;;  (c) copyright 2017 Cyrus Harmon <ch-lisp@bobobeach.com>
+;;;
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; This is the ASDF defsystem file for Robert Strandh's bezier curve
 ;;; work in mcclim.
 ;;;
 ;;; In May 2017, the relevant code was moved into the Extensions
 ;;; directory.
-;;;
-;;; See file 'LICENSE' for the copyright details
-;;;
+
 (in-package #:asdf-user)
 
 (defsystem #:mcclim-bezier
