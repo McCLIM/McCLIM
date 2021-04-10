@@ -23,11 +23,7 @@
                   (signals error (do-it))
                   (finishes (do-it))))))
         '((1    :keyboard               (#\a)                     error) ; invalid name
-
           (:foo :no-such-type           (#\a)                     error) ; invalid type
-
-          (:foo :keyboard               (1)                       error) ; invalid key
-          (:foo :keyboard               (:no-such-key)            error) ; invalid key
           (:foo :keyboard               (#\a :no-such-modifier)   error) ; invalid modifier
           (:foo :keyboard               (#\a))                           ; ok
           (:foo :keyboard               (#\a :meta))                     ; ok
@@ -67,9 +63,6 @@
           (:left                     (:keyboard :left 0))
           ((:left :meta)             (:keyboard :feft ,+meta-key+))
           ;; Errors
-          (:no-such-key              error)
-          ((:select)                 error)
-          ((:no-such-key :meta)      error)
           ((:left :no-such-modifier) error))))
 
 (test gestures.event-data-matches-gesture-p.smoke
