@@ -64,19 +64,7 @@
     (:tab       . #\tab)
     (:backspace . #\backspace)
     (:page      . #\page)
-    (:rubout    . #\rubout)
-    ;; Non-standard
-    (:escape    . :escape)
-    (:left      . :left)
-    (:right     . :right)
-    (:up        . :up)
-    (:down      . :down)
-    (:insert    . :insert)
-    (:home      . :home)
-    (:end       . :end)
-    (:next      . :next)
-    (:prior     . :prior)
-    (:kp-enter  . :kp-enter)))
+    (:rubout    . #\rubout)))
 
 (defun normalize-keyboard-physical-gesture (gesture-spec)
   (destructuring-bind (key-or-name &rest modifiers)
@@ -87,11 +75,14 @@
                   ((alexandria:assoc-value
                     +gesture-key-name-to-char+ key-or-name))
                   (t
-                   (error "~@<~S is not a known symbolic key ~
+                   #+ (or)
+                   (warn "~@<~S is not a known symbolic key ~
                           name. Known symbolic key names are ~{~S~^, ~
                           ~}~@:>"
-                          key-or-name
-                          (map 'list #'car +gesture-key-name-to-char+))))
+                         key-or-name
+                         (map 'list #'car +gesture-key-name-to-char+))
+                   ;; Non-non-standard symbolic gesture.
+                   key-or-name))
             (if (equal modifiers '(t))
                 t
                 (apply #'make-modifier-state modifiers)))))
