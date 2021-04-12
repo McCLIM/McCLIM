@@ -41,7 +41,8 @@
   (:use #:clim #:clim-lisp #:clim-extensions)
 
   (:import-from #:alexandria
-   #:when-let)
+   #:when-let #:when-let*
+   #:if-let)
 
   (:export #:debugger #:with-debugger #:install-debugger))
 
@@ -50,18 +51,29 @@
 ;;; Data model
 
 (defclass debugger-info ()
-  ((the-condition :accessor the-condition
-                  :initarg :the-condition)
+  ((the-condition     :accessor the-condition
+                      :initarg  :the-condition)
    (condition-message :accessor condition-message
                       :initarg  :condition-message)
    (type-of-condition :accessor type-of-condition
                       :initarg  :type-of-condition)
-   (condition-extra :accessor condition-extra
-                    :initarg  :condition-extra)
-   (restarts :accessor restarts
-             :initarg :restarts)
-   (backtrace :accessor backtrace
-              :initarg :backtrace)))
+   (condition-extra   :accessor condition-extra
+                      :initarg  :condition-extra)
+   (restarts          :initarg  :restarts
+                      :accessor restarts)
+   (backtrace         :initarg  :backtrace
+                      :accessor backtrace)))
+
+(defun make-debugger-info (condition restarts backtrace)
+  (let ((type    (type-of condition))
+        (message (swank::safe-condition-message condition))
+        (extras  (swank::condition-extras condition)))
+    (make-instance 'debugger-info :the-condition     condition
+                                  :type-of-condition type
+                                  :condition-message message
+                                  :condition-extra   extras
+                                  :restarts          restarts
+                                  :backtrace         backtrace)))
 
 (defclass minimized-stack-frame-view (textual-view)())
 (defclass maximized-stack-frame-view (textual-view)())
@@ -144,18 +156,17 @@
 
 ;;; Restart keyboard shortcuts
 
-(macrolet ((invoke-x (x)
-             (let* ((char (aref (format nil "~A" x) 0))
-                    (name (alexandria:symbolicate "INVOKE-RESTART-" char)))
-               `(progn
-                  (define-clim-debugger-command (,name :keystroke (,char)) ()
-                    (let* ((pane (find-pane-named
-                                  *application-frame* 'debugger-pane))
-                           (restart (nth ,x (restarts (condition-info pane)))))
-                      (when restart
-                        (com-invoke-restart restart))))))))
-  (invoke-x 0) (invoke-x 1) (invoke-x 2) (invoke-x 3) (invoke-x 4)
-  (invoke-x 5) (invoke-x 6) (invoke-x 7) (invoke-x 8) (invoke-x 9))
+(macrolet ((define ()
+             (flet ((define-one (number)
+                      (let* ((char (digit-char number))
+                             (name (alexandria:symbolicate "INVOKE-RESTART-" char)))
+                        `(define-clim-debugger-command (,name :keystroke (,char)) ()
+                           (when-let* ((pane    (find-pane-named
+                                                 *application-frame* 'debugger-pane))
+                                       (restart (nth ,number (restarts (condition-info pane)))))
+                             (com-invoke-restart restart))))))
+               `(progn ,@(loop :for i :to 9 :collect (define-one i))))))
+  (define))
 
 ;;; Commands
 
@@ -408,8 +419,7 @@
 ;;; Starting the debugger
 
 (defun run-debugger-frame ()
-  (run-frame-top-level
-   (make-application-frame 'clim-debugger)))
+  (run-frame-top-level (make-application-frame 'clim-debugger)))
 
 (defun debugger (condition me-or-my-encapsulation)
   (let ((debugger-frame (make-application-frame 'clim-debugger)))
@@ -417,20 +427,13 @@
      (lambda ()
        (unwind-protect
             (setf (the-condition debugger-frame)
-                  (make-instance
-                   'debugger-info
-                   :the-condition        condition
-                   :type-of-condition    (type-of condition)
-                   :condition-message    (swank::safe-condition-message condition)
-                   :condition-extra      (swank::condition-extras       condition)
-                   :restarts             (compute-restarts)
-                   :backtrace (compute-backtrace 0 nil)))
+                  (make-debugger-info
+                   condition (compute-restarts) (compute-backtrace 0 nil)))
          (run-frame-top-level debugger-frame)
-         (let ((restart (returned-restart debugger-frame)))
-           (if restart
-               (let ((*debugger-hook* me-or-my-encapsulation))
-                 (invoke-restart-interactively restart))
-               (abort))))))))
+         (if-let ((restart (returned-restart debugger-frame)))
+           (let ((*debugger-hook* me-or-my-encapsulation))
+             (invoke-restart-interactively restart))
+           (abort)))))))
 
 (defvar *debugger-bindings*
   `((*debugger-hook*                      . #'debugger)
@@ -464,5 +467,4 @@
   (with-simple-restart  (continue "Continue from interrupt.")
     (with-debugger ()
       (invoke-debugger
-       (make-condition 'simple-error
-                       :format-control "Debugger test")))))
+       (make-condition 'simple-error :format-control "Debugger test")))))
