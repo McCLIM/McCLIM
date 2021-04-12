@@ -111,9 +111,7 @@
                   :reader port-keyboard-input-focus
                   :documentation "The sheet for the keyboard events, if any")
    (pointer :initform nil :initarg :pointer :accessor port-pointer
-		  :documentation "The pointer of the port")
-   (grabbed-sheet :initform nil :accessor port-grabbed-sheet
-		  :documentation "The sheet the pointer is grabbing, if any")))
+		  :documentation "The pointer of the port")))
 
 (defgeneric note-input-focus-changed (sheet state)
   (:documentation "Called when a sheet receives or loses the keyboard input
@@ -372,16 +370,15 @@ is a McCLIM extension.")
 ;;; implemented locally. -- jd 2019-08-21
 (defmethod distribute-event ((port basic-port) (event pointer-event))
   ;; When we receive pointer event we need to take into account
-  ;; unmirrored sheets and grabbed/pressed sheets.
+  ;; unmirrored sheets and grabbing sheets.
   ;;
-  ;; - Grabbed sheet steals all pointer events (non-local exit)
+  ;; - Grabbing sheet steals all pointer events (non-local exit)
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (let ((grabbed-sheet (port-grabbed-sheet port)))
-    (when (sheetp grabbed-sheet)
-      (return-from distribute-event
+  (when-let ((grabbing-sheet (pointer-grabbing-sheet (pointer-event-pointer event))))
+    (return-from distribute-event
         (unless (typep event 'pointer-boundary-event)
-          (dispatch-event-copy grabbed-sheet event)))))
+          (dispatch-event grabbing-sheet event))))
   ;; Synthesize boundary events and update the port-pointer-sheet.
   (let ((new-pointer-sheet (synthesize-boundary-events port event)))
     ;; Set the pointer cursor.
@@ -476,10 +473,10 @@ is a McCLIM extension.")
     (declare (ignore pointer sheet))
     (warn "Port ~A has not implemented pointer grabbing." port))
   (:method :around ((port basic-port) pointer sheet)
-    (declare (ignore pointer))
-    (unless (port-grabbed-sheet port)
+    (declare (ignore port))
+    (unless (pointer-grabbing-sheet pointer)
       (when (call-next-method)
-        (setf (port-grabbed-sheet port) sheet)))))
+        (setf (pointer-grabbing-sheet pointer) sheet)))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
   (:documentation "Ungrab the specified pointer.")
@@ -487,9 +484,9 @@ is a McCLIM extension.")
     (declare (ignore pointer sheet))
     (warn "Port ~A  has not implemented pointer grabbing." port))
   (:method :around ((port basic-port) pointer sheet)
-    (declare (ignore pointer))
-    (when (port-grabbed-sheet port)
-      (setf (port-grabbed-sheet port) nil)
+    (declare (ignore port))
+    (when (pointer-grabbing-sheet pointer)
+      (setf (pointer-grabbing-sheet pointer) nil)
       (call-next-method))))
 
 (defmacro with-pointer-grabbed ((port sheet &key pointer)
