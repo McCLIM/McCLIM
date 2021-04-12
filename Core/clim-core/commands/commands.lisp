@@ -161,7 +161,7 @@
              (make-define-gesture-translator (gesture-arg name ptype gesture)
                (let ((command-args
                        (loop for arg in args
-                             for (name ptype . options) = args
+                             for (name ptype . options) = arg
                              collect (if (eq arg gesture-arg)
                                          'object
                                          (getf options :default
@@ -184,8 +184,7 @@
             for (name ptype . options) = arg
             for gesture = (getf options :gesture)
             when gesture
-            collect (make-define-gesture-translator
-                     arg name ptype gesture)))))
+            collect (make-define-gesture-translator arg name ptype gesture)))))
 
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
