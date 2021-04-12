@@ -379,12 +379,14 @@ is a McCLIM extension.")
   ;; - Grabbing sheet steals all pointer events (non-local exit)
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (when-let ((grabbing-sheet (pointer-grabbing-sheet (pointer-event-pointer event))))
-    (return-from distribute-event
+
+  ;; Synthesize boundary events and update the pointer-sheet.
+  (let ((new-pointer-sheet (synthesize-boundary-events port event))
+        (grabbing-sheet (pointer-grabbing-sheet (pointer-event-pointer event))))
+    (when grabbing-sheet
+      (return-from distribute-event
         (unless (typep event 'pointer-boundary-event)
-          (dispatch-event grabbing-sheet event))))
-  ;; Synthesize boundary events and update the port-pointer-sheet.
-  (let ((new-pointer-sheet (synthesize-boundary-events port event)))
+          (dispatch-event grabbing-sheet (adjust-event new-pointer-sheet event)))))
     ;; Set the pointer cursor.
     (when new-pointer-sheet
       (let* ((event-sheet (event-sheet event))
