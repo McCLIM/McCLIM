@@ -12,7 +12,6 @@
 (in-package #:clim-internals)
 
 (defvar *default-frame-manager* nil)
-(defvar *pane-realizer* nil)
 
 ;; FIXME: The spec says the port must "conform to options".  I've added a check
 ;; that the ports match, but we've no protocol for testing the other

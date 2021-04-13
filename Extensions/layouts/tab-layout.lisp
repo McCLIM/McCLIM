@@ -428,6 +428,9 @@ that the frame manager can customize the implementation."))
   ()
   (:default-initargs :default-view +tab-bar-view+))
 
+(defmethod note-sheet-grafted ((sheet tab-bar-pane))
+  (redisplay-frame-pane (pane-frame sheet) sheet :force-p t))
+
 (defmethod compose-space ((pane tab-bar-pane) &key width height)
   (declare (ignore width height))
   (make-space-requirement :min-height 22 :height 22 :max-height 22))
@@ -436,16 +439,15 @@ that the frame manager can customize the implementation."))
   (let ((current (tab-layout-enabled-page instance)))
     (dolist (page pages)
       (setf (sheet-enabled-p (tab-page-pane page)) (eq page current))))
-  (let ((header
-         (make-pane 'tab-bar-pane
-          :display-time :command-loop
-          :display-function
-          (lambda (frame pane)
-            (declare (ignore frame))
-            (funcall (header-display-function instance) instance pane)))))
+  (let ((header (make-pane 'tab-bar-pane
+                           :display-time :command-loop
+                           :display-function
+                           (lambda (frame pane)
+                             (declare (ignore frame))
+                             (let ((display (header-display-function instance)))
+                               (funcall display instance pane))))))
     (setf (tab-layout-header-pane instance) header)
-    (sheet-adopt-child instance header)
-    (setf (sheet-enabled-p header) t)))
+    (sheet-adopt-child instance header)))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))
