@@ -433,47 +433,30 @@
                              :filled t
                              :ink fill-color)))))))
 
-(define-border-type :underline (stream record
-                                       (ink (medium-ink stream))
-                                       line-style
-                                       line-unit
-                                       line-thickness
-                                       line-cap-shape
-                                       line-dashes)
-  (let ((line-style (%%line-style-for-method)))
-    (labels ((fn (record)
-               (loop for child across (output-record-children record)
-                     do (typecase child
-                          ((or text-displayed-output-record draw-text-output-record)
-                           (with-bounding-rectangle* (left top right bottom) child
-                             (declare (ignore top))
-                             (draw-line* stream left bottom right bottom
-                                         :ink ink
-                                         :line-style line-style)))
-                          (updating-output-record nil)
-                          (compound-output-record (fn child))))))
-      (fn record))))
 
-(define-border-type :crossout (stream record
-                                      (ink (medium-ink stream))
-                                      line-style
-                                      line-unit
-                                      line-thickness
-                                      line-cap-shape
-                                      line-dashes)
-  (let ((line-style (%%line-style-for-method)))
-    (labels ((fn (record)
-               (loop for child across (output-record-children record)
-                     do (typecase child
-                          ((or text-displayed-output-record draw-text-output-record)
-                           (with-bounding-rectangle* (left top right bottom) child
-                             (let ((middle (/ (+ bottom top) 2)))
-                               (draw-line* stream left middle right middle
-                                           :ink ink
-                                           :line-style line-style))))
-                          (updating-output-record nil)
-                          (compound-output-record (fn child))))))
-      (fn record))))
+(macrolet ((define-shape (shape () &body body)
+             `(define-border-type ,shape (stream record
+                                                 (ink (medium-ink stream))
+                                                 line-style
+                                                 line-unit
+                                                 line-thickness
+                                                 line-cap-shape
+                                                 line-dashes)
+                (let ((line-style (%%line-style-for-method)))
+                  (labels ((augment (record)
+                             (typecase record
+                               ((or text-displayed-output-record draw-text-output-record)
+                                ,@body)
+                               (updating-output-record nil)
+                               (compound-output-record
+                                (map nil #'augment (output-record-children record))))))
+                    (map nil #'augment (output-record-children record)))))))
+  (define-shape :underline ()
+    (with-bounding-rectangle* (left nil right bottom) record
+      (draw-line* stream left bottom right bottom :ink ink :line-style line-style)))
+  (define-shape :crossout ()
+    (with-bounding-rectangle* (left top right bottom :center-y middle) record
+      (draw-line* stream left middle right middle :ink ink :line-style line-style))))
 
 (define-border-type :inset (stream left top right bottom
                                    (padding *border-default-padding*)
