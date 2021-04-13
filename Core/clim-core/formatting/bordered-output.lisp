@@ -88,13 +88,14 @@
 ;;; non-null bounding rectangles.  Intuitively, the empty border
 ;;; should remain centered on the cursor.
 (defmacro with-border-edges ((stream record) &body body)
-  `(if (null-bounding-rectangle-p ,record)
-    (multiple-value-bind (left top) (stream-cursor-position ,stream)
-      (let ((right  (1+ left))
-            (bottom (1+ top)))
-        ,@body))
-    (with-bounding-rectangle* (left top right bottom) ,record
-      ,@body)))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (left top right bottom)
+              ,@body))
+       (if (null-bounding-rectangle-p ,record)
+           (multiple-value-bind (left top) (stream-cursor-position ,stream)
+             (,continuation left top (1+ left) (1+ top)))
+           (with-bounding-rectangle* (left top right bottom) ,record
+             (,continuation left top right bottom))))))
 
 (defmacro surrounding-output-with-border
     ((&optional stream &rest drawing-options &key (shape :rectangle)
