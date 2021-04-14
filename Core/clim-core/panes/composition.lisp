@@ -1634,15 +1634,15 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
          ;; Margin of surrounding border.
          (+ m0 (/ line-height 2)))))))
 
-(defmethod compose-space ((pane label-pane) &key width height)
-  (declare (ignore width height))
+(defmethod compose-space ((pane label-pane) &key (width 100) (height 100))
   (multiple-value-bind (right top left bottom
                         text-offset text-width text-height)
       (label-pane-margins pane)
     (let* ((padded-width (+ text-width (* 2 text-offset)))
            (padded-height (+ text-height (* 2 text-offset))))
       (if-let ((child (sheet-child pane)))
-        (let ((sr2 (compose-space child)))
+        (let ((sr2 (compose-space child :width (- width left right)
+                                        :height (- height top bottom))))
           (make-space-requirement
            :width      (+ left right (max padded-width (space-requirement-width sr2)))
            :min-width  (+ left right (max padded-width (space-requirement-min-width sr2)))
