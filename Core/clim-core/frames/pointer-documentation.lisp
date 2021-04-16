@@ -80,18 +80,40 @@
   (let* ((current-modifier (event-modifier-state event))
          (x (device-event-x event))
          (y (device-event-y event))
-         (new-translators
-          (loop for (button) in +button-documentation+
-              for context-list = (multiple-value-list
-                                  (find-innermost-presentation-context
-                                   input-context
-                                   stream
-                                   x y
-                                   :modifier-state current-modifier
-                                   :button button))
-              when (car context-list)
-              collect (cons button context-list))))
-    (list current-modifier new-translators)))
+         (result '())
+         (other-modifiers '())
+         (known-size nil))
+    (labels ((presentation-size (presentation)
+               (or known-size
+                   (multiple-value-bind (min-x min-y max-x max-y)
+                       (output-record-hit-detection-rectangle* presentation)
+                     (* (- max-x min-x) (- max-y min-y)))))
+             (consider-gesture (translator presentation context button size)
+               (let* ((existing (alexandria:assoc-value result button))
+                      (existing-context (third existing))
+                      (existing-size (fourth existing)))
+                 (when (or (not existing)
+                           (and (eq context existing-context)
+                                (< size existing-size)))
+                   (setf (alexandria:assoc-value result button)
+                         (list presentation translator context size)))))
+             (consider-translator (translator presentation context)
+               (let ((gesture (gesture translator)))
+                 (unless (eq gesture t)
+                   (loop with size = (presentation-size presentation)
+                         for (nil button modifier) in gesture
+                         do (if (or (eql modifier t) (eql modifier current-modifier))
+                                (consider-gesture translator presentation context
+                                                  button size)
+                                (pushnew modifier other-modifiers))))))
+             (map-translators (history)
+               (map-applicable-translators
+                #'consider-translator history
+                input-context frame stream x y :for-menu :for-documentation)))
+      (map-translators (stream-output-history stream))
+      (setf known-size most-positive-fixnum)
+      (map-translators (make-blank-area-presentation stream x y event)))
+    (list current-modifier (sort result #'< :key #'car) other-modifiers)))
 
 (defgeneric frame-compare-pointer-documentation-state
     (frame input-context stream old-state new-state))
@@ -122,8 +144,7 @@ alive.")
     ((frame standard-application-frame) input-context stream state event)
   (unless state
     (return-from frame-print-pointer-documentation nil))
-  (destructuring-bind (current-modifier new-translators)
-      state
+  (destructuring-bind (current-modifier new-translators other-modifiers) state
     (let ((x (device-event-x event))
           (y (device-event-y event))
           (pstream *pointer-documentation-output*))
@@ -138,8 +159,7 @@ alive.")
                    (setf (output-record-parent (background-message pstream)) nil)
                    (stream-add-output-record pstream (background-message pstream))
                    (replay (background-message pstream) pstream))))
-          (loop for (button presentation translator context)
-                in new-translators
+          (loop for (button presentation translator context) in new-translators
                 for name = (cadr (assoc button +button-documentation+))
                 for first-one = t then nil
                 do (progn
@@ -161,39 +181,24 @@ alive.")
                                                        :pointer))
                 finally (when new-translators
                           (write-char #\. pstream))))
-      ;; Wasteful to do this after doing find-innermost-presentation-context
-      ;; above... look at doing this first and then doing the innermost test.
-      (let ((other-modifiers nil))
-        (map-applicable-translators
-         (lambda (translator presentation context)
-           (declare (ignore presentation context))
-           (let ((gesture (gesture translator)))
-             (unless (eq gesture t)
-               (loop for (name type modifier) in gesture
-                     unless (or (eql modifier current-modifier)
-                                ;; T means "the wildcard modifier"
-                                (eql modifier t))
-                       do (pushnew modifier other-modifiers)))))
-         (stream-output-history stream) input-context
-         *application-frame* stream x y :for-menu :for-documentation)
-        (when other-modifiers
-          (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
-          (terpri pstream)
-          (write-string "To see other commands, press "	pstream)
-          (loop for modifier-tail on other-modifiers
-                for (modifier) = modifier-tail
-                for count from 0
-                do (progn
-                     (if (null (cdr modifier-tail))
-                         (progn
-                           (when (> count 1)
-                             (write-char #\, pstream))
-                           (when (> count 0)
-                             (write-string " or " pstream)))
+      (when other-modifiers
+        (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
+        (terpri pstream)
+        (write-string "To see other commands, press "	pstream)
+        (loop for modifier-tail on other-modifiers
+              for (modifier) = modifier-tail
+              for count from 0
+              do (progn
+                   (if (null (cdr modifier-tail))
+                       (progn
+                         (when (> count 1)
+                           (write-char #\, pstream))
                          (when (> count 0)
-                           (write-string ", " pstream)))
-                     (print-modifiers pstream modifier :long)))
-          (write-char #\. pstream))))))
+                           (write-string " or " pstream)))
+                       (when (> count 0)
+                         (write-string ", " pstream)))
+                   (print-modifiers pstream modifier :long)))
+        (write-char #\. pstream)))))
 
 (defmethod frame-update-pointer-documentation
     ((frame standard-application-frame) input-context stream event)
