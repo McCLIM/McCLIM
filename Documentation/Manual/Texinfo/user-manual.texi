@@ -221,7 +221,7 @@ complete output each time in the command loop.
 @item Application with an incremental static display function
 Some applications have very large internal data structures to be
 displayed, and it would cause a serious performance problem if the
-display list had to be computer from scratch each time around the
+display list had to be computed from scratch each time around the
 command loop.  To solve this problem, @clim{} contains a feature called
 incremental redisplay.  It allows many of the output records to be kept
 from one iteration of the command loop to the next.  This can be done in
