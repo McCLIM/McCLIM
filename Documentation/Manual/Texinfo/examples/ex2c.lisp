@@ -24,20 +24,20 @@
 (defun display-app (frame pane)
 
   (loop
-     ;; taking items one-by-one from the frame slot 'numbers'
+     ;; Taking items one-by-one from the frame slot 'numbers'...
      for current-element in (numbers frame)
 
-     ;; and increasing line-by-line
+     ;; ...and increasing line-by-line...
      for line from 0
 
-     ;; prints a star if the cursor is on that line
+     ;; ...print a star if the cursor is on that line...
      ;; (Note that here, there is no incremental redisplay. The output
      ;; record of the star will be printed at each call of the display
-     ;; function -- that is at each iteration of the command loop.)
+     ;; function, i.e. at each iteration of the command loop.)
      do (princ (if (= (cursor frame) line) "*" " ") pane)
 
-     ;; and incrementally updates the rendering instructions of the
-     ;; number on that line
+     ;; ...and incrementally update the rendering instructions of the
+     ;; number on that line.
      ;; (Note that 'numbers' was defined as a list of lists, each
      ;; sublist holding an individual number. The reason for that is
      ;; explained below, but this is why (car current-element) is
@@ -53,21 +53,21 @@
 ;; Command definitions
 ;;
 
-;; increase the value of the number on the current line
+;; Increase the value of the number on the current line.
 (define-superapp-command (com-add :name t) ((number 'integer))
   (incf (car (elt (numbers *application-frame*)
                   (cursor *application-frame*)))
         number))
 
-;; move the cursor one line down (increasing the cursor position),
-;; looping back to the beginning if going too far
+;; Move the cursor one line down (increasing the cursor position),
+;; looping back to the beginning if going too far.
 (define-superapp-command (com-next :name t) ()
   (incf (cursor *application-frame*))
   (when (= (cursor *application-frame*)
            (length (numbers *application-frame*)))
     (setf (cursor *application-frame*) 0)))
 
-;; move the cursor one line up
+;; Move the cursor one line up
 (define-superapp-command (com-previous :name t) ()
   (decf (cursor *application-frame*))
   (when (minusp (cursor *application-frame*))

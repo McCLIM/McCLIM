@@ -367,8 +367,8 @@ of this class are in reality also @emph{streams} which can be used in
 calls both to ordinary input and output functions such as @t{format} and
 @t{read} and to @clim{}-specific functions such as @t{draw-line}.
 
-Let's consider an improved example, where for sake of efficiency the
-@emph{my-} names have been replaced by shorter versions:
+Let's consider an improved example, where the @emph{my-} names have been
+replaced by shorter versions for brevity:
 
 @lisp
 @include ex2.lisp
@@ -464,13 +464,12 @@ function that allow us to query and to modify the value.
 
 Observe that in this example, we no longer have the option
 @t{:display-time nil} set in the application pane.  By default, then,
-the @t{:display-time} is @t{:command-loop} which means that the pane
+the @t{:display-time} is @t{:command-loop}, which means that the pane
 is erased after each iteration of the command loop.  Also observe the
-option @t{:display-function} in the application pane definition which
-takes a symbol that names a function to be called to display the pane
-after it has been cleared.  In this case, the name is @t{display-app},
-the name of the function defined immediately after the application
-frame.
+option @t{:display-function} in the application pane definition, which
+takes the name of a function that will be called to display the pane
+after it has been cleared.  In this case, the function is @t{display-app},
+which we have defined immediately after the application frame.
 
 Instead of immediately displaying information about its argument, the
 command @t{com-parity} instead modifies the new slot of the application
