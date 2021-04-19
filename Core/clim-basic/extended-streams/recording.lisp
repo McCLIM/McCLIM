@@ -987,6 +987,15 @@ were added."
         (with-drawing-options (stream :clipping-region record-clip)
           (call-next-method)))))
 
+(defmethod* (setf output-record-position) :before
+  (new-x new-y (record gs-clip-mixin))
+  (with-standard-rectangle* (:x1 old-x :y1 old-y) record
+    (let* ((dx          (- new-x old-x))
+           (dy          (- new-y old-y))
+           (translation (make-translation-transformation dx dy)))
+      (setf (graphics-state-clip record)
+            (transform-region translation (graphics-state-clip record))))))
+
 (defrecord-predicate gs-clip-mixin (clipping-region)
   (if-supplied (clipping-region)
     (region-equal (slot-value record 'clipping-region) clipping-region)))
