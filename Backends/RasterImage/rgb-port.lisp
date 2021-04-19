@@ -34,4 +34,3 @@
     (setf (mirror->%image (port medium) pixmap) pixmap)
     (%make-image pixmap width height)
     pixmap))
-
