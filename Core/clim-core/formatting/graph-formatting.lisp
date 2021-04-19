@@ -2,17 +2,16 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2002 by Gilbert Baumann
-;;;  (c) copyright 2005 by Robert P. Goldman
-;;;  (c) copyright 2017 by John A. Carroll
-;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2002 Gilbert Baumann
+;;;  (c) copyright 2005 Robert P. Goldman
+;;;  (c) copyright 2017 John A. Carroll
+;;;  (c) copyright 2020 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Graph Formatting.
-;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;;; Notes
 

@@ -1,30 +1,15 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
-;;; --------------------------------------------------------------------------------------
-;;;     Title: The coordinate Datatype
-;;;   Created: 1998-12-05 18:06
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: coordinates.lisp,v 1.6 2003/05/31 18:18:43 gilbert Exp $
-;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999,2003 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998,1999,2003 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; The coordinate type and associated functions.
 
-(in-package :clim-internals)
-
+(in-package #:clim-internals)
 
 #+ (or)
 (progn
@@ -89,5 +74,3 @@
 
 (deftype standard-rectangle-coordinate-vector ()
   '(simple-array coordinate (4)))
-
-;; $Log: $

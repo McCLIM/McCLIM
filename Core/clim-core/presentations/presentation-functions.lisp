@@ -219,7 +219,7 @@
       (return-from bind-parameters-and-options body))
     (let* ((opt-ll (and opt-arg (options-lambda-list ptype)))
            (par-ll (and par-arg (parameters-lambda-list ptype)))
-           (mth-vars (get-all-params lambda-list))
+           (mth-vars (get-all-params lambda-list :kind :specialized))
            (opt-vars (get-all-params opt-ll))
            (par-vars (get-all-params par-ll))
            (massaged-type (gensym "MASSAGED-TYPE")))

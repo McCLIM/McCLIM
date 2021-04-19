@@ -7,7 +7,6 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Places and inspection methods for vectors and other arrays.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -24,7 +23,8 @@
 
 ;;; `array-dimensions-place'
 
-(defclass array-dimensions-place (basic-place)
+(defclass array-dimensions-place (read-only-descendants-mixin
+                                  basic-place)
   ())
 
 (defmethod supportsp ((place array-dimensions-place) (operation (eql 'setf)))
@@ -80,6 +80,9 @@
 
 (defclass array-element-place (sequence-element-place)
   ())
+
+(defmethod accepts-value-p ((place array-element-place) (value t))
+  (typep value (array-element-type (container place))))
 
 (defmethod value ((place array-element-place))
   (row-major-aref (container place) (cell place)))
@@ -149,7 +152,7 @@
 
 (defun inspect-element-type-and-total-size (object stream)
   (formatting-row (stream)
-    (format-place-cells stream object 'reader-place 'array-element-type
+    (format-place-cells stream object 'deep-reader-place 'array-element-type
                         :label "Element type")
     (multiple-value-bind (class cell)
         (if (vectorp object)
@@ -183,7 +186,6 @@
   (with-output-as-presentation (stream state 'sequence-range)
     (print-sequence-header stream (array-total-size object) (start state) (end state)))) ; TODO if inspect-sequence could take length from state, we wouldn't need this
 
-;; TODO displacement
 (defmethod inspect-object-using-state ((object vector)
                                        (state  inspected-vector)
                                        (style  (eql :expanded-body))
@@ -213,14 +215,16 @@
                  (loop :for i :from start :below end
                        :do (formatting-row (stream)
                              (formatting-place
-                                 (object place-class i present inspect)
-                               (formatting-cell (stream :align-x :right) ; TODO not yellow when read-only
-                                 (present stream))
+                                 (object place-class i
+                                         present-place present-object)
+                               (formatting-cell (stream :align-x :right)
+                                 (with-style (stream :slot-like)
+                                   (present-place stream)))
                                (formatting-cell (stream)
                                  (if (and fill-pointer (>= i fill-pointer))
                                      (with-style (stream :inactive)
-                                       (inspect stream))
-                                     (inspect stream))))))))
+                                       (present-object stream))
+                                     (present-object stream))))))))
              (when truncated?
                (note-truncated stream length (- end start))))))))))
 
@@ -263,7 +267,9 @@
                                   :for i = (array-row-major-index object row column)
                                   :do (formatting-cell (stream)
                                         (formatting-place
-                                            (object 'array-element-place i present inspect)
-                                          (present stream)
+                                            (object 'array-element-place i
+                                                    present-place present-object)
+                                          (with-style (stream :slot-like)
+                                            (present-place stream))
                                           (write-char #\Space stream)
-                                          (inspect stream)))))))))))))))
+                                          (present-object stream)))))))))))))))

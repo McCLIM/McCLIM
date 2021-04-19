@@ -1,26 +1,14 @@
-;;; -*- Mode: Lisp; Package: DREI-UNDO -*-
-
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Robert Strandh <strandh@labri.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; General-purpose undo module
 
-(in-package :drei-undo)
+(in-package #:drei-undo)
 
 (defgeneric add-undo (undo-record undo-tree)
   (:documentation "Add an undo record to the undo tree below the
@@ -55,9 +43,7 @@ moved (and no calls to `flip-undo-record' are made)."))
 
 (define-condition no-more-undo (simple-error)
   ()
-  (:report (lambda (condition stream)
-             (declare (ignore condition))
-             (format stream "No more undo")))
+  (:report "No more undo")
   (:documentation "A condition of this type is signaled whenever
 an attempt is made to call undo when the application is in its
 initial state."))
@@ -76,10 +62,9 @@ initial state."))
 Client code typically derives subclasses of this class that are
 specific to the application."))
 
-(defmethod initialize-instance :after ((tree standard-undo-tree) &rest args)
-  (declare (ignore args))
-  (setf (current-record tree) tree
-        (leaf-record tree) tree))
+(defmethod initialize-instance :after ((instance standard-undo-tree) &key)
+  (setf (current-record instance) instance
+        (leaf-record instance) instance))
 
 (defclass undo-record () ()
   (:documentation "The base class for all undo records."))
@@ -99,13 +84,14 @@ belongs.")
   (:documentation "Standard instantiable class for undo records."))
 
 (defmethod add-undo ((record standard-undo-record) (tree standard-undo-tree))
-  (push record (children (current-record tree)))
-  (setf (undo-tree record) tree
-        (parent record) (current-record tree)
-        (depth record) (1+ (depth (current-record tree)))
-        (current-record tree) record
-        (leaf-record  tree) record
-        (redo-path tree) '()))
+  (let ((current-record (current-record tree)))
+    (push record (children current-record))
+    (setf (undo-tree record)    tree
+          (parent    record)    current-record
+          (depth     record)    (1+ (depth current-record))
+          (current-record tree) record
+          (leaf-record    tree) record
+          (redo-path      tree) '())))
 
 (defmethod undo ((tree standard-undo-tree) &optional (n 1))
   (assert (<= n (depth (current-record tree)))

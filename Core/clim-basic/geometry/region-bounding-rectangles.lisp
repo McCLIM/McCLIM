@@ -1,28 +1,41 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2003 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2005 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Methods for computing bounding rectangles or various region classes.
+
 (in-package #:climi)
 
-;;; Implementation for various types of regions.
-
-;;; fixme: is this right? nowhere-region is unbound. -- jd 2019-09-30
+;;; FIXME is this right? nowhere-region is unbound. -- jd 2019-09-30
 (defmethod bounding-rectangle* ((x nowhere-region))
   (values 0 0 0 0))
 
 ;;; Lazy evaluation of a bounding rectangle.
 (defmethod slot-unbound (class (region cached-polygon-bbox-mixin) (slot-name (eql 'bbox)))
   (setf (slot-value region 'bbox)
-        (make-instance 'standard-bounding-rectangle
-                       :x1 (reduce #'min (mapcar #'point-x (polygon-points region)))
-                       :y1 (reduce #'min (mapcar #'point-y (polygon-points region)))
-                       :x2 (reduce #'max (mapcar #'point-x (polygon-points region)))
-                       :y2 (reduce #'max (mapcar #'point-y (polygon-points region))))))
+        (loop for point in (polygon-points region)
+              for (x y) = (multiple-value-list (point-position point))
+              minimizing x into x1 maximizing x into x2
+              minimizing y into y1 maximizing y into y2
+              finally (return (make-instance 'standard-bounding-rectangle
+                                              :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod bounding-rectangle* ((region cached-polygon-bbox-mixin))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      (bounding-rectangle region)
+  (with-standard-rectangle* (x1 y1 x2 y2) (bounding-rectangle region)
     (values x1 y1 x2 y2)))
 
 (defun ellipse-bounding-rectangle (el)
-  ;; returns bounding rectangle of ellipse centered at (0, 0) with radii h and v
-  ;; rotated by the angle phi.
+  ;; Return bounding rectangle of ellipse centered at (0, 0) with
+  ;; radii h and v rotated by the angle phi.
   (multiple-value-bind (cx cy h v phi) (ellipse-simplified-representation el)
     (let* ((sin (sin phi))
            (cos (cos phi))
@@ -58,12 +71,11 @@
   (with-slots (x1 y1 x2 y2) a
     (values (min x1 x2) (min y1 y2) (max x1 x2) (max y1 y2))))
 
-(defmethod bounding-rectangle* ((a standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      a
+(defmethod bounding-rectangle* ((region standard-rectangle))
+  (with-standard-rectangle* (x1 y1 x2 y2) region
     (values x1 y1 x2 y2)))
 
-;;; - STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
+;;; STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
 (defmethod bounding-rectangle* ((region standard-rectangle-set))
   (with-slots (bands bounding-rectangle) region
     (values-list (or bounding-rectangle

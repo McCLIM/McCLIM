@@ -1,8 +1,24 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2001 Julien Boninfan
+;;;  (c) copyright 2004 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2017 Peter <craven@gmx.net>
+;;;  (c) copyright 2018 Cyrus Harmon <ch-github@bobobeach.com>
+;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Utilities used in the regions module.
+
 (in-package #:climi)
 
-
-;;; point and angle utilities
-
+;;; Point and angle utilities
+;;;
 ;;; CLIM "native" coordinate system is left-handed (y grows down).
 ;;; Angles are specified to grow in the counter-clockwise direction
 ;;; (disregarding the coordinate system), so we need to invert the y
@@ -48,8 +64,8 @@ y2."
                   (phase (complex y1 x1)))))
     (normalize-angle theta)))
 
-
-;;; line utilities
+;;; Line utilities
+
 (declaim (inline line-contains-point-p))
 (defun line-contains-point-p (x1 y1 x2 y2 px py)
   (coordinate= (* (- py y1) (- x2 x1))
@@ -186,16 +202,14 @@ y2."
         (/ (- px x0) dx)
         (/ (- py y0) dy))))
 
-
-;;; polygon
-;;; -- Set operations on polygons --------------------------------------------
+;;; Polygon: Set operations on polygons
 
 (defstruct (pg-edge (:constructor make-pg-edge* (x1 y1 x2 y2 extra)))
   x1 y1 x2 y2 extra)
 
 (defstruct pg-splitter
   links                                 ; "links" means "left"
-                                        ;list of points
+                                        ; list of points
   rechts)                               ; "rechts" means "right"
                                         ; from the top down
 
@@ -342,7 +356,7 @@ y2."
         (t
          (cons (car pts) (clean-up-point-sequence (cdr pts))))))
 
-;;; -- Intersection Line/Polygon ---------------------------------------------
+;;; Intersection Line/Polygon
 
 ;;; By "overcut" we mean a scalar computed from the intersection point
 ;;; between a polygon segment and an unbounded line.
@@ -364,10 +378,10 @@ y2."
              (funcall fun (position->line-fktn x1 y1 x2 y2 px py)))))
     (declare (inline call-fun))
     (dotimes (i n)
-      (let ((pv  (elt points (mod (- i 1) n)))  ;the point before
-            (po  (elt points (mod i n)))        ;the "current" point
-            (pn  (elt points (mod (+ i 1) n)))  ;the point after
-            (pnn (elt points (mod (+ i 2) n)))) ;the point after**2
+      (let ((pv  (elt points (mod (- i 1) n)))  ; the point before
+            (po  (elt points (mod i n)))        ; the "current" point
+            (pn  (elt points (mod (+ i 1) n)))  ; the point after
+            (pnn (elt points (mod (+ i 2) n)))) ; the point after**2
         (cond
           ;; The line goes directly through PO
           ((multiple-value-bind (px py) (point-position po)
@@ -387,11 +401,13 @@ y2."
                           (let ((sign-1 (line-equation x1 y1 x2 y2 px py)))
                             (cond ((or (and (> sign-1 0) (< sign-2 0))
                                        (and (< sign-1 0) (> sign-2 0)))
-                                   ;; The line goes through the polygons border, by edge po/pn
+                                   ;; The line goes through the polygons border,
+                                   ;; by edge po/pn
                                    (call-fun po))
                                   (t
-                                   ;; otherwise the line touches the polygon at the edge po/pn,
-                                   ;; return both points
+                                   ;; otherwise the line touches the polygon at
+                                   ;; the edge po/pn, return both
+                                   ;; points
                                    (call-fun po)
                                    (call-fun pn))))))
                        (t
@@ -470,10 +486,9 @@ y2."
             ((null (cdr res2)) (car res2))
             (t (make-instance 'standard-region-union :regions res2))))))
 
-
-;;; rectangle-set
+;;; RECTANGLE-SET
 
-;;; -- interval sums ---------------------------------------------------------
+;;; Interval sums
 
 (defun isum-union* (xs ys)        (isum-op xs ys boole-ior   0 0 nil))
 (defun isum-difference* (xs ys)   (isum-op xs ys boole-andc2 0 0 nil))
@@ -519,19 +534,18 @@ y2."
                       (isum-op as bs boole-op in-a in-b x)
                     (isum-op as bs boole-op in-a in-b x0))))))))
 
-;;; -- Bands -----------------------------------------------------------------
-
-
+;;; Bands
+;;;
 ;;; A band list is represented by
-
-;;;  ((x_0 . a_0) (x_1 . a_1) ... (x_n . nil))
-
+;;;
+;;;   ((x_0 . a_0) (x_1 . a_1) ... (x_n . nil))
+;;;
 ;;; The a_i are the relevant interval sums for x in [x_i, x_(i+1)].
-
+;;;
 ;;; The empty band could have been representated as
-;;;  ((x . nil))  x arbitrary
+;;;   ((x . nil))  x arbitrary
 ;;; But to get a canonic representation, I'll choose simply NIL.
-
+;;;
 ;;; A better representation would be
 ;;;  (x_0 a_0 x_1 a_1 ... x_n)
 ;;; Pro: Unlimited bands could be represented by simply skipping the
@@ -587,7 +601,7 @@ y2."
         (cons x2 nil)))
 
 (defun xy-bands->yx-bands (bands)
-  ;; Das kann man sicherlich noch viel geschicker machen ...
+  ;; This can certainly be done in a much more clever way ...
   (let ((res nil))
     (map-over-bands-rectangles
      (lambda (x1 y1 x2 y2)
@@ -618,8 +632,7 @@ y2."
     (make-instance 'standard-rectangle-set
       :bands (rectangle->xy-bands* x1 y1 x2 y2))))
 
-
-;;; ellipse
+;;; ELLIPSE
 
 (defun %ellipse-angle->position (ellipse angle)
   (with-slots (tr) ellipse
@@ -633,23 +646,21 @@ y2."
     ;; remember, that y-axis is reverted
     (coordinate (atan* (- x xc) (- (- y yc))))))
 
-;;; -- Ellipse simplified representation ---------------------------------------
+;;; Ellipse simplified representation
 
 (defun ellipse-coefficients (ell)
   ;; Returns the coefficients of the equation specifying the ellipse
   ;; as in ax^2 + by^2 + cxy + dx + dy - f = 0
-
+  ;;
   ;; Note 1:
   ;;   The `f' here may seem to be superfluous, since you
   ;;   could simply multiply the whole equation by 1/f. But this is
   ;;   not the case, since `f' may as well be 0.
-
   ;; Note 2:
   ;;   In the literature you often find something like
   ;;   (x^2)/a + (y^2)/b - 1 = 0 for an axis aligned ellipse, but
   ;;   I rather choose to treat all coefficients as simple factors instead
   ;;   of denominators.
-
   (with-slots (tr) ell
     ;; Why the inverse here?
     (multiple-value-bind (a b d e c f)
@@ -665,55 +676,55 @@ y2."
 ;;; Straight from the horse's mouth -- moore
 ;;;
 ;;; Axis of an ellipse
-;;; -------------------------
-
+;;; ------------------
+;;;
 ;;; Given an ellipse with its center at the origin, as
-
+;;;
 ;;;    ax^2 + by^2 + cxy - 1 = 0
-
+;;;
 ;;; The two axis of an ellipse are characterized by minimizing and
 ;;; maximizing the radius. Let (x,y) be a point on the delimiter of
 ;;; the ellipse. It's radius (distance from the origin) then is:
-
+;;;
 ;;;    r^2 = x^2 + y^2
-
+;;;
 ;;; To find the axis can now be stated as an minimization problem with
 ;;; constraints. So mechanically construct the auxiliarry function H:
-
+;;;
 ;;;   H = x^2 + y^2 - k(ax^2 + by^2 + cxy - 1)
-
+;;;
 ;;; So the following set of equations remain to be solved
-
+;;;
 ;;;   (I)   dH/dx = 0 = 2x + 2kax + kcy
 ;;;  (II)   dH/dy = 0 = 2y + 2kby + kcx
 ;;; (III)   dH/dk = 0 = ax^2 + by^2 + cxy - 1
-
+;;;
 ;;; Unfortunately, as I always do the math work - hopelessly, even -
 ;;; Maxima is the tool of my choice:
-
+;;;
 ;;; g1: 2*x + 2*k*a*x + k*c*y$
 ;;; g2: 2*y + 2*k*b*y + k*c*x$
 ;;; g3: a*x*x + b*y*y + c*x*y -1$
-
+;;;
 ;;; sol1: solve ([g1,g2],[k,y])$
-
+;;;
 ;;; /* This yields two solutions because of the squares with occur. The
 ;;;  * last equation (G3) must therefore be handled for both solutions for
 ;;;  * y.
 ;;;  */
-
+;;;
 ;;; y1: rhs(first(rest(first(sol1))))$
 ;;; y2: rhs(first(rest(first(rest(sol1)))))$
-
+;;;
 ;;; /* Substitute the 'y' found. */
 ;;; sol2: solve(subst(y1,y,g3),x);
 ;;; x11: rhs(first(sol2));
 ;;; x12: rhs(first(rest(sol2)));
-
+;;;
 ;;; sol3: solve(subst(y2,y,g3),x);
 ;;; x21: rhs(first(sol3));
 ;;; x22: rhs(first(rest(sol3)));
-
+;;;
 ;;; /* dump everything */
 ;;; dumpsol([[x=x11,y=y1], [x=x12,y=y1], [x=x21,y=y2], [x=x22,y=y2]]);
 
@@ -771,7 +782,7 @@ y2."
                             c))))
              (values x1 y1 x2 y2))))))
 
-;;; this function is used in `ellipse-simplified-representation' to fixup
+;;; This function is used in `ellipse-simplified-representation' to fixup
 ;;; normalized radius lengths. Can't be interchanged with
 ;;; `%ellipse-angle->position' because of the rotation inversion.
 (defun %ellipse-simplified-representation/radius (ellipse angle)
@@ -807,7 +818,7 @@ y2."
                    (sqrt (+ (expt (- center-x vx) 2) (expt (- center-y vy) 2)))
                    phi)))))))
 
-;;; -- Intersection of Ellipse vs. Line ----------------------------------------
+;;; Intersection of Ellipse vs. Line
 
 (defun intersection-hline/ellipse (el y)
   "Returns coordinates where ellipse intersects with a horizontal line."
@@ -882,8 +893,8 @@ y2."
            (y2 (+ (* m-slope x2) b-slope)))
       (values (+ cx x1) (+ cy y1) (+ cx x2) (+ cy y2)))))
 
-;;; -- Intersection of Ellipse vs. Ellipse -----------------------------------
-
+;;; Intersection of Ellipse vs. Ellipse
+;;;
 ;;; This entire thing is so incomprehensible, that I have to look for
 ;;; my notes, to present the derivation for the solution of the
 ;;; conic section problem.
@@ -996,7 +1007,7 @@ y2."
                  (eps-f 0d0)
                  (eps-f* 0d-16)
                  (eps-x 1d-20)
-                 (m 20)                 ;maximum number of steps
+                 (m 20) ; maximum number of steps
                  (res nil))
              (loop
                (cond ((> n m)
@@ -1033,7 +1044,7 @@ y2."
                                        (return))))
                                  (setf x1 x-start)
                                  (setq n 0))))))
-                 (setf x (min 1d0 (max -1d0 x1)))        ;Is this allowed?
+                 (setf x (min 1d0 (max -1d0 x1))) ; Is this allowed?
                  (incf n)))
              res)))))
 
@@ -1055,9 +1066,7 @@ y2."
                    b))
                (setf (aref b i) (+ (* (aref b (- i 1)) x) (aref polynomial i)))))))))
 
-
-;;; routines for approximating ellipses as bezier curves
-
+;;; Routines for approximating ellipses as bezier curves
 ;;;
 ;;; Many backends, such as PDF and PostScript don't provide shape
 ;;; drawing functions per se, but rather primitives for working with
@@ -1074,20 +1083,19 @@ y2."
 ;;; I doubt that these functions belong in geometry utilities but I
 ;;; move them anyway. -- jd 2019-10-10
 
-;;
-;; CLIM describes general (not neccessarily axis-aligned) ellipses by
-;; their center and two vectors describing the radii. The formulation
-;; for general ellipses described by Luc Maisonobe, referenced above,
-;; computes the ellipse paths based on the center, the length of each
-;; radius vectors, and the angle between the two radii. Just as a
-;; circle could be (over-)described by its center and a specific 2-d
-;; radius, but only the length of the radius is needed to definitively
-;; describe the circle, any two (non-colinear) radius vectors could
-;; describe a general ellipse. Maisonobe describes an ellipse by two
-;; vectors, the semi-major axis, the semi-minor axis at a right angle
-;; to the semi-major axis, and the angle of the semi-major axis
-;; relative to the positive x-axis. So, given two radii, we call the
-;; code in clim-basic/region.lisp that gives a, b, and theta.
+;;; CLIM describes general (not neccessarily axis-aligned) ellipses by
+;;; their center and two vectors describing the radii. The formulation
+;;; for general ellipses described by Luc Maisonobe, referenced above,
+;;; computes the ellipse paths based on the center, the length of each
+;;; radius vectors, and the angle between the two radii. Just as a
+;;; circle could be (over-)described by its center and a specific 2-d
+;;; radius, but only the length of the radius is needed to definitively
+;;; describe the circle, any two (non-colinear) radius vectors could
+;;; describe a general ellipse. Maisonobe describes an ellipse by two
+;;; vectors, the semi-major axis, the semi-minor axis at a right angle
+;;; to the semi-major axis, and the angle of the semi-major axis
+;;; relative to the positive x-axis. So, given two radii, we call the
+;;; code in clim-basic/region.lisp that gives a, b, and theta.
 (defun reparameterize-ellipse (radius1-dx radius1-dy radius2-dx radius2-dy)
   "Returns three values, the length of radius 1, the length of radius
 2, and the angle (CCW in cartesian coordinates) between the two

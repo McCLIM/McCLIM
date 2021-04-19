@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2019-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2019-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Smoke test for inspecting lists.
-;;;
 
 (cl:in-package #:clouseau.test)
 
@@ -18,7 +17,8 @@
   "Test `object-state-class' for list-related objects."
 
   (object-state-class-cases
-   '(()                      inspected-object)
+   ;; Not necessarily a list
+   '(()                      clouseau::inspected-symbol)
 
    ;; Small lists
    '((1 . 2)                 clouseau:inspected-improper-list)

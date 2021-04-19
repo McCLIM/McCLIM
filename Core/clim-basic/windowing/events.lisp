@@ -178,7 +178,7 @@
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
-   (graft-y :reader pointer-event-native-graft-y) ))
+   (graft-y :reader pointer-event-native-graft-y)))
 
 (defmethod print-object ((event pointer-event) stream)
   (print-unreadable-object (event stream :type t :identity nil)
@@ -190,12 +190,12 @@
   ((button :initarg :button
            :reader pointer-event-button)))
 
-(define-event-class pointer-button-press-event          (pointer-button-event) ())
-(define-event-class pointer-button-release-event        (pointer-button-event) ())
-(define-event-class pointer-button-hold-event           (pointer-button-event) ())
-(define-event-class pointer-button-click-event          (pointer-button-event) ())
-(define-event-class pointer-button-double-click-event   (pointer-button-event) ())
-(define-event-class pointer-button-click-and-hold-event (pointer-button-event) ())
+(define-event-class pointer-button-press-event   (pointer-button-event) ())
+(define-event-class pointer-button-release-event (pointer-button-event) ())
+(define-event-class pointer-button-hold-event    (pointer-button-event) ())
+(define-event-class pointer-click-event          (pointer-button-event) ())
+(define-event-class pointer-double-click-event   (pointer-button-event) ())
+(define-event-class pointer-click-and-hold-event (pointer-button-event) ())
 
 (define-event-class pointer-scroll-event (pointer-button-event)
   ((delta-x :initform 0 :initarg :delta-x

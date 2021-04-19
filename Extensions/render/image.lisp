@@ -129,10 +129,10 @@
             ((region-contains-region-p clip-region region)
              (setf clip-region nil))
             ((bounding-rectangle-p clip-region)
-             (with-bounding-rectangle* (x1 y1 x2 y2)
+             (with-bounding-rectangle* (x1 y1 :width w :height h)
                  (region-intersection clip-region region)
                (setf x (floor x1) y (floor y1)
-                     width (ceiling (- x2 x1)) height (ceiling (- y2 y1))
+                     width (ceiling w) height (ceiling h)
                      clip-region nil))))))
   (let* (;; Stencil
          (stencil-array (and stencil (climi::pattern-array stencil)))

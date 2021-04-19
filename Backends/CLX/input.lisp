@@ -1,28 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2001, 2014, 2016 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000,2001 Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001 Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001,2014,2016 Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 ;;; Think about rewriting this macro to be nicer.
 (defmacro peek-event ((display &rest keys) &body body)
@@ -334,7 +322,7 @@
         (values nil :wait-function)))
     (let ((event (xlib:process-event (clx-port-display port)
                                      :timeout timeout
-				     :handler #'event-handler
+                                     :handler #'event-handler
                                      :discard-p t
                                      :force-output-p t)))
       (case event
@@ -451,13 +439,13 @@
 ;;; that a keysym name is a Common Lisp symbol in the KEYWORD package.
 (defmethod clim-xcommon:modifier-mapping ((port clx-basic-port))
   (let* ((display (clx-port-display port))
-	 (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
-	 (modifier-map (make-array (length x-modifiers) :initial-element nil)))
+         (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
+         (modifier-map (make-array (length x-modifiers) :initial-element nil)))
     (loop
        for keycodes in x-modifiers
        for i from 0
        do (setf (aref modifier-map i)
-		(mapcan (lambda (keycode)
-			  (modifier-keycode->keysyms display keycode))
-			keycodes)))
+                (mapcan (lambda (keycode)
+                          (modifier-keycode->keysyms display keycode))
+                        keycodes)))
     modifier-map))
