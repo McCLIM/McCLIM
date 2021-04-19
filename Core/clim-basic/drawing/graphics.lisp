@@ -979,41 +979,52 @@
   ;; aligned with XY axis. For drawing transformed designs we need to transform
   ;; said rectangular region hence we need to use DRAW-DESIGN. -- jd 2018-09-05
   (check-type pattern pattern)
-  (flet ((draw-it (x y)
-           ;; As I read the spec, the pattern itself is not transformed, so we
-           ;; should draw the full (untransformed) pattern at the transformed x/y
-           ;; coordinates. This requires we revert to the identity transformation
-           ;; before drawing the rectangle. -Hefner
-           (let* ((effective-pattern (effective-transformed-design pattern))
-                  ;; Effective design
-                  (effective-design  (transformed-design-design effective-pattern))
-                  (design-rectangle  (bounding-rectangle effective-design))
-                  ;; Effective pattern transformation
-                  (pattern-transform (transformed-design-transformation
-                                      effective-pattern))
-                  ;; Final transformation and region
-                  (final-transform   (multiple-value-bind (px py)
-                                         (bounding-rectangle-position
-                                          (transform-region
-                                           pattern-transform design-rectangle))
-                                       (compose-transformations
-                                        (make-translation-transformation
-                                         (- x px) (- y py))
-                                        pattern-transform)))
-                  (final-region      (transform-region
-                                      final-transform design-rectangle))
-                  (final-ink         (transform-region final-transform effective-design)))
-             (with-identity-transformation (medium)
-               (draw-design medium final-region :ink final-ink)))))
+  (labels ((draw (x y sx sy)
+             ;; As I read the spec, the pattern itself is not transformed, so we
+             ;; should draw the full (untransformed) pattern at the transformed x/y
+             ;; coordinates. This requires we revert to the identity transformation
+             ;; before drawing the rectangle. -Hefner
+             (let* ((effective-pattern (effective-transformed-design pattern))
+                    ;; Effective design
+                    (effective-design  (transformed-design-design effective-pattern))
+                    (design-rectangle  (make-rectangle*
+                                        0 0
+                                        (pattern-width effective-design)
+                                        (pattern-height effective-design)))
+                    ;; Effective pattern transformation
+                    (pattern-transform (transformed-design-transformation
+                                        effective-pattern))
+                    (pattern-region    (transform-region
+                                        pattern-transform design-rectangle))
+                    ;; Final transformation and region. Adjust for
+                    ;; offsets introduced by PATTERN-TRANSFORM and
+                    ;; axis flipping introduced by the medium
+                    ;; transformation.
+                    (final-transform   (with-bounding-rectangle* (x1 y1 x2 y2)
+                                           pattern-region
+                                         (compose-transformations
+                                          (make-translation-transformation
+                                           (- x x1 (if (minusp sx) (- x2 x1) 0))
+                                           (- y y1 (if (minusp sy) (- y2 y1) 0)))
+                                          pattern-transform)))
+                    (final-region      (transform-region
+                                        final-transform design-rectangle))
+                    (final-ink         (transform-region final-transform effective-design)))
+               (with-identity-transformation (medium)
+                 (draw-design medium final-region :ink final-ink))))
+           (prepare-and-draw (transformation)
+             ;; Capture the translation and axis-flipping aspects of
+             ;; TRANSFORMATION.
+             (multiple-value-bind (tx ty)
+                 (transform-position transformation x y)
+               (multiple-value-bind (sx sy)
+                   (transform-distance transformation 1 1)
+                 (draw tx ty (signum sx) (signum sy))))))
     (if (or clipping-region transformation)
         (with-drawing-options (medium :clipping-region clipping-region
                                       :transformation  transformation)
-          (multiple-value-bind (x y)
-              (transform-position (medium-transformation medium) x y)
-            (draw-it x y)))
-        (multiple-value-bind (x y)
-            (transform-position (medium-transformation medium) x y)
-          (draw-it x y)))))
+          (prepare-and-draw (medium-transformation medium)))
+        (prepare-and-draw (medium-transformation medium)))))
 
 (defun draw-rounded-rectangle* (sheet x1 y1 x2 y2
                                       &rest args &key
