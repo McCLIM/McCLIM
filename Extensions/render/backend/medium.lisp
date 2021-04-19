@@ -90,15 +90,20 @@
                   (maybe-region medium)
                   (transform-region (maybe-transformation medium)
                                     (make-rectangle* left top right bottom)))))
-    (clim:with-bounding-rectangle* (min-x min-y max-x max-y) region
-      (if filled
-          (%medium-fill-image medium min-x min-y (- max-x min-x) (- max-y min-y))
-          (let ((path (make-path left top)))
-            (line-to path right top)
-            (line-to path right bottom)
-            (line-to path left bottom)
-            (close-path path)
-            (%medium-stroke-paths medium (list path)))))))
+    (flet ((path ()
+             (let ((path (make-path left top)))
+               (line-to path right top)
+               (line-to path right bottom)
+               (line-to path left bottom)
+               (close-path path)
+               path)))
+      (cond ((not filled)
+             (%medium-stroke-paths medium (list (path))))
+            ((rectanglep region)
+             (with-bounding-rectangle* (x1 y1 x2 y2) region
+               (%medium-fill-image medium x1 y1 (- x2 x1) (- y2 y1))))
+            (t
+             (%medium-fill-paths medium (list (path))))))))
 
 (defmethod medium-draw-polygon* ((medium render-medium-mixin) coord-seq closed filled)
   (let ((x (elt coord-seq 0))
