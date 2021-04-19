@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -47,7 +47,7 @@
 ;;; interest. As a result, such lists can be shown as a list or as the
 ;;; graph induced by the relation.
 
-(defclass class-list-place (deep-read-only-place)
+(defclass class-list-place (read-only-place)
   ())
 
 (macrolet

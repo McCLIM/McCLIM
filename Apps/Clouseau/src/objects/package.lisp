@@ -17,10 +17,6 @@
 (defclass package-data-place-mixin ()
   ())
 
-(defmethod supportsp ((place     package-data-place-mixin)
-                      (operation (eql 'modify-descendants)))
-  nil)
-
 (defmethod supportsp :around ((place     package-data-place-mixin)
                               (operation (eql 'setf)))
   (and (not (package-locked-p (container place)))
