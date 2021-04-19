@@ -19,8 +19,7 @@
          (effective-dashes (line-style-effective-dashes line-style medium))
          (dashes-vector (typecase effective-dashes
                           (null nil)
-                          (list (coerce effective-dashes 'vector))
-                          (t (vector effective-dashes))))
+                          (sequence (coerce effective-dashes 'vector))))
          (joint-shape (line-style-joint-shape line-style))
          (cap-shape (line-style-cap-shape line-style)))
     (when dashes-vector
