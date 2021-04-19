@@ -279,8 +279,7 @@ padding.)"
   "Return two values, the height and width of MENU (adjusted for
 maximum size according to `frame')."
   (multiple-value-bind (max-width max-height) (max-x-y frame)
-    (with-bounding-rectangle* (x1 y1 x2 y2) menu
-      (declare (ignore x1 y1))
+    (with-bounding-rectangle* (:x2 x2 :y2 y2) menu
       (values (min x2 max-width)
               (min y2 max-height)))))
 

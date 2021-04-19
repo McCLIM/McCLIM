@@ -15,7 +15,11 @@
   ;; while in X11 they are at the centers. We don't do much about the
   ;; discrepancy, but rounding up at half pixel boundaries seems to
   ;; work well.
-  (floor (+ x .5)))
+  (etypecase x
+    (integer      x)
+    (single-float (values (floor (+ x .5f0))))
+    (double-float (values (floor (+ x .5d0))))
+    (ratio        (values (floor (+ x 1/2))))))
 
 (defmacro with-round-positions ((transformation &rest coordinates) &body body)
   (destructuring-bind (x y &rest rest-coords) coordinates

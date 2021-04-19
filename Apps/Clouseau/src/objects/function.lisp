@@ -110,8 +110,8 @@
 (defmethod object-state-class ((object generic-function) (place t))
   'inspected-generic-function)
 
-(defclass inspected-method (inspected-instance
-                            remembered-collapsed-style-mixin)
+(defclass inspected-method (remembered-collapsed-style-mixin
+                            inspected-instance)
   ()
   (:default-initargs
    :slot-style nil))
@@ -173,7 +173,7 @@
         (multiple-value-bind (lambda-list lambda-list-p)
             (function-lambda-list object expression)
           ;; Name
-          (format-place-row stream object 'reader-place 'function-name
+          (format-place-row stream object 'deep-reader-place 'function-name
                             :label "Name")
           ;; Lambda list
           (formatting-row (stream)

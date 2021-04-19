@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Places, inspection methods and commands for instances.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -71,10 +70,13 @@
   ())
 
 (defmethod make-object-state ((object t) (place class-of-place))
-  (make-instance (object-state-class object place)
-                 :place         place
-                 :context-class (class-of (container place))
-                 :style         :name-only))
+  (let* ((class-name (class-name (cell place)))
+         (package    (when class-name
+                       (symbol-package class-name))))
+    (make-instance (object-state-class object place)
+                   :place           place
+                   :context-package package
+                   :style           :name-only)))
 
 (defun inspect-class-as-name (class stream &key context-instance)
   ;; This presents the name of CLASS as a collapsed inspectable object

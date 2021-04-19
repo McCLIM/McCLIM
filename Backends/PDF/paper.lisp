@@ -41,8 +41,7 @@
 (defparameter *pdf-right-margin* 0)
 
 (defun make-pdf-transformation (page output scale-to-fit trim-page-to-output-size)
-  (with-bounding-rectangle* (left top right bottom) page
-    (declare (ignore left top))
+  (with-bounding-rectangle* (nil nil right bottom) page
     (let ((drawing-region (make-rectangle*
                             *pdf-left-margin* *pdf-top-margin*
                             (- right *pdf-right-margin*) (- bottom *pdf-bottom-margin*))))

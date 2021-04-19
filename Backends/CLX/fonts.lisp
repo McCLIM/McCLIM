@@ -1,14 +1,3 @@
-;;;; -*- Mode: Lisp; Syntax: Common-Lisp; indent-tabs-mode: nil; Package: SYSTEM -*-
-;;;; vim: set filetype=lisp tabstop=8 shiftwidth=2 expandtab:
-
-;;;;
-;;;;  fonts.lisp  -- Font access abstraction for CLX backend
-;;;;
-;;;;  Copyright (c) 2016, Daniel Kochmański
-;;;;
-;;;;    see toplevel file 'copyright' for the copyright details.
-;;;;
-
 (in-package #:clim-clx)
 
 (defparameter *families/names*

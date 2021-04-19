@@ -75,19 +75,31 @@
       (apply #'call-next-method stream object type :single-box t args)))
 
 ;;; Listener application frame
+
+(macrolet ((load-icon (name)
+             `(make-pattern-from-bitmap-file
+               (merge-pathnames
+                ,(make-pathname :name (pathname-name name)
+                                :type (pathname-type name)
+                                :directory '(:relative :up :up "data/icons"))
+                #.(or *compile-file-pathname*
+                      *load-pathname*)))))
+  (defvar *default-icon* (load-icon "listener-logo.png"))
+  (defvar *small-icon* (load-icon "listener-logo-small.png")))
+
 (define-application-frame listener (standard-application-frame)
-    ((system-command-reader :accessor system-command-reader
-			    :initarg :system-command-reader
-			    :initform t))
-    (:panes (interactor-container
-             (make-clim-stream-pane
-              :type 'listener-interactor-pane
-              :name 'interactor :scroll-bars t
-              :default-view +listener-view+))
-            (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
-            (wholine (make-pane 'wholine-pane
-                                :display-function 'display-wholine
-                                :display-time :command-loop :end-of-line-action :allow)))
+  ((system-command-reader :accessor system-command-reader
+                          :initarg :system-command-reader
+                          :initform t))
+  (:panes (interactor-container
+           (make-clim-stream-pane
+            :type 'listener-interactor-pane
+            :name 'interactor :scroll-bars t
+            :default-view +listener-view+))
+          (doc :pointer-documentation :default-view +listener-pointer-documentation-view+)
+          (wholine (make-pane 'wholine-pane
+                              :display-function 'display-wholine
+                              :display-time :command-loop :end-of-line-action :allow)))
   (:top-level (default-frame-top-level :prompt 'print-listener-prompt))
   (:command-table (listener
                    :inherit-from (application-commands
@@ -102,10 +114,11 @@
   (:disabled-commands com-pop-directory com-drop-directory com-swap-directory)
   (:menu-bar t)
   (:layouts (default
-	      (vertically ()
-                interactor-container
-                doc
-                wholine))))
+             (vertically ()
+               interactor-container
+               doc
+               wholine)))
+  (:icon (list *default-icon* *small-icon*)))
 
 ;;; Package selection popup
 

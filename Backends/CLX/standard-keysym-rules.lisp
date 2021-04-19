@@ -1,25 +1,12 @@
-;;;; ----------------------------------------------------------------------
-;;;;     Title: X11 standard keysym interpretation rules
-;;;;   Created: 2016-01-25
-;;;;    Author: Robert Strandh <robert.strandh@gmail.com>
-;;;;   License: LGPL (See file COPYING for details).
-;;;; ----------------------------------------------------------------------
-;;;;  (c) copyright 2016 by Robert Strandh
-
-;;;; This library is free software; you can redistribute it and/or
-;;;; modify it under the terms of the GNU Library General Public
-;;;; License as published by the Free Software Foundation; either
-;;;; version 2 of the License, or (at your option) any later version.
-;;;;
-;;;; This library is distributed in the hope that it will be useful,
-;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;;; Library General Public License for more details.
-;;;;
-;;;; You should have received a copy of the GNU Library General Public
-;;;; License along with this library; if not, write to the 
-;;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; X11 standard keysym interpretation rules
 
 (cl:in-package #:clim-clx)
 

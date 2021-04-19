@@ -10,6 +10,7 @@
 ;;;  (c) copyright 2001-2002, 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;  (c) copyright 2002-2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 by Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -176,8 +177,7 @@
 (defmethod allocate-space ((pane clim-stream-pane) width height)
   (multiple-value-bind (w h)
       (untransform-distance (sheet-native-transformation pane) width height)
-    (multiple-value-bind (min-x min-y)
-        (bounding-rectangle-position (stream-output-history pane))
+    (with-bounding-rectangle* (min-x min-y) (stream-output-history pane)
       (let* ((x0 (clamp min-x (- w) 0))
              (y0 (clamp min-y (- h) 0)))
         (setf (sheet-region pane)
@@ -218,8 +218,7 @@
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (multiple-value-bind (x y) (bounding-rectangle* (stream-output-history pane))
-    (values x y)))
+  (bounding-rectangle-position (stream-output-history pane)))
 
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y)
@@ -307,10 +306,9 @@
   (let* ((title-string (title-string pane))
          (a (text-style-ascent (pane-text-style pane) pane))
          (tw (text-size pane title-string)))
-    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (declare (ignore y2))
+    (with-bounding-rectangle* (x1 y1 x2 nil :center-x cx) (sheet-region pane)
       (multiple-value-bind (tx ty)
-          (values (- (/ (- x2 x1) 2) (/ tw 2))
+          (values (- cx (/ tw 2))
                   (+ y1 2 a))
         (draw-text* pane title-string tx ty)))))
 

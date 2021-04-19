@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Generic inspection methods and object state mixins.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -121,6 +120,13 @@
         (call-next-method)
         (setf (style object) collapsed-style))))
 
+;;; Context package mixin
+
+(defclass context-package-mixin ()
+  ((%context-package :initarg  :context-package
+                     :reader   context-package
+                     :initform nil)))
+
 ;;; Context class mixin
 
 (defclass context-class-mixin ()
@@ -128,7 +134,7 @@
                    :reader   context-class
                    :initform nil)))
 
-(defun context-package (state)
+(defmethod context-package ((state context-class-mixin))
   (when-let* ((context-class (context-class state))
               (class-name    (class-name context-class)))
     (symbol-package class-name)))

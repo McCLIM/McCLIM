@@ -1,30 +1,17 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 1998,1999 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2001 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000 Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000 Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 1998-1999 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 (defconstant +x11-pixmap-dimension-limit+ 2048)
 
@@ -364,8 +351,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink clime:transformed-design)
                             &aux (ink (clime:effective-transformed-design ink)))
-  (with-bounding-rectangle* (x1 y1 x2 y2) ink
-    (declare (ignore x2 y2))
+  (with-bounding-rectangle* (x1 y1) ink
     (with-transformed-position ((medium-native-transformation medium) x1 y1)
       (let ((gc-x (round-coordinate x1))
             (gc-y (round-coordinate y1))
@@ -870,5 +856,3 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-miter-limit ((medium clx-medium))
   #.(* pi (/ 11 180)))
-
-

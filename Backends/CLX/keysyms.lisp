@@ -1,28 +1,14 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-CLX; -*-
-;;; --------------------------------------------------------------------------------------
-;;;     Title: X11 keysym handling
-;;;   Created: 2002-02-11
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
-;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 2002 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) 2002 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; X11 keysym handling
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 ;;; Recall that the function CLIM-XCOMMON:KEYSYM-TO-KEYSYM-NAME simply
 ;;; consults a fixed hash table that maps X11 keysyms (which are
@@ -43,9 +29,9 @@
       (return-from modifier-keycode->keysyms nil))
     (let ((second-x-keysym (xlib:keycode->keysym display keycode 1)))
       (cons (clim-xcommon:keysym-to-keysym-name first-x-keysym)
-	    (if (eql first-x-keysym second-x-keysym)
-		'()
-		(list (clim-xcommon:keysym-to-keysym-name second-x-keysym)))))))
+            (if (eql first-x-keysym second-x-keysym)
+                '()
+                (list (clim-xcommon:keysym-to-keysym-name second-x-keysym)))))))
 
 ;;; The X state is the state before the current event, so key events
 ;;; for the modifier keys don't reflect the state that results from

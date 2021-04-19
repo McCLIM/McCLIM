@@ -1,4 +1,4 @@
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 (defclass clx-mirror ()
   ((window
@@ -84,8 +84,7 @@
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (let ((window (window mirror)))
-      (with-bounding-rectangle* (x1 y1 x2 y2) region
-        (declare (ignore x1 y1))
+      (with-bounding-rectangle* (nil nil x2 y2) region
         (setf (xlib:drawable-width window) (round-coordinate x2)
               (xlib:drawable-height window) (round-coordinate y2))))))
 

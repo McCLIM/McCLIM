@@ -95,6 +95,10 @@ pattern, stencil, image etc)."))
         (height (pattern-height pattern)))
     (values 0 0 width height)))
 
+(defmethod bounding-rectangle ((pattern %array-pattern))
+  (destructuring-bind (height width) (array-dimensions (pattern-array pattern))
+    (make-bounding-rectangle 0 0 width height)))
+
 (defclass %rgba-pattern (%array-pattern)
   ((array :type (simple-array (unsigned-byte 32) 2)))
   (:documentation "Helper class of RGBA result of another pattern."))
@@ -402,8 +406,7 @@ Returns a pattern representing this file."
       (design-ink source-pattern (floor (+ x 0.5)) (floor (+ y 0.5))))))
 
 (defmethod %collapse-pattern ((pattern transformed-pattern))
-  (with-bounding-rectangle* (x1 y1 x2 y2) pattern
-    (declare (ignore x2 y2))
+  (with-bounding-rectangle* (x1 y1) pattern
     (let* ((x1 (round x1))
            (y1 (round y1))
            (height (round (pattern-height pattern)))

@@ -5,6 +5,7 @@
 ;;;  (c) copyright 2002 Alexey Dejneka <adejneka@comail.ru>
 ;;;  (c) copyright 2007 Andy Hefner <ahefner@gmail.com>
 ;;;  (c) copyright 2017 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -87,13 +88,14 @@
 ;;; non-null bounding rectangles.  Intuitively, the empty border
 ;;; should remain centered on the cursor.
 (defmacro with-border-edges ((stream record) &body body)
-  `(if (null-bounding-rectangle-p ,record)
-    (multiple-value-bind (left top) (stream-cursor-position ,stream)
-      (let ((right  (1+ left))
-            (bottom (1+ top)))
-        ,@body))
-    (with-bounding-rectangle* (left top right bottom) ,record
-      ,@body)))
+  (with-gensyms (continuation)
+    `(flet ((,continuation (left top right bottom)
+              ,@body))
+       (if (null-bounding-rectangle-p ,record)
+           (multiple-value-bind (left top) (stream-cursor-position ,stream)
+             (,continuation left top (1+ left) (1+ top)))
+           (with-bounding-rectangle* (left top right bottom) ,record
+             (,continuation left top right bottom))))))
 
 (defmacro surrounding-output-with-border
     ((&optional stream &rest drawing-options &key (shape :rectangle)
@@ -177,8 +179,7 @@
         (if move-cursor
             ;; move-cursor is true, move cursor to lower-right corner
             ;; of output.
-            (with-bounding-rectangle* (left top right bottom) border
-              (declare (ignore left top))
+            (with-bounding-rectangle* (nil nil right bottom) border
               (setf (stream-cursor-position stream) (values right bottom)))
             ;; move-cursor is false, preserve the cursor position from
             ;; after the output (I think this is right, it's useful
@@ -432,47 +433,30 @@
                              :filled t
                              :ink fill-color)))))))
 
-(define-border-type :underline (stream record
-                                       (ink (medium-ink stream))
-                                       line-style
-                                       line-unit
-                                       line-thickness
-                                       line-cap-shape
-                                       line-dashes)
-  (let ((line-style (%%line-style-for-method)))
-    (labels ((fn (record)
-               (loop for child across (output-record-children record)
-                     do (typecase child
-                          ((or text-displayed-output-record draw-text-output-record)
-                           (with-bounding-rectangle* (left top right bottom) child
-                             (declare (ignore top))
-                             (draw-line* stream left bottom right bottom
-                                         :ink ink
-                                         :line-style line-style)))
-                          (updating-output-record nil)
-                          (compound-output-record (fn child))))))
-      (fn record))))
 
-(define-border-type :crossout (stream record
-                                      (ink (medium-ink stream))
-                                      line-style
-                                      line-unit
-                                      line-thickness
-                                      line-cap-shape
-                                      line-dashes)
-  (let ((line-style (%%line-style-for-method)))
-    (labels ((fn (record)
-               (loop for child across (output-record-children record)
-                     do (typecase child
-                          ((or text-displayed-output-record draw-text-output-record)
-                           (with-bounding-rectangle* (left top right bottom) child
-                             (let ((middle (/ (+ bottom top) 2)))
-                               (draw-line* stream left middle right middle
-                                           :ink ink
-                                           :line-style line-style))))
-                          (updating-output-record nil)
-                          (compound-output-record (fn child))))))
-      (fn record))))
+(macrolet ((define-shape (shape () &body body)
+             `(define-border-type ,shape (stream record
+                                                 (ink (medium-ink stream))
+                                                 line-style
+                                                 line-unit
+                                                 line-thickness
+                                                 line-cap-shape
+                                                 line-dashes)
+                (let ((line-style (%%line-style-for-method)))
+                  (labels ((augment (record)
+                             (typecase record
+                               ((or text-displayed-output-record draw-text-output-record)
+                                ,@body)
+                               (updating-output-record nil)
+                               (compound-output-record
+                                (map nil #'augment (output-record-children record))))))
+                    (map nil #'augment (output-record-children record)))))))
+  (define-shape :underline ()
+    (with-bounding-rectangle* (left nil right bottom) record
+      (draw-line* stream left bottom right bottom :ink ink :line-style line-style)))
+  (define-shape :crossout ()
+    (with-bounding-rectangle* (left top right bottom :center-y middle) record
+      (draw-line* stream left middle right middle :ink ink :line-style line-style))))
 
 (define-border-type :inset (stream left top right bottom
                                    (padding *border-default-padding*)
