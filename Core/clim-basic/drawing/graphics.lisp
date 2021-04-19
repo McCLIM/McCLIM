@@ -1,25 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2001 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Standard presentations types.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; Work in progress that reduces consing of rest arguments and keyword
 ;;; processing.
@@ -237,7 +228,6 @@
   ;; Moore suggests we use (0,0) if medium is no stream.
   ;;
   ;; Furthermore, the specification is vague about possible scalings ...
-  ;;
   (unless (and x y)
     (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
                                      (stream-cursor-position medium)
@@ -255,13 +245,12 @@
         (funcall cont medium)))))
 
 (defmethod invoke-with-first-quadrant-coordinates (medium cont x y)
-  ;; First we do the same as invoke-with-local-coordinates but rotate
-  ;; and deskew it so that it becomes first-quadrant. We do this by
-  ;; simply measuring the length of the transfomed x and y "unit
-  ;; vectors".  [That is (0,0)-(1,0) and (0,0)-(0,1)] and setting up a
-  ;; transformation which features an upward pointing y-axis and a
-  ;; right pointing x-axis with a length equal to above measured
-  ;; vectors.
+  ;; First we do the same as invoke-with-local-coordinates but rotate and deskew
+  ;; it so that it becomes first-quadrant. We do this by simply measuring the
+  ;; length of the transformed x and y "unit vectors".  [That is (0,0)-(1,0) and
+  ;; (0,0)-(0,1)] and setting up a transformation which features an upward
+  ;; pointing y-axis and a right pointing x-axis with a length equal to above
+  ;; measured vectors.
   (unless (and x y)
     (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
                                      (stream-cursor-position medium)
@@ -282,9 +271,9 @@
                                    x y))
         (funcall cont medium)))))
 
-;;;; 10.3 Line Styles
+;;; 10.3 Line Styles
 
-;;;; 10.3.2 Contrasting Dash Patterns
+;;; 10.3.2 Contrasting Dash Patterns
 
 (defconstant +contrasting-dash-patterns+
   ;; Must be at least eight according to the specification (Section
@@ -307,7 +296,7 @@
         (subseq contrasting-dash-patterns 0 n)
         (aref contrasting-dash-patterns k))))
 
-;;;; 12 Graphics
+;;; 12 Graphics
 
 (defun draw-point (sheet point
                    &rest args
@@ -830,9 +819,9 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
-;;;;
-;;;; DRAW-DESIGN
-;;;;
+;;;
+;;; DRAW-DESIGN
+;;
 
 (defmethod draw-design (medium (design point)
                         &rest options &key &allow-other-keys)
@@ -908,8 +897,7 @@
 
 (defmethod draw-design (medium (design (eql +nowhere+))
                         &rest options &key &allow-other-keys)
-  (declare (ignore medium options)
-           (ignorable design))
+  (declare (ignore medium design options))
   nil)
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+))
