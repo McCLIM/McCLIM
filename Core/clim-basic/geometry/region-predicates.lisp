@@ -107,7 +107,7 @@
          (coordinate-between* y1 y y2))))
 
 (defmethod region-contains-position-p ((region standard-rectangle) x y)
-  (with-standard-rectangle (x1 y1 x2 y2) region
+  (with-standard-rectangle* (x1 y1 x2 y2) region
     (and (coordinate-between* x1 x x2)
          (coordinate-between* y1 y y2))))
 
@@ -182,7 +182,7 @@
 ;;; vertexes lies inside it, then whole rectangle fits as well. We take a
 ;;; special care for ellipses with start/end angle.
 (defmethod region-contains-region-p ((a standard-ellipse) (b standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2) b
+  (with-standard-rectangle* (x1 y1 x2 y2) b
     (if (null (ellipse-start-angle a))
         (and (region-contains-position-p a x1 y1)
              (region-contains-position-p a x2 y1)

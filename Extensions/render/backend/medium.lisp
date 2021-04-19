@@ -100,8 +100,8 @@
       (cond ((not filled)
              (%medium-stroke-paths medium (list (path))))
             ((rectanglep region)
-             (with-bounding-rectangle* (x1 y1 x2 y2) region
-               (%medium-fill-image medium x1 y1 (- x2 x1) (- y2 y1))))
+             (with-bounding-rectangle* (x1 y1 :width w :height h) region
+               (%medium-fill-image medium x1 y1 w h)))
             (t
              (%medium-fill-paths medium (list (path))))))))
 

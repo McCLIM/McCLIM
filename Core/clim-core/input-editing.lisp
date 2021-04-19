@@ -200,8 +200,7 @@ stream to do input-editor-typeout on."))
 device unit offset `y' or below, down by `delta-y' device units,
 then repaint `sheet'."
   (unless (zerop delta-y)
-    (with-bounding-rectangle* (sheet-x1 sheet-y1 sheet-x2 sheet-y2) sheet
-      (declare (ignore sheet-x1 sheet-y1))
+    (with-bounding-rectangle* (:x2 sheet-x2 :y2 sheet-y2) sheet
       (map-over-output-records-overlapping-region
        #'(lambda (record)
            (multiple-value-bind (record-x record-y) (output-record-position record)
@@ -211,9 +210,8 @@ then repaint `sheet'."
        (stream-output-history sheet)
        (make-bounding-rectangle 0 y sheet-x2 sheet-y2))
       ;; Only repaint within the visible region...
-      (with-bounding-rectangle* (viewport-x1 viewport-y1 viewport-x2 viewport-y2)
+      (with-bounding-rectangle* (viewport-x1 nil viewport-x2 viewport-y2)
           (or (pane-viewport-region sheet) sheet)
-        (declare (ignore viewport-y1))
         (repaint-sheet sheet (make-bounding-rectangle viewport-x1 (- y (abs delta-y))
                                                       viewport-x2 viewport-y2))))))
 

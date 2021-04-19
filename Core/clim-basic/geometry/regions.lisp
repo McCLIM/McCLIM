@@ -348,9 +348,6 @@
              `((aref ,coords 0) (aref ,coords 1) (aref ,coords 2) (aref ,coords 3))
              body))))))
 
-(defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
-  `(with-standard-rectangle* (,x1 ,y1 ,x2 ,y2) ,rectangle ,@body))
-
 (defun make-rectangle (point1 point2)
   (make-rectangle* (point-x point1) (point-y point1)
                    (point-x point2) (point-y point2)))
@@ -372,8 +369,7 @@
         (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod rectangle-edges* ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (values x1 y1 x2 y2)))
 
 ;;; standard-rectangles are immutable and all that, but we still need
@@ -426,24 +422,21 @@
 ;;; Polyline/polygon protocol for STANDARD-RECTANGLEs
 
 (defmethod polygon-points ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (list (make-point x1 y1)
           (make-point x1 y2)
           (make-point x2 y2)
           (make-point x2 y1))))
 
 (defmethod map-over-polygon-coordinates (fun (rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (funcall fun x1 y1)
     (funcall fun x1 y2)
     (funcall fun x2 y2)
     (funcall fun x2 y1)))
 
 (defmethod map-over-polygon-segments (fun (rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (funcall fun x1 y1 x1 y2)
     (funcall fun x1 y2 x2 y2)
     (funcall fun x2 y2 x2 y1)
@@ -690,7 +683,7 @@
 ;;; ===========================================================================
 
 (defmethod simple-pprint-object-args (stream (object standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2) object
+  (with-standard-rectangle* (x1 y1 x2 y2) object
     (loop for (slot-name slot-value) in `((x1 ,x1)
                                           (y1 ,y1)
                                           (x2 ,x2)
@@ -708,8 +701,7 @@
 (defmethod print-object ((region standard-rectangle) stream)
   (maybe-print-readably (region stream)
     (print-unreadable-object (region stream :type t :identity nil)
-      (with-standard-rectangle (x1 y1 x2 y2)
-          region
+      (with-standard-rectangle* (x1 y1 x2 y2) region
         (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
 
 ;;; Internal helpers

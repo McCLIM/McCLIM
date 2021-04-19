@@ -47,7 +47,7 @@
 
 (defmethod transform-region (transformation (rect standard-rectangle))
   (cond ((rectilinear-transformation-p transformation)
-         (with-standard-rectangle (x1 y1 x2 y2) rect
+         (with-standard-rectangle* (x1 y1 x2 y2) rect
            (multiple-value-bind (x1* y1*)
                (transform-position transformation x1 y1)
              (multiple-value-bind (x2* y2*)

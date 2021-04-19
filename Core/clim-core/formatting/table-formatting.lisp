@@ -319,8 +319,8 @@
      (replay table stream)
      (setf (stream-cursor-position stream)
            (if move-cursor
-               (values (bounding-rectangle-max-x table)
-                       (bounding-rectangle-max-y table))
+               (with-bounding-rectangle* (:x2 x2 :y2 y2) table
+                 (values x2 y2))
                (values cursor-old-x cursor-old-y))))))
 
 ;;; Think about rewriting this using a common superclass for row and
@@ -411,8 +411,8 @@
            (stream-cursor-position stream))
      (setf (stream-cursor-position stream)
            (if move-cursor
-               (values (bounding-rectangle-max-x item-list)
-                       (bounding-rectangle-max-y item-list))
+               (with-bounding-rectangle* (:x2 x2 :y2 y2) item-list
+                 (values x2 y2)) 
                (values cursor-old-x cursor-old-y)))
      (replay item-list stream)
      item-list)))
@@ -529,21 +529,21 @@
             (descents (make-array nrows :initial-element 0)))
         ;; collect widthen, heights
         (loop for row across rows
-           for i from 0 do
-             (loop for cell across row
-                for j from 0 do
-                ;; we have cell at row i col j at hand.
-                ;; width:
-                  (when cell
-                    (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* cell)
-                      (maxf (aref widthen j)
-                            (max (- x2 x1) (cell-min-width cell)))
-                      (maxf (aref heights i)
-                            (max (- y2 y1) (cell-min-height cell)))
-                      (when (eq (cell-align-y cell) :baseline)
-                        (multiple-value-bind (baseline) (output-record-baseline cell)
-                          (maxf (aref ascents i) baseline)
-                          (maxf (aref descents i) (- y2 y1 baseline))))))))
+              for i from 0 do
+                (loop for cell across row
+                      for j from 0 do
+                        ;; we have cell at row i col j at hand.
+                        ;; width:
+                        (when cell
+                          (with-bounding-rectangle* (:width width :height height) cell
+                            (maxf (aref widthen j)
+                                  (max width (cell-min-width cell)))
+                            (maxf (aref heights i)
+                                  (max height (cell-min-height cell)))
+                            (when (eq (cell-align-y cell) :baseline)
+                              (multiple-value-bind (baseline) (output-record-baseline cell)
+                                (maxf (aref ascents i) baseline)
+                                (maxf (aref descents i) (- height baseline))))))))
 
         ;; baseline aligned cells can force the row to be taller.
         (loop for i from 0 below nrows do

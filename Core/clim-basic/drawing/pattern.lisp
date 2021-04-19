@@ -406,8 +406,7 @@ Returns a pattern representing this file."
       (design-ink source-pattern (floor (+ x 0.5)) (floor (+ y 0.5))))))
 
 (defmethod %collapse-pattern ((pattern transformed-pattern))
-  (with-bounding-rectangle* (x1 y1 x2 y2) pattern
-    (declare (ignore x2 y2))
+  (with-bounding-rectangle* (x1 y1) pattern
     (let* ((x1 (round x1))
            (y1 (round y1))
            (height (round (pattern-height pattern)))

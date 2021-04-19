@@ -685,8 +685,7 @@ are the old dimensions of the display of `view' in device units."
           (return)
           (progn (setf (stroke-start-offset stroke) nil)
                  (invalidate-stroke stroke :modified t)))))
-  (with-bounding-rectangle* (x1 y1 x2 y2) view
-    (declare (ignore x2))
+  (with-bounding-rectangle* (x1 y1 nil y2) view
     (when (> old-height (- y2 y1))
       (clear-rectangle* pane x1 y2 (+ x1 old-width) (+ y1 old-height)))))
 
@@ -726,10 +725,8 @@ type (found via `presentation-type-of') to generate output."
                              draw baseline)))))))
 
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
-  (with-bounding-rectangle* (x1 y1 x2 y2) view
-    (let* ((old-width (- x2 x1))
-           (old-height (- y2 y1))
-           (start-offset (offset (beginning-of-line (top view))))
+  (with-bounding-rectangle* (:width old-width :height old-height) view
+    (let* ((start-offset (offset (beginning-of-line (top view))))
            (pump-state (pump-state-for-offset view start-offset))
            (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane)))
            (current-line-height 0))
@@ -1000,8 +997,7 @@ the end of the buffer."))
                              (stroke-dimensions stroke) x1 y1 x2 y2)
                             (setf (stroke-dirty stroke) t)
                             (setf (stroke-modified stroke) t))))))))
-        (with-bounding-rectangle* (vx1 vy1 vx2 vy2) view
-          (declare (ignore vy1 vx2 vy2))
+        (with-bounding-rectangle* (:x1 vx1) view
           (setf (max-line-width view)
                 (max (max-line-width view)
                      (- x2 vx1))))))))
@@ -1173,8 +1169,7 @@ has `view'."))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
   (when (and (pane-viewport pane) (active pane))
-    (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor pane)
-      (declare (ignore y1))
+    (with-bounding-rectangle* (x1 nil x2 y2) (point-cursor pane)
       (multiple-value-bind (x-position y-position) (transform-position (sheet-transformation pane) 0 0)
         (let ((viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane)))
               (viewport-height (bounding-rectangle-height (or (pane-viewport pane) pane))))

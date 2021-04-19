@@ -5,6 +5,7 @@
 ;;;  (c) copyright 2002 Alexey Dejneka <adejneka@comail.ru>
 ;;;  (c) copyright 2007 Andy Hefner <ahefner@gmail.com>
 ;;;  (c) copyright 2017 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -177,8 +178,7 @@
         (if move-cursor
             ;; move-cursor is true, move cursor to lower-right corner
             ;; of output.
-            (with-bounding-rectangle* (left top right bottom) border
-              (declare (ignore left top))
+            (with-bounding-rectangle* (nil nil right bottom) border
               (setf (stream-cursor-position stream) (values right bottom)))
             ;; move-cursor is false, preserve the cursor position from
             ;; after the output (I think this is right, it's useful

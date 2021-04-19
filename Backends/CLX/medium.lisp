@@ -351,8 +351,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-gcontext ((medium clx-medium) (ink clime:transformed-design)
                             &aux (ink (clime:effective-transformed-design ink)))
-  (with-bounding-rectangle* (x1 y1 x2 y2) ink
-    (declare (ignore x2 y2))
+  (with-bounding-rectangle* (x1 y1) ink
     (with-transformed-position ((medium-native-transformation medium) x1 y1)
       (let ((gc-x (round-coordinate x1))
             (gc-y (round-coordinate y1))

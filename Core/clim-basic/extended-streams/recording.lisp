@@ -251,8 +251,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (bounding-rectangle-position record))
 
 (defmethod* (setf output-record-position) (nx ny (record basic-output-record))
-  (with-standard-rectangle (x1 y1 x2 y2)
-     record
+  (with-standard-rectangle* (x1 y1 x2 y2) record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (setf (rectangle-edges* record)
@@ -272,8 +271,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 (defmethod* (setf output-record-position)
   :before (nx ny (record compound-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (letf (((slot-value record 'in-moving-p) t))
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -942,12 +940,13 @@ were added."
 
 (defmethod* (setf output-record-position) :before
     (nx ny (record gs-ink-mixin))
-    (with-standard-rectangle* (:x1 x1 :y1 y1) record
+    (with-standard-rectangle* (x1 y1) record
       (let* ((dx (- nx x1))
              (dy (- ny y1))
              (tr (make-translation-transformation dx dy)))
         (with-slots (ink) record
-          (setf ink (transform-region tr ink))))))
+          (setf (graphics-state-ink record)
+                (transform-region tr ink))))))
 
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
@@ -966,7 +965,7 @@ were added."
 
 (defmethod* (setf output-record-position) :before
   (new-x new-y (record gs-clip-mixin))
-  (with-standard-rectangle* (:x1 old-x :y1 old-y) record
+  (with-standard-rectangle* (old-x old-y) record
     (let* ((dx          (- new-x old-x))
            (dy          (- new-y old-y))
            (translation (make-translation-transformation dx dy)))
@@ -1074,8 +1073,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record coord-seq-mixin))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (let ((dx (- nx x1))
           (dy (- ny y1))
           (coords (slot-value record 'coord-seq)))
@@ -1219,8 +1217,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-point-output-record))
-    (with-standard-rectangle* (:x1 x1 :y1 y1)
-        record
+    (with-standard-rectangle* (x1 y1) record
       (with-slots (point-x point-y) record
         (let ((dx (- nx x1))
               (dy (- ny y1)))
@@ -1263,8 +1260,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-line-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (point-x1 point-y1 point-x2 point-y2) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1490,8 +1486,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-rectangle-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (left top right bottom) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1549,8 +1544,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-ellipse-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (center-x center-y) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1615,8 +1609,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
   (nx ny (record draw-text-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (multiple-value-prog1 (call-next-method)
@@ -1740,7 +1733,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1) record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (start-x start-y end-x end-y strings baseline) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1793,8 +1786,7 @@ were added."
 
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      text-record
+  (with-standard-rectangle* (nil y1) text-record
     (with-slots (max-height left right) text-record
       (setf (rectangle-edges* text-record)
             (values (coordinate left)
@@ -2225,10 +2217,8 @@ according to the flags RECORD and DRAW."
 
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
-  (with-bounding-rectangle* (x1 y1 x2 y2)
-      record
-    (declare (ignore x1 x2))
-    (values (- y2 y1) nil)))
+  (with-bounding-rectangle* (:height height) record
+    (values height nil)))
 
 (defmethod output-record-baseline ((record standard-text-displayed-output-record))
   (with-slots (baseline) record

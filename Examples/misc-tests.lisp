@@ -453,9 +453,8 @@ Sixth case exhibits vertical gap between paragraphs and margins."
   (terpri stream)
   (clime:with-temporary-margins (stream :left 50 :right 50)
     (terpri stream)
-    (clim:with-bounding-rectangle* (x1 y1 x2 y2)
+    (with-bounding-rectangle* (:x1 x1 :x2 x2)
         (clime:stream-page-region *standard-output*)
-      (declare (ignore y1 y2))
       (let ((cy (nth-value 1 (stream-cursor-position stream))))
         (clim:draw-rectangle* *standard-output* x1 cy x2 (+ cy 100)
                               :filled nil
