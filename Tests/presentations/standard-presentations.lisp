@@ -174,6 +174,55 @@
    '(() ":foo" :foo)
    '(() ":FOO" :foo)))
 
+;;; Numeric types
+
+(defun gen-bound ()
+  (let ((integer (gen-integer :min -10 :max 10)))
+    (lambda ()
+      (case (random 5)
+        ((0)   '*)
+        ((1 2) (funcall integer))
+        ((3 4) (list (funcall integer)))))))
+
+(test number-subtypep.random
+  "Random test for `number-subtypep'."
+
+  (flet ((do-subtype (integerp)
+           (for-all ((low1     (gen-bound))
+                     (high1    (gen-bound))
+                     (low2     (gen-bound))
+                     (high2    (gen-bound)))
+             (labels ((bound-number (bound)
+                        (cond ((numberp bound)
+                               bound)
+                              ((consp bound)
+                               (first bound))))
+                      (fixup-high (low high)
+                        (let ((low-number  (bound-number low))
+                              (high-number (bound-number high))
+                              (required    (+ (if (consp low)  1 0)
+                                              (if (consp high) 1 0))))
+                          (cond ((or (not low-number) (not high-number))
+                                 high)
+                                ((> (- high-number low-number) required)
+                                 high)
+                                ((consp high)
+                                 (list (+ low-number required)))
+                                (t
+                                 (+ low-number required))))))
+               (let* ((high1    (fixup-high low1 high1))
+                      (high2    (fixup-high low2 high2))
+                      (subtype  (if integerp 'integer 'real))
+                      (expected (subtypep `(,subtype ,low1 ,high1)
+                                          `(,subtype ,low2 ,high2)))
+                      (actual   (climi::number-subtypep low1 high1 low2 high2 integerp)))
+                 (is (eql expected actual)
+                     "(~(~A~) ~A ~A) (~(~A~) ~A ~A) -> ~A but expected ~A~%"
+                     subtype low1 high1 subtype low2 high2
+                     actual expected))))))
+    (do-subtype nil)
+    (do-subtype t)))
+
 (define-presentation-type-tests (number)
   :typep
   ('(() nil     nil)

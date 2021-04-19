@@ -261,19 +261,34 @@
 
 ;;; Define a method that will do the comparision for all real types.  It's
 ;;; already determined that that the numeric class of type is a subtype of
-;;;supertype.
+;;; supertype.
 
-(defun number-subtypep (low high super-low super-high)
-  (if (eq low '*)
-      (unless (eq super-low '*)
-        (return-from number-subtypep nil))
-      (unless (or (eq super-low '*) (>= low super-low))
-        (return-from number-subtypep nil)))
-  (if (eq high '*)
-      (unless (eq super-high '*)
-        (return-from number-subtypep nil))
-      (unless (or (eq super-high '*) (<= high super-high))
-        (return-from number-subtypep nil)))
+(defun number-subtypep (low high super-low super-high integerp)
+  (macrolet ((compare-bound (sub sup inclusive-comparator exclusive-comparator fix)
+               `(let ((sup-exclusive (not (atom ,sup)))
+                      (sup-bound (alexandria:ensure-car ,sup))
+                      (sub-exclusive (not (atom ,sub)))
+                      (sub-bound (alexandria:ensure-car ,sub)))
+                  (when integerp
+                    (when sup-exclusive
+                      (setf sup-exclusive nil)
+                      (,fix sup-bound))
+                    (when sub-exclusive
+                      (setf sub-exclusive nil)
+                      (,fix sub-bound)))
+                  (if (or (not sup-exclusive) sub-exclusive)
+                      (,inclusive-comparator sub-bound sup-bound)
+                      (,exclusive-comparator sub-bound sup-bound)))))
+    (unless (eq super-low '*)
+      (if (eq low '*)
+          (return-from number-subtypep nil)
+          (unless (compare-bound low super-low >= > incf)
+            (return-from number-subtypep nil))))
+    (unless (eq super-high '*)
+      (if (eq high '*)
+          (return-from number-subtypep nil)
+          (unless (compare-bound high super-high <= < decf)
+            (return-from number-subtypep nil)))))
   t)
 
 (macrolet
@@ -290,8 +305,12 @@
                       `(and (not (integerp object))
                             (rationalp object))
                       `(,predicate object))
-                 (or (eq low '*) (<= low object))
-                 (or (eq high '*) (<= object high))))
+                 (cond ((eq low '*) t)
+                       ((consp low) (< (first low) object))
+                       (t (<= low object)))
+                 (cond ((eq high '*) t)
+                       ((consp high) (< object (first high)))
+                       (t (<= object high)))))
 
           (define-presentation-method presentation-subtypep
               ((type ,type) maybe-supertype)
@@ -299,7 +318,8 @@
               (let ((super-low low)
                     (super-high high))
                 (with-presentation-type-parameters (,type type)
-                  (values (number-subtypep low high super-low super-high)
+                  (values (number-subtypep low high super-low super-high
+                                           ,(eq type 'integer))
                           t))))))))
   (define real     realp     number)
   (define rational rationalp real)
