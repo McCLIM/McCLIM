@@ -13,7 +13,7 @@
 ;;;  (c) copyright 2017 Peter <craven@gmx.net>
 ;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
 ;;;  (c) copyright 2017,2018 Cyrus Harmon <cyrus@bobobeach.com>
-;;;  (c) copyright 2018,2019 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018,2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ----------------------------------------------------------------------------
 ;;;
@@ -320,31 +320,36 @@
     (setf (aref coords 2) x2)
     (setf (aref coords 3) y2)))
 
-(defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
-  (with-gensyms (coords)
-    `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type standard-rectangle-coordinate-vector ,coords))
-       (let ((,x1 (aref ,coords 0))
-             (,y1 (aref ,coords 1))
-             (,x2 (aref ,coords 2))
-             (,y2 (aref ,coords 3)))
-         (declare (type coordinate ,x1 ,y1 ,x2 ,y2))
-         ,@body))))
+;;; - VARIABLES before first keyword are positional and correspond to
+;;;   X1, Y1, X2, Y2.
+;;;   - Fewer than all four can be provided.
+;;;   - Any of the positional variables can be `nil' indicating that
+;;;     the binding should not be established.
+;;; - The first keyword initiates the keyword part of the variable
+;;;   list (can start after between zero and four positional
+;;;   variables).
+(defmacro with-standard-rectangle* ((&rest variables) rectangle &body body)
+  (let* ((index      (position-if #'keywordp variables))
+         (positional (subseq variables 0 index))
+         (keyword    (when index
+                       (subseq variables index))))
+    (destructuring-bind (&key (x1 (nth 0 positional))
+                              (y1 (nth 1 positional))
+                              (x2 (nth 2 positional))
+                              (y2 (nth 3 positional))
+                              width height center-x center-y)
+        keyword
+      (declare (ignore width height center-x center-y))
+      (with-gensyms (coords)
+        `(let ((,coords (slot-value ,rectangle 'coordinates)))
+           (declare (type standard-rectangle-coordinate-vector ,coords))
+           ,(generate-rectangle-bindings
+             (list* :x1 x1 :y1 y1 :x2 x2 :y2 y2 keyword)
+             `((aref ,coords 0) (aref ,coords 1) (aref ,coords 2) (aref ,coords 3))
+             body))))))
 
-(defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
-  (with-gensyms (coords)
-    `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type standard-rectangle-coordinate-vector ,coords))
-       (let (,@(and x1 `((,x1 (aref ,coords 0))))
-             ,@(and y1 `((,y1 (aref ,coords 1))))
-             ,@(and x2 `((,x2 (aref ,coords 2))))
-             ,@(and y2 `((,y2 (aref ,coords 3)))))
-         (declare (type coordinate
-                        ,@(and x1 `(,x1))
-                        ,@(and y1 `(,y1))
-                        ,@(and x2 `(,x2))
-                        ,@(and y2 `(,y2))))
-         ,@body))))
+(defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
+  `(with-standard-rectangle* (,x1 ,y1 ,x2 ,y2) ,rectangle ,@body))
 
 (defun make-rectangle (point1 point2)
   (make-rectangle* (point-x point1) (point-y point1)
@@ -385,86 +390,38 @@
     (setf (aref coords 3) y2))
   (values x1 y1 x2 y2))
 
-(defmethod rectangle-min-point ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x2 y2))
-    (make-point x1 y1)))
+(macrolet
+    ((def (name &rest parts)
+       (destructuring-bind (first-part &optional second-part) parts
+         (let ((result-form (if (not second-part)
+                                (second first-part)
+                                `(,(if (eq (first first-part) :width)
+                                       'values
+                                       'make-point)
+                                  ,(second first-part)
+                                  ,(second second-part)))))
+           `(progn
+              (defmethod ,name ((rect standard-rectangle))
+                (with-standard-rectangle* (,@(apply #'append parts)) rect
+                  ,result-form))
 
-(defmethod rectangle-min-point ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      rect
-    (make-point x1 y1)))
-
-(defmethod rectangle-max-point ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x1 y1))
-    (make-point x2 y2)))
-
-(defmethod rectangle-max-point ((rect standard-rectangle))
-  (with-standard-rectangle* (:x2 x2 :y2 y2)
-      rect
-    (make-point x2 y2)))
-
-(defmethod rectangle-min-x ((rect rectangle))
-  (nth-value 0 (rectangle-edges* rect)))
-
-(defmethod rectangle-min-x ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1)
-      rect
-    x1))
-
-(defmethod rectangle-min-y ((rect rectangle))
-  (nth-value 1 (rectangle-edges* rect)))
-
-(defmethod rectangle-min-y ((rect standard-rectangle))
-  (with-standard-rectangle* (:y1 y1)
-      rect
-    y1))
-
-(defmethod rectangle-max-x ((rect rectangle))
-  (nth-value 2 (rectangle-edges* rect)))
-
-(defmethod rectangle-max-x ((rect standard-rectangle))
-  (with-standard-rectangle* (:x2 x2)
-      rect
-    x2))
-
-(defmethod rectangle-max-y ((rect rectangle))
-  (nth-value 3 (rectangle-edges* rect)))
-
-(defmethod rectangle-max-y ((rect standard-rectangle))
-  (with-standard-rectangle* (:y2 y2)
-      rect
-    y2))
-
-(defmethod rectangle-width ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore y1 y2))
-    (- x2 x1)))
-
-(defmethod rectangle-width ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1 :x2 x2)
-      rect
-    (- x2 x1)))
-
-(defmethod rectangle-height ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x1 x2))
-    (- y2 y1)))
-
-(defmethod rectangle-height ((rect standard-rectangle))
-  (with-standard-rectangle* (:y1 y1 :y2 y2)
-      rect
-    (- y2 y1)))
-
-(defmethod rectangle-size ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (values (- x2 x1) (- y2 y1))))
-
-(defmethod rectangle-size ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
-    (values (- x2 x1) (- y2 y1))))
+              (defmethod ,name ((rect rectangle))
+                (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
+                  (declare (type coordinate x1 y1 x2 y2)
+                           (ignorable x1 y1 x2 y2))
+                  ,(generate-rectangle-bindings
+                    (apply #'append parts)
+                    '(x1 y1 x2 y2)
+                    `(,result-form)))))))))
+  (def rectangle-min-point (:x1 x1) (:y1 y1))
+  (def rectangle-max-point (:x2 x2) (:y2 y2))
+  (def rectangle-min-x     (:x1 x1))
+  (def rectangle-min-y     (:y1 y1))
+  (def rectangle-max-x     (:x2 x2))
+  (def rectangle-max-y     (:y2 y2))
+  (def rectangle-width     (:width  width))
+  (def rectangle-height    (:height height))
+  (def rectangle-size      (:width  width) (:height height)))
 
 ;;; Polyline/polygon protocol for STANDARD-RECTANGLEs
 
