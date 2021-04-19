@@ -1,4 +1,3 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-TRUETYPE; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: Font matrics, caching, and XRender text support
 ;;;   Created: 2003-05-25 16:32
@@ -104,7 +103,7 @@
                                         :family family
                                         :name (zpb-ttf:subfamily-name loader)
                                         :loader loader)))
-	     (font (alexandria:ensure-gethash
+             (font (alexandria:ensure-gethash
                     (list display loader size) font-cache
                     (make-instance 'clx-truetype-font
                                    :port port
@@ -201,4 +200,3 @@ The following files should exist:~&~{  ~A~^~%~}"
            (clim:text-style-components text-style))))
     (or (find-truetype-font port text-style)
         (mcclim-truetype:invoke-with-truetype-path-restart #'find-font))))
-

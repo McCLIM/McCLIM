@@ -1,4 +1,4 @@
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 (defclass clx-mirror ()
   ((window
