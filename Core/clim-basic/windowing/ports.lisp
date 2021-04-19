@@ -111,18 +111,7 @@
                   :reader port-keyboard-input-focus
                   :documentation "The sheet for the keyboard events, if any")
    (pointer :initform nil :initarg :pointer :accessor port-pointer
-		  :documentation "The pointer of the port")
-   ;; The difference between grabbed-sheet and pressed-sheet is that
-   ;; the former takes all pointer events while pressed-sheet receives
-   ;; replicated pointer motion events. -- jd 2019-08-21
-   ;;
-   ;; If GRABBED-SHEET is T, then WITH-POINTER-GRABBED was invoked with
-   ;; :MULTIPLE-WINDOW T, that is events should be delivered to their owner.
-   ;; -- jd 2020-11-02
-   (grabbed-sheet :initform nil :accessor port-grabbed-sheet
-		  :documentation "The sheet the pointer is grabbing, if any")
-   (pressed-sheet :initform nil :accessor port-pressed-sheet
-		  :documentation "The sheet the pointer is pressed on, if any")))
+		  :documentation "The pointer of the port")))
 
 (defgeneric note-input-focus-changed (sheet state)
   (:documentation "Called when a sheet receives or loses the keyboard input
@@ -231,12 +220,12 @@ is a McCLIM extension.")
 ;;; Function is responsible for making a copy of an immutable event
 ;;; and adjusting its coordinates to be in the target-sheet
 ;;; coordinates. Optionally it may change event's class.
-(defun dispatch-event-copy (target-sheet event &optional new-class
-                            &aux (sheet (event-sheet event)))
+(defun adjust-event (target-sheet event &optional new-class
+                   &aux (sheet (event-sheet event)))
   (if (and (eql target-sheet sheet)
            (or (null new-class)
                (eql new-class (class-of event))))
-      (dispatch-event sheet event)
+      event
       (let* ((event-class (if (null new-class)
                               (class-of event)
                               (find-class new-class)))
@@ -246,7 +235,11 @@ is a McCLIM extension.")
             (setf (slot-value new-event 'sheet-x) x
                   (slot-value new-event 'sheet-y) y)))
         (setf (slot-value new-event 'sheet) target-sheet)
-        (dispatch-event target-sheet new-event))))
+        new-event)))
+
+(defun dispatch-event-copy (target-sheet event &optional new-class
+                            &aux (sheet (event-sheet event)))
+  (dispatch-event target-sheet (adjust-event target-sheet event new-class)))
 
 ;;; Synthesizing and dispatching boundary events
 ;;;
@@ -377,59 +370,41 @@ is a McCLIM extension.")
 ;;; In the most general case we can't tell whether all sheets are mirrored or
 ;;; not. So this default method for pointer-events operates under the
 ;;; assumption that we must deliver events to sheets which doesn't have a
-;;; mirror and that the sheet grabbing, pressing and input focusing is
+;;; mirror and that the sheet grabbing, input focusing is
 ;;; implemented locally. -- jd 2019-08-21
 (defmethod distribute-event ((port basic-port) (event pointer-event))
   ;; When we receive pointer event we need to take into account
-  ;; unmirrored sheets and grabbed/pressed sheets.
+  ;; unmirrored sheets and grabbing sheets.
   ;;
-  ;; - Grabbed sheet steals all pointer events (non-local exit)
-  ;; - Pressed sheet receives replicated motion events
-  ;; - Pressing/releasing the button assigns pressed-sheet
-  ;; - Pressing the button sends the focus event
+  ;; - Grabbing sheet steals all pointer events (non-local exit)
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (let ((grabbed-sheet (port-grabbed-sheet port)))
-    (when (sheetp grabbed-sheet)
+
+  ;; Synthesize boundary events and update the pointer-sheet.
+  (let ((new-pointer-sheet (synthesize-boundary-events port event))
+        (grabbing-sheet (pointer-grabbing-sheet (pointer-event-pointer event))))
+    (when grabbing-sheet
       (return-from distribute-event
         (unless (typep event 'pointer-boundary-event)
-          (dispatch-event-copy grabbed-sheet event)))))
-  ;; Synthesize boundary events and update the port-pointer-sheet.
-  (let ((pressed-sheet (port-pressed-sheet port))
-        (new-pointer-sheet (synthesize-boundary-events port event)))
+          (dispatch-event grabbing-sheet (adjust-event new-pointer-sheet event)))))
     ;; Set the pointer cursor.
-    (when-let ((cursor-sheet (or pressed-sheet new-pointer-sheet)))
+    (when new-pointer-sheet
       (let* ((event-sheet (event-sheet event))
              (old-pointer-cursor
                (port-lookup-current-pointer-cursor port event-sheet))
-             (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
+             (new-pointer-cursor (sheet-pointer-cursor new-pointer-sheet)))
         (unless (eql old-pointer-cursor new-pointer-cursor)
           (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
     ;; Handle some events specially.
     (typecase event
-      ;; Pressing the pointer button over a sheet makes a sheet pressed and
-      ;; focused. The pressed sheet is assigned only when there is currently
-      ;; none, while the event for focusing the sheet is always dispatched.
+      ;; Pressing the pointer button over a sheet makes a sheet
+      ;; focused.
       (pointer-button-press-event
-       (when (null pressed-sheet)
-         (setf (port-pressed-sheet port) new-pointer-sheet))
        (when new-pointer-sheet
          (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event)))
-      ;; Releasing the button sets the pressed sheet to NIL without changing
-      ;; the focus.
-      (pointer-button-release-event
-       (when pressed-sheet
-         (unless (eql pressed-sheet new-pointer-sheet)
-           (dispatch-event-copy pressed-sheet event))
-         (setf (port-pressed-sheet port) nil)))
       ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
       (pointer-boundary-event
-       (return-from distribute-event))
-      ;; Unless pressed sheet is already a target of the motion event,
-      ;; event is duplicated and dispatched to it.
-      (pointer-motion-event
-       (when (and pressed-sheet (not (eql pressed-sheet new-pointer-sheet)))
-         (dispatch-event-copy pressed-sheet event))))
+       (return-from distribute-event)))
     ;; Distribute event to the innermost child (may be none).
     (when new-pointer-sheet
       (dispatch-event-copy new-pointer-sheet event))))
@@ -498,39 +473,27 @@ is a McCLIM extension.")
 
 ;;; Design decision: Recursive grabs are a no-op.
 
-(defgeneric port-grab-pointer (port pointer sheet &key multiple-window)
+(defgeneric port-grab-pointer (port pointer sheet)
   (:documentation "Grab the specified pointer.")
-  (:method ((port basic-port) pointer sheet &key multiple-window)
-    (declare (ignore pointer sheet multiple-window))
-    (warn "Port ~A has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet &key multiple-window)
-    (declare (ignore pointer))
-    (unless (port-grabbed-sheet port)
-      (when (call-next-method)
-        (setf (port-grabbed-sheet port)
-              (if multiple-window
-                  t
-                  sheet))))))
+  (:method ((port basic-port) pointer sheet)
+    (declare (ignore port))
+    (unless (pointer-grabbing-sheet pointer)
+      (setf (pointer-grabbing-sheet pointer) sheet))))
 
 (defgeneric port-ungrab-pointer (port pointer sheet)
   (:documentation "Ungrab the specified pointer.")
   (:method ((port basic-port) pointer sheet)
-    (declare (ignore pointer sheet))
-    (warn "Port ~A  has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet)
-    (declare (ignore pointer))
-    (when (port-grabbed-sheet port)
-      (setf (port-grabbed-sheet port) nil)
-      (call-next-method))))
+    (declare (ignore port))
+    (when (pointer-grabbing-sheet pointer)
+      (setf (pointer-grabbing-sheet pointer) nil))))
 
-(defmacro with-pointer-grabbed ((port sheet &key pointer multiple-window)
+(defmacro with-pointer-grabbed ((port sheet &key pointer)
                                 &body body)
   (with-gensyms (the-port the-sheet the-pointer)
     `(let* ((,the-port ,port)
 	    (,the-sheet ,sheet)
 	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
-       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet
-                                   :multiple-window ,multiple-window))
+       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet))
            (warn "Port ~A failed to grab a pointer." ,the-port)
            (unwind-protect
                 (handler-bind

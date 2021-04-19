@@ -413,7 +413,9 @@ keys read."))
   ((port :reader port :initarg :port)
    (state-lock :reader state-lock :initform (make-lock "pointer lock"))
    (button-state :initform 0 )
-   (sheet :initform nil :initarg :sheet :accessor pointer-sheet)))
+   (sheet :initform nil :initarg :sheet :accessor pointer-sheet)
+   (grabbing-sheet :initform nil :accessor pointer-grabbing-sheet
+		  :documentation "The sheet grabbing the pointer, if any")))
 
 (defgeneric pointer-sheet (pointer))
 

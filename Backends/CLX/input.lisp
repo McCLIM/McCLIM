@@ -396,19 +396,6 @@
                          :modifier-state (clim-xcommon:x-event-state-modifiers
                                           port mask)))))))
 
-(defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
-                              &key multiple-window)
-  (let ((window (window (sheet-mirror sheet)))
-        (events '(:button-press :button-release
-                  :leave-window :enter-window
-                  :pointer-motion)))
-    ;; Probably we want to set :cursor here..
-    (eq :success (xlib:grab-pointer window events :owner-p multiple-window))))
-
-(defmethod port-ungrab-pointer ((port clx-basic-port) pointer sheet)
-  (declare (ignore pointer sheet))
-  (xlib:ungrab-pointer (clx-port-display port)))
-
 ;;; Modifier cache support
 
 ;;; Recall that XLIB:MODIFIER-MAPPING returns 8 values.  Each value is
