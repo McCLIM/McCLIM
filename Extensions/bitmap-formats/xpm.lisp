@@ -1,35 +1,21 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: XPM Parser
-;;;   Created: 2003-05-25
-;;;   Authors: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;            Andy Hefner <ahefner@gmail.com>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2003 by Gilbert Baumann
-;;;  (c) copyright 2006 by Andy Hefner
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2006 by Andy Hefner <ahefner@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; XPM Parser
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;;; Notes
 
 ;;; This is essentially a rewrite/transliteration of Gilbert's original code,
-;;; modified to improve performance. This is achieved primarily by using 
+;;; modified to improve performance. This is achieved primarily by using
 ;;; read-sequence into an (unsigned-byte 8) array and parsing directly
 ;;; from this array (the original code read a list of strings using read-line
 ;;; and further divided these into substrings in various places. It is
@@ -78,11 +64,11 @@
 ;; [as of the XPM-3.4i documentation by Arnaud Le Hors].
 
 ;; | The XPM Format
-;; | 
+;; |
 ;; | The XPM format presents a C syntax, in order to provide the ability to
 ;; | include XPM files in C and C++ programs. It is in fact an array of
 ;; | strings composed of six different sections as follows:
-;; | 
+;; |
 ;; | /* XPM */
 ;; | static char* <variable_name>[] = {
 ;; | <Values>
@@ -90,7 +76,7 @@
 ;; | <Pixels>
 ;; | <Extensions>
 ;; | };
-;; | 
+;; |
 ;; | The words are separated by a white space which can be composed of
 ;; | space and tabulation characters. The <Values> section is a string
 ;; | containing four or six integers in base 10 that correspond to: the
@@ -98,64 +84,64 @@
 ;; | characters per pixel (so there is no limit on the number of colors),
 ;; | and, optionally the hotspot coordinates and the XPMEXT tag if there is
 ;; | any extension following the <Pixels> section.
-;; | 
+;; |
 ;; | <width> <height> <ncolors> <cpp> [<x_hotspot> <y_hotspot>] [XPMEXT]
-;; | 
+;; |
 ;; | The Colors section contains as many strings as there are colors, and
 ;; | each string is as follows:
-;; | 
+;; |
 ;; | <chars> {<key> <color>}+
-;; | 
+;; |
 ;; | Where <chars> is the <chars_per_pixel> length string (not surrounded
 ;; | by anything) representing the pixels, <color> is the specified color,
 ;; | and <key> is a keyword describing in which context this color should
 ;; | be used. Currently the keys may have the following values:
-;; | 
+;; |
 ;; |     m  for mono visual
 ;; |     s  for symbolic name
 ;; |     g4 for 4-level grayscale
 ;; |     g  for grayscale with more than 4 levels
 ;; |     c  for color visual
-;; | 
+;; |
 ;; | Colors can be specified by giving the colorname, a # followed by the
 ;; | RGB code in hexadecimal, or a % followed by the HSV code (not
 ;; | implemented). The symbolic name provides the ability of specifying the
 ;; | colors at load time and not to hardcode them in the file.
-;; | 
+;; |
 ;; | Also the string None can be given as a colorname to mean
 ;; | ``transparent''. Transparency is supported by the XPM library by
 ;; | providing a masking bitmap in addition to the pixmap. This mask can
 ;; | then be used either as a clip-mask of an Xlib GC, or a shape-mask of a
-;; | window using the X11 Nonrectangular Window Shape Extension [XShape]. 
+;; | window using the X11 Nonrectangular Window Shape Extension [XShape].
 ;; | The <Pixels> section is composed by <height> strings of <width> *
 ;; | <chars_per_pixel> characters, where every <chars_per_pixel> length
 ;; | string must be one of the previously defined groups in the <Colors>
 ;; | section.
-;; | 
+;; |
 ;; | Then follows the <Extensions> section which must be labeled, if not
 ;; | empty, in the <Values> section as previously described. This section
 ;; | may be composed by several <Extension> subsections which may be of two
 ;; | types:
-;; | 
+;; |
 ;; |   . one stand alone string composed as follows:
-;; | 
+;; |
 ;; |     XPMEXT <extension-name> <extension-data>
-;; | 
+;; |
 ;; |   . or a block composed by several strings:
-;; | 
+;; |
 ;; |     XPMEXT <extension-name>
 ;; |     <related extension-data composed of several strings>
-;; | 
+;; |
 ;; | Finally, if not empty, this section must end by the following string:
-;; | 
+;; |
 ;; | XPMENDEXT
-;; | 
+;; |
 ;; | Extensions can be used to store any type of data one might want to
 ;; | store along with a pixmap, as long as they are properly encoded so
 ;; | they do not conflict with the general syntax. To avoid possible
 ;; | conflicts with extension names in shared files, they should be
 ;; | prefixed by the name of the company. This would ensure uniqueness.
-;; | 
+;; |
 
 (deftype xpm-data-array () `(simple-array (unsigned-byte 8) 1))
 (deftype array-index ()
@@ -235,7 +221,7 @@
   ;; > There exist files which say e.g. "c light yellow".
   ;; > How am I supposed to parse that?
   ;; >
-  ;; > It seems that the C code just parse everything until one of keys. 
+  ;; > It seems that the C code just parse everything until one of keys.
   ;; > That is we do the same although it is quite stupid.
                                         ;(declare (optimize (debug 3) (safety 3)))
   (declare (optimize (speed 3) (space 0) (safety 0))
@@ -266,19 +252,19 @@
          (cond (last-was-key
                 (setf last-was-key      nil
                       color-token-start p1
-                      color-token-end   p2))              
+                      color-token-end   p2))
                ((xpm-key-p (elt data p1))
-                (when color-token-start (quux key color-token-start color-token-end))               
+                (when color-token-start (quux key color-token-start color-token-end))
                 (setf last-was-key t
                       color-token-start nil
                       color-token-end nil
                       key (elt data p1)))
                (t (when (null color-token-start)
                     (error "Color not prefixed by a key: ~S." (stringize)))
-                  (setf last-was-key nil)                 
+                  (setf last-was-key nil)
                   (setf color-token-end p2)))
          (setf start p2))))))
-                     
+
 (defun xpm-subvector-eql-p (data start end vector) ; FIXME: Guarantee type of input 'vector' and strengthen declaration
   (declare (type xpm-data-array data)
            (type array-index start end)
@@ -288,12 +274,12 @@
        (loop for i from start below end
              do (unless (= (elt data i) (elt vector (- i start))) (return nil))
              return t)))
-             
+
 (defun xpm-parse-single-color (key data start end)
   (declare (type xpm-data-array data)
            (type array-index start end)
            (type (unsigned-byte 8) key)
-           (optimize (speed 3)))  
+           (optimize (speed 3)))
   (cond ((and (= key 115)
               (or
                (xpm-subvector-eql-p data start end #|"None"|# #(78 111 110 101))
@@ -334,7 +320,7 @@
            (let* ((n (- end start 1))
                   (w (* 4 (/ n 3)))
                   (m (1- (expt 2 w)))
-                  (x (xpm-parse-integer-hex data (1+ start) end)))             
+                  (x (xpm-parse-integer-hex data (1+ start) end)))
              (clim:make-rgb-color (/ (ldb (byte w (* 2 w)) x) m)
                                   (/ (ldb (byte w (* 1 w)) x) m)
                                   (/ (ldb (byte w (* 0 w)) x) m))))
@@ -345,7 +331,7 @@
   (flet ((token (name)
            (multiple-value-bind (p1 p2) (xpm-token-bounds data index)
              (unless p1 (error "~A field missing in header." name))
-             (setf index p2)             
+             (setf index p2)
              (parse-integer (map 'string #'code-char (subseq data p1 p2)) :radix 10 :junk-allowed nil))))
     (values
      (token "width")
@@ -360,7 +346,7 @@
     (let ((color-hash (make-hash-table :test #'eql))
           (designs (make-array ncolors))
           (j 0))
-      
+
       (dotimes (i ncolors)
         (multiple-value-bind (code ink post-index) (xpm-parse-color data cpp (xpm-find-next-c-string data index))
           (setf (aref designs j) ink
@@ -394,7 +380,7 @@
                (= b1 47))
       (return-from xpm-scan-comment (1+ i1))))
   (error "Unterminated comment starting at byte ~A" (- start 2)))
-  
+
 (defun xpm-find-next-c-string (data start)
   (declare (optimize (speed 3))
            (type array-index start))
@@ -422,7 +408,7 @@
                                         ;                (do ((c1 0 c2)
                                         ;                     (c2 (elt data index) (elt data index)))
                                         ;                    (and (= c1 42) (= c2
-  
+
 (defun xpm-parse-stream (input)
   ;; For not needing to parse an actual subset of C, we take a very lazy approach.
   ;; We just seek out for the first #\" and parse a C string from there.

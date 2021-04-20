@@ -1,22 +1,18 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-FREETYPE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: TrueType font detection
-;;;   Created: 2003-05-25 16:32
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2008 by Andy Hefner
-;;;  (c) copyright 2016 by Daniel Kochmański
 ;;;
-;;;    See toplevel file 'Copyright' for the copyright details.
+;;;  (c) Copyright 2008 by Andy Hefner <ahefner@gmail.com>
+;;;  (c) Copyright 2016 by Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; This file contains our attempts to configure TTF paths and map them to the
+;;; predefined text styles. First we check if some default paths can be used for
+;;; that purpose, otherwise we shell out to `fc-match'.
 ;;;
 
-;;; This file contains our attempts to configure TTF paths and map
-;;; them to the predefined text styles. First we check if some default
-;;; paths can be used for that purpose, otherwise we shell out to
-;;; `fc-match'.
-
-(in-package :mcclim-truetype)
+(in-package #:mcclim-truetype)
 
 
 ;;; fallback (path may be set in a restart by the user)
@@ -139,20 +135,20 @@
 (defun find-fontconfig-font (font-fc-name)
   (multiple-value-bind (output errors code)
       (uiop:run-program (list "fc-match" "-v" font-fc-name)
-			:output :string :input nil :error-output nil
-			:force-shell t :ignore-error-status t)
+                        :output :string :input nil :error-output nil
+                        :force-shell t :ignore-error-status t)
     (declare (ignore errors))
     (if (not (zerop code))
-	(warn "~&fc-match failed with code ~D.~%" code)
-	(with-input-from-string (stream output)
-	  (parse-fontconfig-output stream)))))
+        (warn "~&fc-match failed with code ~D.~%" code)
+        (with-input-from-string (stream output)
+          (parse-fontconfig-output stream)))))
 
-(defun fontconfig-name (family face) 
+(defun fontconfig-name (family face)
   (format nil "~A:~A" family face))
 
 (defun build-font/family-map (&optional (families *family-names*))
   (loop for family in families nconcing
-    (loop for face in *fontconfig-faces* 
+    (loop for face in *fontconfig-faces*
           as filename = (find-fontconfig-font (fontconfig-name (cdr family) (cdr face)))
           when (null filename) do (return-from build-font/family-map nil)
           collect

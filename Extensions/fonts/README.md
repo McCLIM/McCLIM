@@ -38,16 +38,16 @@ it is dependent on the backend which uses `mcclim-native-ttf`).
   glyphs by tripling the width as passed to cl-vectors and compressing
   triplets of pixels together ourselves. I'm not certain how to draw
   the result through xrender. I've seen hints on Google that there is
-  subpixel AA support in xrender, which isn't obvious from CLX or the 
-  spec. Failing that, we could use a 24bpp mask with component-alpha. 
-  That might even be how you're supposed to do it. I'm skeptical as to 
+  subpixel AA support in xrender, which isn't obvious from CLX or the
+  spec. Failing that, we could use a 24bpp mask with component-alpha.
+  That might even be how you're supposed to do it. I'm skeptical as to
   whether this would be accelerated for most people.
 
 * Subpixel positioning. Not hard in principle - render multiple versions
   of each glyph, offset by fractions of a pixel. Horizontal positioning
   is more important than vertical, so 1/4 pixel horizontal resolution
   and 1 pixel vertical resolution should suffice. Given how ugly most
-  CLIM apps are, and the lack of WYSIWYG document editors crying out 
+  CLIM apps are, and the lack of WYSIWYG document editors crying out
   for perfect text spacing in small fonts, we don't really need this.
 
 ## fontconfig

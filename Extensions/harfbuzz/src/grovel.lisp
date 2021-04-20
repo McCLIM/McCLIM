@@ -1,4 +1,4 @@
-(in-package :mcclim-harfbuzz)
+(in-package #:mcclim-harfbuzz)
 
 (pkg-config-cflags "harfbuzz")
 (pkg-config-cflags "freetype2")

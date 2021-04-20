@@ -1,4 +1,4 @@
-(in-package :mcclim-fontconfig)
+(in-package #:mcclim-fontconfig)
 
 (pkg-config-cflags "fontconfig")
 
