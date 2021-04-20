@@ -2,12 +2,13 @@
 ;;;   License: BSD-2-Clause.
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2020 Daniel Kochmański
+;;;  (c) copyright 2020 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; A game of checkers which demonstrates drawing functions,
-;;; presentations, translators and commands.
+;;; A game of checkers which demonstrates drawing functions, presentations,
+;;; translators and commands.
+;;;
 
 (defpackage #:clim-demo.checkers
   (:use #:clim-lisp #:clim)

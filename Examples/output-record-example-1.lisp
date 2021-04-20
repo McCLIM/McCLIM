@@ -174,7 +174,7 @@
 (defun output-record-example-1 ()
   (clim:run-frame-top-level
    (clim:make-application-frame 'output-record-example-1)))
-  
+
 ;;; When we manipulate the output history manually, it is not
 ;;; automatically replayed after each iteration of the command loop.
 ;;; For that reason, we define an :AFTER method on
