@@ -1,25 +1,23 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Themes
-;;;   Created: 2020-06-26 15:00
-;;;    Author: Daniel Kochmański <daniel@turtleware.eu>
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2001 by Michael McDonald <mikemac@mikemac.com>
-;;;  (c) copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) Copyright 2001 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Theming is a frequently requested feature. For now we'll just move
-;;; things related to theming to a single file so it is easier to come
-;;; up with the unified abstraction later on.
+;;; Themes
+;;;
+;;; Theming is a frequently requested feature. For now we'll just move things
+;;; related to theming to a single file so it is easier to come up with the
+;;; unified abstraction later on.
 ;;;
 
 (in-package #:clim-internals)
 
 ;;; Default Color Scheme Options
-
 
 ;;; Motif-ish
 
@@ -328,7 +326,7 @@
                (multiple-value-bind (outer-points omiddle-points)
                    (shrink-polygon point-seq (* 1/3 border-width))
                  (draw-pieces outer-points omiddle-points +black+ +black+)
-                 (draw-pieces imiddle-points inner-points +black+ +black+))))))))) 
+                 (draw-pieces imiddle-points inner-points +black+ +black+)))))))))
 
   (defun draw-bordered-rectangle* (medium x1 y1 x2 y2 &rest options)
     (apply #'draw-bordered-polygon

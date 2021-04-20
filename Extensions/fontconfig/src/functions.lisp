@@ -1,4 +1,4 @@
-(in-package :mcclim-fontconfig)
+(in-package #:mcclim-fontconfig)
 
 (cffi:define-foreign-library libfontconfig
   (:darwin "libfontconfig.dylib")

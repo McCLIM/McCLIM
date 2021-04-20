@@ -1,6 +1,6 @@
 (in-package #:asdf-user)
 
-(defsystem #:clim-basic
+(defsystem "clim-basic"
   :depends-on ("clim-lisp"
                "alexandria"
                "spatial-trees"

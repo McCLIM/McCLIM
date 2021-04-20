@@ -1,24 +1,13 @@
-;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
-
-;;;  (c) copyright 2000 by 
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;	      Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
 (defpackage #:clim-demo.calculator
   (:use #:clim #:clim-lisp)
@@ -36,15 +25,15 @@
 
 (defun show (number)
   (setf (gadget-value (slot-value *application-frame* 'text-field))
-	(princ-to-string number)))
+        (princ-to-string number)))
 
 (defun queue-number (number)
   (lambda (gadget)
     (declare (ignore gadget))
     (with-slots (calc-state) *application-frame*
       (if (numberp (first calc-state))
-	  (setf (first calc-state) (+ (* 10 (first calc-state)) number))
-	  (push number calc-state))
+          (setf (first calc-state) (+ (* 10 (first calc-state)) number))
+          (push number calc-state))
       (show (first calc-state)))))
 
 (defun queue-operator (operator)
@@ -53,8 +42,8 @@
     (do-operation t)
     (with-slots (calc-state) *application-frame*
       (if (functionp (first calc-state))
-	  (setf (first calc-state) operator)
-	  (push operator calc-state)))))
+          (setf (first calc-state) operator)
+          (push operator calc-state)))))
 
 (defun do-operation (gadget)
   (declare (ignore gadget))
@@ -86,21 +75,21 @@
      &key (command-parser 'command-line-command-parser)
        (command-unparser 'command-line-command-unparser)
        (partial-command-parser
-	'command-line-read-remaining-arguments-for-partial-command)
+        'command-line-read-remaining-arguments-for-partial-command)
        (prompt "Command: "))
   (declare (ignore command-parser command-unparser partial-command-parser prompt))
   (clim-extensions:simple-event-loop))
-     
+
 (defun make-button (label operator &key width height
                                         (max-width +fill+) min-width
                                         (max-height +fill+) min-height)
   (make-pane 'push-button
-	     :label label
-	     :activate-callback operator
+             :label label
+             :activate-callback operator
              :text-style *calculator-text-style*
-	     :width width :height height
-	     :max-width  max-width :min-width min-width
-	     :max-height max-height :min-height min-height))
+             :width width :height height
+             :max-width  max-width :min-width min-width
+             :max-height max-height :min-height min-height))
 
 (define-application-frame calculator-app ()
   ((text-field :initform nil)

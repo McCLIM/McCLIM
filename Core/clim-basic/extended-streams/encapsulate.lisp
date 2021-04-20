@@ -1,30 +1,20 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2001 by Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001 by Tim Moore <moore@bricoworks.com>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defvar *original-stream* nil)
 
 (defclass standard-encapsulating-stream (encapsulating-stream
-					 fundamental-character-input-stream
-					 fundamental-character-output-stream)
+                                         fundamental-character-input-stream
+                                         fundamental-character-output-stream)
   ((stream :reader encapsulating-stream-stream :initarg :stream)))
 
 ;;; Macro used by methods for other stream classes that need to
@@ -32,7 +22,7 @@
 ;;; other methods on their stream argument.
 
 (defmacro with-encapsulating-stream ((maybe-encapsulating-stream stream)
-				     &body body)
+                                     &body body)
   "Within BODY binds MAYBE-ENCAPSULATING-STREAM to an encapsulating stream,
 if there is one, or STREAM"
   `(let ((,maybe-encapsulating-stream (or *original-stream* ,stream)))
@@ -46,24 +36,24 @@ if there is one, or STREAM"
 (defun parse-gf-lambda-list (ll)
   "Returns the required args, optional args, and presence of rest or key args"
   (let ((state 'required)
-	(required-args nil)
-	(optional-args nil)
-	(rest-or-key nil))
+        (required-args nil)
+        (optional-args nil)
+        (rest-or-key nil))
     (loop for arg in ll
-	  do (cond ((member arg lambda-list-keywords)
-		    (when (or (eq arg '&rest)
-			      (eq arg '&key)
-			      (eq arg '&allow-other-keys))
-		      (setq rest-or-key t)
-		      (loop-finish))
-		    (setq state arg))
-		   ((eq state 'required)
-		    (push arg required-args))
-		   ((eq state '&optional)
-		    (push arg optional-args))
-		   (t (error "How did I get in this lambda list state?~%~
+          do (cond ((member arg lambda-list-keywords)
+                    (when (or (eq arg '&rest)
+                              (eq arg '&key)
+                              (eq arg '&allow-other-keys))
+                      (setq rest-or-key t)
+                      (loop-finish))
+                    (setq state arg))
+                   ((eq state 'required)
+                    (push arg required-args))
+                   ((eq state '&optional)
+                    (push arg optional-args))
+                   (t (error "How did I get in this lambda list state?~%~
                               state ~S lambda list ~S"
-			     state ll))))
+                             state ll))))
     (values (nreverse required-args) (nreverse optional-args) rest-or-key))))
 
 (defmacro def-stream-method (name lambda-list)
@@ -71,41 +61,41 @@ if there is one, or STREAM"
   (multiple-value-bind (required optional rest)
       (parse-gf-lambda-list lambda-list)
     (let* ((rest-arg (gensym "REST-ARG"))
-	   (supplied-vars (mapcar #'(lambda (var)
-				      (gensym (format nil "~A-SUPPLIED-P"
-						      (symbol-name var))))
-				  optional))
-	   (ll `(,@required
-		 ,@(and optional
-			`(&optional
-			  ,@(mapcar #'(lambda (var supplied)
-					`(,var nil ,supplied))
-				    optional
-				    supplied-vars)))
+           (supplied-vars (mapcar #'(lambda (var)
+                                      (gensym (format nil "~A-SUPPLIED-P"
+                                                      (symbol-name var))))
+                                  optional))
+           (ll `(,@required
+                 ,@(and optional
+                        `(&optional
+                          ,@(mapcar #'(lambda (var supplied)
+                                        `(,var nil ,supplied))
+                                    optional
+                                    supplied-vars)))
 
-		 ,@(and rest
-			`(&rest ,rest-arg))))
-	   (required-params (mapcar #'(lambda (var)
-					(if (consp var)
-					    (car var)
-					    var))
-				    required))
-	   (apply-list (gensym "APPLY-LIST"))
-	   (body (if (and (not optional) (not rest))
-		     (if (symbolp name)
-			 `(,name ,@required-params)
-			 `(funcall #',name ,@required-params))
-		     `(let ((,apply-list ,(and rest rest-arg)))
-			,@(mapcar #'(lambda (var supplied)
-				      `(when ,supplied
-				         (push ,var ,apply-list)))
-				  (reverse optional)
-				  (reverse supplied-vars))
-			(apply #',name ,@required-params ,apply-list)))))
+                 ,@(and rest
+                        `(&rest ,rest-arg))))
+           (required-params (mapcar #'(lambda (var)
+                                        (if (consp var)
+                                            (car var)
+                                            var))
+                                    required))
+           (apply-list (gensym "APPLY-LIST"))
+           (body (if (and (not optional) (not rest))
+                     (if (symbolp name)
+                         `(,name ,@required-params)
+                         `(funcall #',name ,@required-params))
+                     `(let ((,apply-list ,(and rest rest-arg)))
+                        ,@(mapcar #'(lambda (var supplied)
+                                      `(when ,supplied
+                                         (push ,var ,apply-list)))
+                                  (reverse optional)
+                                  (reverse supplied-vars))
+                        (apply #',name ,@required-params ,apply-list)))))
       `(defmethod ,name ,ll
-	 (let ((*original-stream* stream)
-	       (stream (slot-value stream 'stream)))
-	   ,body)))))
+         (let ((*original-stream* stream)
+               (stream (slot-value stream 'stream)))
+           ,body)))))
 
 ;;; The basic input and output stream protocols, as specified by the Gray
 ;;; stream proposal in Chapter Common Lisp Streams .
@@ -126,7 +116,7 @@ if there is one, or STREAM"
 (def-stream-method open-stream-p ((stream standard-encapsulating-stream)))
 
 (def-stream-method close ((stream standard-encapsulating-stream)
-			  &key abort))
+                          &key abort))
 
 (def-stream-method stream-pathname ((stream standard-encapsulating-stream)))
 
@@ -135,7 +125,7 @@ if there is one, or STREAM"
 (def-stream-method stream-read-char ((stream standard-encapsulating-stream)))
 
 (def-stream-method stream-unread-char ((stream standard-encapsulating-stream)
-				       character))
+                                       character))
 
 (def-stream-method stream-read-char-no-hang
     ((stream standard-encapsulating-stream)))
@@ -179,7 +169,7 @@ if there is one, or STREAM"
 (def-stream-method stream-read-byte ((stream standard-encapsulating-stream)))
 
 (def-stream-method stream-write-byte ((stream standard-encapsulating-stream)
-				      integer))
+                                      integer))
 
 ;;; STREAM-LINE-LENGTH is a CMUCL extension to Gray Streams which the
 ;;; pretty printer seems to use. There's a default method which works
@@ -206,23 +196,23 @@ if there is one, or STREAM"
      child))
 
 (def-stream-method sheet-disown-child ((stream standard-encapsulating-stream)
-				       child
-				       &key errorp))
+                                       child
+                                       &key errorp))
 
 (def-stream-method sheet-siblings ((stream standard-encapsulating-stream)))
 
 (def-stream-method sheet-enabled-children ((stream
-					    standard-encapsulating-stream)))
+                                            standard-encapsulating-stream)))
 
 (def-stream-method sheet-ancestor-p ((stream standard-encapsulating-stream)
-				     putative-ancestor))
+                                     putative-ancestor))
 
 (def-stream-method raise-sheet ((stream standard-encapsulating-stream)))
 
 (def-stream-method bury-sheet ((stream standard-encapsulating-stream)))
 
 (def-stream-method reorder-sheets ((stream standard-encapsulating-stream)
-				   new-ordering))
+                                   new-ordering))
 
 (def-stream-method sheet-enabled-p ((stream standard-encapsulating-stream)))
 
@@ -236,7 +226,7 @@ if there is one, or STREAM"
      child))
 
 (def-stream-method map-over-sheets (function
-				    (stream standard-encapsulating-stream)))
+                                    (stream standard-encapsulating-stream)))
 
 (def-stream-method sheet-transformation
     ((stream standard-encapsulating-stream)))
@@ -252,10 +242,10 @@ if there is one, or STREAM"
      (stream standard-encapsulating-stream)))
 
 (def-stream-method move-sheet ((stream standard-encapsulating-stream)
-			       x y))
+                               x y))
 
 (def-stream-method resize-sheet ((stream standard-encapsulating-stream)
-				 width height))
+                                 width height))
 
 (def-stream-method move-and-resize-sheet
     ((stream standard-encapsulating-stream) x y width height))
@@ -296,26 +286,26 @@ if there is one, or STREAM"
 (def-stream-method sheet-event-queue ((stream standard-encapsulating-stream)))
 
 (def-stream-method dispatch-event ((stream standard-encapsulating-stream)
-				   event))
+                                   event))
 
 (def-stream-method queue-event ((stream standard-encapsulating-stream)
-				event))
+                                event))
 
 (def-stream-method schedule-event ((stream standard-encapsulating-stream)
-				   event delay))
+                                   event delay))
 
 (def-stream-method handle-event ((stream standard-encapsulating-stream)
-				 event))
+                                 event))
 
 (def-stream-method event-read ((stream standard-encapsulating-stream)))
 
 (def-stream-method event-read-no-hang ((stream standard-encapsulating-stream)))
 
 (def-stream-method event-peek ((stream standard-encapsulating-stream)
-			       &optional event-type))
+                               &optional event-type))
 
 (def-stream-method event-unread ((stream standard-encapsulating-stream)
-				 event))
+                                 event))
 
 (def-stream-method event-listen ((stream standard-encapsulating-stream)))
 
@@ -383,13 +373,13 @@ if there is one, or STREAM"
     (continuation medium (stream standard-encapsulating-stream)))
 
 (def-stream-method queue-repaint ((stream standard-encapsulating-stream)
-				  repaint-event))
+                                  repaint-event))
 
 (def-stream-method handle-repaint ((stream standard-encapsulating-stream)
-				   region))
+                                   region))
 
 (def-stream-method repaint-sheet ((stream standard-encapsulating-stream)
-				  region))
+                                  region))
 
 (def-stream-method note-sheet-grafted ((stream standard-encapsulating-stream)))
 
@@ -409,29 +399,29 @@ if there is one, or STREAM"
 ;;; Text Style binding forms
 
 (defmethod invoke-with-text-style ((stream standard-encapsulating-stream)
-				   continuation text-style)
+                                   continuation text-style)
   (invoke-with-text-style (slot-value stream 'stream)
-			  #'(lambda (medium)
-			      (declare (ignore medium))
-			      (funcall continuation stream))
-			  text-style))
+                          #'(lambda (medium)
+                              (declare (ignore medium))
+                              (funcall continuation stream))
+                          text-style))
 
 ;;; Drawing functions
 
 (def-stream-method medium-draw-point* ((stream standard-encapsulating-stream)
-				       x y))
+                                       x y))
 
 (def-stream-method medium-draw-points* ((stream standard-encapsulating-stream)
-					coord-seq))
+                                        coord-seq))
 
 (def-stream-method medium-draw-line* ((stream standard-encapsulating-stream)
-				      x1 y1 x2 y2))
+                                      x1 y1 x2 y2))
 
 (def-stream-method medium-draw-lines* ((stream standard-encapsulating-stream)
-				       position-seq))
+                                       position-seq))
 
 (def-stream-method medium-draw-polygon* ((stream standard-encapsulating-stream)
-					 coord-seq closed filled))
+                                         coord-seq closed filled))
 
 (def-stream-method medium-draw-rectangle*
     ((stream standard-encapsulating-stream) x1 y1 x2 y2 filled))
@@ -461,7 +451,7 @@ if there is one, or STREAM"
     ((stream standard-encapsulating-stream)))
 
 (def-stream-method medium-clear-area ((stream standard-encapsulating-stream)
-				      left top right bottom))
+                                      left top right bottom))
 
 (def-stream-method medium-beep ((stream standard-encapsulating-stream)))
 
@@ -508,7 +498,7 @@ if there is one, or STREAM"
     (margin (stream standard-encapsulating-stream)))
 
 (def-stream-method stream-line-height ((stream standard-encapsulating-stream)
-				       &key text-style))
+                                       &key text-style))
 
 (def-stream-method stream-vertical-spacing
     ((stream standard-encapsulating-stream)))
@@ -589,17 +579,17 @@ if there is one, or STREAM"
      pointer-button-press-handler))
 
 (def-stream-method stream-input-wait ((stream standard-encapsulating-stream)
-				      &key timeout input-wait-test))
+                                      &key timeout input-wait-test))
 
 (def-stream-method stream-unread-gesture
     ((stream standard-encapsulating-stream) gesture))
 
 (def-stream-method stream-accept ((stream standard-encapsulating-stream) type
-			   &key view default default-type provide-default
-			   insert-default replace-input history active-p
-			   prompt prompt-mode display-default query-identifier
-			   activation-gestures additional-activation-gestures
-			   delimiter-gestures additional-delimiter-gestures))
+                           &key view default default-type provide-default
+                           insert-default replace-input history active-p
+                           prompt prompt-mode display-default query-identifier
+                           activation-gestures additional-activation-gestures
+                           delimiter-gestures additional-delimiter-gestures))
 ;;; Output recording
 
 (def-stream-method stream-recording-p
@@ -660,23 +650,23 @@ if there is one, or STREAM"
     ((stream standard-encapsulating-stream) continuation record-type
      &rest initargs)
   (apply #'invoke-with-new-output-record
-	 (slot-value stream 'stream)
-	 #'(lambda (inner-stream output-record)
-	     (declare (ignore inner-stream))
-	     (funcall continuation stream output-record))
-	 record-type
-	 initargs))
+         (slot-value stream 'stream)
+         #'(lambda (inner-stream output-record)
+             (declare (ignore inner-stream))
+             (funcall continuation stream output-record))
+         record-type
+         initargs))
 
 (defmethod invoke-with-output-to-output-record
     ((stream standard-encapsulating-stream) continuation record-type
      &rest initargs)
   (apply #'invoke-with-output-to-output-record
-	 (slot-value stream 'stream)
-	 #'(lambda (inner-stream record)
-	     (declare (ignore inner-stream))
-	     (funcall continuation stream record))
-	 record-type
-	 initargs))
+         (slot-value stream 'stream)
+         #'(lambda (inner-stream record)
+             (declare (ignore inner-stream))
+             (funcall continuation stream record))
+         record-type
+         initargs))
 
 ;;; Presentation type generics
 

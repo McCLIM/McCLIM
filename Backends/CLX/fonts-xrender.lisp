@@ -1,15 +1,14 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Font matrics, caching, and XRender text support
-;;;   Created: 2003-05-25 16:32
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2003 by Gilbert Baumann
-;;;  (c) copyright 2008 by Andy Hefner
-;;;  (c) copyright 2016-2021 by Daniel Kochmański
 ;;;
-;;;    See toplevel file 'Copyright' for the copyright details.
+;;;  (c) Copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2008 by Andy Hefner <ahefner@gmail.com>
+;;;  (c) Copyright 2016-2021 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Font matrics, caching, and XRender text support
 
 (in-package #:clim-clx)
 

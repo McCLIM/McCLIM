@@ -1,4 +1,4 @@
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 (defvar *clx-cursor-mapping*
   '(;; These are taken from the Franz CLIM User's Guide

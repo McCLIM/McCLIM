@@ -1,3 +1,5 @@
+(in-package #:asdf-user)
+
 (defsystem "mcclim-render"
   :description "Support for raster images McCLIM."
   :depends-on ("alexandria"

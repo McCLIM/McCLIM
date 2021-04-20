@@ -18,32 +18,33 @@
 ;;; ----------------------------------------------------------------------------
 ;;;
 ;;; Class and protocol implementations of the geometry module.
-
+;;;
 ;;; TODO
 ;;;
 ;;; - ellipses: The intersection of two ellipses is there, but
 ;;;   handling the start/end angle is not implemented.
-;;
+;;;
 ;;; - provide better (faster) implementations for REGION-EQUAL,
 ;;;   REGION-CONTAINS-REGION-P, and REGION-INTERSECTS-REGION-P.
-;;
+;;;
 ;;; - Compute a union/intersection/difference of an union of polygon
 ;;;   vs another polygon or union of polygons directly via POLYGON-OP.
-;;
+;;;
 ;;; - STANDARD-REGION-UNION should either become a subclass
 ;;;   'STANDARD-DISJUNCT-REGION-UNION' or a flag. Some set operations
 ;;;   could take advantage out the information, if the subregions of
 ;;;   an union are disjunct.
-;;
+;;;
 ;;; - provide sensible PRINT-OBJECT methods.
-;;
+;;;
 ;;; - while you are are at it; provide a reasonable fast vertical scan
 ;;;   routine.  polygons should make use of the sweep line algorithm.
-;;
+;;;
 ;;; - MAKE-POLY{LINE,GON} should canonise its arguments; no edges of
 ;;;   length 0 and no co-linear vertexes. Maybe: canonise rectangles?
 ;;;   Also a polygon of less than three vertexes is to be considered
 ;;;   empty aka +nowhere+.
+;;;
 
 (in-package #:clim-internals)
 

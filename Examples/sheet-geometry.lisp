@@ -60,7 +60,7 @@
         (with-drawing-options (stream :transformation transformation)
           (draw-rectangle* stream x1 y1 x2 y2 :ink +light-blue+ :filled t)
           (draw-design stream region :ink (pane-background object) :filled t))
-        (draw-rectangle* stream px1 py1 px2 py2 :ink +red+ :filled nil)      
+        (draw-rectangle* stream px1 py1 px2 py2 :ink +red+ :filled nil)
         (with-drawing-options (stream :transformation transformation)
           (draw-arrow* stream -100 0 300 0 :ink +dark-green+ :line-thickness 3)
           (draw-arrow* stream 0 -100 0 300 :ink +dark-green+ :line-thickness 3)

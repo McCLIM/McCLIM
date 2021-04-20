@@ -11,11 +11,11 @@
 ;;;
 ;;; To run the example application, call (clim-demo.town-example:run).
 ;;;
-;;; Covered topics: custom view classes, different present
-;;; presentation methods for different views, completion for accept
-;;; presentation methods, accepting-values dialogues, presentation to
-;;; command translators, partial commands in menus, automatically
-;;; generated menus, and keystroke gestures for commands.
+;;; Covered topics: custom view classes, different present presentation methods
+;;; for different views, completion for accept presentation methods,
+;;; accepting-values dialogues, presentation to command translators, partial
+;;; commands in menus, automatically generated menus, and keystroke gestures for
+;;; commands.
 
 (defpackage #:clim-demo.town-example
   (:use #:clim #:clim-lisp)

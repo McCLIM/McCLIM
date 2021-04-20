@@ -1,15 +1,15 @@
-;;; -*- Mode: Lisp; show-trailing-whitespace: t; indent-tabs: nil; -*-
-
-;;; Based on the tab-layout by:
 ;;; ---------------------------------------------------------------------------
-;;;     Title: A Tab Layout Pane
-;;;   Created: 2005/09/16-19
-;;;    Author: Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2005 by Max-Gerd Retzlaff
 ;;;
-;;; Available from:
-;;;   http://bl0rg.net/~mgr/flux/tab-layout_2005-09-19_02-52+0200.tar.bz2
+;;;  (c) Copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2005 by Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;  (c) Copyright 2006 David Lichteblau
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Based on the tab-layout by Max-Gerd Retzlaff available from:
+;;; http://bl0rg.net/~mgr/flux/tab-layout_2005-09-19_02-52+0200.tar.bz2
 ;;;
 ;;; License given on IRC:
 ;;;   http://tunes.org/~nef/logs/lisp/07.01.15
@@ -17,21 +17,12 @@
 ;;;  with Gilbert. BSD or LGPL, or both.  but I'm on the move.. see you later
 ;;; 04:05:22 <mgr> _8work: in fact, I wanted to commit it to mcclim long time
 ;;;  ago, but I have not yet because there seemed to be a lack of interest.
-
-;;; Based on the stack layout by:
-;;; ---------------------------------------------------------------------------
-;;;     Title: Embryo Stack Layout Pane Class
-;;;   Created: 2003-06-01
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: As public domain as it can get.
-;;; ---------------------------------------------------------------------------
-;;; Available from:
-;;;   http://bauhh.dyndns.org:8000/mcclim/cookbook/
-
-;;; ---------------------------------------------------------------------------
-;;; Adapted for inclusion into McCLIM:
-;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2006 David Lichteblau
+;;;
+;;; Based on the stack layout by Gilbert Baumann from:
+;;; http://bauhh.dyndns.org:8000/mcclim/cookbook/
+;;; License is "As public domain as it can get.".
+;;;
+;;; Adapted for inclusion into McCLIM by David Lichteblau.
 
 (defpackage #:clim-tab-layout
   (:use #:clim #:clim-lisp)

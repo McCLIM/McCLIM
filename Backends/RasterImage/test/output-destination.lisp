@@ -6,7 +6,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 
-(cl:in-package #:mcclim-raster-image.test)
+(in-package #:mcclim-raster-image.test)
 
 (in-suite :mcclim-raster-image)
 

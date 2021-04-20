@@ -6,7 +6,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 
-(cl:in-package #:mcclim-raster-image)
+(in-package #:mcclim-raster-image)
 
 (defclass raster-image-destination (file-destination)
   ((%file-format :initarg :file-format

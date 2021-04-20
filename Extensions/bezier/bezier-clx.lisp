@@ -8,6 +8,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Glue code for rendering Bezier designs using the CLX medium.
+;;;
 
 (defpackage #:mcclim-bezier-clx
   (:use #:clim #:clim-lisp #:mcclim-bezier)

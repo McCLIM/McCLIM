@@ -5,8 +5,9 @@
 ;;;  (c) copyright 2019 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
+;;;
 
-(cl:defpackage #:mcclim-raster-image.test
+(defpackage #:mcclim-raster-image.test
   (:use
    #:cl
    #:alexandria
@@ -15,7 +16,7 @@
   (:export
    #:run-tests))
 
-(cl:in-package #:mcclim-raster-image.test)
+(in-package #:mcclim-raster-image.test)
 
 (def-suite* :mcclim-raster-image)
 

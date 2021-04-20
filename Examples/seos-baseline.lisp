@@ -1,4 +1,3 @@
-
 (in-package #:clim-demo)
 
 (define-application-frame seos-baseline ()

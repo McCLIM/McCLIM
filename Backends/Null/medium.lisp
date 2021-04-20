@@ -1,23 +1,13 @@
-;;; -*- Mode: Lisp; Package: CLIM-NULL -*-
-
-;;; (c) 2005 Christophe Rhodes (c.rhodes@gold.ac.uk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2005 by Christophe Rhodes <c.rhodes@gold.ac.uk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-null)
+(in-package #:clim-null)
 
 (defclass null-medium (basic-medium)
   ())
@@ -64,7 +54,7 @@
   nil)
 
 (defmethod medium-draw-line* ((medium null-medium) x1 y1 x2 y2)
-  (declare (ignore x1 y1 x2 y2)) 
+  (declare (ignore x1 y1 x2 y2))
   nil)
 
 ;; FIXME: Invert the transformation and apply it here, as the :around
@@ -89,20 +79,20 @@
   nil)
 
 (defmethod medium-draw-ellipse* ((medium null-medium) center-x center-y
-				 radius-1-dx radius-1-dy
-				 radius-2-dx radius-2-dy
-				 start-angle end-angle filled)
+                                 radius-1-dx radius-1-dy
+                                 radius-2-dx radius-2-dy
+                                 start-angle end-angle filled)
   (declare (ignore center-x center-y
-		   radius-1-dx radius-1-dy
-		   radius-2-dx radius-2-dy
-		   start-angle end-angle filled))
+                   radius-1-dx radius-1-dy
+                   radius-2-dx radius-2-dy
+                   start-angle end-angle filled))
   nil)
 
 (defmethod medium-draw-circle* ((medium null-medium)
-				center-x center-y radius start-angle end-angle
-				filled)
+                                center-x center-y radius start-angle end-angle
+                                filled)
   (declare (ignore center-x center-y radius
-		   start-angle end-angle filled))
+                   start-angle end-angle filled))
   nil)
 
 (defmethod text-style-ascent (text-style (medium null-medium))
@@ -127,23 +117,23 @@
 (defmethod text-size
     ((medium null-medium) string &key text-style (start 0) end)
   (setf string (etypecase string
-		 (character (string string))
-		 (string string)))
+                 (character (string string))
+                 (string string)))
   (let ((width 0)
-	(height (text-style-height text-style medium))
-	(x (- (or end (length string)) start))
-	(y 0)
-	(baseline (text-style-ascent text-style medium)))
+        (height (text-style-height text-style medium))
+        (x (- (or end (length string)) start))
+        (y 0)
+        (baseline (text-style-ascent text-style medium)))
     (do ((pos (position #\Newline string :start start :end end)
-	      (position #\Newline string :start (1+ pos) :end end)))
-	((null pos) (values width height x y baseline))
+              (position #\Newline string :start (1+ pos) :end end)))
+        ((null pos) (values width height x y baseline))
       (let ((start start)
-	    (end pos))
-	(setf x (- end start))
-	(setf y (+ y (text-style-height text-style medium)))
-	(setf width (max width x))
-	(setf height (+ height (text-style-height text-style medium)))
-	(setf baseline (+ baseline (text-style-height text-style medium)))))))
+            (end pos))
+        (setf x (- end start))
+        (setf y (+ y (text-style-height text-style medium)))
+        (setf width (max width x))
+        (setf height (+ height (text-style-height text-style medium)))
+        (setf baseline (+ baseline (text-style-height text-style medium)))))))
 
 (defmethod climb:text-bounding-rectangle*
     ((medium null-medium) string &key text-style (start 0) end align-x align-y direction)
@@ -175,4 +165,3 @@
 
 (defmethod medium-miter-limit ((medium null-medium))
   0)
-

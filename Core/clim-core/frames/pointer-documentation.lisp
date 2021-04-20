@@ -10,6 +10,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Frame pointer documentation computation and updating.
+;;;
 
 (in-package #:clim-internals)
 

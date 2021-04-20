@@ -1,4 +1,4 @@
-(in-package :mcclim-raster-image)
+(in-package #:mcclim-raster-image)
 
 ;;;
 ;;; port

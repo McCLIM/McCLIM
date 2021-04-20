@@ -20,6 +20,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Standard presentations types.
+;;;
 
 (in-package #:clim-internals)
 

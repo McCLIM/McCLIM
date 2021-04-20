@@ -28,5 +28,3 @@
       (:inches (/ (xlib:screen-height-in-millimeters screen) 25.4s0))
       (:millimeters (xlib:screen-height-in-millimeters screen))
       (:screen-sized 1))))
-
-

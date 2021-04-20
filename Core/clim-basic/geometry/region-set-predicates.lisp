@@ -9,6 +9,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Region predicates methods for the region set classes.
+;;;
 
 (in-package #:climi)
 

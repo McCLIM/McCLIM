@@ -8,6 +8,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The frame manager the CLX framebuffer backend.
+;;;
 
 (in-package #:clim-clx-fb)
 

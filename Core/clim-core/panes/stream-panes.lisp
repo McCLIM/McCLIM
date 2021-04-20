@@ -17,7 +17,7 @@
 ;;; Implementation of the 29.4 CLIM Stream Panes.
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; A class that implements the display function invocation. It's put
 ;;; in a super class of clim-stream-pane so that redisplay-frame-pane

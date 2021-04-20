@@ -7,8 +7,9 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Data structures and functions for representing an polygonizing
-;;; Bezier curves.
+;;; Data structures and functions for representing an polygonizing Bezier
+;;; curves.
+;;;
 
 (in-package #:mcclim-bezier)
 

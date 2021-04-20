@@ -1,4 +1,4 @@
-(in-package :mcclim-fontconfig)
+(in-package #:mcclim-fontconfig)
 
 (define-condition fontconfig-error (error)
   ())

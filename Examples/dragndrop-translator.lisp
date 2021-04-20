@@ -1,37 +1,26 @@
-;;; -*- Mode: Lisp; Package: CLIM-DEMO -*-
-
-;;;  (c) copyright 2006 by 
-;;;           Tim Moore (moore@bricoworks.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2006 by Tim Moore <moore@bricoworks.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-demo)
+(in-package #:clim-demo)
 
 (defparameter *colors* (list +black+ +white+ +red+ +green+ +blue+ +magenta+
-			     +cyan+ +yellow+))
+                             +cyan+ +yellow+))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *color-alist*  `(("black" . ,+black+)
-				 ("white" . ,+white+)
-				 ("red" . ,+red+)
-				 ("green" . ,+green+)
-				 ("blue" . ,+blue+)
-				 ("magenta" . ,+magenta+)
-				 ("cyan" . ,+cyan+)
-				 ("yellow" . ,+yellow+))))
+                                 ("white" . ,+white+)
+                                 ("red" . ,+red+)
+                                 ("green" . ,+green+)
+                                 ("blue" . ,+blue+)
+                                 ("magenta" . ,+magenta+)
+                                 ("cyan" . ,+cyan+)
+                                 ("yellow" . ,+yellow+))))
 
 (define-presentation-type named-color ()
   :inherit-from `(completion ,*color-alist* :value-key cdr))
@@ -49,9 +38,9 @@
 (defmethod draw (stream (thing rect))
   (with-output-as-presentation (stream thing 'rect)
     (let ((x (x thing))
-	  (y (y thing)))
+          (y (y thing)))
       (draw-rectangle* stream x y (+ x (width thing)) (+ y (height thing))
-		       :ink (color thing)))))
+                       :ink (color thing)))))
 
 
 (define-application-frame drag-test ()
@@ -89,6 +78,4 @@
 
 #-(and)
 (define-gesture-name :drag-and-drop :pointer-button (:control :left)
-		     :unique t)
-
-
+                     :unique t)
