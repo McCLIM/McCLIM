@@ -1,29 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: DEFGENERICs and stuff
-;;;   Created: 2001-08-12
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2001,2002 by Gilbert Baumann
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; DEFGENERICs and stuff
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; This is just an ad hoc list. Would it be a good idea to include all
 ;;; (exported) generic functions here? --GB
@@ -411,13 +398,13 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric medium-draw-polygon* (medium coord-seq closed filled))
 (defgeneric medium-draw-rectangle* (medium left top right bottom filled))
 (defgeneric medium-draw-ellipse* (medium center-x center-y
-				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-				  start-angle end-angle filled))
+                                  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                  start-angle end-angle filled))
 (defgeneric medium-draw-circle* (medium center-x center-y radius start-angle end-angle filled))
 (defgeneric medium-draw-text* (medium string x y
-			       start end
-			       align-x align-y
-			       toward-x toward-y transform-glyphs))
+                               start end
+                               align-x align-y
+                               toward-x toward-y transform-glyphs))
 
 
 ;;; 10.1 Medium Components
@@ -524,9 +511,9 @@ different icons for different purposes based on the icon sizes."))
 ;;;; 14.5
 (defgeneric draw-design
     (medium design
-	    &key ink clipping-region transformation line-style line-thickness
-	    line-unit line-dashes line-joint-shape line-cap-shape text-style
-	    text-family text-face text-size))
+            &key ink clipping-region transformation line-style line-thickness
+            line-unit line-dashes line-joint-shape line-cap-shape text-style
+            text-family text-face text-size))
 
 
 ;;; 15.3 The Text Cursor [complete]
@@ -993,7 +980,7 @@ The returned value is the position in the input buffer."))
 
 (defgeneric presentation-replace-input
     (stream object type view
-	    &key buffer-start rescan query-identifier for-context-type)
+            &key buffer-start rescan query-identifier for-context-type)
   (:documentation "Like `replace-input', except that the new
 input to insert into the input buffer is gotten by presenting
 `object' with the presentation type `type' and view

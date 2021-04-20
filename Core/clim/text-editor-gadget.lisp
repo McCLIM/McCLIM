@@ -1,35 +1,21 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2000 by
-;;; Arthur Lemmens (lemmens@simplex.nl),
-;;; Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;; and Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2001 by
-;;; Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;  (c) copyright 2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2006 by Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2000 by Arthur Lemmens <lemmens@simplex.nl>
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2001 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2006 by Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; This file contains the concrete implementation of the text-field and
+;;; text-editor gadgets. It is loaded rather late, because it requires Drei.
 
-;;; This file contains the concrete implementation of the text-field
-;;; and text-editor gadgets. It is loaded rather late, because it
-;;; requires Drei.
-
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; The text editor gadget(s) is implemented as a class implementing
 ;;; the text editor gadget protocol, but containing an editor
@@ -113,10 +99,10 @@
   (declare (ignore width height))
   (with-sheet-medium (medium pane)
     (let ((width (text-size medium (gadget-value pane)))
-	  (height (+ (stream-vertical-spacing pane)
-		     (text-style-height (medium-text-style medium) medium))))
+          (height (+ (stream-vertical-spacing pane)
+                     (text-style-height (medium-text-style medium) medium))))
       (make-space-requirement :height height :min-height height :max-height height
-			      :width width :min-width width))))
+                              :width width :min-width width))))
 
 (defclass drei-text-editor-substrate (text-editor-substrate-mixin
                                       drei-editor-substrate)

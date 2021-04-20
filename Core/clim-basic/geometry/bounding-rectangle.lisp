@@ -10,6 +10,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Bounding rectangle class and protocol implementation.
+;;;
 
 (in-package #:climi)
 

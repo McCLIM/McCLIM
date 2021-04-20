@@ -8,6 +8,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The coordinate type and associated functions.
+;;;
 
 (in-package #:clim-internals)
 

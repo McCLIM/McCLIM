@@ -12,7 +12,7 @@
 ;;; Implementation of the graphics state, mediums and line styles.
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; GRAPHICS-STATE class
 

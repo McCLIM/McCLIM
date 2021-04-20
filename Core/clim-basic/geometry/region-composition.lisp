@@ -10,6 +10,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Region algebra methods for the various region classes.
+;;;
 
 (in-package #:climi)
 

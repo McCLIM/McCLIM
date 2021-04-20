@@ -1,22 +1,21 @@
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Page layout abstraction
-;;;   Created: 2019-02-06 19:42
-;;;    Author: Daniel Kochmański <daniel@turtleware.eu>
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2002 by Alexey Dejneka <adejneka@comail.ru>
-;;;  (c) copyright 2019 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) Copyright 2002 by Alexey Dejneka <adejneka@comail.ru>
+;;;  (c) Copyright 2019 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Page layout may have numerous properties which arrange things on a
-;;; stream with having a broader picture in mind. Text on a page may
-;;; have alignment and direction, margins, columns, paragraph settings
-;;; and much more. This file is a beacon of the abstraction which may
-;;; be used to specify these things.
+;;; Page layout abstraction
 ;;;
-(in-package :clim-internals)
+;;; Page layout may have numerous properties which arrange things on a stream
+;;; with having a broader picture in mind. Text on a page may have alignment and
+;;; direction, margins, columns, paragraph settings and much more. This file is
+;;; a beacon of the abstraction which may be used to specify these things.
+;;;
+
+(in-package #:clim-internals)
 
 (defclass standard-page-layout ()
   ((%page-region :reader stream-page-region :writer (setf %page-region))

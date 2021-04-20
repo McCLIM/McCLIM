@@ -12,6 +12,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Methods for computing bounding rectangles or various region classes.
+;;;
 
 (in-package #:climi)
 

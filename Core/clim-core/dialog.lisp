@@ -1,79 +1,69 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2003 by Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2003 by Tim Moore <moore@bricoworks.com>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
 #| Random notes:
-
-An accepting-values stream diverts the calls to accept into calling
-accept-present-default, as described in the spec.  The output record
-produced by accept-present-default, as well as the current value of
-that query, arguments that were passed to accept, etc. are stored in a
-query object. The stream stores all the query objects for this
-invocation of accepting-values. The record created and returned by
-accept-present-default must be a subclass of updating-output-record.
-
-After the initial output records are drawn, invoke-accepting-values
-blocks accepting commands. The state of the dialog state machine is changed
-via these commands. The commands currently are:
-
-COM-SELECT-QUERY query-id -- calls the method select-query with the
-corresponding query object and output record object. When select-query returns
-the "next" field, if any, is selected so the user can move from field to field
-easily.
-
-COM-CHANGE-QUERY query-id value -- This command is used to directly change the
-value of a query field that does not need to be selected first for input. For
-example, a user would click directly on a radio button without selecting the
-gadget first.
-
-COM-DESELECT-QUERY -- deselects the currently selected query.
-
-COM-QUERY-EXIT -- Exits accepting-values
-
-COM-QUERY-ABORT -- Aborts accepting-values
-
-COM-DO-COMMAND-BUTTON -- Execute the body of a command-button after a push
-
-These commands are generated in two ways. For query fields that are entirely
-based on CLIM drawing commands and presentations, these are emitted by
-presentation translators. There is a presentation type selectable-query that
-throws com-select-query for the :select gesture. Fields that are based on
-gadgets have to throw presentations from their callbacks. This can be done
-using  the method on p. 305 of the Franz CLIM user guide, or by using  the
-McCLIM function throw-object-ptype.
-
-After a command is executed the body of accepting-values is rerun, calling
-accept-present-default again to update the fields' graphic appearance. [This
-may be calling these methods too often and may change in the future]. The
-values returned by the user's calls to accept come from the query objects.
-
-
-If a query field is selectable than it should implement the method
-select-query:
-
-SELECT-QUERY stream query record -- Make a query field active and do any
-input. This should change the query object and setf (changedp query). This
-method might be interrupted at any time if the user selects another field.
-
+                                        ; ; ;
+An accepting-values stream diverts the calls to accept into calling ; ; ;
+accept-present-default, as described in the spec.  The output record ; ; ;
+produced by accept-present-default, as well as the current value of ; ; ;
+that query, arguments that were passed to accept, etc. are stored in a ; ; ;
+query object. The stream stores all the query objects for this ; ; ;
+invocation of accepting-values. The record created and returned by ; ; ;
+accept-present-default must be a subclass of updating-output-record. ; ; ;
+                                        ; ; ;
+After the initial output records are drawn, invoke-accepting-values ; ; ;
+blocks accepting commands. The state of the dialog state machine is changed ; ; ;
+via these commands. The commands currently are: ; ; ;
+                                        ; ; ;
+COM-SELECT-QUERY query-id -- calls the method select-query with the ; ; ;
+corresponding query object and output record object. When select-query returns ; ; ;
+the "next" field, if any, is selected so the user can move from field to field ; ; ;
+easily.                                 ; ; ;
+                                        ; ; ;
+COM-CHANGE-QUERY query-id value -- This command is used to directly change the ; ; ;
+value of a query field that does not need to be selected first for input. For ; ; ;
+example, a user would click directly on a radio button without selecting the ; ; ;
+gadget first.                           ; ; ;
+                                        ; ; ;
+COM-DESELECT-QUERY -- deselects the currently selected query. ; ; ;
+                                        ; ; ;
+COM-QUERY-EXIT -- Exits accepting-values ; ; ;
+                                        ; ; ;
+COM-QUERY-ABORT -- Aborts accepting-values ; ; ;
+                                        ; ; ;
+COM-DO-COMMAND-BUTTON -- Execute the body of a command-button after a push ; ; ;
+                                        ; ; ;
+These commands are generated in two ways. For query fields that are entirely ; ; ;
+based on CLIM drawing commands and presentations, these are emitted by ; ; ;
+presentation translators. There is a presentation type selectable-query that ; ; ;
+throws com-select-query for the :select gesture. Fields that are based on ; ; ;
+gadgets have to throw presentations from their callbacks. This can be done ; ; ;
+using  the method on p. 305 of the Franz CLIM user guide, or by using  the ; ; ;
+McCLIM function throw-object-ptype.     ; ; ;
+                                        ; ; ;
+After a command is executed the body of accepting-values is rerun, calling ; ; ;
+accept-present-default again to update the fields' graphic appearance. [This ; ; ;
+may be calling these methods too often and may change in the future]. The ; ; ;
+values returned by the user's calls to accept come from the query objects. ; ; ;
+                                        ; ; ;
+                                        ; ; ;
+If a query field is selectable than it should implement the method ; ; ;
+select-query:                           ; ; ;
+                                        ; ; ;
+SELECT-QUERY stream query record -- Make a query field active and do any ; ; ;
+input. This should change the query object and setf (changedp query). This ; ; ;
+method might be interrupted at any time if the user selects another field. ; ; ;
+                                        ; ; ;
 |#
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defclass query ()
   ((query-identifier :accessor query-identifier :initarg :query-identifier)

@@ -16,7 +16,7 @@
 ;;; Implementation of the 29.3 Composite and Layout Panes (panes).
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;;
 ;;; Ambiguities and Obmissions

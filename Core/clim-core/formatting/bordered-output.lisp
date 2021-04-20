@@ -11,6 +11,7 @@
 ;;;
 ;;; Macros and functions surrounding stream output with different
 ;;; kinds of borders and decorations.
+;;;
 
 ;;; TODO:
 ;;;  - Define a protocol which the graph formatter can utilize to determine

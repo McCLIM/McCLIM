@@ -9,6 +9,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; 29.4.5 Creating a Standalone CLIM Window
+;;;
 
 (in-package #:clim-internals)
 

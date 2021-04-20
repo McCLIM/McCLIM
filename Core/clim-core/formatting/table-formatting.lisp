@@ -8,6 +8,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Macros and functions for formatting tables and item lists.
+;;;
 
 ;;; TODO:
 ;;;
