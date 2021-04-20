@@ -161,9 +161,19 @@
   (apply #'make-instance (find-concrete-pane-class fm type)
          :frame frame :manager fm :port (port fm) args))
 
+(defmethod make-pane-1
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     (type class) &rest args)
+  (apply #'make-instance type :frame frame :manager fm :port (port fm) args))
+
+(defmethod make-pane-1
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     type &rest args)
+  (apply #'make-pane-1 fm frame (find-concrete-pane-class fm type) args))
+
 (defmethod make-pane-1 :around
     ((fm standard-frame-manager) (frame standard-application-frame)
-     type &rest args &key (event-queue nil evq-p) &allow-other-keys)
+     (type class) &rest args &key (event-queue nil evq-p) &allow-other-keys)
   ;; Default event-queue to the frame event queue.
   (declare (ignore event-queue))
   (if (null evq-p)
