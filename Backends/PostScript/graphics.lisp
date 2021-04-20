@@ -1,27 +1,14 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
-
-;;;  (c) copyright 2001 by
-;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
-;;;           Gilbert Baumann (unk6@rz.uni-karlsruhe.de)
-
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2002 by Alexey Dejneka <adejneka@comail.ru>
+;;;  (c) Copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
 ;;; TODO:
 ;;;
@@ -37,7 +24,7 @@
 ;;; - structure this file
 ;;; - set miter limit?
 
-(in-package :clim-postscript)
+(in-package #:clim-postscript)
 
 ;;; Postscript output utilities
 (defun write-number (stream number)
@@ -72,7 +59,7 @@
 % base-font-name new-font-name encoding-vector ReEncode -->
 /ReEncode
 {
-  5 dict 
+  5 dict
   begin
     /newencoding exch def
     /newfontname exch def
@@ -80,10 +67,10 @@
 
     /basefontdict basefontname findfont def
     /newfont basefontdict maxlength dict def
-    
+
     basefontdict
-    { 
-      exch dup dup /FID ne exch /Encoding ne and 
+    {
+      exch dup dup /FID ne exch /Encoding ne and
       { exch newfont 3 1 roll put }
       { pop pop }
       ifelse
@@ -103,10 +90,10 @@
   (dotimes (i 256)
     (format sink "  dup ~3D /~A put~%" i (or (aref *iso-latin-1-symbolic-names* i) ".notdef")))
   (format sink "pop~%~%")
-  
+
   (dolist (k '("Times-Roman" "Times-Italic" "Times-Bold" "Times-BoldItalic"
-	       "Helvetica" "Helvetica-Oblique" "Helvetica-Bold" "Helvetica-BoldOblique"
-	       "Courier" "Courier-Oblique" "Courier-Bold" "Courier-BoldOblique"))
+               "Helvetica" "Helvetica-Oblique" "Helvetica-Bold" "Helvetica-BoldOblique"
+               "Courier" "Courier-Oblique" "Courier-Bold" "Courier-BoldOblique"))
     (format sink "/~A /~A-iso ISOmapping ReEncode~%" k k)))
 
 (defun write-postscript-dictionary (stream)
@@ -522,8 +509,8 @@ setmatrix")
       (format stream (if filled "fill~%" "stroke~%")))))
 
 (defmethod medium-draw-ellipse* ((medium postscript-medium) center-x center-y
-				 radius1-dx radius1-dy radius2-dx radius2-dy
-				 start-angle end-angle filled)
+                                 radius1-dx radius1-dy radius2-dx radius2-dy
+                                 start-angle end-angle filled)
   (let* ((stream (medium-drawable medium))
          (tr (medium-native-transformation medium))
          (ellipse (transform-region
@@ -559,8 +546,8 @@ setmatrix")
     (pushnew font (slot-value (medium-sheet medium) 'document-fonts)
              :test #'string=)
     (format stream "/~A findfont ~D scalefont setfont~%"
-	    font
-	    size))) ;### evil hack.
+            font
+            size))) ;### evil hack.
 
 (defun postscript-escape-char (char)
   (case char

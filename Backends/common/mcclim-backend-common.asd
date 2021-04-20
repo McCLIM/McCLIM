@@ -1,4 +1,4 @@
-(cl:in-package #:asdf-user)
+(in-package #:asdf-user)
 
 (defsystem "mcclim-backend-common"
   :depends-on ("clim")

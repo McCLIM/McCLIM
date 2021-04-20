@@ -11,8 +11,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Server path processing, port initialization and mirroring
-;;; functions.
+;;; Server path processing, port initialization and mirroring functions.
 
 (in-package #:clim-clx)
 

@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) 2002 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;

@@ -5,8 +5,9 @@
 ;;;  (c) copyright 2019 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
+;;;
 
-(cl:in-package #:mcclim-raster-image.test)
+(in-package #:mcclim-raster-image.test)
 
 (in-suite :mcclim-raster-image)
 

@@ -1,4 +1,3 @@
-
 (in-package :clim-postscript-font)
 
 (define-font-metrics '"Times-Roman"
@@ -209,7 +208,7 @@
                        (-1 "Adieresis" 722 835 0 -15 706)
                        (-1 "Yacute" 722 890 0 -22 703)
                        (-1 "brokenbar" 200 676 14 -67 133)
-                       (-1 "onehalf" 750 676 14 -31 746))) 
+                       (-1 "onehalf" 750 676 14 -31 746)))
 (define-font-metrics '"Times-Bold"
                      '676
                      '205
@@ -419,7 +418,7 @@
                        (-1 "Adieresis" 722 877 0 -9 689)
                        (-1 "Yacute" 722 928 0 -15 699)
                        (-1 "brokenbar" 220 691 19 -66 154)
-                       (-1 "onehalf" 750 688 12 7 775))) 
+                       (-1 "onehalf" 750 688 12 7 775)))
 (define-font-metrics '"Times-Italic"
                      '683
                      '205
@@ -630,7 +629,7 @@
                        (-1 "Adieresis" 611 818 0 51 564)
                        (-1 "Yacute" 556 876 0 -78 633)
                        (-1 "brokenbar" 275 666 18 -105 171)
-                       (-1 "onehalf" 750 676 10 -34 749))) 
+                       (-1 "onehalf" 750 676 10 -34 749)))
 (define-font-metrics '"Times-BoldItalic"
                      '699
                      '205
@@ -836,7 +835,7 @@
                        (-1 "Adieresis" 667 862 0 67 593)
                        (-1 "Yacute" 611 904 0 -73 659)
                        (-1 "brokenbar" 220 685 18 -66 154)
-                       (-1 "onehalf" 750 683 14 9 723))) 
+                       (-1 "onehalf" 750 683 14 9 723)))
 (define-font-metrics '"Courier"
                      '629
                      '157
@@ -1077,7 +1076,7 @@
                        (-1 "thorn" 600 629 157 6 555)
                        (-1 "aring" 600 627 15 -53 559)
                        (-1 "yacute" 600 672 157 -7 592)
-                       (-1 "icircumflex" 600 654 0 -94 505))) 
+                       (-1 "icircumflex" 600 654 0 -94 505)))
 (define-font-metrics '"Courier-Oblique"
                      '629
                      '157
@@ -1319,7 +1318,7 @@
                        (-1 "thorn" 600 629 157 24 605)
                        (-1 "aring" 600 627 15 -76 569)
                        (-1 "yacute" 600 672 157 4 683)
-                       (-1 "icircumflex" 600 654 0 -95 551))) 
+                       (-1 "icircumflex" 600 654 0 -95 551)))
 (define-font-metrics '"Courier-Bold"
                      '626
                      '142
@@ -1558,7 +1557,7 @@
                        (-1 "thorn" 600 626 142 14 570)
                        (-1 "aring" 600 678 15 -35 570)
                        (-1 "yacute" 600 661 142 4 601)
-                       (-1 "icircumflex" 600 657 0 -63 523))) 
+                       (-1 "icircumflex" 600 657 0 -63 523)))
 (define-font-metrics '"Courier-BoldOblique"
                      '626
                      '142
@@ -1798,7 +1797,7 @@
                        (-1 "thorn" 600 626 142 31 622)
                        (-1 "aring" 600 678 15 -62 592)
                        (-1 "yacute" 600 661 142 20 694)
-                       (-1 "icircumflex" 600 657 0 -77 566))) 
+                       (-1 "icircumflex" 600 657 0 -77 566)))
 (define-font-metrics '"Helvetica"
                      '718
                      '207
@@ -2006,7 +2005,7 @@
                        (-1 "Adieresis" 667 901 0 -14 654)
                        (-1 "Yacute" 667 929 0 -14 653)
                        (-1 "brokenbar" 260 737 19 -94 167)
-                       (-1 "onehalf" 834 703 19 -43 773))) 
+                       (-1 "onehalf" 834 703 19 -43 773)))
 (define-font-metrics '"Helvetica-Oblique"
                      '718
                      '207
@@ -2215,7 +2214,7 @@
                        (-1 "Adieresis" 667 901 0 -14 654)
                        (-1 "Yacute" 667 929 0 -167 806)
                        (-1 "brokenbar" 260 737 19 -90 324)
-                       (-1 "onehalf" 834 703 19 -114 839))) 
+                       (-1 "onehalf" 834 703 19 -114 839)))
 (define-font-metrics '"Helvetica-Bold"
                      '718
                      '207
@@ -2423,7 +2422,7 @@
                        (-1 "Adieresis" 722 915 0 -20 702)
                        (-1 "Yacute" 667 936 0 -15 653)
                        (-1 "brokenbar" 280 737 19 -84 196)
-                       (-1 "onehalf" 834 710 19 -26 794))) 
+                       (-1 "onehalf" 834 710 19 -26 794)))
 (define-font-metrics '"Helvetica-BoldOblique"
                      '718
                      '207
@@ -2632,4 +2631,4 @@
                        (-1 "Adieresis" 722 915 0 -20 716)
                        (-1 "Yacute" 667 936 0 -168 806)
                        (-1 "brokenbar" 280 737 19 -80 353)
-                       (-1 "onehalf" 834 710 19 -132 858))) 
+                       (-1 "onehalf" 834 710 19 -132 858)))

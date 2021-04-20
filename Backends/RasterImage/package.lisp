@@ -1,6 +1,4 @@
-(in-package :common-lisp-user)
-
-(defpackage :mcclim-raster-image
+(defpackage #:mcclim-raster-image
     (:use :clim :clim-lisp :clim-backend :mcclim-render)
     (:import-from :climi
                   #:port-grafts

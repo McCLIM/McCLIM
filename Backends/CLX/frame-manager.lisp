@@ -12,6 +12,7 @@
 ;;;
 ;;; The frame manager and ad-hoc sheet class generation logic of the
 ;;; CLX backend.
+;;;
 
 (in-package #:clim-clx)
 

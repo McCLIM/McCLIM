@@ -1,24 +1,14 @@
-;;; -*- Mode: Lisp; Package: CLIM-NULL; -*-
-
-;;;  (c) copyright 2005 by Christophe Rhodes (c.rhodes@gold.ac.uk)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2005 by Christophe Rhodes <c.rhodes@gold.ac.uk>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-null)
+(in-package #:clim-null)
 
 (defclass null-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)
@@ -38,7 +28,7 @@
   (setf (slot-value port 'id) (gensym "NULL-PORT-"))
   ;; FIXME: it seems bizarre for this to be necessary
   (push (make-instance 'null-frame-manager :port port)
-	(slot-value port 'climi::frame-managers)))
+        (slot-value port 'climi::frame-managers)))
 
 (defmethod print-object ((object null-port) stream)
   (print-unreadable-object (object stream :identity t :type t)
@@ -46,7 +36,7 @@
 
 (defmethod port-set-mirror-region ((port null-port) sheet region)
   nil)
-                                   
+
 (defmethod port-set-mirror-transformation
     ((port null-port) sheet transformation)
   nil)
@@ -135,4 +125,4 @@
 
 (defmethod set-sheet-pointer-cursor ((port null-port) sheet cursor)
   (declare (ignore sheet cursor))
-  nil)        
+  nil)
