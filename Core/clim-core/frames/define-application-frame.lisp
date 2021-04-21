@@ -20,34 +20,35 @@
   (setf (slot-value pane 'name) name)
   pane)
 
-(defun generate-pane-creation-form (name form)
-  (destructuring-bind (pane &rest options) form
-    (cond
-      ;; Single form which is a function call
-      ((and (null options) (listp pane))
-       `(coerce-pane-name ,pane ',name))
-      ;; Standard panes denoted by a keyword
-      ((eq pane :application)
-       `(make-clim-application-pane :name ',name ,@options :scroll-bars :both))
-      ((eq pane :interactor)
-       `(make-clim-interactor-pane :name ',name ,@options :scroll-bars :vertical))
-      ((eq pane :pointer-documentation)
-       `(make-clim-pointer-documentation-pane :name ',name ,@options))
-      ((eq pane :command-menu)
-       `(make-clim-command-menu-pane :name ',name ,@options))
-      ;; Non-standard pane designator passed to the `make-pane'
-      (t
-       `(make-pane ',pane :name ',name ,@options)))))
+(defun generate-panes-for-layout-form (panes)
+  (flet ((generate-pane-form (name form)
+           (destructuring-bind (pane &rest options) form
+             (cond
+               ;; Single form which is a function call
+               ((and (null options) (listp pane))
+                `(coerce-pane-name ,pane ',name))
+               ;; Standard panes denoted by a keyword
+               ((eq pane :application)
+                `(make-clim-application-pane :name ',name ,@options))
+               ((eq pane :interactor)
+                `(make-clim-interactor-pane :name ',name ,@options))
+               ((eq pane :pointer-documentation)
+                `(make-clim-pointer-documentation-pane :name ',name ,@options))
+               ((eq pane :command-menu)
+                `(make-clim-command-menu-pane :name ',name ,@options))
+               ;; Non-standard pane designator passed to the `make-pane'
+               (t
+                `(make-pane ',pane :name ',name ,@options))))))
+    `(list
+      ,@(loop for (name . form) in panes
+              collect `(cons ',name ,(generate-pane-form name form))))))
 
 (defun generate-generate-panes-form (class-name panes layouts)
   `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
-               (list
-                ,@(loop for (name . form) in panes
-                        collect `(cons ',name ,(generate-pane-creation-form
-                                                name form))))))
+               ,(generate-panes-for-layout-form panes)))
        (let ,(loop for (name . form) in panes
                    collect `(,name (alexandria:assoc-value
                                     (frame-panes-for-layout frame)
