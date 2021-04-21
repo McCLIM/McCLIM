@@ -49,6 +49,33 @@
 
 ;;; HEADLESS-FRAME-MANAGER class
 
+(defmethod note-frame-enabled (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-disabled (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-iconified (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-deiconified (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-command-enabled (fm frame new-value)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-command-disabled (fm frame new-value)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-frame-pretty-name-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-icon-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-command-table-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
 (defclass headless-frame-manager (frame-manager)
   ((frames
     :initform nil
@@ -81,42 +108,6 @@
 (defmethod generate-panes
     ((fm headless-frame-manager) (frame application-frame))
   (declare (ignore fm frame)))
-
-(defmethod note-frame-enabled
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-disabled
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-iconified
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-deiconified
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-command-enabled
-    ((fm headless-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-command-disabled
-    ((fm headless-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-frame-pretty-name-changed
-    ((fm headless-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
-
-(defmethod note-frame-icon-changed
-    ((fm headless-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
-
-(defmethod note-frame-command-table-changed
-    ((fm headless-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
 
 ;;; STANDARD-FRAME-MANAGER class
 
