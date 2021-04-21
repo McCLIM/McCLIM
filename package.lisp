@@ -1988,6 +1988,7 @@
    #:find-frame-type
    #:note-frame-pretty-name-changed
    #:note-frame-icon-changed
+   #:note-frame-command-table-changed
    ;; images
    #:rgb-image
    #:xpm-parse-file

@@ -114,6 +114,10 @@
     ((fm headless-frame-manager) (frame application-frame) new-value)
   (declare (ignore fm frame new-value)))
 
+(defmethod note-frame-command-table-changed
+    ((fm headless-frame-manager) (frame application-frame) new-value)
+  (declare (ignore fm frame new-value)))
+
 ;;; STANDARD-FRAME-MANAGER class
 
 (defclass standard-frame-manager (headless-frame-manager)
@@ -281,6 +285,16 @@
   ;; new icon somewhere.
   (when-let ((top-level-sheet (frame-top-level-sheet frame)))
     (setf (sheet-icon top-level-sheet) new-value)))
+
+(defmethod note-frame-command-table-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-command-table)
+  ;; Update the menu-bar even if its command-table doesn't change to ensure
+  ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
+  (when-let* ((menu-bar (frame-menu-bar-pane frame))
+              (bar-command-table (slot-value frame 'menu-bar)))
+    (if (eq bar-command-table t)
+        (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
+        (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
 
 ;;; Menu frame methods
 

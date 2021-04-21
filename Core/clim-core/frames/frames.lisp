@@ -247,14 +247,8 @@ documentation produced by presentations.")))
           (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
-(defmethod (setf frame-command-table) :after (new-command-table frame)
-  ;; Update the menu-bar even if its command-table doesn't change to ensure
-  ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
-  (when-let* ((menu-bar (frame-menu-bar-pane frame))
-              (bar-command-table (slot-value frame 'menu-bar)))
-    (if (eq bar-command-table t)
-        (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
-        (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
+(defmethod (setf frame-command-table) :after (new-table frame)
+  (note-frame-command-table-changed (frame-manager frame) frame new-table))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))

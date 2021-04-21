@@ -5,6 +5,7 @@
 * Frame and sheet icons::
 * Frame and sheet names::
 * Frame and sheet shrinking::
+* Frame command table change::
 * Text editor substrate::
 * Extended text formatting::
 * Extended blank area presentation type::
@@ -62,6 +63,15 @@ the following protocol:
 
 @include docstrings/fun-clim-extensions-shrink-sheet.texi
 @include docstrings/fun-clim-backend-port-shrink-sheet.texi
+
+@node Frame command table change
+@section Frame command table change
+
+When the command table is changed this may result in necessity to
+change the menu. Menu is managed by the frame manager so @mcclim{}
+adds the appropriate notification protocol.
+
+@include docstrings/fun-clim-extensions-note-frame-command-table-changed.texi
 
 @node Text editor substrate
 @section Text editor substrate
