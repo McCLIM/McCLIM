@@ -39,18 +39,7 @@
       (t
        `(make-pane ',pane :name ',name ,@options)))))
 
-;;; FIXME The menu-bar code in the following function is incorrect.  it
-;;; needs to be moved to somewhere after the backend, since it depends
-;;; on the backend chosen.
-;;;
-;;; This hack slaps a menu-bar into the start of the application-frame,
-;;; in such a way that it is hard to find.
-(defun generate-generate-panes-form (class-name menu-bar panes layouts
-                                     pointer-documentation)
-  (when pointer-documentation
-    (setf panes (append panes
-                        '((%pointer-documentation%
-                           pointer-documentation-pane)))))
+(defun generate-generate-panes-form (class-name panes layouts)
   `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
@@ -63,34 +52,9 @@
                    collect `(,name (alexandria:assoc-value
                                     (frame-panes-for-layout frame)
                                     ',name :test #'eq)))
-         ;; [BTS] added this, but is not sure that this is correct for
-         ;; adding a menu-bar transparently, should also only be done
-         ;; where the exterior window system does not support menus
-         (setf (frame-menu-bar-pane frame) nil)
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
-                 ,@(if (or menu-bar pointer-documentation)
-                       (mapcar (lambda (layout)
-                                 `(,(first layout)
-                                   (vertically ()
-                                     ,@(cond
-                                         ((eq menu-bar t)
-                                          `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))))
-                                         ((consp menu-bar)
-                                          `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar
-                                                   (make-command-table nil :menu ',menu-bar)
-                                                   frame 'hmenu-pane))))
-                                         (menu-bar
-                                          `((setf (frame-menu-bar-pane frame)
-                                                  (make-menu-bar ',menu-bar frame 'hmenu-pane))))
-                                         (t nil))
-                                     ,@(rest layout)
-                                     ,@(when pointer-documentation
-                                         '(%pointer-documentation%)))))
-                               layouts)
-                       layouts)))))
+                 ,@layouts))))
      ;; Update frame-current-panes and the special pane slots.
      (update-frame-pane-lists frame)))
 
@@ -220,25 +184,25 @@
        (defclass ,name ,superclasses
          ,slots
          (:default-initargs
-          :name              ',name
-          :pretty-name       ,pretty-name
+          :name ',name
+          :pretty-name ,pretty-name
           ,@(when icon-supplied-p `(:icon ,icon))
-          :command-table     (find-command-table ',(first command-table))
+          :command-table (find-command-table ',(first command-table))
           :disabled-commands ',disabled-commands
-          :menu-bar          ',menu-bar
-          :current-layout    ',current-layout
-          :layouts           ',layouts
-          :resize-frame      ',resize-frame
-          :top-level-lambda  (lambda (,frame-arg)
-                               (,(car top-level) ,frame-arg
-                                ,@(cdr top-level)))
+          :menu-bar ',menu-bar
+          :pointer-documentation ',pointer-documentation
+          :current-layout ',current-layout
+          :layouts ',layouts
+          :resize-frame ',resize-frame
+          :top-level-lambda (lambda (,frame-arg)
+                              (,(car top-level) ,frame-arg
+                               ,@(cdr top-level)))
           ,@geometry
           ,@user-default-initargs)
          ,@other-options)
 
        ,@(when (or panes layouts)
-           `(,(generate-generate-panes-form
-               name menu-bar panes layouts pointer-documentation)))
+           `(,(generate-generate-panes-form name panes layouts)))
 
        ,@(when command-table
            `((define-command-table ,@command-table)))

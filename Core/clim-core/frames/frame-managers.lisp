@@ -189,10 +189,10 @@
 (defmethod generate-panes :before
     ((fm standard-frame-manager) (frame standard-application-frame))
   (declare (ignore fm))
-  (when (and (frame-panes frame)
-             (eq (sheet-parent (frame-panes frame))
-                 (frame-top-level-sheet frame)))
-    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
+  (when-let ((panes (frame-panes frame)))
+    (let ((top-level-sheet (frame-top-level-sheet frame)))
+      (when (sheet-ancestor-p panes top-level-sheet)
+        (sheet-disown-child top-level-sheet (sheet-child top-level-sheet)))))
   (loop for (nil . pane) in (frame-panes-for-layout frame)
         for parent = (sheet-parent pane)
         if  parent
@@ -210,10 +210,37 @@
       (setf (frame-panes frame) single-pane)))
   (update-frame-pane-lists frame))
 
+(defun maybe-add-auxiliary-panes (frame)
+  (let ((root (frame-panes frame))
+        (menu (slot-value frame 'menu-bar))
+        (pdoc (slot-value frame 'pdoc-bar)))
+    (when menu
+      (setf (frame-menu-bar-pane frame)
+            (cond ((eq menu t)
+                   (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))
+                  ((consp menu)
+                   (make-menu-bar (make-command-table nil :menu menu)
+                                  frame 'hmenu-pane))
+                  (menu
+                   (make-menu-bar menu frame 'hmenu-pane))))
+      (setf menu (frame-menu-bar-pane frame)))
+    (when pdoc
+      (if (frame-pointer-documentation-output frame)
+          (setf pdoc nil)
+          (multiple-value-bind (pane stream)
+              (make-clim-pointer-documentation-pane)
+            (setf pdoc pane
+                  (frame-pointer-documentation-output frame) stream))))
+    (if (or menu pdoc)
+        (make-instance 'vrack-pane
+                       :contents (remove nil (list menu root pdoc))
+                       :port (port frame))
+        root)))
+
 (defmethod generate-panes :after
     ((fm standard-frame-manager) (frame standard-application-frame))
   (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (sheet-adopt-child top-level-sheet (frame-panes frame))
+    (sheet-adopt-child top-level-sheet (maybe-add-auxiliary-panes frame))
     (unless (sheet-parent top-level-sheet)
       (sheet-adopt-child (find-graft :port (port fm)) top-level-sheet))
     ;; Find the size of the new frame
