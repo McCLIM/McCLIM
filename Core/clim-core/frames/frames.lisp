@@ -58,15 +58,23 @@
 (defclass standard-application-frame (application-frame
                                       frame-geometry-mixin
                                       presentation-history-mixin)
-  ((name :initarg :name
-         :reader frame-name)
-   (pretty-name :initarg :pretty-name
-                :accessor frame-pretty-name)
-   (icon :accessor frame-icon
-         :documentation "If non-NIL, an array pattern or a sequence
-                         of array patterns that should be used by the
-                         host's window manager to represent the
-                         frame, for example when it is iconified.")
+  ((name
+    :initarg :name
+    :reader frame-name)
+   (pretty-name
+    :initarg :pretty-name
+    :accessor frame-pretty-name)
+   (icon
+    :accessor frame-icon
+    :documentation "If non-NIL, an array pattern or a sequence of array patterns
+                    that should be used by the host's window manager to
+                    represent the frame, for example when it is iconified.")
+   (menu-bar
+    :initarg :menu-bar
+    :initform nil)
+   (pdoc-bar
+    :initarg :pointer-documentation
+    :initform t)
    (command-table :initarg :command-table
                   :initform nil
                   :accessor frame-command-table)
@@ -95,8 +103,6 @@
 
    (top-level-sheet :initform nil
                     :reader frame-top-level-sheet)
-   (menu-bar :initarg :menu-bar
-             :initform nil)
    (menu-bar-pane :initform nil
                   :accessor frame-menu-bar-pane)
    (state :initarg :state
@@ -247,14 +253,8 @@ documentation produced by presentations.")))
           (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
-(defmethod (setf frame-command-table) :after (new-command-table frame)
-  ;; Update the menu-bar even if its command-table doesn't change to ensure
-  ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
-  (when-let* ((menu-bar (frame-menu-bar-pane frame))
-              (bar-command-table (slot-value frame 'menu-bar)))
-    (if (eq bar-command-table t)
-        (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
-        (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
+(defmethod (setf frame-command-table) :after (new-table frame)
+  (note-frame-command-table-changed (frame-manager frame) frame new-table))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
@@ -279,7 +279,7 @@ documentation produced by presentations.")))
   (when (and (or width height)
              (not (and width height)))
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (let ((pane (frame-panes frame)))
+  (let ((pane (frame-top-level-sheet frame)))
     (when (and (null width) (null height))
       (let (;;I guess this might be wrong. --GB 2004-06-01
             (space (compose-space pane)))

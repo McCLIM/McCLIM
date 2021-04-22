@@ -1158,21 +1158,21 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric note-command-disabled (frame-manager frame command-name))
 
 (defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
-  (:documentation "McMCLIM extension: Notify client that the pretty
-name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
-FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change."))
+  (:documentation "McCLIM extension: Notify client that the pretty
+name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME."))
 
 (defgeneric note-frame-icon-changed (frame-manager frame new-icon)
-  (:documentation "McMCLIM extension: Notify client that the icon of
-FRAME, managed by FRAME-MANAGER, changed to NEW-ICON.
-FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change."))
+  (:documentation "McCLIM extension: Notify client that the icon of
+FRAME, managed by FRAME-MANAGER, changed to NEW-ICON."))
+
+(defgeneric note-frame-command-table-changed (frame-manager frame new-command-table)
+  (:documentation "McCLIM extension: Notify client that the command-table of
+FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE."))
 
 (defgeneric frame-manager-notify-user
     (framem message-string
      &key frame associated-window title
-          documentation exit-boxes name style text-style))
+       documentation exit-boxes name style text-style))
 
 (defgeneric generate-panes (frame-manager frame))
 (defgeneric find-pane-for-frame (frame-manager frame))
