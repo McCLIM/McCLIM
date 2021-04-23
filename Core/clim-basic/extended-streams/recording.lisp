@@ -841,6 +841,7 @@ were added."
              (%remove-entry-from-children-cache record child))
        (output-record-children record))
   (setf (slot-value record 'child-count) 0)
+  (setf (last-insertion-nr record) 0)
   (setf (%tree-record-children record) (%make-tree-output-record-tree)))
 
 (defmethod output-record-count ((record standard-tree-output-record))
