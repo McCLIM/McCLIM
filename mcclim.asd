@@ -113,7 +113,8 @@ interface management system."
                              (:module "extended-streams"
                               :depends-on ("package")
                               :components ((:file "stream-input")
-                                           (:file "gestures")))
+                                           (:file "gestures")
+                                           (:file "recording")))
                              (:module "presentations"
                               :depends-on ("package")
                               :components ((:file "presentation-types")

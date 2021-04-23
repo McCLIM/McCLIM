@@ -14,10 +14,10 @@
 ;;;  (c) copyright 2006 Andreas Fuchs <afuchs@common-lisp.net>
 ;;;  (c) copyright 2007 David Lichteblau <dlichteblau@common-lisp.net>
 ;;;  (c) copyright 2007 Robert Goldman <rgoldman@common-lisp.net>
-;;;  (c) copyright 2016-2020 Daniel Kochmański <daniel@turtleware.eu>
 ;;;  (c) copyright 2017 Cyrus Harmon <cyrus@bobobeach.com>
 ;;;  (c) copyright 2018 Elias Martenson <lokedhs@gmail.com>
 ;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -220,17 +220,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 ;;;; Implementation
 
 (defclass basic-output-record (standard-bounding-rectangle output-record)
-  ((parent :initarg :parent ; XXX
-           :initform nil
+  ((parent :initform nil
            :accessor output-record-parent)) ; XXX
   (:documentation "Implementation class for the Basic Output Record Protocol."))
 
 (defmethod initialize-instance :after ((record basic-output-record)
                                        &key (x-position 0.0d0 x-position-p)
-                                            (y-position 0.0d0 y-position-p))
+                                            (y-position 0.0d0 y-position-p)
+                                            (parent nil))
   (when (or x-position-p y-position-p)
     (setf (rectangle-edges* record)
-          (values x-position y-position x-position y-position))))
+          (values x-position y-position x-position y-position)))
+  (when parent
+    (add-output-record record parent)))
 
 ;;; We need to remember initial record position (hence x,y slots) in case when
 ;;; we add children expanding record in top-left direction and then call
@@ -263,9 +265,9 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
             (nx ny (record basic-output-record))
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
-    (let ((parent (output-record-parent record)))
-      (when (and parent (not (and (typep parent 'compound-output-record)
-                                  (slot-value parent 'in-moving-p)))) ; XXX
+    (when-let ((parent (output-record-parent record)))
+      (unless (and (typep parent 'compound-output-record)
+                   (slot-value parent 'in-moving-p)) ; XXX
         (recompute-extent-for-changed-child parent record
                                             min-x min-y max-x max-y)))
     (values nx ny)))
@@ -427,15 +429,14 @@ the associated sheet can be determined."
 (defmethod add-output-record :after (child (record compound-output-record))
   (recompute-extent-for-new-child record child)
   (when (eq record (output-record-parent child))
-    (let ((sheet (find-output-record-sheet record)))
-      (when sheet (note-output-record-got-sheet child sheet)))))
+    (when-let ((sheet (find-output-record-sheet record)))
+      (note-output-record-got-sheet child sheet))))
 
 (defmethod delete-output-record :before (child (record basic-output-record)
                                          &optional (errorp t))
   (declare (ignore errorp))
-  (let ((sheet (find-output-record-sheet record)))
-    (when sheet
-      (note-output-record-lost-sheet child sheet))))
+  (when-let ((sheet (find-output-record-sheet record)))
+    (note-output-record-lost-sheet child sheet)))
 
 (defmethod delete-output-record (child (record basic-output-record)
                                  &optional (errorp t))
@@ -452,17 +453,15 @@ the associated sheet can be determined."
   (error "Cannot clear ~S." record))
 
 (defmethod clear-output-record :before ((record compound-output-record))
-  (let ((sheet (find-output-record-sheet record)))
-    (when sheet
-      (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))))
+  (when-let ((sheet (find-output-record-sheet record)))
+    (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet)))
 
 (defmethod clear-output-record :around ((record compound-output-record))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
     (call-next-method)
     (assert (null-bounding-rectangle-p record))
-    (when (output-record-parent record)
-      (recompute-extent-for-changed-child
-       (output-record-parent record) record x1 y1 x2 y2))))
+    (when-let ((parent (output-record-parent record)))
+      (recompute-extent-for-changed-child parent record x1 y1 x2 y2))))
 
 (defmethod clear-output-record :after ((record compound-output-record))
   (with-slots (x y) record
@@ -478,7 +477,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added last" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records
     (function (record compound-output-record)
      &optional (x-offset 0) (y-offset 0)
@@ -496,7 +495,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added first" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records-containing-position
     (function (record compound-output-record) x y
      &optional (x-offset 0) (y-offset 0)
@@ -520,7 +519,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added last" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records-overlapping-region
     (function (record compound-output-record) region
      &optional (x-offset 0) (y-offset 0)
@@ -532,10 +531,11 @@ the associated sheet can be determined."
        (output-record-children record)))
 
 ;;; XXX Dunno about this definition... -- moore
-;;; Your apprehension is justified, but we lack a better means by which
-;;; to distinguish "empty" compound records (roots of trees of compound
-;;; records, containing no non-compound records). Such subtrees should
-;;; not affect bounding rectangles.  -- Hefner
+;;;
+;;; Your apprehension is justified, but we lack a better means by which to
+;;; distinguish "empty" compound records (roots of trees of compound records,
+;;; containing no non-compound records). Such subtrees should not affect
+;;; bounding rectangles.  -- Hefner
 (defun null-bounding-rectangle-p (bbox)
   (with-bounding-rectangle* (x1 y1 x2 y2) bbox
     (and (= x1 x2)
@@ -557,10 +557,9 @@ the associated sheet can be determined."
            (setf (rectangle-edges* record)
                  (values (min old-x1 x1-child) (min old-y1 y1-child)
                          (max old-x2 x2-child) (max old-y2 y2-child))))))
-      (let ((parent (output-record-parent record)))
-        (when parent
-          (recompute-extent-for-changed-child
-           parent record old-x1 old-y1 old-x2 old-y2)))))
+      (when-let ((parent (output-record-parent record)))
+        (recompute-extent-for-changed-child
+         parent record old-x1 old-y1 old-x2 old-y2))))
   record)
 
 (defun %tree-recompute-extent* (record)
@@ -593,69 +592,56 @@ the associated sheet can be determined."
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
      old-min-x old-min-y old-max-x old-max-y)
-  (with-bounding-rectangle* (ox1 oy1 ox2 oy2)  record
+  (with-bounding-rectangle* (ox1 oy1 ox2 oy2) record
     (with-bounding-rectangle* (cx1 cy1 cx2 cy2) changed-child
-      ;; If record is currently empty, use the child's bbox
-      ;; directly. Else..  Does the new rectangle of the child contain
-      ;; the original rectangle?  If so, we can use min/max to grow
-      ;; record's current rectangle.  If not, the child has shrunk,
-      ;; and we need to fully recompute.
+      ;; If record is currently empty, use the child's bbox directly. Else..
+      ;; Does the new rectangle of the child contain the original rectangle?  If
+      ;; so, we can use min/max to grow record's current rectangle.  If not, the
+      ;; child has shrunk, and we need to fully recompute.
       (multiple-value-bind (nx1 ny1 nx2 ny2)
           (cond
-            ;; The child has been deleted; who knows what the
-            ;; new bounding box might be.
-            ;; This case shouldn't be really necessary.
+            ;; The child has been deleted; who knows what the new bounding box
+            ;; might be. This case shouldn't be really necessary.
             ((not (output-record-parent changed-child))
              (%tree-recompute-extent* record))
-            ;; Only one child of record, and we already have the bounds.
-            ((eql (output-record-count record) 1)
-             ;; See output-record-children for why this assert breaks:
-             ;; (assert (eq changed-child (elt (output-record-children
-             ;; record) 0)))
+            ;; 1) Only one child of record, and we already have the bounds.
+            ;; 2) Our record occupied no space so the new child is the rectangle.
+            ((or (eql (output-record-count record) 1)
+                 (null-bounding-rectangle-p record))
              (values cx1 cy1 cx2 cy2))
-            ;; If our record occupied no space (had no children, or
-            ;; had only children similarly occupying no space,
-            ;; hackishly determined by null-bounding-rectangle-p),
-            ;; recompute the extent now, otherwise the next COND
-            ;; clause would, as an optimization, attempt to extend our
-            ;; current bounding rectangle, which is invalid.
-            ((null-bounding-rectangle-p record)
-             (%tree-recompute-extent* record))
-            ;; In the following cases, we can grow the new bounding
-            ;; rectangle from its previous state:
+            ;; In the following cases, we can grow the new bounding rectangle
+            ;; from its previous state:
             ((or
-              ;; If the child was originally empty, it could not have
-              ;; affected previous computation of our bounding
-              ;; rectangle.  This is hackish for reasons similar to
-              ;; the above.
+              ;; If the child was originally empty, it could not have affected
+              ;; previous computation of our bounding rectangle.  This is
+              ;; hackish for reasons similar to the above.
               (and (= old-min-x old-max-x) (= old-min-y old-max-y))
-              ;; For each edge of the original child bounds, if it was
-              ;; within its respective edge of the old parent bounding
-              ;; rectangle, or if it has not changed:
+              ;; For each edge of the original child bounds, if it was within
+              ;; its respective edge of the old parent bounding rectangle, or if
+              ;; it has not changed:
               (and (or (> old-min-x ox1) (= old-min-x cx1))
                    (or (> old-min-y oy1) (= old-min-y cy1))
                    (or (< old-max-x ox2) (= old-max-x cx2))
                    (or (< old-max-y oy2) (= old-max-y cy2)))
-              ;; New child bounds contain old child bounds, so use
-              ;; min/max to extend the already-calculated rectangle.
+              ;; New child bounds contain old child bounds, so use min/max to
+              ;; extend the already-calculated rectangle.
               (and (<= cx1 old-min-x) (<= cy1 old-min-y)
                    (>= cx2 old-max-x) (>= cy2 old-max-y)))
              (values (min cx1 ox1) (min cy1 oy1)
                      (max cx2 ox2) (max cy2 oy2)))
-            ;; No shortcuts - we must compute a new bounding box from
-            ;; those of all our children. We want to avoid this - in
-            ;; worst cases, such as a toplevel output history, large
-            ;; graph, or table, there may exist thousands of
-            ;; children. Without the above optimizations, construction
-            ;; becomes O(N^2) due to bounding rectangle calculation.
-            (t (%tree-recompute-extent* record)))
+            ;; No shortcuts - we must compute a new bounding box from those of
+            ;; all our children. We want to avoid this - in worst cases, such as
+            ;; a toplevel output history, there may exist thousands of children.
+            ;; Without the above optimizations, construction becomes O(N^2) due
+            ;; to the bounding rectangle calculation.
+            (t
+             (%tree-recompute-extent* record)))
         (with-slots (x y) record
           (setf x nx1 y ny1)
-          (setf (rectangle-edges* record) (values  nx1 ny1 nx2 ny2))
-          (let ((parent (output-record-parent record)))
-            (unless (or (null parent)
-                        (and (= nx1 ox1) (= ny1 oy1)
-                             (= nx2 ox2) (= nx2 oy2)))
+          (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2))
+          (when-let ((parent (output-record-parent record)))
+            (unless (and (= nx1 ox1) (= ny1 oy1)
+                         (= nx2 ox2) (= nx2 oy2))
               (recompute-extent-for-changed-child parent record
                                                   ox1 oy1 ox2 oy2)))))))
   record)
@@ -691,10 +677,8 @@ the associated sheet can be determined."
     (call-next-method)
     (with-bounding-rectangle* (x1 y1 x2 y2) record
       (when-let ((parent (output-record-parent record)))
-        (when (not (and (= old-x1 x1)
-                        (= old-y1 y1)
-                        (= old-x2 x2)
-                        (= old-y2 y2)))
+        (unless (and (= old-x1 x1) (= old-y1 y1)
+                     (= old-x2 x2) (= old-y2 y2))
           (recompute-extent-for-changed-child parent record
                                               old-x1 old-y1
                                               old-x2 old-y2)))))
@@ -713,16 +697,15 @@ the associated sheet can be determined."
 (defmethod delete-output-record (child (record standard-sequence-output-record)
                                  &optional (errorp t))
   (with-slots (children) record
-    (let ((pos (position child children :test #'eq)))
-      (if (null pos)
-          (when errorp
-            (error "~S is not a child of ~S" child record))
-          (progn
-            (setq children (replace children children
-                                    :start1 pos
-                                    :start2 (1+ pos)))
-            (decf (fill-pointer children))
-            (setf (output-record-parent child) nil))))))
+    (if-let ((pos (position child children :test #'eq)))
+      (progn
+        (setq children (replace children children
+                                :start1 pos
+                                :start2 (1+ pos)))
+        (decf (fill-pointer children))
+        (setf (output-record-parent child) nil))
+      (when errorp
+        (error "~S is not a child of ~S" child record)))))
 
 (defmethod clear-output-record ((record standard-sequence-output-record))
   (let ((children (output-record-children record)))
@@ -783,17 +766,18 @@ were added."
       (inserted-nr :initarg :inserted-nr
                    :accessor tree-output-record-entry-inserted-nr)))
 
+(defconstant %infinite-rectangle%
+  (rectangles:make-rectangle)
+  "This constant should be used to map over all tree output records.")
+
 (defun make-tree-output-record-entry (record inserted-nr)
   (make-instance 'tree-output-record-entry
-    :record record
-    :inserted-nr inserted-nr))
+                 :record record
+                 :inserted-nr inserted-nr))
 
-(defun %record-to-spatial-tree-rectangle (r)
-  (rectangles:make-rectangle
-   :lows `(,(bounding-rectangle-min-x r)
-            ,(bounding-rectangle-min-y r))
-   :highs `(,(bounding-rectangle-max-x r)
-             ,(bounding-rectangle-max-y r))))
+(defun %record-to-spatial-tree-rectangle (record)
+  (with-bounding-rectangle* (x1 y1 x2 y2) record
+    (rectangles:make-rectangle :lows `(,x1 ,y1) :highs `(,x2 ,y2))))
 
 (defun %output-record-entry-to-spatial-tree-rectangle (r)
   (when (null (tree-output-record-entry-cached-rectangle r))
@@ -807,41 +791,26 @@ were added."
                         :rectfun #'%output-record-entry-to-spatial-tree-rectangle))
 
 (defclass standard-tree-output-record (compound-output-record)
-  ((children :initform (%make-tree-output-record-tree)
-             :accessor %tree-record-children)
+  ((children-tree :initform (%make-tree-output-record-tree)
+                  :accessor %tree-record-children)
    (children-hash :initform (make-hash-table :test #'eql)
                   :reader %tree-record-children-cache)
    (child-count :initform 0)
    (last-insertion-nr :initform 0 :accessor last-insertion-nr)))
 
-(defun %entry-in-children-cache (record entry)
-  (gethash entry (%tree-record-children-cache record)))
+(defun %entry-in-children-cache (record child)
+  (gethash child (%tree-record-children-cache record)))
 
-(defun (setf %entry-in-children-cache) (new-val record entry)
-  (setf (gethash entry (%tree-record-children-cache record)) new-val))
+(defun (setf %entry-in-children-cache) (new-val record child)
+  (setf (gethash child (%tree-record-children-cache record)) new-val))
 
-(defun %remove-entry-from-children-cache (record entry)
-  (remhash entry (%tree-record-children-cache record)))
+(defun %remove-entry-from-children-cache (record child)
+  (remhash child (%tree-record-children-cache record)))
 
 (defmethod output-record-children ((record standard-tree-output-record))
-  (with-bounding-rectangle* (min-x min-y max-x max-y) record
-    (map 'list
-         #'tree-output-record-entry-record
-         (spatial-trees:search
-          ;; Originally, (%record-to-spatial-tree-rectangle record).
-          ;; The form below intends to fix output-record-children not
-          ;; reporting empty children, which may lie outside the
-          ;; reported bounding rectangle of their parent.
-          ;; Assumption: null bounding records are always at the
-          ;; origin.  I've never noticed this violated, but it's out
-          ;; of line with what null-bounding-rectangle-p checks, and
-          ;; setf of output-record-position may invalidate it. Seems
-          ;; to work, but fix that and try again later.  Note that max
-          ;; x or y may be less than zero..
-          (rectangles:make-rectangle
-           :lows  (list (min 0 min-x) (min 0 min-y))
-           :highs (list (max 0 max-x) (max 0 max-y)))
-          (%tree-record-children record)))))
+  (map 'list #'tree-output-record-entry-record
+       (spatial-trees:search %infinite-rectangle%
+                             (%tree-record-children record))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
   (let ((entry (make-tree-output-record-entry
@@ -854,17 +823,17 @@ were added."
 
 (defmethod delete-output-record
     (child (record standard-tree-output-record) &optional (errorp t))
-  (let ((entry (find child (spatial-trees:search
-                            (%entry-in-children-cache record child)
-                            (%tree-record-children record))
-                     :key #'tree-output-record-entry-record)))
-    (decf (slot-value record 'child-count))
-    (cond
-      ((not (null entry))
-       (spatial-trees:delete entry (%tree-record-children record))
-       (%remove-entry-from-children-cache record child)
-       (setf (output-record-parent child) nil))
-      (errorp (error "~S is not a child of ~S" child record)))))
+  (if-let ((entry (find child (spatial-trees:search
+                               (%entry-in-children-cache record child)
+                               (%tree-record-children record))
+                        :key #'tree-output-record-entry-record)))
+    (progn
+      (decf (slot-value record 'child-count))
+      (spatial-trees:delete entry (%tree-record-children record))
+      (%remove-entry-from-children-cache record child)
+      (setf (output-record-parent child) nil))
+    (when errorp
+      (error "~S is not a child of ~S" child record))))
 
 (defmethod clear-output-record ((record standard-tree-output-record))
   (map nil (lambda (child)
@@ -872,6 +841,7 @@ were added."
              (%remove-entry-from-children-cache record child))
        (output-record-children record))
   (setf (slot-value record 'child-count) 0)
+  (setf (last-insertion-nr record) 0)
   (setf (%tree-record-children record) (%make-tree-output-record-tree)))
 
 (defmethod output-record-count ((record standard-tree-output-record))
@@ -887,10 +857,10 @@ were added."
                        :key #'tree-output-record-entry-inserted-nr))
     (apply function (tree-output-record-entry-record child) function-args)))
 
-(defmethod map-over-output-records-1 (function (record standard-tree-output-record) function-args)
-  (map-over-tree-output-records function record
-    (%record-to-spatial-tree-rectangle record) :most-recent-last
-                                function-args))
+(defmethod map-over-output-records-1
+    (function (record standard-tree-output-record) args)
+  (map-over-tree-output-records
+   function record %infinite-rectangle% :most-recent-last args))
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-tree-output-record) x y
@@ -920,12 +890,15 @@ were added."
                 '()))))
 
 (defmethod recompute-extent-for-changed-child :around
-    ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
+    ((record standard-tree-output-record) child
+     old-min-x old-min-y old-max-x old-max-y)
   (when (eql record (output-record-parent child))
-    (let ((entry (%entry-in-children-cache record child)))
-     (spatial-trees:delete entry (%tree-record-children record))
-     (setf (tree-output-record-entry-cached-rectangle entry) nil)
-     (spatial-trees:insert entry (%tree-record-children record))))
+    ;; The child is _not_ being deleted. Update the spatial tree.
+    (let ((entry (%entry-in-children-cache record child))
+          (tree (%tree-record-children record)))
+      (spatial-trees:delete entry tree)
+      (setf (tree-output-record-entry-cached-rectangle entry) nil)
+      (spatial-trees:insert entry tree)))
   (call-next-method))
 
 ;;;
@@ -1131,32 +1104,32 @@ were added."
        (when (stream-drawing-p stream)
          (call-next-method)))))
 
-;;; DEF-GRECORDING: This is the central interface through which
-;;; recording is implemented for drawing functions. The body provided
-;;; is used to compute the bounding rectangle of the rendered
-;;; output. DEF-GRECORDING will define a class for the output record,
-;;; with slots corresponding to the drawing function arguments. It
-;;; also defines an INITIALIZE-INSTANCE method computing the bounding
-;;; rectangle of the record. It defines a method for the medium
+;;; DEF-GRECORDING: This is the central interface through which recording is
+;;; implemented for drawing functions. The body provided is used to compute the
+;;; bounding rectangle of the rendered output. DEF-GRECORDING will define a
+;;; class for the output record, with slots corresponding to the drawing
+;;; function arguments. It also defines an INITIALIZE-INSTANCE method computing
+;;; the bounding rectangle of the record. It defines a method for the medium
 ;;; drawing function specialized on output-recording-stream, which is
-;;; responsible for creating the output record and adding it to the
-;;; stream history. It also defines a REPLAY-OUTPUT-RECORD method,
-;;; which calls the medium drawing function based on the recorded
-;;; slots.
+;;; responsible for creating the output record and adding it to the stream
+;;; history. It also defines a REPLAY-OUTPUT-RECORD method, which calls the
+;;; medium drawing function based on the recorded slots.
 ;;;
 ;;; The macro lambda list of DEF-GRECORDING is loosely based on that
 ;;; of DEFCLASS with a few differences:
-;;; * The name can either be just a symbol or a list of a symbol
-;;;   followed by keyword arguments which control what aspects should
-;;;   be generated: class, medium-fn and replay-fn.
-;;; * Instead of slot specifications, a list of argument descriptions
-;;;   is supplied which is used to defined slots as well as arguments.
-;;;   An argument is either a symbol or a list of the form
-;;;   (NAME INITFORM STOREP) where INITFORM computes the value to
-;;;   store in the output record and STOREP controls whether a slot
-;;;   for the argument should be present in the output record at all.
-;;; * DEFCLASS options are not accepted, but a body is, as described
-;;;   above.
+;;;
+;;; * The name can either be just a symbol or a list of a symbol followed by
+;;;   keyword arguments which control what aspects should be generated: class,
+;;;   medium-fn and replay-fn.
+;;;
+;;; * Instead of slot specifications, a list of argument descriptions is
+;;;   supplied which is used to defined slots as well as arguments.  An argument
+;;;   is either a symbol or a list of the form (NAME INITFORM STOREP) where
+;;;   INITFORM computes the value to store in the output record and STOREP
+;;;   controls whether a slot for the argument should be present in the output
+;;;   record at all.
+;;;
+;;; * DEFCLASS options are not accepted, but a body is, as described above.
 (defmacro def-grecording (name-and-options (&rest mixins) (&rest args)
                           &body body)
   (destructuring-bind (name &key (class t) (medium-fn t) (replay-fn t))
@@ -1198,7 +1171,7 @@ were added."
          ,@(when replay-fn
              `((defmethod replay-output-record ((record ,class-name) stream
                                                 &optional (region +everywhere+)
-                                                          (x-offset 0) (y-offset 0))
+                                                  (x-offset 0) (y-offset 0))
                  (declare (ignore x-offset y-offset region))
                  (with-slots (,@slot-names) record
                    (let ((,medium (sheet-medium stream)))
@@ -1233,10 +1206,10 @@ were added."
        (if-supplied (point-y coordinate)
          (coordinate= (slot-value record 'point-y) point-y))))
 
-;;; Initialize the output record with a copy of COORD-SEQ, as the
-;;; replaying code will modify it to be positioned relative to the
-;;; output-record's position and making a temporary is (arguably) less
-;;; bad than untransforming the coords back to how they were.
+;;; Initialize the output record with a copy of COORD-SEQ, as the replaying code
+;;; will modify it to be positioned relative to the output-record's position and
+;;; making a temporary is (arguably) less bad than untransforming the coords
+;;; back to how they were.
 (def-grecording draw-points (coord-seq-mixin gs-line-style-mixin)
     ((coord-seq (copy-sequence-into-vector coord-seq)))
   (let* ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
