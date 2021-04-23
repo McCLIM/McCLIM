@@ -14,10 +14,10 @@
 ;;;  (c) copyright 2006 Andreas Fuchs <afuchs@common-lisp.net>
 ;;;  (c) copyright 2007 David Lichteblau <dlichteblau@common-lisp.net>
 ;;;  (c) copyright 2007 Robert Goldman <rgoldman@common-lisp.net>
-;;;  (c) copyright 2016-2020 Daniel Kochmański <daniel@turtleware.eu>
 ;;;  (c) copyright 2017 Cyrus Harmon <cyrus@bobobeach.com>
 ;;;  (c) copyright 2018 Elias Martenson <lokedhs@gmail.com>
 ;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -601,23 +601,14 @@ the associated sheet can be determined."
       (multiple-value-bind (nx1 ny1 nx2 ny2)
           (cond
             ;; The child has been deleted; who knows what the new bounding box
-            ;; might be.  This case shouldn't be really necessary.
+            ;; might be. This case shouldn't be really necessary.
             ((not (output-record-parent changed-child))
              (%tree-recompute-extent* record))
-            ;; Only one child of record, and we already have the bounds.
-            ((eql (output-record-count record) 1)
-             ;; See output-record-children for why this assert breaks:
-             #+ (or)
-             (assert (eq changed-child
-                         (elt (output-record-children record) 0)))
+            ;; 1) Only one child of record, and we already have the bounds.
+            ;; 2) Our record occupied no space so the new child is the rectangle.
+            ((or (eql (output-record-count record) 1)
+                 (null-bounding-rectangle-p record))
              (values cx1 cy1 cx2 cy2))
-            ;; If our record occupied no space (had no children, or had only
-            ;; children similarly occupying no space, hackishly determined by
-            ;; null-bounding-rectangle-p), recompute the extent now, otherwise
-            ;; the next COND clause would, as an optimization, attempt to extend
-            ;; our current bounding rectangle, which is invalid.
-            ((null-bounding-rectangle-p record)
-             (%tree-recompute-extent* record))
             ;; In the following cases, we can grow the new bounding rectangle
             ;; from its previous state:
             ((or
@@ -640,11 +631,11 @@ the associated sheet can be determined."
                      (max cx2 ox2) (max cy2 oy2)))
             ;; No shortcuts - we must compute a new bounding box from those of
             ;; all our children. We want to avoid this - in worst cases, such as
-            ;; a toplevel output history, large graph, or table, there may exist
-            ;; thousands of children. Without the above optimizations,
-            ;; construction becomes O(N^2) due to bounding rectangle
-            ;; calculation.
-            (t (%tree-recompute-extent* record)))
+            ;; a toplevel output history, there may exist thousands of children.
+            ;; Without the above optimizations, construction becomes O(N^2) due
+            ;; to the bounding rectangle calculation.
+            (t
+             (%tree-recompute-extent* record)))
         (with-slots (x y) record
           (setf x nx1 y ny1)
           (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2))
@@ -775,10 +766,14 @@ were added."
       (inserted-nr :initarg :inserted-nr
                    :accessor tree-output-record-entry-inserted-nr)))
 
+(defconstant %infinite-rectangle%
+  (rectangles:make-rectangle)
+  "This constant should be used to map over all tree output records.")
+
 (defun make-tree-output-record-entry (record inserted-nr)
   (make-instance 'tree-output-record-entry
-    :record record
-    :inserted-nr inserted-nr))
+                 :record record
+                 :inserted-nr inserted-nr))
 
 (defun %record-to-spatial-tree-rectangle (record)
   (with-bounding-rectangle* (x1 y1 x2 y2) record
@@ -813,25 +808,9 @@ were added."
   (remhash child (%tree-record-children-cache record)))
 
 (defmethod output-record-children ((record standard-tree-output-record))
-  (with-bounding-rectangle* (min-x min-y max-x max-y) record
-    (map 'list
-         #'tree-output-record-entry-record
-         (spatial-trees:search
-          ;; Originally, (%record-to-spatial-tree-rectangle record).  The form
-          ;; below intends to fix output-record-children not reporting empty
-          ;; children, which may lie outside the reported bounding rectangle of
-          ;; their parent.
-          ;;
-          ;; Assumption: null bounding records are always at the origin.  I've
-          ;; never noticed this violated, but it's out of line with what
-          ;; null-bounding-rectangle-p checks, and setf of
-          ;; output-record-position may invalidate it. Seems to work, but fix
-          ;; that and try again later.  Note that max x or y may be less than
-          ;; zero..
-          (rectangles:make-rectangle
-           :lows  (list (min 0 min-x) (min 0 min-y))
-           :highs (list (max 0 max-x) (max 0 max-y)))
-          (%tree-record-children record)))))
+  (map 'list #'tree-output-record-entry-record
+       (spatial-trees:search %infinite-rectangle%
+                             (%tree-record-children record))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
   (let ((entry (make-tree-output-record-entry
@@ -879,8 +858,8 @@ were added."
 
 (defmethod map-over-output-records-1
     (function (record standard-tree-output-record) args)
-  (let ((rect (%record-to-spatial-tree-rectangle record)))
-    (map-over-tree-output-records function record rect :most-recent-last args)))
+  (map-over-tree-output-records
+   function record %infinite-rectangle% :most-recent-last args))
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-tree-output-record) x y
@@ -913,6 +892,7 @@ were added."
     ((record standard-tree-output-record) child
      old-min-x old-min-y old-max-x old-max-y)
   (when (eql record (output-record-parent child))
+    ;; The child is _not_ being deleted. Update the spatial tree.
     (let ((entry (%entry-in-children-cache record child))
           (tree (%tree-record-children record)))
       (spatial-trees:delete entry tree)
