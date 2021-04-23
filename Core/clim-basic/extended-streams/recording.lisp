@@ -220,17 +220,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 ;;;; Implementation
 
 (defclass basic-output-record (standard-bounding-rectangle output-record)
-  ((parent :initarg :parent ; XXX
-           :initform nil
+  ((parent :initform nil
            :accessor output-record-parent)) ; XXX
   (:documentation "Implementation class for the Basic Output Record Protocol."))
 
 (defmethod initialize-instance :after ((record basic-output-record)
                                        &key (x-position 0.0d0 x-position-p)
-                                            (y-position 0.0d0 y-position-p))
+                                            (y-position 0.0d0 y-position-p)
+                                            (parent nil))
   (when (or x-position-p y-position-p)
     (setf (rectangle-edges* record)
-          (values x-position y-position x-position y-position))))
+          (values x-position y-position x-position y-position)))
+  (when parent
+    (add-output-record record parent)))
 
 ;;; We need to remember initial record position (hence x,y slots) in case when
 ;;; we add children expanding record in top-left direction and then call
