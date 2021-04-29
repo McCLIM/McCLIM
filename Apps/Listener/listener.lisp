@@ -81,7 +81,7 @@
                (merge-pathnames
                 ,(make-pathname :name (pathname-name name)
                                 :type (pathname-type name)
-                                :directory '(:relative :up :up "data/icons"))
+                                :directory '(:relative :up :up "data" "icons"))
                 #.(or *compile-file-pathname*
                       *load-pathname*)))))
   (defvar *default-icon* (load-icon "listener-logo.png"))
