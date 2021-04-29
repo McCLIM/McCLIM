@@ -7,9 +7,5 @@
                "cl-svg"
                "flexi-streams")
   :serial t
-  :components ((:file "package")
-               #+nil (:file "emacs-frame-manager")
-               (:file "emacs-port")
-               (:file "emacs-medium")
-               (:file "emacs-sheet")))
+  :components ((:file "emacs)))
 
