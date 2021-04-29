@@ -78,8 +78,8 @@
           (window (clim-clx::realize-mirror-aux port sheet
                                       :event-mask *event-mask*
                                       :map nil
-                                      :width (clim-clx::round-coordinate (space-requirement-width q))
-                                      :height (clim-clx::round-coordinate (space-requirement-height q)))))
+                                      :width (space-requirement-width q)
+                                      :height (space-requirement-height q))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))

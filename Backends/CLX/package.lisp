@@ -65,8 +65,8 @@
                 #:when-let*)
   (:import-from #:climi
                 #:event-listen-or-wait
-                #:%sheet-mirror-region
-                #:%sheet-mirror-transformation
+                #:sheet-mirror-geometry
+                #:with-standard-rectangle*
                 #:standard-port)
   (:export
    #:clx-port
