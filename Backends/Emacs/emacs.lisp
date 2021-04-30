@@ -118,6 +118,7 @@
                              climi::updating-output-stream-mixin
                              basic-sheet
                              standard-extended-output-stream
+                             extended-input-stream
                              permanent-medium-sheet-output-mixin
                              standard-output-recording-stream)
   ((port :initform nil :initarg port :accessor port)))
@@ -140,7 +141,35 @@
             (push (format nil "~A ~A ~A ~A" min-x min-y (- max-x min-x) (- max-y min-y))
                   (slot-value scene 'svg::attributes))
             (push :view-box (slot-value scene 'svg::attributes))
+            (clim:map-over-output-records
+             (lambda (x) (format swank::*current-standard-output* "~A" x) (finish-output *terminal-io*))
+             (stream-output-history stream))
             (swank::send-to-emacs (list :write-clime 
                                         (with-output-to-string (svg)
-                                          (svg:stream-out svg scene))))))))))
+                                          (svg:stream-out svg scene))
+                                        (presentations-for-emacs stream)))))))))
 
+(defun presentations-for-emacs (stream)
+  (let (ids)
+    (labels ((visit (record)
+               (when (typep record 'presentation)
+                 (push (list (register-presentation record) (emacs-map-area record))
+                       ids))
+               (map-over-output-records #'visit record)))
+      (visit (stream-output-history stream)))
+    ids))
+
+(defun emacs-map-area (record)
+  (multiple-value-bind (x0 y0 x1 y2) (bounding-rectangle* record)
+    ;; Syntax follows https://www.gnu.org/software/emacs/manual/html_node/elisp/Image-Descriptors.html
+    `(#:rect . ((,x0 ,y0) . (,x1 ,y2)))))
+
+(defvar *presentations* (make-array 0 :adjustable t :fill-pointer 0)
+  "Vector of presentations (identified by index.)")
+
+(defun register-presentation (presentation)
+  (vector-push-extend presentation *presentations*))
+
+(defmethod stream-accept (stream type &rest keywords)
+  (declare (ignore keywords))
+  (swank:y-or-n-p-in-emacs "STREAM-ACCEPT"))
