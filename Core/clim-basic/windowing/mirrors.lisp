@@ -108,81 +108,66 @@
   "Flag used to inhibit setting mirror region and transformation to prevent
 infinite recursion on (setf sheet-*).")
 
-(defun %set-mirror-geometry (sheet mt mr)
-  (unless (eql *configuration-event-p* sheet)
-    (let ((port (port sheet))
-          (old-mr (%sheet-mirror-region sheet))
-          (old-mt (%sheet-mirror-transformation sheet)))
-      ;; TOP-LEVEL-SHEET-MIXIN is a sheet representing the window, however we
-      ;; can't always set its exact location and region (because the window
-      ;; manager may add decorations or ignore our request altogether - like a
-      ;; tiling window manager). -- jd 2020-11-30
-      (unless (and old-mr (region-equal mr old-mr))
-        (port-set-mirror-region port sheet mr))
-      (unless (and old-mt (transformation-equal mt old-mt))
-        (port-set-mirror-transformation port sheet MT))))
-  (setf (%sheet-mirror-region sheet) mr)
-  (setf (%sheet-mirror-transformation sheet) mt))
+;;; This mirror is invisible because it doesn't intersect its parent's mirror.
+(defconstant +nowhere-mirror+ (make-rectangle* -5 -5 -4 -4))
 
-;;; This function makes the mirror "invisible" by putting it outside of the
-;;; parent's mirror.
-(let ((mt (make-translation-transformation -5 -5))
-      (mr (make-rectangle* 0 0 1 1)))
-  (defun %set-empty-mirror (sheet)
-    (%set-mirror-geometry sheet mt mr)
-    (with-slots (native-transformation device-transformation) sheet
-      (setf native-transformation nil
-            device-transformation nil))))
+(defun %set-mirror-geometry (sheet region)
+  (when (region-equal region +nowhere+)
+    (setf region +nowhere-mirror+))
+  (let ((geometry (sheet-mirror-geometry sheet)))
+    (setf (rectangle-edges* geometry)
+          (if (eql *configuration-event-p* sheet)
+              (bounding-rectangle* region)
+              ;; TOP-LEVEL-SHEET-MIXIN is a sheet representing the window,
+              ;; however we can't always set its exact location and region (the
+              ;; window manager may i.e add decorations or ignore our request -
+              ;; like a tiling window manager). -- jd 2020-11-30
+              (port-set-mirror-geometry (port sheet) sheet region)))
+    geometry))
 
 (defun update-mirror-geometry (sheet)
   ;; We can't manipulate grafts (and rasters)
   (when-let ((parent (sheet-parent sheet)))
     (assert (sheet-direct-mirror sheet))
-    (let* ((region (sheet-region sheet))
+    (let* ((msheet (sheet-mirrored-ancestor parent))
+           (region (sheet-region sheet))
            (s-tran (sheet-transformation sheet))
-           (parent-region (sheet-region parent))
            (parent-n-tran (sheet-native-transformation parent))
            (sheet->parent-mirror (compose-transformations parent-n-tran s-tran))
-           ;; clipped-region is expressed in the parent's mirror coordinates.
-           (clipped-region
-             (if (graftp parent)
-                 ;; For the TOP-LEVEL-SHEET-PANE (when the parent is a GRAFT)
-                 ;; we don't clip the sheet-region with the parent-region.
-                 ;; -- admich 2019-05-30
-                 (transform-region sheet->parent-mirror region)
-                 (region-intersection
-                  (transform-region parent-n-tran parent-region)
-                  (transform-region sheet->parent-mirror region)))))
-      ;; When the parent mirror is not a graft or a raster, then it has the
-      ;; mirror region set. In that case we clip the mirror with it.
-      (when-let* ((parent-msheet (sheet-mirrored-ancestor parent))
-                  (parent-mirror-region (%sheet-mirror-region parent-msheet)))
-        (setf clipped-region
-              (region-intersection parent-mirror-region clipped-region)))
-      (if (region-equal clipped-region +nowhere+)
-          (%set-empty-mirror sheet)
-          (with-bounding-rectangle* (x1 y1 x2 y2) clipped-region
-            ;; No point in rounding coordinates here - composition below will
-            ;; leave us with fractional dx and dy anyway. Moreover that may
-            ;; distort a result of the call to TRANSFORMATION-EQUAL below and
-            ;; cause unnecessary repaints. -- jd 2021-03-04
-            (let* ((mt (make-translation-transformation x1 y1))
-                   (mr (make-rectangle* 0 0 (- x2 x1) (- y2 y1)))
-                   (new-n-tran (compose-transformations
-                                (invert-transformation mt)
-                                (compose-transformations parent-n-tran s-tran)))
-                   (old-n-tran (%%sheet-native-transformation sheet)))
-              (%set-mirror-geometry sheet mt mr)
-              (unless (and old-n-tran
-                           (transformation-equal new-n-tran old-n-tran))
-                (invalidate-cached-transformations sheet)
-                (%%set-sheet-native-transformation new-n-tran sheet)
-                (when old-n-tran
-                  ;; Native transformation has changed - repaint the sheet.
-                  ;; Normally we would call dispatch-repaint, however the sheet
-                  ;; transformation may change without intervening event reads
-                  ;; (for instance in a display function that causes scrolling),
-                  ;; and dispatching the repaint would not take effect until the
-                  ;; next event read, causing a corrupted output during display.
-                  ;; -- jd 2021-03-02
-                  (repaint-sheet sheet (untransform-region new-n-tran mr))))))))))
+           ;; mirror-region is expressed in the parent's mirror coordinates.
+           (mirrored-region (transform-region sheet->parent-mirror region)))
+      ;; Relation between the parent native region and its mirror is arbitrary.
+      ;; That's why we first clip with the parent native region and then with
+      ;; its mirror (keeping in mind that the graft doesn't clip it children).
+      (flet ((clip (clip-sheet clip-region)
+               (when (and clip-sheet clip-region (not (graftp clip-sheet)))
+                 (setf mirrored-region
+                       (region-intersection mirrored-region clip-region)))))
+        (clip parent (sheet-native-region parent))
+        (with-bounding-rectangle* (:width w :height h)
+            (sheet-mirror-geometry msheet)
+          (clip msheet (make-rectangle* 0 0 w h))))
+      ;; %set-mirror-geometry will return the mirror region with coordinates
+      ;; rounded according to the port-set-mirror-geometry policy.
+      (let ((mirror-region (%set-mirror-geometry sheet mirrored-region)))
+        (when (region-equal mirrored-region +nowhere+)
+          (with-slots (native-transformation device-transformation) sheet
+            (setf native-transformation nil
+                  device-transformation nil)
+            (return-from update-mirror-geometry)))
+        (with-standard-rectangle* (x y) mirror-region
+          (let* ((offset (make-translation-transformation (- x) (- y)))
+                 (old-n-tran (%%sheet-native-transformation sheet))
+                 (new-n-tran (compose-transformations offset sheet->parent-mirror)))
+            (%%set-sheet-native-region (transform-region offset mirror-region) sheet)
+            (unless (and old-n-tran (transformation-equal new-n-tran old-n-tran))
+              (invalidate-cached-transformations sheet)
+              (%%set-sheet-native-transformation new-n-tran sheet)
+              (when old-n-tran
+                ;; Native transformation has changed - repaint the sheet.
+                ;;
+                ;; We don't call dispatch-repaint because the transformation of
+                ;; the sheet may change without intervening event reads and the
+                ;; repaint would not happen before the next event is read, causing
+                ;; a corrupted output during display. -- jd 2021-03-02
+                (repaint-sheet sheet +everywhere+)))))))))

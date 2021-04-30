@@ -8,6 +8,7 @@
 ;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;  (c) Copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2021 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -102,7 +103,9 @@
                           :reader %%sheet-native-transformation)
    (native-region :type (or null region)
                   :initarg :native-region
-                  :initform nil)
+                  :initform nil
+                  :writer %%set-sheet-native-region
+                  :reader %%sheet-native-region)
    (device-transformation :type (or null transformation)
                           :initform nil)
    (device-region :type (or null region)
@@ -679,23 +682,24 @@
 ;;; These are the limitations of the X Window System.
 
 (defclass mirrored-sheet-mixin ()
-  ((port :initform nil :initarg :port :accessor port)
+  ((port
+    :initform nil
+    :initarg :port
+    :accessor port)
    (mirror
     :initform nil
     :reader sheet-direct-mirror
     :writer (setf %sheet-direct-mirror))
-   (native-transformation :initform +identity-transformation+)
-   (mirror-transformation
-    :documentation "Our idea of the current mirror transformation. Might not be
-correct if a foreign application changes our mirror's geometry."
-    :initform +identity-transformation+
-    :accessor %sheet-mirror-transformation)
-   (mirror-region
-    :documentation "Our idea of the current mirror region. Might not be correct
-if a foreign application changes our mirror's geometry. Also note that this
-might be different from the sheet's native region."
-    :initform nil
-    :accessor %sheet-mirror-region)))
+   (native-transformation
+    :initform +identity-transformation+)
+   (native-region
+    :initform +nowhere+)
+   (mirror-geometry
+    :initform (make-bounding-rectangle -5 -5 1 1)
+    :accessor sheet-mirror-geometry
+    :documentation "Our idea of the current mirror geometry. Might not be
+correct if a foreign application changes our mirror's geometry. Also note that
+this might be different from the sheet's native region and transformation.")))
 
 (defmethod sheet-mirrored-ancestor ((sheet mirrored-sheet-mixin))
   sheet)
@@ -725,10 +729,9 @@ might be different from the sheet's native region."
 
 (defmethod invalidate-cached-transformations ((sheet mirrored-sheet-mixin))
   (with-slots (native-transformation device-transformation) sheet
-    (setf ;;native-transformation nil
-     device-transformation nil))
-  (loop for child in (sheet-children sheet)
-     do (invalidate-cached-transformations child)))
+    ;; (setf native-transformation nil)
+    (setf device-transformation nil))
+  (mapc #'invalidate-cached-transformations (sheet-children sheet)))
 
 ;;; Coordinate swizzling
 
@@ -739,20 +742,7 @@ might be different from the sheet's native region."
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
   (unless (%%sheet-native-transformation sheet)
     (return-from sheet-native-region +nowhere+))
-  (with-slots (native-region) sheet
-    (unless native-region
-      (let ((this-region (transform-region (sheet-native-transformation sheet)
-                                           (sheet-region sheet)))
-            (parent (sheet-parent sheet)))
-        (setf native-region
-              (if parent
-                  (region-intersection this-region
-                                       (transform-region
-                                        (invert-transformation
-                                         (%sheet-mirror-transformation sheet))
-                                        (sheet-native-region parent)))
-                  this-region))))
-    native-region))
+  (or (%%sheet-native-region sheet) +nowhere+))
 
 (defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
   (or (%%sheet-native-transformation sheet) +identity-transformation+))
