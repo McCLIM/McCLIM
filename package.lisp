@@ -2026,8 +2026,6 @@
    #:port-set-mirror-name
    #:port-set-mirror-icon
    #:port-set-mirror-geometry
-   #:port-set-mirror-region
-   #:port-set-mirror-transformation
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event

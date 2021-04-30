@@ -184,8 +184,7 @@ destroy-port
 port-disable-sheet
 port-enable-sheet
 port-force-output
-port-set-mirror-region
-port-set-mirror-transformation
+port-set-mirror-geometry
 set-sheet-pointer-cursor
 port-set-mirror-name
 @end verbatim

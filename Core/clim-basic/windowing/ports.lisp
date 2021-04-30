@@ -167,15 +167,6 @@ is a McCLIM extension.")
     (call-next-method)
     (setf (%sheet-direct-mirror sheet) nil)))
 
-(defmethod port-set-mirror-geometry
-    ((port basic-port) (sheet mirrored-sheet-mixin) region)
-  (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
-    (let ((transformation (make-translation-transformation x1 y1))
-          (region (make-rectangle* 0 0 w h)))
-      (port-set-mirror-transformation port sheet transformation)
-      (port-set-mirror-region port sheet region))
-    (values x1 y1 x2 y2)))
-
 (defmethod port-properties ((port basic-port) indicator)
   (with-slots (properties) port
     (getf properties indicator)))
