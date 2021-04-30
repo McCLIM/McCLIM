@@ -84,16 +84,20 @@
     ((port clx-basic-port) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (with-bounding-rectangle* (x y :width w :height h) region
-        (let ((window (window mirror))
-              (x (round-coordinate x))
-              (y (round-coordinate y))
-              (w (round-coordinate w))
-              (h (round-coordinate h)))
-          (setf (xlib:drawable-x window) x
-                (xlib:drawable-y window) y
-                (xlib:drawable-width window) w
-                (xlib:drawable-height window) h)
-          (values x y (+ x w) (+ y h))))))
+      (let ((window (window mirror))
+            (x (round-coordinate x))
+            (y (round-coordinate y))
+            (w (round-coordinate w))
+            (h (round-coordinate h)))
+        (with-standard-rectangle* (old-x old-y :width old-w :height old-h)
+            (sheet-mirror-geometry sheet)
+          (unless (and (= x old-x) (= y old-y))
+            (setf (xlib:drawable-x window) x
+                  (xlib:drawable-y window) y))
+          (unless (and (= w old-w) (= h old-h))
+            (setf (xlib:drawable-width window) w
+                  (xlib:drawable-height window) h)))
+        (values x y (+ x w) (+ y h))))))
 
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
