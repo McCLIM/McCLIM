@@ -1,6 +1,6 @@
 (in-package #:asdf-user)
 
-(defsystem "nmcclim-fontconfig"
+(defsystem "mcclim-fontconfig"
   :description "CFFI interface to Fontconfig"
   :license "Apache"
   :defsystem-depends-on ("cffi-grovel")
