@@ -1,12 +1,12 @@
 (in-package #:asdf-user)
 
-(defsystem #:mcclim-clx
-  :depends-on (#:alexandria
-               #:cl-unicode
-               #:zpb-ttf
-               #:clx
-               #:mcclim-fonts/truetype
-               #:mcclim-backend-common)
+(defsystem "mcclim-clx"
+  :depends-on ("alexandria"
+               "cl-unicode"
+               "zpb-ttf"
+               "clx"
+               "mcclim-fonts/truetype"
+               "mcclim-backend-common")
   :serial t
   :components
   ((:module "basic" :pathname "" :components
@@ -31,6 +31,6 @@
              (:file "pixmap" :depends-on ("medium"))))
    (:file "input")))
 
-(defsystem #:mcclim-clx/freetype
-  :depends-on (#:mcclim-clx
-               #:mcclim-fonts/clx-freetype))
+(defsystem "mcclim-clx/freetype"
+  :depends-on ("mcclim-clx"
+               "mcclim-fonts/clx-freetype"))

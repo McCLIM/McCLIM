@@ -11,4 +11,3 @@
 ;;;
 
 (in-package #:clim-internals)
-

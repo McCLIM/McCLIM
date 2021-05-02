@@ -42,20 +42,20 @@
 
 (progn
   (add-address (make-address :name "Chris Richardson"
-			     :address "Franz, Inc."
-			     :number "510-548-3600"))
+                             :address "Franz, Inc."
+                             :number "510-548-3600"))
   (add-address (make-address :name "Colin Meldrum"
-			     :address "Franz, Inc."
-			     :number "510-548-3600"))
+                             :address "Franz, Inc."
+                             :number "510-548-3600"))
   (add-address (make-address :name "Scott McKay"
-			     :address "Symbolics, Inc."
-			     :number "617-221-1000"))
+                             :address "Symbolics, Inc."
+                             :number "617-221-1000"))
   (add-address (make-address :name "Bill York"
-			     :address "Lucid, Inc."
-			     :number "415-xxx-yyyy"))
+                             :address "Lucid, Inc."
+                             :number "415-xxx-yyyy"))
   (add-address (make-address :name "Paul Weineke"
-			     :address "Lucid, Inc."
-			     :number "415-xxx-yyyy"))
+                             :address "Lucid, Inc."
+                             :number "415-xxx-yyyy"))
   )
 
 ;;; --------------------------------
@@ -76,12 +76,12 @@
 (define-presentation-type address-address ())
 (define-presentation-type address-number ())
 
-;;; Define a method for displaying the "Rolodex" form of entry.  
+;;; Define a method for displaying the "Rolodex" form of entry.
 ;;; This will be redisplayed efficiently by CLIM's updating output facility.
 ;;; [Note that the addition of calls to UPDATING-OUTPUT with specific cache values
 ;;; could be inserted around each of the fields here to improve the performance if the
 ;;; amount of information on display became large.  The trade-off would be the relative
-;;; speed difference between whatever mechanism would be used to compare unique-ids and 
+;;; speed difference between whatever mechanism would be used to compare unique-ids and
 ;;; cache-values (typically EQL) versus the default mechanism for comparing strings
 ;;; (STRING-EQUAL).]
 (defmethod display-address ((address-to-display address) stream)
@@ -112,25 +112,25 @@
   (:panes
     (interactor :interactor)
     (address :application
-	     :incremental-redisplay t
-	     :display-function 'display-current-address)
+             :incremental-redisplay t
+             :display-function 'display-current-address)
     (names :application
-	   :incremental-redisplay t
-	   :display-function 'display-names))
+           :incremental-redisplay t
+           :display-function 'display-names))
   (:layouts
     (default
       (vertically ()
         (horizontally ()
-	  address names)
-	interactor))))
+          address names)
+        interactor))))
 
-;;; This is the display-function for the upper-left pane, which specified 
+;;; This is the display-function for the upper-left pane, which specified
 ;;; :display-function '(incremental-redisplay-display-function display-current-address).
 (defmethod display-current-address ((frame address-book) stream)
   (let ((current-address (slot-value frame 'current-address)))
     (when current-address
        (updating-output (stream :unique-id current-address)
-	 (display-address current-address stream)))))
+         (display-address current-address stream)))))
 
 ;;; This is the display-function for the upper-right pane, which specified
 ;;; :display-function '(display-names).
@@ -153,8 +153,8 @@
 (define-address-book-command (com-new-address :menu "New")
     ()
   (let ((name nil)
-	(address nil)
-	(number nil))
+        (address nil)
+        (number nil))
     (let ((stream (frame-standard-input *application-frame*)))
       (window-clear stream)
       ;; ACCEPTING-VALUES collects all calls to ACCEPT within its body
@@ -165,16 +165,16 @@
       ;;  Number: a string
       ;; is produced, where each "a string" is sensitive and can be edited.
       (accepting-values (stream)
-	(setq name (apply #'accept 'string :stream stream :prompt
-			  "Name" (and name (list :default name))))
-	(terpri stream)
-	(setq address (apply #'accept 'string :stream stream :prompt
-			     "Address" 
-			     (and address (list :default address))))
-	(terpri stream)
-	(setq number (apply #'accept 'string :stream stream :prompt
-			    "Number"
-			    (and number (list :default number)))))
+        (setq name (apply #'accept 'string :stream stream :prompt
+                          "Name" (and name (list :default name))))
+        (terpri stream)
+        (setq address (apply #'accept 'string :stream stream :prompt
+                             "Address"
+                             (and address (list :default address))))
+        (terpri stream)
+        (setq number (apply #'accept 'string :stream stream :prompt
+                            "Number"
+                            (and number (list :default number)))))
       (window-clear stream)
       (add-address (make-address :name name :address address :number number)))))
 
@@ -185,19 +185,18 @@
 (define-address-book-command com-change-address-name
     ((address address-name :gesture :select))
   (let ((new-name (accept 'string :stream (frame-standard-input *application-frame*)
-			  :prompt "New name" :default (address-name address))))
+                          :prompt "New name" :default (address-name address))))
     (setf (address-name address) new-name)
     (setq *addresses* (sort *addresses* #'string-lessp :key #'address-last-name))))
 
 (define-address-book-command com-change-address-address
     ((address address-address :gesture :select))
   (let ((new-address (accept 'string :stream (frame-standard-input *application-frame*)
-			     :prompt "New address" :default (address-address address))))
+                             :prompt "New address" :default (address-address address))))
     (setf (address-address address) new-address)))
 
 (define-address-book-command com-change-address-number
     ((address address-number :gesture :select))
   (let ((new-number (accept 'string :stream (frame-standard-input *application-frame*)
-			    :prompt "New number" :default (address-number address))))
+                            :prompt "New number" :default (address-number address))))
     (setf (address-number address) new-number)))
-

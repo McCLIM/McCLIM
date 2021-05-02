@@ -1,31 +1,15 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-XCOMMON; -*-
-;;; --------------------------------------------------------------------------------------
-;;;     Title: X11 keysym handling
-;;;   Created: 2002-02-11
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
-;;; --------------------------------------------------------------------------------------
-;;;  (c) copyright 2002 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) 2002 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; X11 keysym handling
+;;;
 
-;;; Support and port mixin for X based backends, handling keycode to
-;;; keysym and character mapping, and handling of modifiers.
-
-(in-package :clim-xcommon)
+(in-package #:clim-xcommon)
 
 ;;; Recall some terminology.  A KEYCODE is an integer between 8 and
 ;;; 255 and it corresponds to some key on the keyboard.  The
@@ -190,10 +174,10 @@
 (defun create-clim-modifier-mask (clx-modifier-mask)
   (let ((m clx-modifier-mask))
     (logior (if (plusp (logand m +shift-bit+)) +shift-key+ 0)
-	    (if (plusp (logand m +control-bit+)) +control-key+ 0)
-	    (if (plusp (logand m *meta-bit*)) +meta-key+ 0)
-	    (if (plusp (logand m *hyper-bit*)) +hyper-key+ 0)
-	    (if (plusp (logand m *super-bit*)) +super-key+ 0))))
+            (if (plusp (logand m +control-bit+)) +control-key+ 0)
+            (if (plusp (logand m *meta-bit*)) +meta-key+ 0)
+            (if (plusp (logand m *hyper-bit*)) +hyper-key+ 0)
+            (if (plusp (logand m *super-bit*)) +super-key+ 0))))
 
 ;;; Return the keysym name for the keysym associated with KEYCODE in
 ;;; DISPLAY.
@@ -205,18 +189,18 @@
 ;;; to be interpreted as MODE-SWITCH.
 (defun mode-switch-position (display)
   (position-if (lambda (keycodes)
-		 (find :mode-switch keycodes
-		       :key (lambda (keycode) (code-to-name keycode display))))
-	       (multiple-value-list (xlib:modifier-mapping display))))
+                 (find :mode-switch keycodes
+                       :key (lambda (keycode) (code-to-name keycode display))))
+               (multiple-value-list (xlib:modifier-mapping display))))
 
 ;;; Return the bit position in a modifier mask that should be
 ;;; interpreted as the NUM-LOCK modifier, or NIL if no modifier is to
 ;;; be interpreted as NUM-LOCK.
 (defun num-lock-position (display)
   (position-if (lambda (keycodes)
-		 (find :num-lock keycodes
-		       :key (lambda (keycode) (code-to-name keycode display))))
-	       (multiple-value-list (xlib:modifier-mapping display))))
+                 (find :num-lock keycodes
+                       :key (lambda (keycode) (code-to-name keycode display))))
+               (multiple-value-list (xlib:modifier-mapping display))))
 
 (defun position-to-mask (position)
   (if (null position)
@@ -227,16 +211,16 @@
 ;;; as CAPS-LOCK.
 (defun lock-is-caps-lock-p (display)
   (find :caps-lock (nth-value 1 (xlib:modifier-mapping display))
-	:key (lambda (keycode) (code-to-name keycode display))))
+        :key (lambda (keycode) (code-to-name keycode display))))
 
 ;;; Given an X11/CLX modifier mask, return a backend-specific modifier
 ;;; mask with the relevant bits set.
 (defun create-other-modifier-mask (clx-modifier-mask
-				   caps-lock-mask
-				   mode-switch-mask)
+                                   caps-lock-mask
+                                   mode-switch-mask)
   (let ((m clx-modifier-mask))
     (logior (if (plusp (logand m caps-lock-mask)) +caps-lock+ 0)
-	    (if (plusp (logand m mode-switch-mask)) +mode-switch+ 0))))
+            (if (plusp (logand m mode-switch-mask)) +mode-switch+ 0))))
 
 ;;; Recall that the function MODIFIER-MAPPING is similar to the one
 ;;; with the same name in the XLIB package.  It returns a vector of
@@ -287,16 +271,16 @@
 
 (defun make-modifier-cache (port)
   (let* ((cache (make-array 256))
-	 (display (clim-clx::clx-port-display port))
-	 (caps-lock-mask (if (lock-is-caps-lock-p display) +lock-bit+ #b00))
-	 (mode-switch-position (mode-switch-position display))
-	 (mode-switch-mask (position-to-mask mode-switch-position)))
+         (display (clim-clx::clx-port-display port))
+         (caps-lock-mask (if (lock-is-caps-lock-p display) +lock-bit+ #b00))
+         (mode-switch-position (mode-switch-position display))
+         (mode-switch-mask (position-to-mask mode-switch-position)))
     (loop for x-modifier-mask from 0 below 256
-	  do (setf (aref cache x-modifier-mask)
-		   (cons (create-clim-modifier-mask x-modifier-mask)
-			 (create-other-modifier-mask x-modifier-mask
-						     caps-lock-mask
-						     mode-switch-mask))))
+          do (setf (aref cache x-modifier-mask)
+                   (cons (create-clim-modifier-mask x-modifier-mask)
+                         (create-other-modifier-mask x-modifier-mask
+                                                     caps-lock-mask
+                                                     mode-switch-mask))))
     cache))
 
 (defgeneric x-event-state-modifiers (port state)
@@ -310,19 +294,19 @@
     (unless modifier-cache
       (setf modifier-cache (make-modifier-cache port)))
     (destructuring-bind (clim-modifiers . other-modifiers)
-	;; Mask off the button state bits.
-	(aref modifier-cache
-	      (mod state (length modifier-cache)))
+        ;; Mask off the button state bits.
+        (aref modifier-cache
+              (mod state (length modifier-cache)))
       (values clim-modifiers
-	      (logtest +caps-lock+ other-modifiers)
-	      (logtest +mode-switch+ other-modifiers)))))
+              (logtest +caps-lock+ other-modifiers)
+              (logtest +mode-switch+ other-modifiers)))))
 
 (defun modify-modifiers (event-key keysym-name modifiers)
   (let ((keysym-modifier (loop for (keysyms modifier) in +clim-modifiers+
-			       if (member keysym-name keysyms)
-			       return modifier)))
+                               if (member keysym-name keysyms)
+                               return modifier)))
     (cond ((and keysym-modifier (eq event-key :key-press))
-	   (logior modifiers keysym-modifier))
-	  ((and keysym-modifier (eq event-key :key-release))
-	   (logandc2 modifiers keysym-modifier))
-	  (t modifiers))))
+           (logior modifiers keysym-modifier))
+          ((and keysym-modifier (eq event-key :key-release))
+           (logandc2 modifiers keysym-modifier))
+          (t modifiers))))

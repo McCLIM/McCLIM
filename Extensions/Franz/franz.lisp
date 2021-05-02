@@ -1,4 +1,4 @@
-(in-package :climi)
+(in-package #:climi)
 
 (defun dragging-drawing (stream drawer &key (finish-on-release t)
                          (pointer (port-pointer (port stream)))

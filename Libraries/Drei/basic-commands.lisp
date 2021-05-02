@@ -1,37 +1,20 @@
-;;; -*- Mode: Lisp; Package: DREI-COMMANDS -*-
-
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Taylor R. Campbell (campbell@mumble.net)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006 Taylor R. Campbell <campbell@mumble.net>
+;;;  (c) copyright 2006,2007,2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Definitions of basic commands that are necessary for DREI to be
 ;;; functional at all.
 
-(in-package :drei-commands)
+(in-package #:drei-commands)
 
 (defmacro handling-motion-limit-errors ((unit-plural &key (beep t)
                                                      (display-message t))
@@ -48,7 +31,7 @@ true (the default)."
               `(display-message ,(concatenate 'string "No more " unit-plural))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Motion commands.
 ;;; See information in motion.lisp
 ;;;
@@ -169,92 +152,92 @@ with a negative argument -n, move point forward by n lines."
 
 ;;; Bind gestures to commands
 (set-key `(com-forward-object ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\f :control)))
+         'movement-table
+         '((#\f :control)))
 
 (set-key `(com-forward-object ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:right)))
+         'movement-table
+         '((:right)))
 
 (set-key `(com-backward-object ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\b :control)))
+         'movement-table
+         '((#\b :control)))
 
 (set-key `(com-backward-object ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:left)))
+         'movement-table
+         '((:left)))
 
 (set-key `(com-forward-word ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\f :meta)))
+         'movement-table
+         '((#\f :meta)))
 
 (set-key `(com-forward-word ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:right :control)))
+         'movement-table
+         '((:right :control)))
 
 (set-key `(com-backward-word ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\b :meta)))
+         'movement-table
+         '((#\b :meta)))
 
 (set-key `(com-backward-word ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:left :control)))
+         'movement-table
+         '((:left :control)))
 
 (set-key `(com-forward-line ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\n :control)))
+         'movement-table
+         '((#\n :control)))
 
 (set-key `(com-forward-line ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:down)))
+         'movement-table
+         '((:down)))
 
 (set-key `(com-backward-line ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\p :control)))
+         'movement-table
+         '((#\p :control)))
 
 (set-key `(com-backward-line ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:up)))
+         'movement-table
+         '((:up)))
 
 (set-key 'com-beginning-of-line
-	 'movement-table
-	 '((:home)))
+         'movement-table
+         '((:home)))
 
 (set-key 'com-beginning-of-line
-	 'movement-table
-	 '((#\a :control)))
+         'movement-table
+         '((#\a :control)))
 
 (set-key 'com-end-of-line
-	 'movement-table
-	 '((#\e :control)))
+         'movement-table
+         '((#\e :control)))
 
 (set-key 'com-end-of-line
-	 'movement-table
-	 '((:end)))
+         'movement-table
+         '((:end)))
 
 (set-key `(com-forward-page ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\x :control) (#\])))
+         'movement-table
+         '((#\x :control) (#\])))
 
 (set-key `(com-backward-page ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\x :control) (#\[)))
+         'movement-table
+         '((#\x :control) (#\[)))
 
 (set-key `(com-backward-paragraph ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\{ :meta)))
+         'movement-table
+         '((#\{ :meta)))
 
 (set-key `(com-backward-paragraph ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:up :control)))
+         'movement-table
+         '((:up :control)))
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
-	 'movement-table
-	 '((#\} :meta)))
+         'movement-table
+         '((#\} :meta)))
 
 (set-key `(com-forward-paragraph ,*numeric-argument-marker*)
-	 'movement-table
-	 '((:down :control)))
+         'movement-table
+         '((:down :control)))
 
 (define-command (com-insert-space :name t :command-table editing-table)
     ()
@@ -267,7 +250,7 @@ with a negative argument -n, move point forward by n lines."
 (set-key 'com-insert-space 'editing-table '((#\Space :shift)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Editing commands.
 ;;;
 ;;; Commands for deleting, killing and moving stuff See information in
@@ -314,7 +297,7 @@ with a negative argument -n, move point forward by n lines."
                                       :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Kill " plural " up to the next " noun " end.
-With a numeric argument, kill forward (backward if negative) 
+With a numeric argument, kill forward (backward if negative)
 that many " plural ".
 
 Successive kills append to the kill ring.")
@@ -330,7 +313,7 @@ Successive kills append to the kill ring.")
                             :command-table ,command-table)
                ((count 'integer :prompt ,(concat "Number of " plural) :default 1))
              ,(concat "Kill from point until the previous " noun " beginning.
-With a numeric argument, kill backward (forward, if negative) 
+With a numeric argument, kill backward (forward, if negative)
 that many " plural ".
 
 Successive kills append to the kill ring.")
@@ -402,7 +385,7 @@ the first object of that line to the end of the previous line."
     ((count 'integer :prompt "Number of Objects" :default 1)
      (killp 'boolean :prompt "Kill?" :default nil))
   "Delete the object after point.
-With a numeric argument, kill that many objects 
+With a numeric argument, kill that many objects
 after (or before, if negative) point."
   (handling-motion-limit-errors ("objects")
     (if killp
@@ -413,7 +396,7 @@ after (or before, if negative) point."
     ((count 'integer :prompt "Number of Objects" :default 1)
      (killp 'boolean :prompt "Kill?" :default nil))
   "Delete the object before point.
-With a numeric argument, kills that many objects 
+With a numeric argument, kills that many objects
 before (or after, if negative) point."
   (handling-motion-limit-errors ("objects")
     (if killp
@@ -425,38 +408,38 @@ before (or after, if negative) point."
 (defun user-kill-line (mark &optional (count 1) (whole-lines-p nil) (concatenate-p nil))
   (let ((start (offset mark)))
     (cond ((= 0 count)
-	   (beginning-of-line mark))
-	  ((< count 0)
-	   (loop repeat (- count)
+           (beginning-of-line mark))
+          ((< count 0)
+           (loop repeat (- count)
               until (beginning-of-buffer-p mark)
               do (beginning-of-line mark)
               until (beginning-of-buffer-p mark)
               do (backward-object mark)))
-	  ((or whole-lines-p (> count 1))
-	   (loop repeat count
+          ((or whole-lines-p (> count 1))
+           (loop repeat count
               until (end-of-buffer-p mark)
               do (end-of-line mark)
               until (end-of-buffer-p mark)
               do (forward-object mark)))
-	  (t
-	   (cond ((end-of-buffer-p mark) nil)
-		 ((end-of-line-p mark) (forward-object mark))
-		 (t (end-of-line mark)))))
+          (t
+           (cond ((end-of-buffer-p mark) nil)
+                 ((end-of-line-p mark) (forward-object mark))
+                 (t (end-of-line mark)))))
     (unless (mark= mark start)
       (if concatenate-p
-	  (kill-ring-concatenating-push *kill-ring*
-					(region-to-sequence start mark))
-	  (kill-ring-standard-push *kill-ring*
-				   (region-to-sequence start mark)))
+          (kill-ring-concatenating-push *kill-ring*
+                                        (region-to-sequence start mark))
+          (kill-ring-standard-push *kill-ring*
+                                   (region-to-sequence start mark)))
       (delete-region start mark))))
 
 (define-command (com-kill-line :name t :command-table deletion-table)
     ((numarg 'integer :prompt "Kill how many lines?" :default 1)
      (numargp 'boolean :prompt "Kill entire lines?" :default nil))
   "Kill the objects on the current line after point.
-When at the end of a line, kill the #\\Newline. 
+When at the end of a line, kill the #\\Newline.
 With a numeric argument of 0, kill the objects on the current line before point.
-With a non-zero numeric argument, kill that many lines forward (backward, 
+With a non-zero numeric argument, kill that many lines forward (backward,
 if negative) from point.
 
 Successive kills append to the kill ring."
@@ -476,46 +459,46 @@ Successive kills append to the kill ring."
 ;;; Bind gestures to commands
 
 (set-key `(com-kill-word ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\d :meta)))
+         'deletion-table
+         '((#\d :meta)))
 
 (set-key `(com-backward-kill-word ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\Backspace :meta)))
+         'deletion-table
+         '((#\Backspace :meta)))
 
 (set-key 'com-transpose-words
-	 'editing-table
-	 '((#\t :meta)))
+         'editing-table
+         '((#\t :meta)))
 
 (set-key 'com-transpose-lines
-	 'editing-table
-	 '((#\x :control) (#\t :control)))
+         'editing-table
+         '((#\x :control) (#\t :control)))
 
 (set-key `(com-delete-object ,*numeric-argument-marker*
-			     ,*numeric-argument-marker*)
-	 'deletion-table
-	 '(#\Rubout))
+                             ,*numeric-argument-marker*)
+         'deletion-table
+         '(#\Rubout))
 
 (set-key `(com-delete-object ,*numeric-argument-marker*
-			     ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\d :control)))
+                             ,*numeric-argument-marker*)
+         'deletion-table
+         '((#\d :control)))
 
 (set-key `(com-backward-delete-object ,*numeric-argument-marker*
-				      ,*numeric-argument-marker*)
-	 'deletion-table
-	 '(#\Backspace))
+                                      ,*numeric-argument-marker*)
+         'deletion-table
+         '(#\Backspace))
 
 (set-key 'com-transpose-objects
-	 'editing-table
-	 '((#\t :control)))
+         'editing-table
+         '((#\t :control)))
 
 (set-key `(com-kill-line ,*numeric-argument-marker* ,*numeric-argument-marker*)
-	 'deletion-table
-	 '((#\k :control)))
+         'deletion-table
+         '((#\k :control)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Self-insertion-commands.
 ;;;
 ;;; These are what do the basic keypress->character inserted in buffer
@@ -537,4 +520,4 @@ the numeric arguments."
 
 (set-key `(com-self-insert ,*numeric-argument-marker*)
          'self-insert-table
-	 '((#\Newline)))
+         '((#\Newline)))

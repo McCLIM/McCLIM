@@ -12,6 +12,7 @@
 ;;;
 ;;; The frame manager and ad-hoc sheet class generation logic of the
 ;;; CLX backend.
+;;;
 
 (in-package #:clim-clx)
 
@@ -77,13 +78,14 @@
     (concrete-pane-class mirroring
      class-name-prefix class-name-package compute-superclasses)
   (flet ((make-class-name (concrete-class-name)
-           (let ((*package* class-name-package))
-             (alexandria:symbolicate
-              class-name-prefix "-"
-              (if-let ((package (symbol-package concrete-class-name)))
-                (package-name package)
-                "UNINTERNED")
-              ":" (symbol-name concrete-class-name))))
+           (intern (format nil "~A-~A:~A"
+                           class-name-prefix
+                           (if-let ((package (symbol-package
+                                              concrete-class-name)))
+                             (package-name package)
+                             "UNINTERNED")
+                           (symbol-name concrete-class-name))
+                   class-name-package))
          (define-class (metaclass name concrete-class)
            (let* ((superclasses (funcall compute-superclasses concrete-class))
                   (class (make-instance metaclass

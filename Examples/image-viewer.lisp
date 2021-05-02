@@ -1,24 +1,13 @@
-;;; -*- Mode: Lisp; Package: CLIM-DEMO -*-
-
-;;;  (c) copyright 2008 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2008 by Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; A simple program for displaying images of formats known to McCLIM.
+;;;
 
 (in-package :clim-demo)
 
@@ -41,7 +30,7 @@ value of the gadget is the image being displayed."))
 (defmethod handle-repaint ((pane image-viewer-pane) region)
   (declare (ignore region))
   ;; Clear the old image.
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)    
+  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
   ;; Draw the new one, if there is one.
   (when (gadget-value pane)

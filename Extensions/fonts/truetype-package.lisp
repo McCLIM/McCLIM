@@ -1,5 +1,4 @@
-
-(cl:defpackage :mcclim-truetype
+(defpackage :mcclim-truetype
   (:use :climi :clim :clim-lisp)
   (:import-from :alexandria
                 :ensure-gethash
@@ -10,9 +9,9 @@
            #:*fontconfig-faces*
            #:*families/faces*
            #:*zpb-font-lock*
-           #:truetype-device-font-name 
+           #:truetype-device-font-name
            #:fontconfig-font-name
-           #:make-truetype-device-font-name 
+           #:make-truetype-device-font-name
            #:make-fontconfig-font-name
            #:find-fontconfig-font
            #:invoke-with-truetype-path-restart)

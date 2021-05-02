@@ -95,7 +95,6 @@ interface management system."
                 :components ((:file "package")
                              (:file "utils")
                              (:file "input-editing")
-                             (:file "input-streams")
                              (:file "commands")
                              (:file "text-selection")
                              (:file "text-formatting")
@@ -110,13 +109,20 @@ interface management system."
                              (:module "drawing"
                               :depends-on ("package")
                               :components ((:file "medium")
-                                           (:file "design")))
+                                           (:file "design")
+                                           (:file "bezier")))
+                             (:module "extended-streams"
+                              :depends-on ("package")
+                              :components ((:file "stream-input")
+                                           (:file "gestures")
+                                           (:file "recording")))
                              (:module "presentations"
                               :depends-on ("package")
                               :components ((:file "presentation-types")
                                            (:file "presentation-functions")
                                            (:file "presentation-inheritance")
-                                           (:file "translators")))
+                                           (:file "translators")
+                                           (:file "standard-presentations")))
                              (:module "frames"
                               :depends-on ("package")
                               :components ((:file "define-application-frame"))))))

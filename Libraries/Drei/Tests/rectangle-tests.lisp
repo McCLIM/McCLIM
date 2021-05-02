@@ -1,24 +1,14 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Tests for the rectangle editing functionality.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite rectangle-tests :description "The test suite for
 rectangle-editing related tests." :in drei-tests)
@@ -124,7 +114,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -178,7 +168,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -230,7 +220,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -281,7 +271,7 @@ Line number four"))
 Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -334,7 +324,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))
@@ -389,7 +379,7 @@ Line number four")
     (beginning-of-buffer (point))
     (forward-line (point) (current-syntax))
     (forward-object (point) 5)
-    
+
     (end-of-buffer (mark))
     (backward-line (mark) (current-syntax))
     (beginning-of-line (mark))

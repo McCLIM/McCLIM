@@ -1,24 +1,14 @@
-;;; -*- Mode: Lisp; Package: DREI-TESTS -*-
-
-;;;  (c) copyright 2006-2007 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2006-2008 Troels Henriksen (athas@sigkill.dk)
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Tests for the swine lisp syntax.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (in-suite lisp-syntax-tests)
 
@@ -30,7 +20,7 @@ list keywords."
           lambda-list-keywords)
   (is-false (drei-lisp-syntax::lambda-list-keyword-p '&keyword)))
 
-;; This is to make FiveAM give useful output when tests fail.
+;;; This is to make FiveAM give useful output when tests fail.
 (defmacro testing-find-affected-parameters (&body body)
   `(macrolet ((test-find-affected-parameters (lambda-list arg-indices expected-result)
                 `(flet ((affected-parameters (lambda-list arg-indices)

@@ -1,27 +1,17 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2014 by Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2001,2002 by Tim Moore (moore@bricoworks.com)
-;;;  (c) copyright 2019,2020 by Daniel Kochmański (daniel@turtleware.eu)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998,1999,2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2001,2002 by Tim Moore <moore@bricoworks.com>
+;;;  (c) Copyright 2019,2020 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Part VI: Extended Stream Input Facilities
 ;;; Chapter 22: Extended Stream Input
+;;;
 
 (in-package #:clim-internals)
 
@@ -400,234 +390,7 @@ keys read."))
   (unread-char gesture stream))
 
 
-;;; 22.3 Gestures and Gesture Names
 
-(defparameter *gesture-names* (make-hash-table))
-
-(defmacro define-gesture-name (name type gesture-spec &key (unique t))
-  `(add-gesture-name ',name ',type ',gesture-spec ,@(and unique
-                                                         `(:unique ',unique))))
-
-(defun delete-gesture-name (name)
-  "Delete the gesture named by the symbol `name' from the list of
-known gestures."
-  (remhash name *gesture-names*))
-
-;;; XXX perhaps this should be in the backend somewhere?
-(defconstant +name-to-char+ '((:newline . #\newline)
-                              (:linefeed . #\linefeed)
-                              (:return . #\return)
-                              (:tab . #\tab)
-                              (:backspace . #\backspace)
-                              (:page . #\page)
-                              (:rubout . #\rubout)))
-
-(defun realize-gesture-spec (type gesture-spec)
-  ;; Some CLIM code (scigraph) assumes that gesture-spec can be a symbol.
-  (unless (listp gesture-spec)
-    (setq gesture-spec (list gesture-spec)))
-  (destructuring-bind (device-name . modifiers)
-      gesture-spec
-    (let* ((modifier-state (apply #'make-modifier-state modifiers)))
-      (cond ((and (eq type :keyboard)
-                  (symbolp device-name))
-             (setq device-name (or (cdr (assoc device-name +name-to-char+))
-                                   device-name)))
-            ((member type '(:pointer-button
-                            :pointer-button-press
-                            :pointer-button-release
-                            :pointer-scroll)
-                     :test #'eq)
-             (let ((real-device-name
-                     (case device-name
-                       (:left        +pointer-left-button+)
-                       (:middle      +pointer-middle-button+)
-                       (:right       +pointer-right-button+)
-                       (:wheel-up    +pointer-wheel-up+)
-                       (:wheel-down  +pointer-wheel-down+)
-                       (:wheel-left  +pointer-wheel-left+)
-                       (:wheel-right +pointer-wheel-right+)
-                       (t (error "~S is not a known button" device-name)))))
-               (setq device-name real-device-name))))
-      (values type device-name modifier-state))))
-
-(defun add-gesture-name (name type gesture-spec &key unique)
-  (let ((gesture-entry (multiple-value-list (realize-gesture-spec type gesture-spec))))
-    (if unique
-        (setf (gethash name *gesture-names*) (list gesture-entry))
-        (push gesture-entry (gethash name *gesture-names*)))))
-
-(defgeneric character-gesture-name (name))
-
-(defmethod character-gesture-name ((name character))
-  name)
-
-(defmethod character-gesture-name ((name symbol))
-  (let ((entry (car (gethash name *gesture-names*))))
-    (if entry
-        (destructuring-bind (type device-name modifier-state)
-            entry
-          (if (and (eq type :keyboard)
-                   (eql modifier-state 0))
-              device-name
-              nil))
-        nil)))
-
-(defgeneric %event-matches-gesture (event type device-name modifier-state)
-  (:method (event type device-name modifier-state)
-    (declare (ignore event type device-name modifier-state))
-    nil)
-  (:method ((event key-press-event)
-            (type (eql :keyboard))
-            device-name
-            modifier-state)
-    (let ((character (keyboard-event-character event))
-          (name      (keyboard-event-key-name event)))
-      (and (if character
-               (eql character device-name)
-               (eql name device-name))
-           (eql (event-modifier-state event) modifier-state))))
-  (:method ((event pointer-button-press-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-press)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-button-release-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-release)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-scroll-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-scroll)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event pointer-button-event)
-            type
-            device-name
-            modifier-state)
-    (and (or (eql type :pointer-button-press)
-             (eql type :pointer-button-release)
-             (eql type :pointer-scroll)
-             (eql type :pointer-button))
-         (eql (pointer-event-button event) device-name)
-         (eql (event-modifier-state event) modifier-state)))
-  (:method ((event character)
-            (type (eql :keyboard))
-            device-name
-            modifier-state)
-    ;; Because gesture objects are either characters or event objects,
-    ;; support characters here too.
-    (and (eql event device-name)
-         (eql modifier-state 0))))
-
-(defun event-matches-gesture-name-p (event gesture-name)
-  ;; Just to be nice, we special-case literal characters here.  We also
-  ;; special-case literal 'physical' gesture specs of the form (type device-name
-  ;; modifier-state).  The CLIM spec requires neither of these things.
-  (let ((gesture-entry
-          (typecase gesture-name
-            (character (list (multiple-value-list (realize-gesture-spec :keyboard gesture-name))))
-            (cons (list gesture-name)) ; Literal physical gesture
-            (t (gethash gesture-name *gesture-names*)))))
-    (loop for (type device-name modifier-state) in gesture-entry
-          do (when (%event-matches-gesture event
-                                           type
-                                           device-name
-                                           modifier-state)
-               (return-from event-matches-gesture-name-p t))
-          finally (return nil))))
-
-(defun modifier-state-matches-gesture-name-p (modifier-state gesture-name)
-  (loop for (nil nil gesture-state) in (gethash gesture-name *gesture-names*)
-        do (when (eql gesture-state modifier-state)
-             (return-from modifier-state-matches-gesture-name-p t))
-        finally (return nil)))
-
-
-(defun make-modifier-state (&rest modifiers)
-  (loop for result = 0 then (logior (case modifier
-                                      (:shift +shift-key+)
-                                      (:control +control-key+)
-                                      (:meta +meta-key+)
-                                      (:super +super-key+)
-                                      (:hyper +hyper-key+)
-                                      (t (error "~S is not a known modifier" modifier)))
-                                    result)
-        for modifier in modifiers
-        finally (return result)))
-
-;;; Standard gesture names
-
-(define-gesture-name :abort :keyboard (#\c :control))
-(define-gesture-name :clear-input :keyboard (#\u :control))
-(define-gesture-name :complete :keyboard (:tab))
-(define-gesture-name :help :keyboard (#\/ :control))
-(define-gesture-name :possibilities :keyboard (#\? :control))
-
-(define-gesture-name :select :pointer-button-press (:left))
-(define-gesture-name :describe :pointer-button-press (:middle))
-(define-gesture-name :menu :pointer-button-press (:right))
-(define-gesture-name :edit :pointer-button-press (:left :meta))
-(define-gesture-name :delete :pointer-button-press (:middle :shift))
-
-(define-gesture-name :scroll-up :pointer-scroll (:wheel-up))
-(define-gesture-name :scroll-down :pointer-scroll (:wheel-down))
-(define-gesture-name :scroll-left :pointer-scroll (:wheel-left))
-(define-gesture-name :scroll-right :pointer-scroll (:wheel-right))
-
-;;; Define so we have a gesture for #\newline that we can use in
-;;; *standard-activation-gestures*
-
-(define-gesture-name :newline :keyboard (#\newline))
-(define-gesture-name :newline :keyboard (#\return) :unique nil)
-
-(define-gesture-name :return :keyboard (#\return))
-
-;;; The standard delimiter
-
-(define-gesture-name command-delimiter :keyboard (#\space))
-
-;;; Extension: support for handling abort gestures that appears to be
-;;; in real CLIM
-
-;;; From the hyperspec, more or less
-
-(defun invoke-condition-restart (c)
-  (let ((restarts (compute-restarts c)))
-    (loop for i from 0
-          for restart in restarts
-          do (format t "~&~D: ~A~%" i restart))
-    (loop with n = nil
-          and k = (length restarts)
-          until (and (integerp n) (>= n 0) (< n k))
-          do (progn
-               (format t "~&Option: ")
-               (setq n (read))
-               (fresh-line))
-          finally
-          #-cmu (invoke-restart (nth n restarts))
-          #+cmu (funcall (conditions::restart-function (nth n restarts))))))
-
-(defmacro catch-abort-gestures (format-args &body body)
-  `(restart-case
-       (handler-bind ((abort-gesture #'invoke-condition-restart))
-         ,@body)
-     (nil ()
-       :report (lambda (s) (format s ,@format-args))
-       :test (lambda (c) (typep c 'abort-gesture))
-       nil)))
-
-
 ;;; 22.4 The Pointer Protocol
 ;;;
 ;;; Implemented by the back end.  Sort of.

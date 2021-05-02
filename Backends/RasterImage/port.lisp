@@ -1,4 +1,4 @@
-(in-package :mcclim-raster-image)
+(in-package #:mcclim-raster-image)
 
 ;;;
 ;;; Port
@@ -33,19 +33,18 @@
 
 ;;; Port-Graft methods
 
-(defmethod make-graft ((port raster-image-port) &key (orientation :default) (units :device))
-  (let* ((width (raster-image-port-width port))
+(defmethod make-graft ((port raster-image-port) &key (orientation :default)
+                                                     (units       :device))
+  (let* ((width  (raster-image-port-width port))
          (height (raster-image-port-height port))
-         (graft (make-instance 'raster-image-graft
-                               :port port
-                               :mirror nil
-                               :orientation orientation
-                               :units units
-                               :width width
-                               :height height)))
-    (let ((region (make-bounding-rectangle 0 0 width height)))
-      (climi::%%set-sheet-region region graft))
-    graft))
+         (region (make-bounding-rectangle 0 0 width height)))
+    (make-instance 'raster-image-graft :port        port
+                                       :region      region
+                                       :mirror      nil
+                                       :orientation orientation
+                                       :units       units
+                                       :width       width
+                                       :height      height)))
 
 (defmethod graft ((port raster-image-port))
   (first (port-grafts port)))

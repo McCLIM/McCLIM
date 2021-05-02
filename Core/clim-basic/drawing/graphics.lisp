@@ -1,25 +1,28 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2003 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2001 Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001,2002 Alexey Dejneka
+;;;  (c) copyright 2002 Brian Spilsbury
+;;;  (c) copyright 2002,2003 Gilbert Baumann <gbaumann@common-lisp.net>
+;;;  (c) copyright 2003-2008 Andy Hefner <ahefner@common-lisp.net>
+;;;  (c) copyright 2005,2006 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2005 Rudi Schlatte <rschlatte@common-lisp.net>
+;;;  (c) copyright 2008 Troels Henriksen <thenriksen@common-lisp.net>
+;;;  (c) copyright 2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2016 Alessandro Serra <gas2serra@gmail.com>
+;;;  (c) copyright 2018 Elias Mårtenson <lokedhs@gmail.com>
+;;;  (c) copyright 2019-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Standard presentations types.
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; Work in progress that reduces consing of rest arguments and keyword
 ;;; processing.
@@ -237,7 +240,6 @@
   ;; Moore suggests we use (0,0) if medium is no stream.
   ;;
   ;; Furthermore, the specification is vague about possible scalings ...
-  ;;
   (unless (and x y)
     (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
                                      (stream-cursor-position medium)
@@ -255,13 +257,12 @@
         (funcall cont medium)))))
 
 (defmethod invoke-with-first-quadrant-coordinates (medium cont x y)
-  ;; First we do the same as invoke-with-local-coordinates but rotate
-  ;; and deskew it so that it becomes first-quadrant. We do this by
-  ;; simply measuring the length of the transfomed x and y "unit
-  ;; vectors".  [That is (0,0)-(1,0) and (0,0)-(0,1)] and setting up a
-  ;; transformation which features an upward pointing y-axis and a
-  ;; right pointing x-axis with a length equal to above measured
-  ;; vectors.
+  ;; First we do the same as invoke-with-local-coordinates but rotate and deskew
+  ;; it so that it becomes first-quadrant. We do this by simply measuring the
+  ;; length of the transformed x and y "unit vectors".  [That is (0,0)-(1,0) and
+  ;; (0,0)-(0,1)] and setting up a transformation which features an upward
+  ;; pointing y-axis and a right pointing x-axis with a length equal to above
+  ;; measured vectors.
   (unless (and x y)
     (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
                                      (stream-cursor-position medium)
@@ -282,9 +283,9 @@
                                    x y))
         (funcall cont medium)))))
 
-;;;; 10.3 Line Styles
+;;; 10.3 Line Styles
 
-;;;; 10.3.2 Contrasting Dash Patterns
+;;; 10.3.2 Contrasting Dash Patterns
 
 (defconstant +contrasting-dash-patterns+
   ;; Must be at least eight according to the specification (Section
@@ -307,7 +308,7 @@
         (subseq contrasting-dash-patterns 0 n)
         (aref contrasting-dash-patterns k))))
 
-;;;; 12 Graphics
+;;; 12 Graphics
 
 (defun draw-point (sheet point
                    &rest args
@@ -576,13 +577,15 @@
 (defun draw-arrow (sheet point-1 point-2
                    &rest args
                    &key ink clipping-region transformation
-                     line-style line-thickness
-                     line-unit line-dashes line-cap-shape
-                     (to-head t) from-head (head-length 10) (head-width 5) angle)
+                        line-style line-thickness
+                        line-unit line-dashes line-cap-shape
+                        (to-head t) from-head (head-length 10) (head-width 5)
+                        (head-filled nil) angle)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape
-                   to-head from-head head-length head-width angle))
+                   to-head from-head head-length head-width
+                   head-filled angle))
   (multiple-value-bind (x1 y1) (point-position point-1)
     (multiple-value-bind (x2 y2) (point-position point-2)
       (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
@@ -592,7 +595,8 @@
                     &key ink clipping-region transformation
                          line-style line-thickness
                          line-unit line-dashes line-cap-shape
-                         (to-head t) from-head (head-length 10) (head-width 5) angle)
+                         (to-head t) from-head (head-length 10) (head-width 5)
+                         (head-filled nil) angle)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
@@ -631,8 +635,9 @@
                (tip-to-peak (+ head-length
                                offset
                                (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
-          (when to-head   (incf p offset))
-          (when from-head (decf q offset))
+          (when (not head-filled)
+            (when to-head   (incf p offset))
+            (when from-head (decf q offset)))
           (if (and to-head
                    from-head
                    (< (abs (- start end)) (* 2 tip-to-peak)))
@@ -644,7 +649,7 @@
                                      (/ start 2) width
                                      start 0
                                      (/ start 2) (- width))
-                               :filled t
+                               :filled head-filled
                                :line-thickness 0))
               (progn
                 (when to-head
@@ -652,17 +657,20 @@
                                  (list (+ p head-length) (- width/2)
                                        p 0
                                        (+ p head-length) width/2)
-                                 :filled nil
+                                 :filled head-filled
                                  :closed nil))
                 (when from-head
                   (draw-polygon* sheet
                                  (list (- q head-length) (- width/2)
                                        q 0
                                        (- q head-length) width/2)
-                                 :filled nil
+                                 :filled head-filled
                                  :closed nil))
 
                 (unless (< q p)
+                  (when head-filled
+                    (when to-head   (incf p offset))
+                    (when from-head (decf q offset)))
                   (draw-line* sheet q 0 p 0)))))))))
 
 (defun draw-oval (sheet center-pt x-radius y-radius
@@ -823,9 +831,9 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
-;;;;
-;;;; DRAW-DESIGN
-;;;;
+;;;
+;;; DRAW-DESIGN
+;;
 
 (defmethod draw-design (medium (design point)
                         &rest options &key &allow-other-keys)
@@ -901,8 +909,7 @@
 
 (defmethod draw-design (medium (design (eql +nowhere+))
                         &rest options &key &allow-other-keys)
-  (declare (ignore medium options)
-           (ignorable design))
+  (declare (ignore medium design options))
   nil)
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+))
@@ -941,25 +948,31 @@
   ;; patterns without compromising the specification. -- jd 2018-09-08
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern)))
-    (if (or clipping-region transformation)
-        (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
-          #1=(draw-rectangle* medium 0 0 width height
-                              :ink (transform-region (medium-transformation medium) pattern)))
-        #1#)))
+    (flet ((draw-it ()
+             (draw-rectangle* medium 0 0 width height
+                              :ink (transform-region (medium-transformation medium) pattern))))
+      (if (or clipping-region transformation)
+          (with-drawing-options (medium :clipping-region clipping-region
+                                        :transformation  transformation)
+            (draw-it))
+          (draw-it)))))
 
 (defmethod draw-design (medium (pattern transformed-pattern)
                         &key clipping-region transformation &allow-other-keys)
-  (if (or clipping-region transformation)
-      (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
-        #1=(let* ((effective-pattern (effective-transformed-design pattern))
+  (flet ((draw-it ()
+           (let* ((effective-pattern (effective-transformed-design pattern))
                   (pattern-tr (transformed-design-transformation effective-pattern))
                   (pattern-ds (transformed-design-design effective-pattern))
                   (ink-tr (compose-transformations (medium-transformation medium) pattern-tr))
                   (width (pattern-width pattern-ds))
                   (height (pattern-height pattern-ds))
                   (region (transform-region pattern-tr (make-rectangle* 0 0 width height))))
-             (draw-design medium region :ink (transform-region ink-tr pattern-ds))))
-      #1#))
+             (draw-design medium region :ink (transform-region ink-tr pattern-ds)))))
+    (if (or clipping-region transformation)
+        (with-drawing-options (medium :clipping-region clipping-region
+                                      :transformation  transformation)
+          (draw-it))
+        (draw-it))))
 
 (defun draw-pattern* (medium pattern x y &key clipping-region transformation)
   ;; Note: I believe the sample implementation in the spec is incorrect. --GB
@@ -967,27 +980,52 @@
   ;; aligned with XY axis. For drawing transformed designs we need to transform
   ;; said rectangular region hence we need to use DRAW-DESIGN. -- jd 2018-09-05
   (check-type pattern pattern)
-  (let* ((width (pattern-width pattern))
-         (height (pattern-height pattern))
-         (region (make-rectangle* x y (+ x width) (+ y height))))
+  (labels ((draw (x y sx sy)
+             ;; As I read the spec, the pattern itself is not transformed, so we
+             ;; should draw the full (untransformed) pattern at the transformed x/y
+             ;; coordinates. This requires we revert to the identity transformation
+             ;; before drawing the rectangle. -Hefner
+             (let* ((effective-pattern (effective-transformed-design pattern))
+                    ;; Effective design
+                    (effective-design  (transformed-design-design effective-pattern))
+                    (design-rectangle  (make-rectangle*
+                                        0 0
+                                        (pattern-width effective-design)
+                                        (pattern-height effective-design)))
+                    ;; Effective pattern transformation
+                    (pattern-transform (transformed-design-transformation
+                                        effective-pattern))
+                    (pattern-region    (transform-region
+                                        pattern-transform design-rectangle))
+                    ;; Final transformation and region. Adjust for
+                    ;; offsets introduced by PATTERN-TRANSFORM and
+                    ;; axis flipping introduced by the medium
+                    ;; transformation.
+                    (final-transform   (with-bounding-rectangle* (x1 y1 x2 y2)
+                                           pattern-region
+                                         (compose-transformations
+                                          (make-translation-transformation
+                                           (- x x1 (if (minusp sx) (- x2 x1) 0))
+                                           (- y y1 (if (minusp sy) (- y2 y1) 0)))
+                                          pattern-transform)))
+                    (final-region      (transform-region
+                                        final-transform design-rectangle))
+                    (final-ink         (transform-region final-transform effective-design)))
+               (with-identity-transformation (medium)
+                 (draw-design medium final-region :ink final-ink))))
+           (prepare-and-draw (transformation)
+             ;; Capture the translation and axis-flipping aspects of
+             ;; TRANSFORMATION.
+             (multiple-value-bind (tx ty)
+                 (transform-position transformation x y)
+               (multiple-value-bind (sx sy)
+                   (transform-distance transformation 1 1)
+                 (draw tx ty (signum sx) (signum sy))))))
     (if (or clipping-region transformation)
-        (with-drawing-options (medium :clipping-region clipping-region :transformation transformation)
-          ;; As I read the spec, the pattern itself is not transformed, so we
-          ;; should draw the full (untransformed) pattern at the tranformed x/y
-          ;; coordinates. This requires we revert to the identity transformation
-          ;; before drawing the rectangle. -Hefner
-          #1=(with-bounding-rectangle* (x1 y1 x2 y2)
-                 (transform-region (medium-transformation medium) region)
-               (declare (ignore x2 y2))
-               (let* ((effective-pattern (effective-transformed-design pattern))
-                      (pattern-tr (compose-transformations
-                                   (make-translation-transformation x1 y1)
-                                   (transformed-design-transformation effective-pattern)))
-                      (pattern-ds (transformed-design-design effective-pattern))
-                      (region (transform-region pattern-tr (make-rectangle* 0 0 width height))))
-                 (with-identity-transformation (medium)
-                   (draw-design medium region :ink (transform-region pattern-tr pattern-ds))))))
-        #1#)))
+        (with-drawing-options (medium :clipping-region clipping-region
+                                      :transformation  transformation)
+          (prepare-and-draw (medium-transformation medium)))
+        (prepare-and-draw (medium-transformation medium)))))
 
 (defun draw-rounded-rectangle* (sheet x1 y1 x2 y2
                                       &rest args &key

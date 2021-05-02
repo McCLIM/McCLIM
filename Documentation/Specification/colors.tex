@@ -195,7 +195,7 @@ the \term{color} \arg{color}. The values are real numbers between 0 and 1
 
 Returns three values, the \arg{intensity}, \arg{hue}, and \arg{saturation}
 components of the \term{color} \arg{color}.  The first value is a real number
-between 0 andn $\sqrt{3}$ (inclusive).  The second and third values are real
+between 0 and $\sqrt{3}$ (inclusive).  The second and third values are real
 numbers between 0 and 1 (inclusive).
 
 
@@ -417,7 +417,7 @@ If a medium's background design is not completely opaque at all points, the
 consequences are unspecified.  Consequently, a drawing plane is always opaque
 and drawing can use simplified color blending that assumes $o_2 = 1$ and
 $o_3 = 1$.  However, \cl{compose-over} must handle a non-opaque background
-correctly. 
+correctly.
 
 Note that these $(r,g,b,o)$ quadruples of real numbers between 0 and 1 are
 mathematical and an implementation need not store information in this form.

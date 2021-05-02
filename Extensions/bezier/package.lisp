@@ -1,4 +1,4 @@
-(defpackage :mcclim-bezier
+(defpackage #:mcclim-bezier
   (:use #:clim #:clim-lisp)
 
   (:import-from #:clim-internals

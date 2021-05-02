@@ -279,8 +279,7 @@ padding.)"
   "Return two values, the height and width of MENU (adjusted for
 maximum size according to `frame')."
   (multiple-value-bind (max-width max-height) (max-x-y frame)
-    (with-bounding-rectangle* (x1 y1 x2 y2) menu
-      (declare (ignore x1 y1))
+    (with-bounding-rectangle* (:x2 x2 :y2 y2) menu
       (values (min x2 max-width)
               (min y2 max-height)))))
 
@@ -343,6 +342,13 @@ maximum size according to `frame')."
   ;; Nothing.
   nil)
 
+(define-gesture-name menu-choose-exit :keyboard :escape)
+
+(defvar *menu-choose-abort-gestures*
+  (list 'menu-choose-exit)
+  "A list of gesture names that serve as additional abort gestures for
+`menu-choose-from-drawer'.")
+
 ;; Spec function.
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
@@ -357,7 +363,9 @@ maximum size according to `frame')."
                                       :y-position y-position)
   ;; The menu is enabled (make visible) after the size is adjusted.
   (enable-menu menu)
-  (let ((*pointer-documentation-output* pointer-documentation))
+  (let ((*pointer-documentation-output* pointer-documentation)
+        (*abort-gestures* (append *menu-choose-abort-gestures*
+                                  *abort-gestures*)))
     (handler-case
         (with-input-context (`(or ,presentation-type blank-area) :override t)
             (object type event)

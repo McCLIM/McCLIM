@@ -1,9 +1,9 @@
-(defpackage :clim-freetype
+(defpackage #:clim-freetype
   (:use :cl)
   (:export #:*enable-autohint*
            #:make-font-replacement-text-style))
 
-(in-package :clim-freetype)
+(in-package #:clim-freetype)
 
 (defclass clx-freetype-port (clim-clx:clx-render-port) ())
 (defclass clx-freetype-medium (clim-clx:clx-render-medium) ())

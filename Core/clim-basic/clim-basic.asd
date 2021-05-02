@@ -1,6 +1,6 @@
 (in-package #:asdf-user)
 
-(defsystem #:clim-basic
+(defsystem "clim-basic"
   :depends-on ("clim-lisp"
                "alexandria"
                "spatial-trees"
@@ -52,9 +52,11 @@
     :components ((:file "text-formatting") ; standard-page-layout
                  (:file "views")           ; stream-default-view
                  (:file "dead-keys")       ; dead-key merging
-                 (:file "stream-output"    :depends-on ("text-formatting" "views"))
-                 (:file "recording"        :depends-on ("stream-output"))
-                 (:file "text-selection"   :depends-on ("recording"))
-                 (:file "encapsulate"      :depends-on ("stream-output" "recording"))
-                 (:file "stream-input"     :depends-on ("encapsulate" "dead-keys"))
-                 (:file "pointer-tracking" :depends-on ("stream-output" "stream-input"))))))
+                 (:file "stream-output"     :depends-on ("text-formatting" "views"))
+                 (:file "recording"         :depends-on ("stream-output"))
+                 (:file "text-selection"    :depends-on ("recording"))
+                 (:file "encapsulate"       :depends-on ("stream-output" "recording"))
+                 (:file "stream-input"      :depends-on ("encapsulate" "dead-keys"))
+                 (:file "gestures")
+                 (:file "standard-gestures" :depends-on ("gestures"))
+                 (:file "pointer-tracking"  :depends-on ("stream-output" "stream-input"))))))

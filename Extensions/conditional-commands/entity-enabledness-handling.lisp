@@ -1,4 +1,4 @@
-(in-package :conditional-commands)
+(in-package #:conditional-commands)
 
 ;;; General note:
 ;;;    The commands in the slots ENABLED-COMMANDS and DISABLE-COMMANDS
@@ -99,7 +99,7 @@
         (format debug-output "~&entity-enabledness-change: change-status: ~a" change-status)
         (format debug-output "~&entity-enabledness-change application-frame: ~a" *application-frame*)
         (force-output))
-      
+
       (when *application-frame*
 
         (let ((enabled-conditional-commands (creating-assoc application-frame *enabled-conditional-commands*))
@@ -134,7 +134,7 @@
               (setf (sheet-enabled-p (find-pane-named *application-frame* sheet)) t)))
           ;; evaluate-this
           (eval evaluate-this))))
-    
+
     entity-enabledness-change))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -164,7 +164,7 @@
              ;; such argument pair matches, the leftmost argument pair is used."
                                              ',(append entity-enabledness-change
                                                        '(:change-status nil))))
-    
+
     (define-application-frame ,name
         ,superclasses
       ,slots
@@ -172,4 +172,3 @@
 
     (defmethod run-frame-top-level :before ((frame ,name) &key)
       (change-entity-enabledness ',change-name #+nil ',name)))))
-

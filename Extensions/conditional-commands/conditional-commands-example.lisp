@@ -1,12 +1,9 @@
-(in-package :cl-user)
-
-(defpackage :conditional-commands-example
+(defpackage #:conditional-commands-example
   (:use :clim :clim-extensions :clim-lisp
         :conditional-commands)
   (:export :run))
 
-
-(in-package :conditional-commands-example)
+(in-package #:conditional-commands-example)
 
 (defvar *incarnation-number* 0)
 

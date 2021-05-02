@@ -12,7 +12,6 @@
 (in-package #:clim-internals)
 
 (defvar *default-frame-manager* nil)
-(defvar *pane-realizer* nil)
 
 ;; FIXME: The spec says the port must "conform to options".  I've added a check
 ;; that the ports match, but we've no protocol for testing the other
@@ -50,6 +49,33 @@
 
 ;;; HEADLESS-FRAME-MANAGER class
 
+(defmethod note-frame-enabled (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-disabled (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-iconified (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-frame-deiconified (fm frame)
+  (declare (ignore fm frame)))
+
+(defmethod note-command-enabled (fm frame new-value)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-command-disabled (fm frame new-value)
+  (declare (ignore fm frame command-name)))
+
+(defmethod note-frame-pretty-name-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-icon-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
+(defmethod note-frame-command-table-changed (fm frame new-value)
+  (declare (ignore fm frame new-value)))
+
 (defclass headless-frame-manager (frame-manager)
   ((frames
     :initform nil
@@ -82,38 +108,6 @@
 (defmethod generate-panes
     ((fm headless-frame-manager) (frame application-frame))
   (declare (ignore fm frame)))
-
-(defmethod note-frame-enabled
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-disabled
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-iconified
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-frame-deiconified
-    ((fm headless-frame-manager) (frame application-frame))
-  (declare (ignore fm frame)))
-
-(defmethod note-command-enabled
-    ((fm headless-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-command-disabled
-    ((fm headless-frame-manager) (frame application-frame) command-name)
-  (declare (ignore fm frame command-name)))
-
-(defmethod note-frame-pretty-name-changed
-    ((fm headless-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
-
-(defmethod note-frame-icon-changed
-    ((fm headless-frame-manager) (frame application-frame) new-value)
-  (declare (ignore fm frame new-value)))
 
 ;;; STANDARD-FRAME-MANAGER class
 
@@ -162,9 +156,19 @@
   (apply #'make-instance (find-concrete-pane-class fm type)
          :frame frame :manager fm :port (port fm) args))
 
+(defmethod make-pane-1
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     (type class) &rest args)
+  (apply #'make-instance type :frame frame :manager fm :port (port fm) args))
+
+(defmethod make-pane-1
+    ((fm standard-frame-manager) (frame standard-application-frame)
+     type &rest args)
+  (apply #'make-pane-1 fm frame (find-concrete-pane-class fm type) args))
+
 (defmethod make-pane-1 :around
     ((fm standard-frame-manager) (frame standard-application-frame)
-     type &rest args &key (event-queue nil evq-p) &allow-other-keys)
+     (type class) &rest args &key (event-queue nil evq-p) &allow-other-keys)
   ;; Default event-queue to the frame event queue.
   (declare (ignore event-queue))
   (if (null evq-p)
@@ -185,10 +189,10 @@
 (defmethod generate-panes :before
     ((fm standard-frame-manager) (frame standard-application-frame))
   (declare (ignore fm))
-  (when (and (frame-panes frame)
-             (eq (sheet-parent (frame-panes frame))
-                 (frame-top-level-sheet frame)))
-    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
+  (when-let ((panes (frame-panes frame)))
+    (let ((top-level-sheet (frame-top-level-sheet frame)))
+      (when (sheet-ancestor-p panes top-level-sheet)
+        (sheet-disown-child top-level-sheet (sheet-child top-level-sheet)))))
   (loop for (nil . pane) in (frame-panes-for-layout frame)
         for parent = (sheet-parent pane)
         if  parent
@@ -206,10 +210,37 @@
       (setf (frame-panes frame) single-pane)))
   (update-frame-pane-lists frame))
 
+(defun maybe-add-auxiliary-panes (frame)
+  (let ((root (frame-panes frame))
+        (menu (slot-value frame 'menu-bar))
+        (pdoc (slot-value frame 'pdoc-bar)))
+    (when menu
+      (setf (frame-menu-bar-pane frame)
+            (cond ((eq menu t)
+                   (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))
+                  ((consp menu)
+                   (make-menu-bar (make-command-table nil :menu menu)
+                                  frame 'hmenu-pane))
+                  (menu
+                   (make-menu-bar menu frame 'hmenu-pane))))
+      (setf menu (frame-menu-bar-pane frame)))
+    (when pdoc
+      (if (frame-pointer-documentation-output frame)
+          (setf pdoc nil)
+          (multiple-value-bind (pane stream)
+              (make-clim-pointer-documentation-pane)
+            (setf pdoc pane
+                  (frame-pointer-documentation-output frame) stream))))
+    (if (or menu pdoc)
+        (make-instance 'vrack-pane
+                       :contents (remove nil (list menu root pdoc))
+                       :port (port frame))
+        root)))
+
 (defmethod generate-panes :after
     ((fm standard-frame-manager) (frame standard-application-frame))
   (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (sheet-adopt-child top-level-sheet (frame-panes frame))
+    (sheet-adopt-child top-level-sheet (maybe-add-auxiliary-panes frame))
     (unless (sheet-parent top-level-sheet)
       (sheet-adopt-child (find-graft :port (port fm)) top-level-sheet))
     ;; Find the size of the new frame
@@ -272,6 +303,16 @@
   ;; new icon somewhere.
   (when-let ((top-level-sheet (frame-top-level-sheet frame)))
     (setf (sheet-icon top-level-sheet) new-value)))
+
+(defmethod note-frame-command-table-changed
+    ((fm standard-frame-manager) (frame standard-application-frame) new-command-table)
+  ;; Update the menu-bar even if its command-table doesn't change to ensure
+  ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
+  (when-let* ((menu-bar (frame-menu-bar-pane frame))
+              (bar-command-table (slot-value frame 'menu-bar)))
+    (if (eq bar-command-table t)
+        (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
+        (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
 
 ;;; Menu frame methods
 

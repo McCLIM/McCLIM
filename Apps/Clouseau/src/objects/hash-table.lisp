@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Places, inspection methods and commands for hash-tables.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -94,22 +93,22 @@
   (with-preserved-cursor-x (stream)
     (formatting-table (stream)
       (formatting-row (stream)
-        (format-place-cells stream object 'reader-place 'hash-table-test
+        (format-place-cells stream object 'deep-reader-place 'hash-table-test
                             :label "Test")
-        #+sbcl (format-place-cells stream object 'reader-place 'sb-ext:hash-table-synchronized-p
+        #+sbcl (format-place-cells stream object 'deep-reader-place 'sb-ext:hash-table-synchronized-p
                                    :label "Synchronized")
-        #+sbcl (format-place-cells stream object 'reader-place 'sb-ext:hash-table-weakness
+        #+sbcl (format-place-cells stream object 'deep-reader-place 'sb-ext:hash-table-weakness
                                    :label "Weakness"))
       (formatting-row (stream)
-        (format-place-cells stream object 'reader-place 'hash-table-count
+        (format-place-cells stream object 'deep-reader-place 'hash-table-count
                             :label "Count" :object-style :hash-table-count)
-        (format-place-cells stream object 'reader-place 'hash-table-size
+        (format-place-cells stream object 'deep-reader-place 'hash-table-size
                             :label "Size" :object-style :hash-table-size))
       (formatting-row (stream)
-        (format-place-cells stream object 'reader-place 'hash-table-rehash-size
+        (format-place-cells stream object 'deep-reader-place 'hash-table-rehash-size
                             :label "Rehash Size"
                             :object-style :hash-table-rehash-size)
-        (format-place-cells stream object 'reader-place 'hash-table-rehash-threshold
+        (format-place-cells stream object 'deep-reader-place 'hash-table-rehash-threshold
                             :label "Rehash Threshold"
                             :object-style :hash-table-rehash-threshold))))
 

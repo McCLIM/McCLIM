@@ -90,15 +90,20 @@
                   (maybe-region medium)
                   (transform-region (maybe-transformation medium)
                                     (make-rectangle* left top right bottom)))))
-    (clim:with-bounding-rectangle* (min-x min-y max-x max-y) region
-      (if filled
-          (%medium-fill-image medium min-x min-y (- max-x min-x) (- max-y min-y))
-          (let ((path (make-path left top)))
-            (line-to path right top)
-            (line-to path right bottom)
-            (line-to path left bottom)
-            (close-path path)
-            (%medium-stroke-paths medium (list path)))))))
+    (flet ((path ()
+             (let ((path (make-path left top)))
+               (line-to path right top)
+               (line-to path right bottom)
+               (line-to path left bottom)
+               (close-path path)
+               path)))
+      (cond ((not filled)
+             (%medium-stroke-paths medium (list (path))))
+            ((rectanglep region)
+             (with-bounding-rectangle* (x1 y1 :width w :height h) region
+               (%medium-fill-image medium x1 y1 w h)))
+            (t
+             (%medium-fill-paths medium (list (path))))))))
 
 (defmethod medium-draw-polygon* ((medium render-medium-mixin) coord-seq closed filled)
   (let ((x (elt coord-seq 0))
@@ -121,10 +126,9 @@
     (%medium-stroke-paths medium (list path))))
 
 (defmethod medium-draw-point* ((medium render-medium-mixin) x y)
-  (let ((path (arc x y
-                   (max 1 (/ (line-style-thickness (medium-line-style medium)) 2))
-                   pi
-                   (+ pi (* 2 pi)))))
+  (let* ((line-style (medium-line-style medium))
+         (thickness (line-style-effective-thickness line-style medium))
+         (path (arc x y (max 1 (/ thickness 2)) pi (+ pi (* 2 pi)))))
     (%medium-fill-paths medium (list path))))
 
 (defmethod clime:medium-draw-circle* ((medium render-medium-mixin)

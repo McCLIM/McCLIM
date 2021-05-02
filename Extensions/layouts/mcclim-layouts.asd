@@ -1,4 +1,3 @@
-
 #| dummy system to make Quicklisp happy |#
 (defsystem #:mcclim-layouts)
 

@@ -1,65 +1,51 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;           Robert Strandh (strandh@labri.u-bordeaux.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Robert Strandh <strandh@labri.u-bordeaux.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-(in-package :clim-internals)
-
-;;; ------------------------------------------------------------------------------------------
-;;;  Events
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Events
 ;;;
 
-;; The event objects are defined similar to the CLIM event hierarchy.
-;;
-;; Class hierarchy as in CLIM:
-;;
-;;   event
-;;     device-event
-;;       keyboard-event
-;;         key-press-event
-;;         key-release-event
-;;       pointer-event
-;;         pointer-button-event
-;;           pointer-button-press-event
-;;           pointer-button-release-event
-;;           pointer-button-hold-event
-;;           pointer-scroll-event
-;;         pointer-motion-event
-;;           pointer-boundary-event
-;;             pointer-enter-event
-;;               pointer-grab-enter-event
-;;               pointer-ungrab-enter-event
-;;             pointer-exit-event
-;;               pointer-grab-leave-event
-;;               pointer-ungrab-leave-event
-;;     window-event
-;;       window-configuration-event
-;;       window-repaint-event
-;;       window-map-event
-;;       window-unmap-event
-;;     window-manager-event
-;;       window-manager-delete-event
-;;       window-manager-focus-event
-;;     timer-event
-;;
+(in-package #:clim-internals)
+
+;;; The event objects are defined similar to the CLIM event hierarchy.
+;;;
+;;; Class hierarchy as in CLIM:
+;;;
+;;;   event
+;;;     device-event
+;;;       keyboard-event
+;;;         key-press-event
+;;;         key-release-event
+;;;       pointer-event
+;;;         pointer-button-event
+;;;           pointer-button-press-event
+;;;           pointer-button-release-event
+;;;           pointer-button-hold-event
+;;;           pointer-scroll-event
+;;;         pointer-motion-event
+;;;           pointer-boundary-event
+;;;             pointer-enter-event
+;;;               pointer-grab-enter-event
+;;;               pointer-ungrab-enter-event
+;;;             pointer-exit-event
+;;;               pointer-grab-leave-event
+;;;               pointer-ungrab-leave-event
+;;;     window-event
+;;;       window-configuration-event
+;;;       window-repaint-event
+;;;       window-map-event
+;;;       window-unmap-event
+;;;     window-manager-event
+;;;       window-manager-delete-event
+;;;       window-manager-focus-event
+;;;     timer-event
 
 (defvar *last-timestamp* 0)
 (defvar *last-timestamp-lock* (make-lock))
@@ -178,7 +164,7 @@
    (x :reader pointer-event-native-x)
    (y :reader pointer-event-native-y)
    (graft-x :reader pointer-event-native-graft-x)
-   (graft-y :reader pointer-event-native-graft-y) ))
+   (graft-y :reader pointer-event-native-graft-y)))
 
 (defmethod print-object ((event pointer-event) stream)
   (print-unreadable-object (event stream :type t :identity nil)
@@ -190,12 +176,12 @@
   ((button :initarg :button
            :reader pointer-event-button)))
 
-(define-event-class pointer-button-press-event          (pointer-button-event) ())
-(define-event-class pointer-button-release-event        (pointer-button-event) ())
-(define-event-class pointer-button-hold-event           (pointer-button-event) ())
-(define-event-class pointer-button-click-event          (pointer-button-event) ())
-(define-event-class pointer-button-double-click-event   (pointer-button-event) ())
-(define-event-class pointer-button-click-and-hold-event (pointer-button-event) ())
+(define-event-class pointer-button-press-event   (pointer-button-event) ())
+(define-event-class pointer-button-release-event (pointer-button-event) ())
+(define-event-class pointer-button-hold-event    (pointer-button-event) ())
+(define-event-class pointer-click-event          (pointer-button-event) ())
+(define-event-class pointer-double-click-event   (pointer-button-event) ())
+(define-event-class pointer-click-and-hold-event (pointer-button-event) ())
 
 (define-event-class pointer-scroll-event (pointer-button-event)
   ((delta-x :initform 0 :initarg :delta-x
@@ -271,9 +257,7 @@
 (define-event-class window-manager-focus-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
-  ((token
-    :initarg :token
-    :reader  event-token)))
+  ())
 
 ;;; Constants dealing with events
 
@@ -292,7 +276,6 @@
 (defconstant +hyper-key+             #x1000)
 (defconstant +alt-key+               #x2000)
 
-;; Key names are a symbol whose value is port-specific. Key names
-;; corresponding to the set of standard characters (such as the
-;; alphanumerics) will be a symbol in the keyword package.
-;; ???!
+;; Key names are a symbol whose value is port-specific. Key names corresponding
+;; to the set of standard characters (such as the alphanumerics) will be a
+;; symbol in the keyword package.  ???!

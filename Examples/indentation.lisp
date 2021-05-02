@@ -1,4 +1,4 @@
-(cl:in-package #:clim-demo)
+(in-package #:clim-demo)
 
 (define-application-frame indentation ()
   ()

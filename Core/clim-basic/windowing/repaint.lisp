@@ -1,71 +1,18 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com),
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 20014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-;;;; The Repaint Protocol.
-
-(in-package :clim-internals)
-
-;;; Delayed repainting mechanism
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; A region of code the execution of which will result in multiple
-;;; redundant repaints of one or more sheets can be surrounded in
-;;; WITH-DELAYED-DISPATCH-REPAINT. In that case, repaints requested in
-;;; the body code are not processed immediately but are recorded for
-;;; later. When exiting from the WITH-DELAYED-DISPATCH-REPAINT call,
-;;; all recorded repaints are merged (i.e. for each involved sheet,
-;;; the effective repaint region is the union of all recorded repaint
-;;; regions) and executed.
+;;; The Repaint Protocol.
+;;;
 
-(defvar *delayed-repaints* nil)
-
-(defmethod repaint-sheet :around ((sheet basic-sheet) region)
-  (declare (ignore region))
-  (when (sheet-viewable-p sheet)
-    (if-let ((delayed-repaints *delayed-repaints*))
-      (push region (gethash sheet delayed-repaints '()))
-      (call-next-method))))
-
-(defun invoke-with-inhibited-repaint-sheet (continuation)
-  ;; If *DELAYED-REPAINTS* is non-NIL, there must be a surrounding
-  ;; call of this function, so we don't have to do anything.
-  (if *delayed-repaints*
-      (funcall continuation)
-      (let ((delayed-repaints (make-hash-table :test #'eq)))
-        ;; REPAINT-SHEET calls in continuation populate DELAYED-REPAINTS.
-        (let ((*delayed-repaints* delayed-repaints))
-          (funcall continuation))
-        ;; Merge and execute recorded repaint requests.
-        (maphash (lambda (sheet regions)
-                   ;; FIXME calling repaint-sheet confuses drei when the
-                   ;; interactor doesn't have a mirror. -- jd 2021-03-19
-                   #+ (or) (repaint-sheet sheet (reduce #'region-union regions))
-                   #- (or) (dispatch-repaint sheet (reduce #'region-union regions)))
-                 delayed-repaints))))
-
-(defmacro with-inhibited-repaint-sheet (() &body body)
-  (gen-invoke-trampoline
-   'invoke-with-inhibited-repaint-sheet '() '() body))
+(in-package #:clim-internals)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -80,6 +27,12 @@
 (defmethod handle-repaint ((sheet basic-sheet) region)
   (declare (ignore region))
   nil)
+
+(defmethod repaint-sheet :around ((sheet basic-sheet) region)
+  (declare (ignore region))
+  (when (and (sheet-mirror sheet)
+             (sheet-viewable-p sheet))
+    (call-next-method)))
 
 (defmethod handle-repaint :around ((sheet sheet-with-medium-mixin) region)
   (typecase region
@@ -239,41 +192,38 @@
 (defmethod (setf sheet-region) :around (region (sheet basic-sheet))
   (let ((old-region (sheet-region sheet)))
     (unless (region-equal region old-region)
-      (with-inhibited-repaint-sheet ()
-        (call-next-method)
-        (when (sheet-viewable-p sheet)
-          (let* ((tr (sheet-transformation sheet))
-                 (r1 (rounded-bounding-rectangle (transform-region tr old-region)))
-                 (r2 (rounded-bounding-rectangle (transform-region tr region))))
-            (repaint-sheet (sheet-parent sheet)
-                           (region-union r1 r2))))))))
+      (call-next-method)
+      (when (sheet-viewable-p sheet)
+        (let* ((tr (sheet-transformation sheet))
+               (r1 (rounded-bounding-rectangle (transform-region tr old-region)))
+               (r2 (rounded-bounding-rectangle (transform-region tr region))))
+          (repaint-sheet (sheet-parent sheet)
+                         (region-union r1 r2)))))))
 
 (defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
   (let ((old-transformation (sheet-transformation sheet)))
     (unless (transformation-equal transformation old-transformation)
-      (with-inhibited-repaint-sheet ()
-        (call-next-method)
-        (when (sheet-viewable-p sheet)
-          (let* ((region (sheet-region sheet))
-                 (new-transformation (sheet-transformation sheet))
-                 (new-region (transform-region new-transformation region))
-                 (old-region (transform-region old-transformation region)))
-            (repaint-sheet (sheet-parent sheet)
-                           (region-union
-                            (rounded-bounding-rectangle new-region)
-                            (rounded-bounding-rectangle old-region)))))))))
-
-(defun %set-sheet-region-and-transformation (sheet region transformation)
-  (let ((old-transformation (sheet-transformation sheet))
-        (old-region (sheet-region sheet)))
-    (with-inhibited-repaint-sheet ()
-      (setf (sheet-region sheet) region
-            (sheet-transformation sheet) transformation)
+      (call-next-method)
       (when (sheet-viewable-p sheet)
-        (let ((new-region (transform-region (sheet-transformation sheet)
-                                            (sheet-region sheet)))
-              (old-region (transform-region old-transformation old-region)))
+        (let* ((region (sheet-region sheet))
+               (new-transformation (sheet-transformation sheet))
+               (new-region (transform-region new-transformation region))
+               (old-region (transform-region old-transformation region)))
           (repaint-sheet (sheet-parent sheet)
                          (region-union
                           (rounded-bounding-rectangle new-region)
                           (rounded-bounding-rectangle old-region))))))))
+
+(defun %set-sheet-region-and-transformation (sheet region transformation)
+  (let ((old-transformation (sheet-transformation sheet))
+        (old-region (sheet-region sheet)))
+    (setf (sheet-region sheet) region
+          (sheet-transformation sheet) transformation)
+    (when (sheet-viewable-p sheet)
+      (let ((new-region (transform-region (sheet-transformation sheet)
+                                          (sheet-region sheet)))
+            (old-region (transform-region old-transformation old-region)))
+        (repaint-sheet (sheet-parent sheet)
+                       (region-union
+                        (rounded-bounding-rectangle new-region)
+                        (rounded-bounding-rectangle old-region)))))))

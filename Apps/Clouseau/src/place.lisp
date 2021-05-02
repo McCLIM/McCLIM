@@ -8,7 +8,6 @@
 ;;;
 ;;; Basic classes implementing the place protocol in different
 ;;; ways. Intended as superclasses for specific place classes.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -75,9 +74,7 @@
          t)))
 
 (defmethod supportsp ((place basic-place) (operation (eql 'setf)))
-  (if-let ((parent (parent place)))
-    (supportsp parent 'modify-descendants)
-    t))
+  t)
 
 (defmethod supportsp :around ((place     basic-place)
                               (operation (eql 'remove-value)))
@@ -99,6 +96,15 @@
   (when-let ((parent (parent place)))
     (note-changed parent)))
 
+;;; `read-only-descendants-mixin'
+
+(defclass read-only-descendants-mixin ()
+  ())
+
+(defmethod supportsp ((place     read-only-descendants-mixin)
+                      (operation (eql 'modify-descendants)))
+  nil)
+
 ;;; `read-only-place'
 
 (defclass read-only-place (basic-place)
@@ -109,12 +115,9 @@
 
 ;;; `deep-read-only-place'
 
-(defclass deep-read-only-place (read-only-place)
+(defclass deep-read-only-place (read-only-descendants-mixin
+                                read-only-place)
   ())
-
-(defmethod supportsp ((place     read-only-place)
-                      (operation (eql 'modify-descendants)))
-  nil)
 
 ;;; `sequence-element-place'
 

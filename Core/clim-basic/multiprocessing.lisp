@@ -1,19 +1,20 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
-;;;   Title: CLIM-2, Chapter 32.2 Multi-processing (BT)
-;;; Created: 2016-01-27
-;;;  Author: Daniel Kochmański <daniel@turtleware.eu>
-;;; License: LGPL-2.1
 ;;; ---------------------------------------------------------------------------
-;;; (c) copyright 2016 by Daniel Kochmański
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) Copyright 2016 by Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; CLIM-2, Chapter 32.2 Multi-processing (using a library bordeaux-threads).
+;;;
+;;; Multiprocessing non-portable stuff (implemented using bordeaux-threads where
+;;; feasible). BT has also limited support for single-threaded
+;;; implementations. Supersedes MP-NIL backend.
+;;;
 
-
-;;;; Multiprocessing non-portable stuff (implemented using
-;;;; bordeaux-threads where feasible). BT has also limited support for
-;;;; single-threaded implementations. Supersedes MP-NIL backend.
+(in-package #:clim-internals)
 
-(in-package :clim-internals)
-
-
 ;;; B.2 Multi-processing
 ;;;
 ;;; Most Lisp implementations provide some form of
@@ -189,7 +190,7 @@ equivalent to progn."
 
 
 ;;; O.0 Conditionals
-;;; 
+;;;
 ;;; These functions aren't in the CLIM specification but event queue uses them.
 
 (defun make-condition-variable ()

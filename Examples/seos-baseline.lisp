@@ -1,4 +1,3 @@
-
 (in-package #:clim-demo)
 
 (define-application-frame seos-baseline ()
@@ -34,8 +33,7 @@
   (show-line pane :normal "Last " :huge "line " :normal "bam bam")
 
   (terpri pane)
-  (with-bounding-rectangle* (x1 y1 x2 y2) (clime:stream-page-region pane)
-    (declare (ignore y1 y2))
+  (with-bounding-rectangle* (:x1 x1 :x2 x2) (clime:stream-page-region pane)
     (let ((y (nth-value 1 (stream-cursor-position pane))))
       (draw-line* pane x1 y x2 y :ink +blue+ :line-dashes t)))
   (terpri pane)

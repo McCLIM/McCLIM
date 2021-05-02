@@ -1,26 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2018 by Daniel Kochmanski (daniel@turtleware.eu)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998,1999,2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2018 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; Input Protocol Classes
 
@@ -665,9 +655,3 @@ predicate yields true. Time of wait-function call depends on a port.")
 
 (defclass clim-sheet-input-mixin (standard-sheet-input-mixin)
   ())
-
-;;; Convenience function.
-
-(defun schedule-timer-event (sheet token delay)
-  (let ((event (make-instance 'timer-event :token token :sheet sheet)))
-    (schedule-event sheet event delay)))

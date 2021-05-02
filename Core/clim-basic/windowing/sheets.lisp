@@ -1,35 +1,20 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com),
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2001 by
-;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The sheet protocol
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defgeneric raise-sheet-internal (sheet parent))
 (defgeneric bury-sheet-internal (sheet parent))
@@ -108,26 +93,25 @@
 
 (defclass basic-sheet (sheet)
   ((region :type region
-	   :initarg :region
-	   :initform (make-bounding-rectangle 0 0 100 100)
-	   :accessor sheet-region
-           :writer %%set-sheet-region)
+           :initarg :region
+           :initform (make-bounding-rectangle 0 0 100 100)
+           :accessor sheet-region)
    (native-transformation :type (or null transformation)
-			  :initform nil
+                          :initform nil
                           :writer %%set-sheet-native-transformation
                           :reader %%sheet-native-transformation)
    (native-region :type (or null region)
                   :initarg :native-region
-		  :initform nil)
+                  :initform nil)
    (device-transformation :type (or null transformation)
                           :initform nil)
    (device-region :type (or null region)
-		  :initform nil)
+                  :initform nil)
    (pointer-cursor :accessor sheet-pointer-cursor
                    :initarg  :pointer-cursor
                    :initform :default)
    (enabled-p :type boolean
-	      :initarg :enabled-p
+              :initarg :enabled-p
               :initform t
               :accessor sheet-enabled-p)))
 
@@ -169,10 +153,10 @@
   (delete-if-not #'sheet-enabled-p (copy-list (sheet-children sheet))))
 
 (defmethod sheet-ancestor-p ((sheet basic-sheet)
-			     (putative-ancestor sheet))
+                             (putative-ancestor sheet))
   (or (eq sheet putative-ancestor)
       (and (sheet-parent sheet)
-	   (sheet-ancestor-p (sheet-parent sheet) putative-ancestor))))
+           (sheet-ancestor-p (sheet-parent sheet) putative-ancestor))))
 
 (defmethod raise-sheet ((sheet basic-sheet))
   (error 'sheet-is-not-child))
@@ -198,12 +182,12 @@
 
 (defmethod sheet-occluding-sheets ((sheet basic-sheet) (child sheet))
   (labels ((fun (l)
-		(cond ((eq (car l) child) '())
-		      ((and (sheet-enabled-p (car l))
+                (cond ((eq (car l) child) '())
+                      ((and (sheet-enabled-p (car l))
                             (region-intersects-region-p
                              (sheet-region (car l)) (sheet-region child)))
-		       (cons (car l) (fun (cdr l))))
-		      (t (fun (cdr l))))))
+                       (cons (car l) (fun (cdr l))))
+                      (t (fun (cdr l))))))
     (fun (sheet-children sheet))))
 
 (defmethod map-over-sheets (function (sheet basic-sheet))
@@ -330,41 +314,41 @@
 
 (defmethod child-containing-position ((sheet basic-sheet) x y)
   (loop for child in (sheet-children sheet)
-	do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
-	     (when (and (sheet-enabled-p child)
-			(region-contains-position-p (sheet-region child) tx ty))
-	       (return child)))))
+        do (multiple-value-bind (tx ty) (map-sheet-position-to-child child x y)
+             (when (and (sheet-enabled-p child)
+                        (region-contains-position-p (sheet-region child) tx ty))
+               (return child)))))
 
 (defmethod children-overlapping-region ((sheet basic-sheet) (region region))
   (loop for child in (sheet-children sheet)
-	if (and (sheet-enabled-p child)
-		(region-intersects-region-p
-		 region
-		 (transform-region (sheet-transformation child)
-				   (sheet-region child))))
-	  collect child))
+        if (and (sheet-enabled-p child)
+                (region-intersects-region-p
+                 region
+                 (transform-region (sheet-transformation child)
+                                   (sheet-region child))))
+          collect child))
 
 (defmethod children-overlapping-rectangle* ((sheet basic-sheet) x1 y1 x2 y2)
   (children-overlapping-region sheet (make-rectangle* x1 y1 x2 y2)))
 
 (defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor (eql nil)))
   (cond ((sheet-parent sheet)
-	 (compose-transformations (sheet-transformation sheet)
-				  (sheet-delta-transformation
-				   (sheet-parent sheet) ancestor)))
-	(t +identity-transformation+)))
+         (compose-transformations (sheet-transformation sheet)
+                                  (sheet-delta-transformation
+                                   (sheet-parent sheet) ancestor)))
+        (t +identity-transformation+)))
 
 (defmethod sheet-delta-transformation ((sheet basic-sheet) (ancestor sheet))
   (cond ((eq sheet ancestor) +identity-transformation+)
-	((sheet-parent sheet)
-	 (compose-transformations (sheet-transformation sheet)
-				  (sheet-delta-transformation
-				   (sheet-parent sheet) ancestor)))
-	(t (error 'sheet-is-not-ancestor))))
+        ((sheet-parent sheet)
+         (compose-transformations (sheet-transformation sheet)
+                                  (sheet-delta-transformation
+                                   (sheet-parent sheet) ancestor)))
+        (t (error 'sheet-is-not-ancestor))))
 
 (defmethod sheet-allocated-region ((sheet basic-sheet) (child sheet))
   (reduce #'region-difference
-	  (mapcar #'(lambda (child)
+          (mapcar #'(lambda (child)
                       (transform-region (sheet-transformation child)
                                         (sheet-region child)))
                   (cons child (sheet-occluding-sheets sheet child)))))
@@ -375,14 +359,14 @@
 (defmethod sheet-mirrored-ancestor ((sheet basic-sheet))
   (let ((parent (sheet-parent sheet)))
     (if (null parent)
-	nil
-	(sheet-mirrored-ancestor parent))))
+        nil
+        (sheet-mirrored-ancestor parent))))
 
 (defmethod sheet-mirror ((sheet basic-sheet))
   (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
     (if (null mirrored-ancestor)
-	nil
-	(sheet-direct-mirror mirrored-ancestor))))
+        nil
+        (sheet-direct-mirror mirrored-ancestor))))
 
 (defmethod graft ((sheet basic-sheet))
   nil)
@@ -419,8 +403,8 @@
   (with-slots (native-transformation) sheet
     (unless native-transformation
       (setf native-transformation
-	    (if-let ((parent (sheet-parent sheet)))
-	      (compose-transformations
+            (if-let ((parent (sheet-parent sheet)))
+              (compose-transformations
                (sheet-native-transformation parent)
                (sheet-transformation sheet))
               +identity-transformation+)))
@@ -432,14 +416,14 @@
   (with-slots (native-region) sheet
     (unless native-region
       (let ((this-native-region (transform-region
-				 (sheet-native-transformation sheet)
-				 (sheet-region sheet)))
-	    (parent (sheet-parent sheet)))
-	(setf native-region
-	      (if (null parent)
-		  this-native-region
-		  (region-intersection this-native-region
-				       (sheet-native-region parent))))))
+                                 (sheet-native-transformation sheet)
+                                 (sheet-region sheet)))
+            (parent (sheet-parent sheet)))
+        (setf native-region
+              (if (null parent)
+                  this-native-region
+                  (region-intersection this-native-region
+                                       (sheet-native-region parent))))))
     native-region))
 
 (defmethod sheet-device-transformation ((sheet basic-sheet))
@@ -529,8 +513,8 @@
   (setf (sheet-parent child) sheet))
 
 (defmethod sheet-disown-child :after (sheet
-				      (child sheet-parent-mixin)
-				      &key (errorp t))
+                                      (child sheet-parent-mixin)
+                                      &key (errorp t))
   (declare (ignore sheet errorp))
   (setf (sheet-parent child) nil))
 
@@ -591,17 +575,17 @@
   (and (sheet-child sheet) (list (sheet-child sheet))))
 
 (defmethod sheet-adopt-child :before ((sheet sheet-single-child-mixin)
-				      (child sheet-parent-mixin))
+                                      (child sheet-parent-mixin))
   (when (sheet-child sheet)
     (error 'sheet-supports-only-one-child :sheet sheet)))
 
 (defmethod sheet-adopt-child ((sheet sheet-single-child-mixin)
-			      (child sheet-parent-mixin))
+                              (child sheet-parent-mixin))
   (setf (sheet-child sheet) child))
 
 (defmethod sheet-disown-child ((sheet sheet-single-child-mixin)
-			       (child sheet-parent-mixin)
-			       &key (errorp t))
+                               (child sheet-parent-mixin)
+                               &key (errorp t))
   (declare (ignore errorp))
   (setf (sheet-child sheet) nil))
 
@@ -622,22 +606,22 @@
   ((children :initform nil :accessor sheet-children)))
 
 (defmethod sheet-adopt-child ((sheet sheet-multiple-child-mixin)
-			      (child sheet-parent-mixin))
+                              (child sheet-parent-mixin))
   (push child (sheet-children sheet)))
 
 (defmethod sheet-disown-child ((sheet sheet-multiple-child-mixin)
-			       (child sheet-parent-mixin)
-			       &key (errorp t))
+                               (child sheet-parent-mixin)
+                               &key (errorp t))
   (declare (ignore errorp))
   (setf (sheet-children sheet) (delete child (sheet-children sheet))))
 
 (defmethod raise-sheet-internal (sheet (parent sheet-multiple-child-mixin))
   (setf (sheet-children parent)
-	(cons sheet (delete sheet (sheet-children parent)))))
+        (cons sheet (delete sheet (sheet-children parent)))))
 
 (defmethod bury-sheet-internal (sheet (parent sheet-multiple-child-mixin))
   (setf (sheet-children parent)
-	(append (delete sheet (sheet-children parent)) (list  sheet))))
+        (append (delete sheet (sheet-children parent)) (list  sheet))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

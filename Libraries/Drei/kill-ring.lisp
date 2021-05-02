@@ -1,28 +1,16 @@
-;;; -*- Mode: Lisp; Package: DREI-KILL-RING -*-
-
-;;;  (c) copyright 2004 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2004 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2006-2008 Troels Henriksen <thenriksen@common-lisp.net>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Kill ring system
 
-;;; kill ring system
-
-(in-package :drei-kill-ring)
+(in-package #:drei-kill-ring)
 
 (defgeneric kill-ring-chain (ring)
   (:documentation "Return the cursorchain associated with the
@@ -33,31 +21,31 @@ kill ring `ring'."))
 kill ring."))
 
 (defclass kill-ring ()
-  ((max-size :type (integer 5 *) ;5 element minimum from flexichain protocol 
-	     :initarg :max-size
+  ((max-size :type (integer 5 *) ; 5 element minimum from flexichain protocol
+             :initarg :max-size
              :documentation "The limitation placed upon the
 number of elements held by the kill ring.  Once the maximum size
 has been reached, older entries must first be removed before new
 ones can be added. When altered, any surplus elements will be
 silently dropped.")
    (cursorchain :type standard-cursorchain
-		:accessor kill-ring-chain
-		:initform (make-instance 'standard-cursorchain)
+                :accessor kill-ring-chain
+                :initform (make-instance 'standard-cursorchain)
                 :documentation "The cursorchain associated with
 the kill ring.")
    (yankpoint   :type left-sticky-flexicursor
-	        :accessor kill-ring-cursor
+                :accessor kill-ring-cursor
                 :documentation "The flexicursor associated with
 the kill ring.")
    (append-next-p :type boolean :initform nil
-		  :accessor append-next-p))
+                  :accessor append-next-p))
   (:documentation "A class for all kill rings"))
 
 (define-condition empty-kill-ring (simple-error)
   ()
   (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (format stream "The kill ring is empty")))
+             (declare (ignore condition))
+             (format stream "The kill ring is empty")))
   (:documentation "This condition is signaled whenever a yank
   operation is performed on an empty kill ring."))
 
@@ -130,19 +118,19 @@ of type `empty-kill-ring' is signalled."))
       (setf (slot-value kr 'max-size) size))
   (let ((len (kill-ring-length kr)))
     (if (> len size)
-	(loop for n from 1 to (- len size)
-	      do (pop-end (kill-ring-chain kr))))))
+        (loop for n from 1 to (- len size)
+              do (pop-end (kill-ring-chain kr))))))
 
 (defmethod reset-yank-position ((kr kill-ring))
   (setf (cursor-pos (kill-ring-cursor kr)) 0)
-  t) 
+  t)
 
 (defmethod rotate-yank-position ((kr kill-ring) &optional (times 1))
     (if (> (kill-ring-length kr) 0)
-	(let* ((curs (kill-ring-cursor kr))
-	       (pos (mod (+ times (cursor-pos curs))
-			 (kill-ring-length kr))))
-	  (setf (cursor-pos curs) pos))))
+        (let* ((curs (kill-ring-cursor kr))
+               (pos (mod (+ times (cursor-pos curs))
+                         (kill-ring-length kr))))
+          (setf (cursor-pos curs) pos))))
 
 (defun push-start-and-copy (chain vector)
   (push-start chain vector)
@@ -153,37 +141,37 @@ of type `empty-kill-ring' is signalled."))
 (defmethod kill-ring-standard-push ((kr kill-ring) vector)
   (check-type vector vector)
   (cond ((append-next-p kr)
-	 (kill-ring-concatenating-push kr vector)
-	 (setf (append-next-p kr) nil))
-	(t (let ((chain (kill-ring-chain kr)))
-	     (if (>= (kill-ring-length kr)
-		     (kill-ring-max-size kr))
-	         (progn
-		   (pop-end chain)
-		   (push-start-and-copy chain vector))
-	         (push-start-and-copy chain vector)))
-	   (reset-yank-position kr))))
+         (kill-ring-concatenating-push kr vector)
+         (setf (append-next-p kr) nil))
+        (t (let ((chain (kill-ring-chain kr)))
+             (if (>= (kill-ring-length kr)
+                     (kill-ring-max-size kr))
+                 (progn
+                   (pop-end chain)
+                   (push-start-and-copy chain vector))
+                 (push-start-and-copy chain vector)))
+           (reset-yank-position kr))))
 
 (defmethod kill-ring-concatenating-push ((kr kill-ring) vector)
   (check-type vector vector)
   (let ((chain (kill-ring-chain kr)))
     (if (zerop (kill-ring-length kr))
-	(push-start-and-copy chain vector)
+        (push-start-and-copy chain vector)
         (push-start-and-copy chain
-		             (concatenate 'vector
-				          (pop-start chain)
-				          vector)))
+                             (concatenate 'vector
+                                          (pop-start chain)
+                                          vector)))
     (reset-yank-position kr)))
 
 (defmethod kill-ring-reverse-concatenating-push ((kr kill-ring) vector)
   (check-type vector vector)
   (let ((chain (kill-ring-chain kr)))
     (if (zerop (kill-ring-length kr))
-	(push-start-and-copy chain vector)
-	(push-start-and-copy chain
-		             (concatenate 'vector
-				          vector
-				          (pop-start chain))))
+        (push-start-and-copy chain vector)
+        (push-start-and-copy chain
+                             (concatenate 'vector
+                                          vector
+                                          (pop-start chain))))
     (reset-yank-position kr)))
 
 (defmethod kill-ring-yank ((kr kill-ring) &optional (reset nil))

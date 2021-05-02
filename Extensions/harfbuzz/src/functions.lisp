@@ -1,7 +1,7 @@
-(in-package :mcclim-harfbuzz)
+(in-package #:mcclim-harfbuzz)
 
 (cffi:define-foreign-library libharfbuzz
-  (:darwin "libharfbuzz.dylib")                             
+  (:darwin "libharfbuzz.dylib")
   (:unix "libharfbuzz.so"))
 
 (cffi:use-foreign-library libharfbuzz)

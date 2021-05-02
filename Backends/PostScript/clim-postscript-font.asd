@@ -1,3 +1,5 @@
+(in-package #:asdf-user)
+
 (defsystem "clim-postscript-font"
   :depends-on ("clim-basic"
                "mcclim-backend-common") ; for font abstractions

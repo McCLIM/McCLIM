@@ -1,3 +1,17 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 1998 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Bounding rectangle class and protocol implementation.
+;;;
+
 (in-package #:climi)
 
 ;;; 4.1 Bounding rectangles
@@ -30,33 +44,77 @@
 
 ;;; 4.1.2 Bounding Rectangle Convenience Functions
 
-(defmacro with-bounding-rectangle* ((min-x min-y max-x max-y) region &body body)
-  `(multiple-value-bind (,min-x ,min-y ,max-x ,max-y) (bounding-rectangle* ,region)
-     ,@body))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun generate-rectangle-bindings (variables coordinate-expressions body)
+    (destructuring-bind (&key x1 y1 x2 y2 width height center-x center-y)
+        variables
+      (let ((bindings '()))
+        (macrolet ((bind (name expression)
+                     `(let ((name (or ,name (gensym ,(string name)))))
+                        (push (cons ',name name) bindings)
+                        (unless (eq name ,expression)
+                          (list (list name ,expression)))))
+                   (ref (name)
+                     `(alexandria:assoc-value bindings ',name)))
+          `(let* (,@(when (or x1 width  center-x)
+                      (bind x1 (nth 0 coordinate-expressions)))
+                  ,@(when (or y1 height center-y)
+                      (bind y1 (nth 1 coordinate-expressions)))
+                  ,@(when (or x2 width  center-x)
+                      (bind x2 (nth 2 coordinate-expressions)))
+                  ,@(when (or y2 height center-y)
+                      (bind y2 (nth 3 coordinate-expressions)))
+                  ,@(when (or width)
+                      (bind width  `(- ,(ref x2) ,(ref x1))))
+                  ,@(when (or height)
+                      (bind height `(- ,(ref y2) ,(ref y1))))
+                  ,@(when center-x
+                      (bind center-x `(/ (+ ,(ref x1) ,(ref x2)) 2)))
+                  ,@(when center-y
+                      (bind center-y `(/ (+ ,(ref y1) ,(ref y2)) 2))))
+             (declare (type coordinate ,@(map 'list #'cdr bindings)))
+             ,@body))))))
 
-(defmethod bounding-rectangle-position (bounding-rectangle)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
-    (declare (ignore x2 y2))
-    (values x1 y1)))
+;;; Compatible extension compared to standard.
+;;; - Like in the standard macro, VARIABLES before first keyword are
+;;;   positional and correspond to X1, Y1, X2, Y2. However:
+;;;   - Fewer than all four can be provided.
+;;;   - Any of the positional variables can be `nil' indicating that
+;;;     the binding should not be established.
+;;; - The first keyword initiates the keyword part of the variable
+;;;   list (can start after between zero and four positional
+;;;   variables).
+(defmacro with-bounding-rectangle* ((&rest variables) region &body body)
+  (let* ((index      (position-if #'keywordp variables))
+         (positional (subseq variables 0 index))
+         (keyword    (when index
+                       (subseq variables index))))
+    (destructuring-bind (&key (x1 (nth 0 positional))
+                              (y1 (nth 1 positional))
+                              (x2 (nth 2 positional))
+                              (y2 (nth 3 positional))
+                              width height center-x center-y)
+        keyword
+      (declare (ignore width height center-x center-y))
+      (alexandria:with-unique-names (x1* y1* x2* y2*)
+        `(multiple-value-bind (,x1* ,y1* ,x2* ,y2*) (bounding-rectangle* ,region)
+           (declare (type coordinate ,x1* ,y1* ,x2* ,y2*)
+                    (ignorable ,x1* ,y1* ,x2* ,y2*))
+           ,(generate-rectangle-bindings
+             (list* :x1 x1 :y1 y1 :x2 x2 :y2 y2 keyword)
+             `(,x1* ,y1* ,x2* ,y2*)
+             body))))))
 
-(defmethod bounding-rectangle-min-x (bounding-rectangle)
-  (nth-value 0 (bounding-rectangle* bounding-rectangle)))
-
-(defmethod bounding-rectangle-min-y (bounding-rectangle)
-  (nth-value 1 (bounding-rectangle* bounding-rectangle)))
-
-(defmethod bounding-rectangle-max-x (bounding-rectangle)
-  (nth-value 2 (bounding-rectangle* bounding-rectangle)))
-
-(defmethod bounding-rectangle-max-y (bounding-rectangle)
-  (nth-value 3 (bounding-rectangle* bounding-rectangle)))
-
-(defmethod bounding-rectangle-width (bounding-rectangle)
-  (nth-value 0 (bounding-rectangle-size bounding-rectangle)))
-
-(defmethod bounding-rectangle-height (bounding-rectangle)
-  (nth-value 1 (bounding-rectangle-size bounding-rectangle)))
-
-(defmethod bounding-rectangle-size (bounding-rectangle)
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* bounding-rectangle)
-    (values (- x2 x1) (- y2 y1))))
+(macrolet ((def (name &rest parts)
+             `(defmethod ,name (bounding-rectangle)
+                (with-bounding-rectangle* (,@(apply #'append parts))
+                    bounding-rectangle
+                  (values ,@(map 'list #'second parts))))))
+  (def bounding-rectangle-position (:x1 x1) (:y1 y1))
+  (def bounding-rectangle-min-x    (:x1 x1))
+  (def bounding-rectangle-min-y    (:y1 y1))
+  (def bounding-rectangle-max-x    (:x2 x2))
+  (def bounding-rectangle-max-y    (:y2 y2))
+  (def bounding-rectangle-size     (:width width) (:height height))
+  (def bounding-rectangle-width    (:width width))
+  (def bounding-rectangle-height   (:height height)))

@@ -1906,8 +1906,8 @@
    #:never-repaint-background-mixin
    #:background
    #:foreground
-   ;; #:line-style-effective-thickness
-   ;; #:line-style-effective-dashes
+   #:line-style-effective-thickness
+   #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
    #:medium-draw-circle*
@@ -1988,6 +1988,7 @@
    #:find-frame-type
    #:note-frame-pretty-name-changed
    #:note-frame-icon-changed
+   #:note-frame-command-table-changed
    ;; images
    #:rgb-image
    #:xpm-parse-file

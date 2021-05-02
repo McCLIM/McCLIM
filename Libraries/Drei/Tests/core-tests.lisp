@@ -1,26 +1,15 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Tests for the Drei core functionality.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite core-tests :description "The test suite for
 DREI-CORE related tests." :in drei-tests)
@@ -40,12 +29,12 @@ DREI-CORE related tests." :in drei-tests)
     (possibly-fill-line)
     (is (string= (buffer-contents)
                  "Very long line, this should be filled, if auto-fill is on."))
-    
+
     (setf (auto-fill-mode (current-view)) t)
     (possibly-fill-line)
     (is (string= (buffer-contents)
                  "Very long line, this should be filled, if auto-fill is on."))
-    
+
     (setf (auto-fill-column (current-view)) 20)
     (possibly-fill-line)
     (is (string= (buffer-contents)
@@ -310,7 +299,7 @@ if everything works"))))
 
 (test fill-region
   (flet ((fill-it (fill-column)
-           (fill-region (point) (mark) 
+           (fill-region (point) (mark)
                         (lambda (mark)
                           (proper-line-indentation (current-view) mark))
                         fill-column

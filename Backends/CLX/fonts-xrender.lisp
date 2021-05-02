@@ -1,16 +1,14 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-TRUETYPE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Font matrics, caching, and XRender text support
-;;;   Created: 2003-05-25 16:32
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2003 by Gilbert Baumann
-;;;  (c) copyright 2008 by Andy Hefner
-;;;  (c) copyright 2016-2021 by Daniel Kochmański
 ;;;
-;;;    See toplevel file 'Copyright' for the copyright details.
+;;;  (c) Copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2008 by Andy Hefner <ahefner@gmail.com>
+;;;  (c) Copyright 2016-2021 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Font matrics, caching, and XRender text support
 
 (in-package #:clim-clx)
 
@@ -104,7 +102,7 @@
                                         :family family
                                         :name (zpb-ttf:subfamily-name loader)
                                         :loader loader)))
-	     (font (alexandria:ensure-gethash
+             (font (alexandria:ensure-gethash
                     (list display loader size) font-cache
                     (make-instance 'clx-truetype-font
                                    :port port
@@ -201,4 +199,3 @@ The following files should exist:~&~{  ~A~^~%~}"
            (clim:text-style-components text-style))))
     (or (find-truetype-font port text-style)
         (mcclim-truetype:invoke-with-truetype-path-restart #'find-font))))
-

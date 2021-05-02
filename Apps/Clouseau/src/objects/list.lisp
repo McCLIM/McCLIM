@@ -8,7 +8,6 @@
 ;;;
 ;;; Places, inspection methods and commands for cons cells and lists
 ;;; of different shapes.
-;;;
 
 (cl:in-package #:clouseau)
 

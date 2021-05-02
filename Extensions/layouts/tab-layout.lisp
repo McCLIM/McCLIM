@@ -1,15 +1,15 @@
-;;; -*- Mode: Lisp; show-trailing-whitespace: t; indent-tabs: nil; -*-
-
-;;; Based on the tab-layout by:
 ;;; ---------------------------------------------------------------------------
-;;;     Title: A Tab Layout Pane
-;;;   Created: 2005/09/16-19
-;;;    Author: Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2005 by Max-Gerd Retzlaff
 ;;;
-;;; Available from:
-;;;   http://bl0rg.net/~mgr/flux/tab-layout_2005-09-19_02-52+0200.tar.bz2
+;;;  (c) Copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2005 by Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;  (c) Copyright 2006 David Lichteblau
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Based on the tab-layout by Max-Gerd Retzlaff available from:
+;;; http://bl0rg.net/~mgr/flux/tab-layout_2005-09-19_02-52+0200.tar.bz2
 ;;;
 ;;; License given on IRC:
 ;;;   http://tunes.org/~nef/logs/lisp/07.01.15
@@ -17,21 +17,12 @@
 ;;;  with Gilbert. BSD or LGPL, or both.  but I'm on the move.. see you later
 ;;; 04:05:22 <mgr> _8work: in fact, I wanted to commit it to mcclim long time
 ;;;  ago, but I have not yet because there seemed to be a lack of interest.
-
-;;; Based on the stack layout by:
-;;; ---------------------------------------------------------------------------
-;;;     Title: Embryo Stack Layout Pane Class
-;;;   Created: 2003-06-01
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: As public domain as it can get.
-;;; ---------------------------------------------------------------------------
-;;; Available from:
-;;;   http://bauhh.dyndns.org:8000/mcclim/cookbook/
-
-;;; ---------------------------------------------------------------------------
-;;; Adapted for inclusion into McCLIM:
-;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2006 David Lichteblau
+;;;
+;;; Based on the stack layout by Gilbert Baumann from:
+;;; http://bauhh.dyndns.org:8000/mcclim/cookbook/
+;;; License is "As public domain as it can get.".
+;;;
+;;; Adapted for inclusion into McCLIM by David Lichteblau.
 
 (defpackage #:clim-tab-layout
   (:use #:clim #:clim-lisp)
@@ -310,22 +301,17 @@ as :PRESENTATION-TYPE to pane creation forms that specify no type themselves."
 
 ;;; presentation/command system integration
 
-(define-command (com-switch-to-tab-page
-                 :command-table clim:global-command-table)
-    ((page 'tab-page :prompt "Tab page"))
+(define-command (com-switch-to-tab-page :command-table global-command-table)
+    ((page 'tab-page :prompt "Tab page"
+                     :gesture (:select
+                               :tester ((object)
+                                        (not (sheet-enabled-p (tab-page-pane object))))
+                               :documentation "Switch to this page"
+                               :pointer-documentation "Switch to this page"
+                               :echo nil)))
   (switch-to-page page))
 
-(define-presentation-to-command-translator switch-via-tab-button
-    (tab-page com-switch-to-tab-page clim:global-command-table
-              :gesture :select
-              :tester ((object)
-                       (not (sheet-enabled-p (tab-page-pane object))))
-              :documentation "Switch to this page"
-              :pointer-documentation "Switch to this page")
-    (object)
-  (list object))
-
-(define-command (com-remove-tab-page :command-table clim:global-command-table)
+(define-command (com-remove-tab-page :command-table global-command-table)
     ((page 'tab-page :prompt "Tab page"))
   (remove-page page))
 
@@ -433,6 +419,9 @@ that the frame manager can customize the implementation."))
   ()
   (:default-initargs :default-view +tab-bar-view+))
 
+(defmethod note-sheet-grafted ((sheet tab-bar-pane))
+  (redisplay-frame-pane (pane-frame sheet) sheet :force-p t))
+
 (defmethod compose-space ((pane tab-bar-pane) &key width height)
   (declare (ignore width height))
   (make-space-requirement :min-height 22 :height 22 :max-height 22))
@@ -441,16 +430,15 @@ that the frame manager can customize the implementation."))
   (let ((current (tab-layout-enabled-page instance)))
     (dolist (page pages)
       (setf (sheet-enabled-p (tab-page-pane page)) (eq page current))))
-  (let ((header
-         (make-pane 'tab-bar-pane
-          :display-time :command-loop
-          :display-function
-          (lambda (frame pane)
-            (declare (ignore frame))
-            (funcall (header-display-function instance) instance pane)))))
+  (let ((header (make-pane 'tab-bar-pane
+                           :display-time :command-loop
+                           :display-function
+                           (lambda (frame pane)
+                             (declare (ignore frame))
+                             (let ((display (header-display-function instance)))
+                               (funcall display instance pane))))))
     (setf (tab-layout-header-pane instance) header)
-    (sheet-adopt-child instance header)
-    (setf (sheet-enabled-p header) t)))
+    (sheet-adopt-child instance header)))
 
 (defmethod compose-space ((pane tab-layout-pane) &key width height)
   (declare (ignore width height))

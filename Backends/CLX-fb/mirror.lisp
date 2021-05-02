@@ -1,4 +1,4 @@
-(in-package :clim-clx-fb)
+(in-package #:clim-clx-fb)
 
 (defclass clx-fb-mirror (image-mirror-mixin)
   ((width :initform 0)
@@ -55,9 +55,9 @@
 (declaim (inline xlib-image-data-set-pixel))
 (defun xlib-image-data-set-pixel (data x y red green blue)
   (setf (aref data y x)
-	(dpb blue (byte 8 0)
-	     (dpb green (byte 8 8)
-		  (dpb red (byte 8 16) 0)))))
+        (dpb blue (byte 8 0)
+             (dpb green (byte 8 8)
+                  (dpb red (byte 8 16) 0)))))
 
 (defun image-mirror-pre-put (width height xmirror sheet clx-image xlib-image dirty-r)
   (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))

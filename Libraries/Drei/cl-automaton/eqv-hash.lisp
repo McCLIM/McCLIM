@@ -1,27 +1,15 @@
-;;; -*- Mode: Lisp; Package: AUTOMATON -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2005-2007 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
+;;;  (c) copyright 2005-2007 Aleksandar Bakic <a_bakic@yahoo.com>
 ;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
 ;;; A naive attempt at implementing the protocol proposed by Robert
 ;;; Strandh (see eqv-hash.txt).
 
-(in-package :eqv-hash)
+(in-package #:eqv-hash)
 
 ;;; Perhaps the term 'intention' is better than 'situation' (as in
 ;;; extensional vs. intentional equality, see
@@ -71,23 +59,23 @@
 
 (defun htref (table key)
   (let* ((s (situation table))
-	 (pair (assoc key (gethash (hash key s) (ht table))
-		      :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
+         (pair (assoc key (gethash (hash key s) (ht table))
+                      :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
     (if pair (values (cdr pair) t) (values nil nil))))
 
 (defun (setf htref) (object table key)
   (let* ((ht (ht table))
-	 (s (situation table))
-	 (h (hash key s))
-	 (p (assoc key (gethash h ht)
-		   :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
+         (s (situation table))
+         (h (hash key s))
+         (p (assoc key (gethash h ht)
+                   :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
     (if p
-	(progn
-	  (rplaca p key)
-	  (rplacd p object))
-	(progn
-	  (push (cons key object) (gethash h ht))
-	  (incf (cnt table)))))
+        (progn
+          (rplaca p key)
+          (rplacd p object))
+        (progn
+          (push (cons key object) (gethash h ht))
+          (incf (cnt table)))))
   object)
 
 (defun htadd (table key)
@@ -95,17 +83,17 @@
 
 (defun htremove (table key)
   (let* ((ht (ht table))
-	 (s (situation table))
-	 (h (hash key s))
-	 (b (remove key (gethash h ht)
-		    :key #'car :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
+         (s (situation table))
+         (h (hash key s))
+         (b (remove key (gethash h ht)
+                    :key #'car :test #'(lambda (o1 o2) (eqv o1 o2 s)))))
     (if (eq b (gethash h ht))
-	nil
-	(progn
-	  (decf (cnt table))
-	  (if b
-	      (setf (gethash h ht) b)
-	      (remhash h ht))))))
+        nil
+        (progn
+          (decf (cnt table))
+          (if b
+              (setf (gethash h ht) b)
+              (remhash h ht))))))
 
 (defun htpresent (table key)
   (multiple-value-bind (v v-p)
@@ -116,21 +104,21 @@
 (defmacro with-ht ((key value) table &body body)
   (let ((bucket (gensym "BUCKET")))
     `(loop for ,bucket being the hash-values of (ht ,table) do
-	  (loop for (,key . ,value) in ,bucket do
-	       ,@body))))
+          (loop for (,key . ,value) in ,bucket do
+               ,@body))))
 
 (defmacro with-ht-collect ((key value) table &body body)
   (let ((bucket (gensym "BUCKET")))
     `(loop for ,bucket being the hash-values of (ht ,table) nconc
-	  (loop for (,key . ,value) in ,bucket collect
-	       ,@body))))
+          (loop for (,key . ,value) in ,bucket collect
+               ,@body))))
 
 ;; By Bruno Haible:
 ;; (let ((hashcode-table
 ;;        (make-hash-table :test #'eq
-;; 			:key-type 't :value-type 'fixnum
-;; 			:weak :key)))
+;;                      :key-type 't :value-type 'fixnum
+;;                      :weak :key)))
 ;;   (defmethod hash (obj (situation (eql +eq-key-situation)))
 ;;     (or (gethash obj hashcode-table)
-;; 	(setf (gethash obj hashcode-table) (random (+ most-positive-fixnum 
-;; 						      1))))))
+;;      (setf (gethash obj hashcode-table) (random (+ most-positive-fixnum
+;;                                                    1))))))

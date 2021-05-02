@@ -148,15 +148,15 @@
   (declare (ignore region))
   (when (sheet-grafted-p pane)
     (with-slots (armed) pane
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region pane))
+      (with-bounding-rectangle* (x1 y1 x2 y2 :center-y cy) (sheet-region pane)
         (draw-rectangle* pane x1 y1 x2 y2 :ink (effective-gadget-background pane))
         (let* ((as (text-style-ascent (pane-text-style pane) pane))
                (ds (text-style-descent (pane-text-style pane) pane)) )
           (multiple-value-bind (tx1 ty1 tx2 ty2)
               (values (+ x1 (pane-x-spacing pane))
-                      (- (/ (+ y1 y2) 2) (/ (+ as ds) 2))
+                      (- cy (/ (+ as ds) 2))
                       (+ x1 (pane-x-spacing pane) (+ as ds))
-                      (+ (/ (+ y1 y2) 2) (/ (+ as ds) 2)))
+                      (+ cy (/ (+ as ds) 2)))
             (draw-toggle-button-indicator pane (toggle-button-indicator-type pane) (gadget-value pane)
                                           tx1 ty1 tx2 ty2)
             (if (gadget-active-p pane)
@@ -188,22 +188,21 @@
 (defmethod handle-repaint ((pane menu-button-pane) region)
   (declare (ignore region))
   (with-slots (x-spacing y-spacing) pane
-    (let ((region (sheet-region pane)))
-      (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-        (draw-rectangle* pane x1 y1 x2 y2
-                         :ink (effective-gadget-background pane)
-                         :filled t)
-        (when (and (gadget-active-p pane)
-                   (gadget-armed-p pane))
-          (draw-bordered-rectangle* pane x1 y1 x2 y2
-                                    :style :outset
-                                    :border-width *3d-border-thickness*))
-        (multiple-value-bind (x1 y1 x2 y2)
-            (values (+ x1 x-spacing) (+ y1 y-spacing)
-                    (- x2 x-spacing) (- y2 y-spacing))
-          (if (gadget-active-p pane)
-              (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
-              (draw-engraved-label* pane x1 y1 x2 y2)))))))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
+      (draw-rectangle* pane x1 y1 x2 y2
+                       :ink (effective-gadget-background pane)
+                       :filled t)
+      (when (and (gadget-active-p pane)
+                 (gadget-armed-p pane))
+        (draw-bordered-rectangle* pane x1 y1 x2 y2
+                                  :style :outset
+                                  :border-width *3d-border-thickness*))
+      (multiple-value-bind (x1 y1 x2 y2)
+          (values (+ x1 x-spacing) (+ y1 y-spacing)
+                  (- x2 x-spacing) (- y2 y-spacing))
+        (if (gadget-active-p pane)
+            (draw-label* pane x1 y1 x2 y2 :ink (effective-gadget-foreground pane))
+            (draw-engraved-label* pane x1 y1 x2 y2))))))
 
 (defmethod compose-space ((gadget menu-button-pane) &key width height)
   (declare (ignore width height))
@@ -363,9 +362,10 @@
     ;; redraw up arrow
     (unless (and (not all-new-p) (eql up-state old-up-state))
       (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
-        (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-up-region scroll-bar)
+        (with-bounding-rectangle* (x1 y1 x2 y2 :center-x cx)
+            (scroll-bar-up-region scroll-bar)
           (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-inner-color*)
-          (let ((pg (list (make-point (/ (+ x1 x2) 2) y1)
+          (let ((pg (list (make-point cx y1)
                           (make-point x1 y2)
                           (make-point x2 y2))))
             (case up-state
@@ -378,9 +378,10 @@
     ;; redraw dn arrow
     (unless (and (not all-new-p) (eql dn-state old-dn-state))
       (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
-        (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-down-region scroll-bar)
+        (with-bounding-rectangle* (x1 y1 x2 y2 :center-x cx)
+            (scroll-bar-down-region scroll-bar)
           (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-inner-color*)
-          (let ((pg (list (make-point (/ (+ x1 x2) 2) y2)
+          (let ((pg (list (make-point cx y2)
                           (make-point x1 y1)
                           (make-point x2 y1))))
             (case dn-state
@@ -401,9 +402,7 @@
                   (numberp tb-y2) (numberp old-tb-y2)
                   (= (- tb-y2 tb-y1) (- old-tb-y2 old-tb-y1)))
              ;; Thumb is just moving, compute old and new region
-             (multiple-value-bind (x1 ignore.1 x2 ignore.2)
-                 (bounding-rectangle* (scroll-bar-thumb-bed-region scroll-bar))
-               (declare (ignore ignore.1 ignore.2))
+             (with-bounding-rectangle* (:x1 x1 :x2 x2) (scroll-bar-thumb-bed-region scroll-bar)
                ;; compute new and old region
                (with-sheet-medium (medium scroll-bar)
                  (with-drawing-options (medium :transformation (scroll-bar-transformation scroll-bar))
@@ -455,8 +454,7 @@
     (setf up-state (if (eq event-state :up-armed) :armed nil))
     (setf dn-state (if (eq event-state :dn-armed) :armed nil))
     (setf tb-state nil)                 ;we have no armed display yet
-    (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
-      (declare (ignore x1 x2))
+    (with-bounding-rectangle* (nil y1 nil y2) (scroll-bar-thumb-region scroll-bar value)
       (setf tb-y1 y1
             tb-y2 y2))))
 
@@ -733,7 +731,7 @@
                            (- middle 10.0))))))))))
 
 (flet ((compute-dims (slider)
-         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* (sheet-region slider))
+         (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region slider)
            ;; Offset is the distance from the bounding region to the
            ;; slider's "rail" and then some, so the knob doesn't go
            ;; beyond the rail too much.
@@ -1017,8 +1015,7 @@ response to scroll wheel events."))
   (generic-list-pane-item-height pane))
 
 (defmethod handle-repaint ((pane generic-list-pane) region)
-  (with-bounding-rectangle* (sx0 sy0 sx1 sy1) (sheet-region pane)
-    (declare (ignore sx1 sy1))
+  (with-bounding-rectangle* (sx0 sy0) (sheet-region pane)
     (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
         (if (bounding-rectangle-p region)
             region
@@ -1123,8 +1120,7 @@ Returns :select or :deselect, depending on what action was performed."
   "Given a pointer event, determine what item in the pane it has fallen upon.
 Returns two values, the item itself, and the index within the item list."
   (declare (ignore mx))
-  (with-bounding-rectangle* (sx0 sy0 sx1 sy1)  (sheet-region pane)
-    (declare (ignorable sx0 sx1 sy1))
+  (with-bounding-rectangle* (nil sy0 nil nil) (sheet-region pane)
     (with-slots (items) pane
       (let* ((item-height (generic-list-pane-item-height pane))
              (number-of-items (generic-list-pane-items-length pane))
@@ -1380,8 +1376,7 @@ if INVOKE-CALLBACK is given."))
                             :max-height +fill+)))
 
 (defun generic-option-pane-draw-widget (pane)
-  (with-bounding-rectangle* (x0 y0 x1 y1) pane
-    (declare (ignore x0))
+  (with-bounding-rectangle* (nil y0 x1 y1) pane
     (multiple-value-bind (widget-width widget-height)
         (generic-option-pane-widget-size pane)
       (let ((center (floor (/ (- y1 y0) 2)))
@@ -1664,9 +1659,10 @@ if INVOKE-CALLBACK is given."))
       (when t ; :move-cursor t
         ;; Almost like LWW, except baseline of text should align with bottom
         ;; of gadget? FIXME
-        (setf (stream-cursor-position sheet)
-              (values (+ x (bounding-rectangle-width record))
-                      (+ y (bounding-rectangle-height record))))))))
+        (with-bounding-rectangle* (:width width :height height) record
+         (setf (stream-cursor-position sheet)
+               (values (+ x width)
+                       (+ y height))))))))
 
 ;; The CLIM 2.0 spec does not really say what this macro should return.
 ;; Existing code written for "Real CLIM" assumes it returns the gadget pane

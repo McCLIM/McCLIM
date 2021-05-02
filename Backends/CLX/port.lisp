@@ -11,8 +11,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Server path processing, port initialization and mirroring
-;;; functions.
+;;; Server path processing, port initialization and mirroring functions.
 
 (in-package #:clim-clx)
 
@@ -204,27 +203,13 @@
                                  :save-under :on
                                  :map nil))
 
-(defmethod make-graft ((port clx-port) &key (orientation :default) (units :device))
-  (let* ((root (clx-port-window port))
-         (graft (make-instance 'clx-graft
-                               :port port
-                               :mirror (make-instance 'clx-mirror :window root)
-                               :orientation orientation :units units))
-         (screen (clx-port-screen port))
-         (width (xlib:screen-width screen))
-         (height (xlib:screen-height screen)))
-    (let ((region (make-bounding-rectangle 0 0 width height)))
-      (climi::%%set-sheet-region region graft))
-    graft))
+
 
 (defmethod make-medium ((port clx-port) sheet)
   (make-instance 'clx-medium :port port :sheet sheet))
 
 (defmethod make-medium ((port clx-render-port) sheet)
   (make-instance 'clx-render-medium :port port :sheet sheet))
-
-(defmethod graft ((port clx-port))
-  (first (port-grafts port)))
 
 (defmethod port-force-output ((port clx-port))
   (xlib:display-force-output (clx-port-display port)))

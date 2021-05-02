@@ -9,6 +9,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Package definition for the clx-fb module.
+;;;
 
 (defpackage #:clim-clx-fb
   (:use #:clim

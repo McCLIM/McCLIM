@@ -1,29 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: DEFGENERICs and stuff
-;;;   Created: 2001-08-12
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2001,2002 by Gilbert Baumann
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; DEFGENERICs and stuff
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; This is just an ad hoc list. Would it be a good idea to include all
 ;;; (exported) generic functions here? --GB
@@ -411,13 +398,13 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric medium-draw-polygon* (medium coord-seq closed filled))
 (defgeneric medium-draw-rectangle* (medium left top right bottom filled))
 (defgeneric medium-draw-ellipse* (medium center-x center-y
-				  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-				  start-angle end-angle filled))
+                                  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                                  start-angle end-angle filled))
 (defgeneric medium-draw-circle* (medium center-x center-y radius start-angle end-angle filled))
 (defgeneric medium-draw-text* (medium string x y
-			       start end
-			       align-x align-y
-			       toward-x toward-y transform-glyphs))
+                               start end
+                               align-x align-y
+                               toward-x toward-y transform-glyphs))
 
 
 ;;; 10.1 Medium Components
@@ -524,9 +511,9 @@ different icons for different purposes based on the icon sizes."))
 ;;;; 14.5
 (defgeneric draw-design
     (medium design
-	    &key ink clipping-region transformation line-style line-thickness
-	    line-unit line-dashes line-joint-shape line-cap-shape text-style
-	    text-family text-face text-size))
+            &key ink clipping-region transformation line-style line-thickness
+            line-unit line-dashes line-joint-shape line-cap-shape text-style
+            text-family text-face text-size))
 
 
 ;;; 15.3 The Text Cursor [complete]
@@ -652,6 +639,12 @@ Only those records that overlap REGION are displayed."))
 
 (defgeneric displayed-output-record-ink (displayed-output-record))
 
+;;; 16.2.1. The Basic Output Record Protocol (extras)
+
+(defgeneric (setf output-record-parent) (parent record)
+  (:documentation "Additional protocol generic function. PARENT may be
+an output record or NIL."))
+
 ;;; 16.2.2. Output Record "Database" Protocol
 
 (defgeneric output-record-children (record))
@@ -695,6 +688,21 @@ each other, MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION hits the least
 recently inserted record first and the most recently inserted record
 last. Otherwise, the order in which the records are traversed is
 unspecified. "))
+
+;;; 16.2.2. Output Record "Database" Protocol (extras)
+;;;
+;;; From the Franz CLIM user's guide but not in the spec... clearly
+;;; necessary.
+
+(defgeneric map-over-output-records-1 (continuation record continuation-args))
+
+(defun map-over-output-records
+    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
+  "Call FUNCTION on each of the children of RECORD.
+FUNCTION is a function of one or more arguments and called with all of
+FUNCTION-ARGS as APPLY arguments."
+  (declare (ignore x-offset y-offset))
+  (map-over-output-records-1 function record function-args))
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 
@@ -787,6 +795,10 @@ corresponding to a table cell within the column."))
 (defgeneric invoke-updating-output
     (stream continuation record-type unique-id id-test cache-value cache-test
      &key fixed-position all-new parent-cache))
+
+;;; 21.3 Incremental Redisplay Protocol.
+
+(defgeneric match-output-records (record &rest args))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol
@@ -968,7 +980,7 @@ The returned value is the position in the input buffer."))
 
 (defgeneric presentation-replace-input
     (stream object type view
-	    &key buffer-start rescan query-identifier for-context-type)
+            &key buffer-start rescan query-identifier for-context-type)
   (:documentation "Like `replace-input', except that the new
 input to insert into the input buffer is gotten by presenting
 `object' with the presentation type `type' and view
@@ -1146,21 +1158,21 @@ and `cell-align-y' are as for `formatting-item-list'."))
 (defgeneric note-command-disabled (frame-manager frame command-name))
 
 (defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
-  (:documentation "McMCLIM extension: Notify client that the pretty
-name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME.
-FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change."))
+  (:documentation "McCLIM extension: Notify client that the pretty
+name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME."))
 
 (defgeneric note-frame-icon-changed (frame-manager frame new-icon)
-  (:documentation "McMCLIM extension: Notify client that the icon of
-FRAME, managed by FRAME-MANAGER, changed to NEW-ICON.
-FRAME-MANAGER can be NIL if FRAME is not owned by a frame manager at
-the time of the change."))
+  (:documentation "McCLIM extension: Notify client that the icon of
+FRAME, managed by FRAME-MANAGER, changed to NEW-ICON."))
+
+(defgeneric note-frame-command-table-changed (frame-manager frame new-command-table)
+  (:documentation "McCLIM extension: Notify client that the command-table of
+FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE."))
 
 (defgeneric frame-manager-notify-user
     (framem message-string
      &key frame associated-window title
-          documentation exit-boxes name style text-style))
+       documentation exit-boxes name style text-style))
 
 (defgeneric generate-panes (frame-manager frame))
 (defgeneric find-pane-for-frame (frame-manager frame))
@@ -1340,6 +1352,11 @@ Returns a SPACE-REQUIREMENT object."))
   (:documentation
    "Returns the thickness in device units of a line,
 rendered on MEDIUM with the style LINE-STYLE."))
+
+(defgeneric line-style-effective-dashes (line-style medium)
+  (:documentation
+   "Return a dash length or a sequence of dash lengths device units
+for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;;
 

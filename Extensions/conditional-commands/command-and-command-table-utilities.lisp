@@ -1,4 +1,4 @@
-(in-package :command-and-command-table-utilities)
+(in-package #:command-and-command-table-utilities)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; command/command-table helper functions

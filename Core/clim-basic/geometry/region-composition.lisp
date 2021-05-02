@@ -1,15 +1,29 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 1998 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Region algebra methods for the various region classes.
+;;;
+
 (in-package #:climi)
 
-
-;;; utilities
+;;; Utilities
+
 (defun region-exclusive-or (a b)
   (region-union (region-difference a b) (region-difference b a)))
 
-
 (defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
-;;; dimensionality rule
+;;; Dimensionality rule
+
 (defmethod region-union ((a area) (b path)) a)
 (defmethod region-union ((a path) (b point)) a)
 (defmethod region-union ((a area) (b point)) a)
@@ -17,14 +31,16 @@
 (defmethod region-union ((a point) (b path)) b)
 (defmethod region-union ((a point) (b area)) b)
 
-;;; points
+;;; Points
+
 (defmethod region-union ((a point) (b point))
   (cond ((region-equal a b)
          a)
         (t
          (make-instance 'standard-region-union :regions (list a b)))))
 
-;;; paths
+;;; Paths
+
 (defmethod region-union ((a standard-line) (b standard-line))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
@@ -90,7 +106,8 @@
 (defmethod region-union ((a standard-line) (b standard-polyline))
   (region-union b a))
 
-;;; areas
+;;; Areas
+
 (defmethod region-union ((xs standard-rectangle) (ys standard-rectangle))
   (region-union (rectangle->standard-rectangle-set xs)
                 (rectangle->standard-rectangle-set ys)))
@@ -104,13 +121,13 @@
 (defmethod region-union ((a standard-rectangle) (b standard-polygon))
   (polygon-op a b #'logior))
 
-
 ;;; IMHO the CLIM dimensionality rule is brain dead! --gb
 
 (defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-intersection :regions (list a b)))
 
-;;; points
+;;; Points
+
 (macrolet ((thunk (point-var region-var)
              `(multiple-value-bind (x y) (point-position ,point-var)
                 (if (region-contains-position-p ,region-var x y)
@@ -122,11 +139,11 @@
     (thunk p a)))
 
 (defmethod region-intersection ((a point) (b point))
-  (cond
-    ((region-equal a b) a)
-    (t +nowhere+)))
+  (cond ((region-equal a b) a)
+        (t +nowhere+)))
 
-;;; paths
+;;; Paths
+
 (macrolet ((thunk (polyline-var region-var)
              `(let ((res +nowhere+))
                 ;; hack alert
@@ -154,7 +171,8 @@
               (:coincident (make-line* sx1 sy1 sx2 sy2))
               ((nil) +nowhere+))))))))
 
-;;; paths/areas
+;;; Paths/areas
+
 (macrolet
     ((thunk (line-var ellipse-var)
        `(let (p1x p1y p2x p2y)
@@ -233,7 +251,8 @@
   (defmethod region-intersection ((line line) (polygon polygon))
     (thunk line polygon)))
 
-;;; areas
+;;; Areas
+
 (defmethod region-intersection ((xr rectangle) (yr rectangle))
   (region-intersection (rectangle->standard-rectangle-set xr)
                        (rectangle->standard-rectangle-set yr)))
@@ -247,23 +266,25 @@
 (defmethod region-intersection ((a standard-rectangle) (b standard-polygon))
   (polygon-op a b #'logand))
 
-
 (defmethod region-difference ((x bounding-rectangle) (y bounding-rectangle))
   (make-instance 'standard-region-difference :a x :b y))
 
-;;; dimensionality rule
+;;; Dimensionality rule
+
 (defmethod region-difference ((x area) (y path)) x)
 (defmethod region-difference ((x area) (y point)) x)
 (defmethod region-difference ((x path) (y point)) x)
 
-;;; points
+;;; Points
+
 (defmethod region-difference ((x point) (y bounding-rectangle))
   (multiple-value-bind (px py) (point-position x)
     (if (region-contains-position-p y px py)
         +nowhere+
         x)))
 
-;;; paths
+;;; Paths
+
 (defmethod region-difference ((a standard-polyline) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-polygon-segments
@@ -310,13 +331,15 @@
                 (t
                  a)))))))
 
-;;; paths/areas
+;;; Paths/areas
+
 (defmethod region-difference ((a line) (b polygon))
   (multiple-value-bind (x1 y1) (line-start-point* a)
     (multiple-value-bind (x2 y2) (line-end-point* a)
       (difference-segment/polygon x1 y1 x2 y2 b))))
 
-;;; areas
+;;; Areas
+
 (defmethod region-difference ((xs standard-rectangle) (ys standard-rectangle))
   (region-difference (rectangle->standard-rectangle-set xs)
                      (rectangle->standard-rectangle-set ys)))

@@ -1,24 +1,13 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2001 by
-;;;           Tim Moore (moore@bricoworks.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001 by Tim Moore <moore@bricoworks.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defun setf-name-p (name)
   (typep name '(cons (eql setf) (cons symbol null))))
@@ -29,9 +18,9 @@
 (defun make-setf*-gfn-name (function-name)
   (let* ((name-sym (cadr function-name)))
     `(setf ,(intern (format nil ".~A-~A."
-			    (symbol-name name-sym)
-			    (symbol-name '#:star))
-		    (symbol-package name-sym)))))
+                            (symbol-name name-sym)
+                            (symbol-name '#:star))
+                    (symbol-package name-sym)))))
 
 (defmacro defgeneric* (fun-name lambda-list &body options)
   "Defines a SETF* generic function.  FUN-NAME is a SETF function

@@ -1,7 +1,12 @@
-;;;;  Copyright (c) 2003       Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;;  Copyright (c) 2018-2021  Daniel Kochmański <daniel@turtleware.eu>
-;;;;
-;;;;    License:  LGPL-2.1-or-later
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2003 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2018-2021 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 
 (in-package #:clim-clx)
 
