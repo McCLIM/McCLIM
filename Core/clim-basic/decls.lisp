@@ -1380,6 +1380,10 @@ for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
 (defgeneric port-shrink-sheet (port sheet))
 (defgeneric port-pointer (port))
 
+(defgeneric port-set-mirror-name (port sheet name))
+(defgeneric port-set-mirror-icon (port sheet icon))
+(defgeneric port-set-mirror-geometry (port sheet region))
+
 ;;; Defined in Franz user guide sec. 15.1
 (defgeneric port-modifier-state (port))
 

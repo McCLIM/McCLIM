@@ -103,7 +103,7 @@
 
 
 (defun realize-mirror-aux (port sheet
-                           &key (width 100) (height 100) (x 0) (y 0)
+                           &key (width nil) (height nil) (x nil) (y nil)
                                 (override-redirect :off)
                                 (map t)
                                 (backing-store :not-useful)
@@ -117,49 +117,47 @@
                                               :pointer-motion
                                               :button-motion)))
   (assert (null (sheet-direct-mirror sheet)))
+  (with-standard-rectangle* (mx my :width mw :height mh)
+      (sheet-mirror-geometry sheet)
+    (setf x (round-coordinate (or x mx))
+          y (round-coordinate (or y my))
+          width  (round-coordinate (or width mw))
+          height (round-coordinate (or height mh))))
   (let* ((desired-color (typecase sheet
-                            (pane ; CHECKME [is this sensible?] seems to be
-                             (let ((background (pane-background sheet)))
-                               (if (typep background 'color)
-                                   background
-                                   +white+)))
-                             ;; sheet-with-medium-mixin
-                            (permanent-medium-sheet-output-mixin
-                             (medium-background sheet))
-                            (t
-                             +white+)))
+                          (pane        ; CHECKME [is this sensible?] seems to be
+                           (let ((background (pane-background sheet)))
+                             (if (typep background 'color)
+                                 background
+                                 +white+)))
+                          ;; sheet-with-medium-mixin
+                          (permanent-medium-sheet-output-mixin
+                           (medium-background sheet))
+                          (t
+                           +white+)))
          (color (multiple-value-bind (r g b)
                     (color-rgb desired-color)
                   (xlib:make-color :red r :green g :blue b)))
          (screen (clx-port-screen port))
          (pixel (xlib:alloc-color (xlib:screen-default-colormap screen) color))
-         (window (multiple-value-bind (x y)
-                     (if-let ((transformation (%sheet-mirror-transformation sheet)))
-                       (transform-position transformation 0 0)
-                       (values x y))
-                   (multiple-value-bind (width height)
-                       (if-let ((region (%sheet-mirror-region sheet)))
-                         (bounding-rectangle-size region)
-                         (values width height))
-                     (xlib:create-window
-                      :parent (window (sheet-mirror (sheet-parent sheet)))
-                      :width (round-coordinate width)
-                      :height (round-coordinate height)
-                      :x (round-coordinate x)
-                      :y (round-coordinate y)
-                      :override-redirect override-redirect
-                      :backing-store backing-store
-                      :save-under save-under
-                      :gravity :north-west
-                      ;; Evil Hack -- but helps enormously (Has anybody
-                      ;; a good idea how to sneak the concept of
-                      ;; bit-gravity into CLIM)? --GB
-                      :bit-gravity (if (typep sheet 'climi::extended-output-stream)
-                                       :north-west
-                                       :forget)
-                      :background pixel
-                      :event-mask (apply #'xlib:make-event-mask
-                                         event-mask))))))
+         (window (xlib:create-window
+                  :parent (window (sheet-mirror (sheet-parent sheet)))
+                  :width (round-coordinate width)
+                  :height (round-coordinate height)
+                  :x (round-coordinate x)
+                  :y (round-coordinate y)
+                  :override-redirect override-redirect
+                  :backing-store backing-store
+                  :save-under save-under
+                  :gravity :north-west
+                  ;; Evil Hack -- but helps enormously (Has anybody
+                  ;; a good idea how to sneak the concept of
+                  ;; bit-gravity into CLIM)? --GB
+                  :bit-gravity (if (typep sheet 'climi::extended-output-stream)
+                                   :north-west
+                                   :forget)
+                  :background pixel
+                  :event-mask (apply #'xlib:make-event-mask
+                                     event-mask))))
     (when map
       (xlib:map-window window)
       (xlib:display-finish-output (clx-port-display port)))
@@ -179,8 +177,8 @@
          (window (realize-mirror-aux
                   port sheet
                   :map nil
-                  :width (round-coordinate (space-requirement-width q))
-                  :height (round-coordinate (space-requirement-height q))))
+                  :width (space-requirement-width q)
+                  :height (space-requirement-height q)))
          (name (clime:sheet-name sheet))
          (instance-name (string-downcase name))
          (class-name (string-capitalize name))

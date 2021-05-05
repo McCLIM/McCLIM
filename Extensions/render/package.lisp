@@ -65,8 +65,7 @@
                 #:*families/faces*
                 #:truetype-face)
   (:import-from #:clim-backend
-                #:port-set-mirror-region
-                #:port-set-mirror-transformation
+                #:port-set-mirror-geometry
                 #:medium-native-transformation
                 #:medium-device-transformation
                 #:medium-native-region

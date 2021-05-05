@@ -2008,7 +2008,7 @@
 ;;; To start with, I grabbed the methods defined by the CLX backend
 ;;; whose symbol package is CLIM or CLIMI.
 
-(defpackage :clim-backend
+(defpackage #:clim-backend
   (:nicknames :climb)
   (:use :clim :clim-extensions)
   (:export
@@ -2025,8 +2025,7 @@
    #:with-pointer-grabbed
    #:port-set-mirror-name
    #:port-set-mirror-icon
-   #:port-set-mirror-region
-   #:port-set-mirror-transformation
+   #:port-set-mirror-geometry
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event

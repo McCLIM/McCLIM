@@ -26,15 +26,12 @@
       (%set-image-region (mirror->%image port mirror)
                          (make-bounding-rectangle 0 0 width height)))))
 
-(defmethod port-set-mirror-region :after
+(defmethod port-set-mirror-geometry :after
     ((port render-port-mixin) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (%set-image-region (mirror->%image port mirror) region)))
-
-(defmethod port-set-mirror-transformation :after
-    ((port render-port-mixin) (sheet mirrored-sheet-mixin) transformation)
-  (declare (ignore port sheet transformation))
-  nil)
+    (with-bounding-rectangle* (:width w :height h) region
+      (%set-image-region (mirror->%image port mirror)
+                         (make-rectangle* 0 0 w h)))))
 
 ;;; realize/destroy mirrors
 
