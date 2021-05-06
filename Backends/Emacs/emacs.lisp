@@ -129,15 +129,26 @@
           (bottom (ceiling (- y2 y0))))
       (cons '#:rect (cons (cons left top) (cons right bottom))))))
 
+
+;;;; Presentations and input context
+
 (defvar *presentations* (make-array 0 :adjustable t :fill-pointer 0)
   "Vector of presentations (identified by index.)")
 
 (defun register-presentation (presentation)
   (vector-push-extend presentation *presentations*))
 
-(defmethod stream-accept (stream type &rest keywords)
+#+swank
+(defmethod stream-accept ((stream swank/gray::slime-input-stream) type &rest keywords)
   (declare (ignore keywords))
-  (swank:y-or-n-p-in-emacs "STREAM-ACCEPT"))
+  (presentation-object (elt *presentations*
+                            (swank:clime-accept-in-emacs (acceptable-presentations type)))))
+
+(defun acceptable-presentations (presentation-type)
+  (loop for index from 0
+        for presentation across *presentations*
+        when (presentation-typep (presentation-object presentation) presentation-type)
+          collect index))
 
 
 ;;;; Tooltips
