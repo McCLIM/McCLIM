@@ -246,6 +246,6 @@
   "Return an SVG color string representing INK (which may be NIL.)"
   (if ink
       (multiple-value-bind (r g b a) (color-rgba ink)
-        (format nil "rgb(~f%, ~f%, ~f%, ~f)" (* r 100) (* g 100) (* b 100) a))
+        (format nil "rgba(~f%, ~f%, ~f%, ~f)" (* r 100) (* g 100) (* b 100) a))
       "none"))
 
