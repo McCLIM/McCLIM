@@ -67,7 +67,167 @@
 (defmethod medium-draw-rectangle* ((medium emacs-medium) x1 y1 x2 y2 filled))
 (defmethod medium-draw-polygon* ((medium emacs-medium) coord-seq closed filled))
 (defmethod medium-draw-ellipse* ((medium emacs-medium) cx cy r1dx r1dy r2dx r2dy sa ea filled))
-  
+(defmethod medium-draw-text* ((medium emacs-medium) string x y start end align-x align-y toward-x toward-y transform-glyphs))
+
+;;;; Text
+
+;; FIXME We don't provide an implementation of `text-style-mapping`,
+;;  and perhaps we don't want to - jqs 2020-05-08
+
+(defparameter *svg-text-size-map*
+  '(:tiny "xx-small"
+    :very-small "x-small"
+    :small "small"
+    :normal "medium"
+    :large "large"
+    :very-large "x-large"
+    :huge "xx-large"
+    :smaller "smaller"
+    :larger "larger"))
+
+(defun clim-to-svg-size (size)
+  (etypecase size
+    (symbol (getf *svg-text-size-map* size "medium"))
+    (real (format nil "~Fpt" size))))
+
+(defparameter *svg-text-family-map*
+  '(:fix "monospace"
+    :serif "serif"
+    :sans-serif "sans-serif"))
+
+(defun clim-to-svg-family (family)
+  (getf *svg-text-family-map* family "serif"))
+
+(defun clim-to-svg-face (face)
+  (cond ((or (eq :roman face)
+             (eq nil face))
+         "font-style:normal")
+        ((eq :bold face)
+         "font-weight:bold")
+        ((eq :italic face)
+         "font-style:italic")
+        ((equal '(:bold :italic) face)
+         "font-style:italic;font-weight:bold")
+        ;; assume '(:italic :bold) has been normalised to the above - jqs 2020-05-08
+        (t (error "Unknown face: ~S" face))))
+
+(defun svg-text-style (text-style)
+  (let ((family (text-style-family text-style))
+        (face (text-style-face text-style))
+        (size (text-style-size text-style)))
+    (format nil "font-family:~A;~A;font-size:~A"
+            (clim-to-svg-family family)
+            (clim-to-svg-face face)
+            (clim-to-svg-size size))))
+
+(defun text-to-svg (string text-style)
+  ;; FiXME We include "xml:space = preserve" to avoid whitespace being collapsed.
+  ;;  This might mean that multi-line text will get a bounding-rectangle using
+  ;;  the libsvg layout algorithm, but a `text-size` using a different
+  ;;  layout algorithm. Perhaps it doesn't matter, and this just
+  ;;  shouldn't be called with multi-line text - jqs 2020-05-08
+  (format nil "<svg xmlns='http://www.w3.org/2000/svg'>
+  <text style='~A;' xml:space='preserve'>
+    <tspan x='0' y='0'>
+      <tspan>~A</tspan>
+    </tspan>
+  </text>
+</svg>"
+          (svg-text-style text-style)
+          string))
+
+(defmethod climb:text-bounding-rectangle* ((medium emacs-medium) string
+                                           &key text-style start end align-x align-y direction)
+  (declare (ignore align-x align-y direction))
+  (let* ((sub (subseq string (or start 0) (or end (length string))))
+         (text-style (or text-style (medium-text-style medium)))
+         (svg-data (text-to-svg string text-style))
+         (image-size (svg-image-size svg-data)))
+    (values 0 0 (car image-size) (cdr image-size))))
+
+(defun svg-image-size (svg-data)
+  (swank:ed-rpc 'svg-image-size svg-data))
+
+(defmethod text-size ((medium emacs-medium) string &key text-style (start 0) end)
+  (let* ((string (string string))
+         (text-style (or text-style (medium-text-style medium)))
+         (end (or end (length string)))
+         (line-height (text-style-height text-style medium))
+         (total-height 0)
+         (width 0)
+         (max-width 0))
+    (climi::dolines (line (subseq string start end)
+                          (values max-width total-height
+                                  width (- total-height line-height)
+                                  (- total-height (text-style-descent text-style medium))))
+      (setf width (if (zerop (length line))
+                      0
+                      (car (svg-image-size (text-to-svg line text-style)))))
+      (incf total-height line-height)
+      (alexandria:maxf max-width width))))
+
+;; FIXME - hacky, but perhaps we don't want to bother with real text metrics - jqs 2020-05-08
+
+(defparameter *text-style-metrics-cache*
+  (make-hash-table :test #'equal)
+  "A hash-table, the KEYs of which are lists (family face size), and the VALUES of which are
+four-element vector: width, height, ascent, descent")
+
+(defun tsmetric->index (metric)
+  (ecase metric
+    (:width 0)
+    (:height 1)
+    (:ascent 2)
+    (:descent 3)))
+
+(defun make-text-style-metrics-cache-entry ()
+  (make-array 4 :initial-element nil))
+
+(defun text-style-metrics-cache-key (text-style)
+  (list (text-style-family text-style)
+        (text-style-face text-style)
+        (text-style-size text-style)))
+
+(defun get-text-style-metric (text-style metric if-not-found)
+  (let ((key (text-style-metrics-cache-key text-style))
+        (index (tsmetric->index metric)))
+    (multiple-value-bind (entry foundp)
+        (gethash key *text-style-metrics-cache*)
+      (if foundp
+          (alexandria:if-let ((val (svref entry index)))
+            val
+            (setf (svref entry index) (funcall if-not-found)))
+          (let ((entry (make-text-style-metrics-cache-entry)))
+            (prog1 (setf (svref entry index) (funcall if-not-found))
+              (setf (gethash key *text-style-metrics-cache*) entry)))))))
+
+(defun text-style-base (text-style)
+  (svg-image-size (text-to-svg "x" text-style)))
+
+(defmethod text-style-width ((text-style standard-text-style) (medium emacs-medium))
+  (get-text-style-metric text-style
+                         :width
+                         #'(lambda () (car (text-style-base text-style)))))
+
+(defmethod text-style-ascent ((text-style standard-text-style) (medium emacs-medium))
+  (get-text-style-metric text-style
+                         :ascent
+                         #'(lambda () (cdr (svg-image-size (text-to-svg "A" text-style))))))
+
+(defmethod text-style-descent ((text-style standard-text-style) (medium emacs-medium))
+  (get-text-style-metric text-style
+                         :descent
+                         #'(lambda () (- (cdr (svg-image-size (text-to-svg "y" text-style)))
+                                         (cdr (text-style-base text-style))))))
+
+(defmethod text-style-height ((text-style standard-text-style) (medium emacs-medium))
+  (get-text-style-metric text-style
+                         :height
+                         #'(lambda () (+ (text-style-ascent text-style medium)
+                                         (text-style-descent text-style medium)))))
+
+(defmethod text-style-fixed-width-p ((text-style standard-text-style) (medium emacs-medium))
+  (eq :fix (text-style-family text-style)))
 
 ;;;; Stream
 
@@ -100,6 +260,12 @@
           (swank::send-to-emacs (list :write-clime
                                       (output-record-to-svg output)
                                       (presentations-for-emacs stream))))))))
+
+;; FIXME - for some reason CLIM acts as if we have an absurdly small right margin.
+;;  For now this can be used in a `with-temporary-margins` call until I work
+;;  out how to use it when initializing the stream - jqs 2020-05-08
+(defun emacs-right-margin ()
+  (swank:ed-rpc 'window-width-for-margin))
 
 (defun output-record-to-svg (record)
   (multiple-value-bind (x-min y-min x-max y-max) (bounding-rectangle* record)
@@ -213,7 +379,42 @@
            (list :ellipse (x center-x) (y center-y)
                  (distance radius-1-dx radius-1-dy)
                  (distance radius-2-dx radius-2-dy)
-                 filled ink)))))))
+                 filled ink))))
+      (draw-text-output-record
+       (let ((medium (make-instance 'emacs-medium)))
+         (with-slots (ink text-style string point-x point-y
+                      climi::align-x climi::align-y
+                      climi::toward-x climi::toward-y)
+             record
+           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
+             (ecase climi::align-y
+               (:baseline (incf y1 (text-style-ascent text-style medium)))
+               (:top nil)
+               (:center (incf y1 (/ (text-style-height text-style medium) 2)))
+               (:bottom (incf y1 (text-style-height text-style medium))))
+             ;; FIXME Pretty sure this is wrong, especially if we just set everything
+             ;;  to zero again - jqs 2020-05-08
+             (ecase climi::align-x
+               (:left nil)
+               (:right (rotatef x1 x2))
+               (:center (let ((half (/ x2 2)))
+                          (decf x1 half)
+                          (decf x2 half))))
+             (list :text
+                   ink
+                   text-style
+                   string
+                   (x x1)
+                   (y y1)
+                   (x x2)
+                   (y y2)
+                   (x point-x)
+                   (y point-y)
+                   ;; FXIME We don't actually use these. The mismatch between CLIM's
+                   ;;  notions of ltr and tb etc. and CSS3's are too great for now
+                   ;;  - jqs 2020-05-08
+                   climi::toward-x
+                   climi::toward-y))))))))
 
 
 ;;;; SVG
@@ -240,12 +441,19 @@
      (format stream "~&<ellipse cx='~F' cy='~F' rx='~F' ry='~F' fill='~A' stroke='~A'/>~%"
              cx cy r1 r2
              (svg-color (if filled ink nil))
-             (svg-color (if filled nil ink))))))
+             (svg-color (if filled nil ink))))
+    ((:text ink text-style string x1 y1 x2 y2 point-x point-y toward-x toward-y)
+     (declare (ignore toward-x toward-y x2 y2 point-x point-y))
+     (format stream "~&<text style='~A;' xml:space='preserve' fill='~A'><tspan x='~F' y='~F'><tspan>~A</tspan></tspan></text>"
+             (svg-text-style text-style)
+             (svg-color ink)
+             x1 y1
+             string))))
 
 (defun svg-color (ink)
   "Return an SVG color string representing INK (which may be NIL.)"
   (if ink
       (multiple-value-bind (r g b a) (color-rgba ink)
-        (format nil "rgb(~f%, ~f%, ~f%, ~f)" (* r 100) (* g 100) (* b 100) a))
+        (format nil "rgba(~f%, ~f%, ~f%, ~f)" (* r 100) (* g 100) (* b 100) a))
       "none"))
 
