@@ -140,10 +140,22 @@
                                            &key text-style start end align-x align-y direction)
   (declare (ignore align-x align-y direction))
   (let* ((sub (subseq string (or start 0) (or end (length string))))
-         (text-style (or text-style (medium-text-style medium)))
-         (svg-data (text-to-svg string text-style))
-         (image-size (svg-image-size svg-data)))
-    (values 0 0 (car image-size) (cdr image-size))))
+         (text-style (or text-style (medium-text-style medium))))
+    (multiple-value-bind (width height x y baseline)
+        (text-size medium sub :text-style text-style)
+      (declare (ignore baseline))
+      (values x y (+ x width) (+ y height)))))
+
+(defparameter *svg-string-size-cache*
+  (make-hash-table :test 'equal))
+
+(defun get-svg-string-size (string text-style)
+  (let ((cache-key (cons string (text-style-metrics-cache-key text-style))))
+    (alexandria:if-let ((cache-value (gethash cache-key *svg-string-size-cache*)))
+      cache-value
+      (let* ((svg-data (text-to-svg string text-style))
+             (image-size (svg-image-size svg-data)))
+        (setf (gethash cache-key *svg-string-size-cache*) image-size)))))
 
 (defun svg-image-size (svg-data)
   (swank:ed-rpc 'svg-image-size svg-data))
@@ -162,7 +174,7 @@
                                   (- total-height (text-style-descent text-style medium))))
       (setf width (if (zerop (length line))
                       0
-                      (car (svg-image-size (text-to-svg line text-style)))))
+                      (car (get-svg-string-size line text-style))))
       (incf total-height line-height)
       (alexandria:maxf max-width width))))
 
