@@ -31,9 +31,11 @@
                 #:center-x #:center-y
                 #:radius-1-dx #:radius-1-dy
                 #:radius-2-dx #:radius-2-dy
-                #:draw-rectangle-output-record #:draw-ellipse-output-record
+                #:draw-rectangle-output-record #:draw-rectangles-output-record
+                #:draw-ellipse-output-record
                 #:draw-polygon-output-record #:draw-text-output-record
-                #:draw-point-output-record #:draw-points-output-record))
+                #:draw-point-output-record #:draw-points-output-record
+                #:draw-line-output-record #:draw-lines-output-record))
 
 
 
@@ -68,6 +70,10 @@
 (defmethod medium-draw-polygon* ((medium emacs-medium) coord-seq closed filled))
 (defmethod medium-draw-ellipse* ((medium emacs-medium) cx cy r1dx r1dy r2dx r2dy sa ea filled))
 (defmethod medium-draw-text* ((medium emacs-medium) string x y start end align-x align-y toward-x toward-y transform-glyphs))
+(defmethod medium-draw-line* ((medium emacs-medium) x1 y1 x2 y2))
+(defmethod medium-draw-lines* ((medium emacs-medium) coord-seq))
+(defmethod medium-draw-point* ((medium emacs-medium) x y))
+(defmethod medium-draw-points* ((medium emacs-medium) coord-seq))
 
 ;;;; Text
 
@@ -126,13 +132,7 @@
   ;;  the libsvg layout algorithm, but a `text-size` using a different
   ;;  layout algorithm. Perhaps it doesn't matter, and this just
   ;;  shouldn't be called with multi-line text - jqs 2020-05-08
-  (format nil "<svg xmlns='http://www.w3.org/2000/svg'>
-  <text style='~A;' xml:space='preserve'>
-    <tspan x='0' y='0'>
-      <tspan>~A</tspan>
-    </tspan>
-  </text>
-</svg>"
+  (format nil "<svg xmlns='http://www.w3.org/2000/svg'><text style='~A;' xml:space='preserve'><tspan x='0' y='0'><tspan>~A</tspan></tspan></text></svg>"
           (svg-text-style text-style)
           string))
 
@@ -202,7 +202,7 @@ four-element vector: width, height, ascent, descent")
               (setf (gethash key *text-style-metrics-cache*) entry)))))))
 
 (defun text-style-base (text-style)
-  (svg-image-size (text-to-svg "x" text-style)))
+  (svg-image-size (text-to-svg "M" text-style)))
 
 (defmethod text-style-width ((text-style standard-text-style) (medium emacs-medium))
   (get-text-style-metric text-style
@@ -228,6 +228,45 @@ four-element vector: width, height, ascent, descent")
 
 (defmethod text-style-fixed-width-p ((text-style standard-text-style) (medium emacs-medium))
   (eq :fix (text-style-family text-style)))
+
+;;;; Lines
+
+(defun svg-stroke-unit (line-style)
+  (ecase (line-style-unit line-style)
+    ((:normal :coordinate) "px") ;; ignore scaling voodoo
+    (:point "pt")))
+
+(defun svg-stroke-width (line-style)
+  (format nil "~F~A"
+          (line-style-thickness line-style)
+          (svg-stroke-unit line-style)))
+
+(defun svg-stroke-line-join (line-style)
+  (ecase (line-style-joint-shape line-style)
+    (:miter "miter")
+    (:bevel "bevel")
+    (:round "round")
+    (:none nil)))
+
+(defun svg-stroke-line-cap (line-style)
+  (ecase (line-style-cap-shape line-style)
+    (:butt "butt")
+    (:square "square")
+    (:round "round")
+    (:no-end-point nil))) ; FIXME ??
+
+(defun svg-stroke-dasharray (line-style)
+  (let ((dashes (line-style-dashes line-style)))
+    (cond ((null dashes)
+           nil)
+          ((eq t dashes)
+           "3 3")
+          ((listp dashes)
+           (format nil "~{~D~^ ~}" dashes))
+          ((vectorp dashes)
+           (format nil "~{~D~^ ~}" (coerce dashes 'list)))
+          (t
+           (error "Unknown line-dash entry: ~S" dashes)))))
 
 ;;;; Stream
 
@@ -359,10 +398,24 @@ four-element vector: width, height, ascent, descent")
    Optionally translate coordinates relative to the given origin.
    Return NIL if RECORD is not a recognized shape-drawing output record."
   (labels ((x (x) (- x x-min))   ;; Translate top-left corner to (0,0)
-           (y (y) (- y y-min)))
+           (y (y) (- y y-min))
+           (xsys (seq)
+             (loop for i below (length seq)
+                   if (oddp i) collect (x (elt seq i))
+                     else collect (y (elt seq i))))
+           (rects (seq)
+             (loop for i below (length seq) by 4
+                   for left = (elt seq i)
+                   for top = (elt seq (+ 1 i))
+                   for right = (elt seq (+ 2 i))
+                   for bottom = (elt seq (+ 3 i))
+                   collect (min left right)
+                   collect (min bottom right)
+                   collect (abs (- right left))
+                   collect (abs (- bottom top)))))
     (typecase record
       (draw-rectangle-output-record
-       (with-slots (left top right bottom filled ink) record
+       (with-slots (left top right bottom filled line-style ink) record
          ;; NB: left/right and top/bottom positions aren't dependable
          (list :rectangle
                (x (min left right))
@@ -370,16 +423,44 @@ four-element vector: width, height, ascent, descent")
                (abs (- right left))
                (abs (- bottom top))
                filled
+               line-style
                ink)))
+      (draw-rectangles-output-record
+       (with-slots (climi::coord-seq filled line-style ink) record
+         (list :rectangles (rects climi::coord-seq) filled line-style ink)))
       (draw-ellipse-output-record
-       (with-slots (center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy filled ink)
+       (with-slots (center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                    climi::start-angle climi::end-angle filled line-style ink)
            record
          (flet ((distance (x y)
                   (sqrt (+ (expt x 2) (expt y 2)))))
            (list :ellipse (x center-x) (y center-y)
                  (distance radius-1-dx radius-1-dy)
                  (distance radius-2-dx radius-2-dy)
-                 filled ink))))
+                 climi::start-angle climi::end-angle filled line-style ink))))
+      (draw-line-output-record
+       (with-slots (climi::point-x1 climi::point-y1 climi::point-x2 climi::point-y2 line-style ink)
+           record
+         (list :line
+               (x climi::point-x1) (y climi::point-y1)
+               (x climi::point-x2) (y climi::point-y2)
+               line-style ink)))
+      (draw-lines-output-record
+       (with-slots (climi::coord-seq line-style ink)
+           record
+         (list :lines (xsys climi::coord-seq) line-style ink)))
+      (draw-point-output-record
+       (with-slots (point-x point-y line-style ink)
+           record
+         (list :point (x point-x) (y point-y) line-style ink)))
+      (draw-points-output-record
+       (with-slots (climi::coord-seq line-style ink)
+           record
+         (list :points (xsys climi::coord-seq) line-style ink)))
+      (draw-polygon-output-record
+       (with-slots (climi::coord-seq filled climi::closed line-style ink)
+           record
+         (list :polygon (xsys climi::coord-seq) filled climi::closed line-style ink)))
       (draw-text-output-record
        (let ((medium (make-instance 'emacs-medium)))
          (with-slots (ink text-style string point-x point-y
@@ -416,6 +497,13 @@ four-element vector: width, height, ascent, descent")
                    climi::toward-x
                    climi::toward-y))))))))
 
+(defun ellipse-angle-to-point (angle r1 r2)
+  (flet ((zeroize (n) (if (< (abs n) 1e-6) 0 n)))
+    (let* ((p (atan (* (/ r1 r2) (- (tan angle)))))
+           (x (zeroize (* r1 (cos p))))
+           (y (zeroize (* r2 (sin p)))))
+      (cons x y))))
+
 
 ;;;; SVG
 
@@ -432,16 +520,96 @@ four-element vector: width, height, ascent, descent")
   "Print SHAPE to STREAM in SVG format.
    If STREAM is NIL then return the SVG shape as a string."
   (alexandria:destructuring-ecase shape
-    ((:rectangle x y w h filled ink)
-     (format stream "~&<rect x='~F' y='~F' width='~F' height='~F' fill='~A' stroke='~A'/>~%"
+    ((:rectangle x y w h filled line-style ink)
+     (format stream "~&<rect x='~F' y='~F' width='~F' height='~F' fill='~A' stroke='~A' ~
+                     ~@[stroke-width='~A' ~]~
+                     ~@[stroke-linejoin='~A' ~]~
+                     ~@[stroke-dasharray='~A' ~]~
+                     />~%"
              x y w h
              (svg-color (if filled ink nil))
-             (svg-color (if filled nil ink))))
-    ((:ellipse cx cy r1 r2 filled ink)
-     (format stream "~&<ellipse cx='~F' cy='~F' rx='~F' ry='~F' fill='~A' stroke='~A'/>~%"
-             cx cy r1 r2
+             (svg-color (if filled nil ink))
+             (and (not filled) (svg-stroke-width line-style))
+             (svg-stroke-line-join line-style)
+             (and (not filled) (svg-stroke-dasharray line-style))))
+    ((:rectangles coord-seq filled line-style ink)
+     (do ((i 0 (+ i 4)))
+         ((= i (length coord-seq)))
+       (format stream "~&<rect x='~F' y='~F' width='~F' height='~F' fill='~A' stroke='~A' ~
+                       ~@[stroke-width='~A' ~]~
+                       ~@[stroke-linejoin='~A' ~]~
+                       ~@[stroke-dasharray='~A' ~]~
+                       />~%"
+             (elt coord-seq i) (elt coord-seq (+ i 1)) (elt coord-seq (+ i 2)) (elt coord-seq (+ i 3))
              (svg-color (if filled ink nil))
-             (svg-color (if filled nil ink))))
+             (svg-color (if filled nil ink))
+             (and (not filled) (svg-stroke-width line-style))
+             (svg-stroke-line-join line-style)
+             (and (not filled) (svg-stroke-dasharray line-style)))))
+    ((:ellipse cx cy r1 r2 start-angle end-angle filled line-style ink)
+     (if (or (null start-angle)
+             (and (zerop start-angle) (= (* 2 pi) end-angle)))
+         (format stream "~&<ellipse cx='~F' cy='~F' rx='~F' ry='~F' fill='~A' stroke='~A' ~
+                         ~@[stroke-width='~A' ~]~
+                         ~@[stroke-dasharray='~A' ~]~
+                         />~%"
+                 cx cy r1 r2
+                 (svg-color (if filled ink nil))
+                 (svg-color (if filled nil ink))
+                 (and (not filled) (svg-stroke-width line-style))
+                 (and (not filled) (svg-stroke-dasharray line-style)))
+         (let ((start-point (ellipse-angle-to-point start-angle r1 r2))
+               (end-point (ellipse-angle-to-point end-angle r1 r2)))
+           (format stream "~&<path d='M ~F,~F ~
+                                      l ~F,~F ~
+                                      a ~F,~F ~
+                                        0 ~D,~D ~
+                                        ~F,~F z' ~
+                           fill='~A' stroke='~A' ~
+                           ~@[stroke-width='~A' ~]~
+                           ~@[stroke-dasharray='~A' ~]~
+                           />~&"
+                   cx cy
+                   (car start-point) (cdr start-point)
+                   r1 r2
+                   (if (>= (abs (- end-angle start-angle)) pi) 1 0)
+                   (if (plusp (- end-angle start-angle)) 0 1)
+                   (- (car end-point) (car start-point)) (- (cdr end-point) (cdr start-point))
+                   (svg-color (if filled ink nil))
+                   (svg-color (if filled nil ink))
+                   (and (not filled) (svg-stroke-width line-style))
+                   (and (not filled) (svg-stroke-dasharray line-style))))))
+    ((:line x1 y1 x2 y2 line-style ink)
+     (format stream (svg-line x1 y1 x2 y2 line-style ink)))
+    ((:lines coord-seq line-style ink)
+     (do ((i 0 (+ i 4)))
+         ((= i (length coord-seq)))
+       (format stream (svg-line (elt coord-seq i)       (elt coord-seq (+ i 1))
+                                (elt coord-seq (+ i 2)) (elt coord-seq (+ i 3))
+                                line-style ink))))
+    ((:point x y line-style ink)
+     (format stream (svg-point x y line-style ink)))
+    ((:points position-seq line-style ink)
+     (do ((i 0 (+ i 2)))
+         ((= i (length position-seq)))
+       (format stream (svg-point (elt position-seq i) (elt position-seq (+ i 1)) line-style ink))))
+    ((:polygon coord-seq filled closed line-style ink)
+     (format stream "~&<poly~A points='~{~F, ~F~^ ~}' ~
+                     ~@[stroke='~A' ~]~
+                     ~@[fill='~A' ~]~
+                     ~@[stroke-width='~A' ~]~
+                     ~@[stroke-linejoin='~A' ~]~
+                     ~@[stroke-linecap='~A' ~]~
+                     ~@[stroke-dasharray='~A' ~]~
+                     />"
+             (if (and (null filled) (null closed)) "line" "gon")
+             coord-seq
+             (svg-color (if filled nil ink))
+             (svg-color (if filled ink nil))
+             (and (not filled) (svg-stroke-width line-style))
+             (svg-stroke-line-join line-style)
+             (and (not filled) (not closed) (svg-stroke-line-cap line-style))
+             (svg-stroke-dasharray line-style)))
     ((:text ink text-style string x1 y1 x2 y2 point-x point-y toward-x toward-y)
      (declare (ignore toward-x toward-y x2 y2 point-x point-y))
      (format stream "~&<text style='~A;' xml:space='preserve' fill='~A'><tspan x='~F' y='~F'><tspan>~A</tspan></tspan></text>"
@@ -450,6 +618,29 @@ four-element vector: width, height, ascent, descent")
              x1 y1
              string))))
 
+(defun svg-point (x y line-style ink)
+  (let ((radius (/ (line-style-thickness line-style) 2))
+        (unit (svg-stroke-unit line-style)))
+    (format nil "~&<circle cx='~F' cy='~F' r='~F~A' fill='~A' />~%"
+            x y radius unit (svg-color ink))))
+
+(defun svg-line (x1 y1 x2 y2 line-style ink)
+  (let ((stroke-width (svg-stroke-width line-style))
+        (stroke-linejoin (svg-stroke-line-join line-style))
+        (stroke-linecap (svg-stroke-line-cap line-style))
+        (stroke-dasharray (svg-stroke-dasharray line-style)))
+    (format nil  "~&<line x1='~F' y1='~F' x2='~F' y2='~F' stroke='~A' ~
+                  ~@[stroke-width='~A' ~]~
+                  ~@[stroke-linejoin='~A' ~]~
+                  ~@[stroke-linecap='~A' ~]~
+                  ~@[stroke-dasharray='~A' ~]~
+                  />"
+            x1 y1 x2 y2 (svg-color ink)
+            stroke-width
+            stroke-linejoin
+            stroke-linecap
+            stroke-dasharray)))
+  
 (defun svg-color (ink)
   "Return an SVG color string representing INK (which may be NIL.)"
   (if ink
