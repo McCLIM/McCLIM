@@ -218,7 +218,7 @@ four-element vector: width, height, ascent, descent")
   (get-text-style-metric text-style
                          :descent
                          #'(lambda () (- (cdr (svg-image-size (text-to-svg "y" text-style)))
-                                         (cdr (text-style-base text-style))))))
+                                         (cdr (svg-image-size (text-to-svg "v" text-style)))))))
 
 (defmethod text-style-height ((text-style standard-text-style) (medium emacs-medium))
   (get-text-style-metric text-style
@@ -467,31 +467,25 @@ four-element vector: width, height, ascent, descent")
                       climi::align-x climi::align-y
                       climi::toward-x climi::toward-y)
              record
-           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
+           (multiple-value-bind (width height final-x final-y baseline)
+               (text-size medium string :text-style text-style)
+             (declare (ignore height final-x final-y))
              (ecase climi::align-y
-               (:baseline (incf y1 (text-style-ascent text-style medium)))
-               (:top nil)
-               (:center (incf y1 (/ (text-style-height text-style medium) 2)))
-               (:bottom (incf y1 (text-style-height text-style medium))))
-             ;; FIXME Pretty sure this is wrong, especially if we just set everything
-             ;;  to zero again - jqs 2020-05-08
+               (:top (incf point-y (text-style-ascent text-style medium)))
+               (:center (incf point-y (- baseline (/ (text-style-height text-style medium) 2))))
+               (:baseline nil)
+               (:bottom (decf point-y (text-style-descent text-style medium))))
              (ecase climi::align-x
                (:left nil)
-               (:right (rotatef x1 x2))
-               (:center (let ((half (/ x2 2)))
-                          (decf x1 half)
-                          (decf x2 half))))
+               (:center (decf point-x (/ width 2)))
+               (:right (decf point-x width)))
              (list :text
-                   ink
-                   text-style
                    string
-                   (x x1)
-                   (y y1)
-                   (x x2)
-                   (y y2)
-                   (x point-x)
-                   (y point-y)
-                   ;; FXIME We don't actually use these. The mismatch between CLIM's
+                   point-x
+                   point-y
+                   text-style
+                   ink
+                   ;; FIXME We don't actually use these. The mismatch between CLIM's
                    ;;  notions of ltr and tb etc. and CSS3's are too great for now
                    ;;  - jqs 2020-05-08
                    climi::toward-x
@@ -610,12 +604,12 @@ four-element vector: width, height, ascent, descent")
              (svg-stroke-line-join line-style)
              (and (not filled) (not closed) (svg-stroke-line-cap line-style))
              (svg-stroke-dasharray line-style)))
-    ((:text ink text-style string x1 y1 x2 y2 point-x point-y toward-x toward-y)
-     (declare (ignore toward-x toward-y x2 y2 point-x point-y))
+    ((:text string x y text-style ink toward-x toward-y)
+     (declare (ignore toward-x toward-y))
      (format stream "~&<text style='~A;' xml:space='preserve' fill='~A'><tspan x='~F' y='~F'><tspan>~A</tspan></tspan></text>"
              (svg-text-style text-style)
              (svg-color ink)
-             x1 y1
+             x y
              string))))
 
 (defun svg-point (x y line-style ink)
