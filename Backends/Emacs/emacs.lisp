@@ -365,7 +365,7 @@ four-element vector: width, height, ascent, descent")
       (map-over-output-record-tree (lambda (record)
                                      (push (output-record-to-list record x-min y-min) shapes))
                                    root)
-      (remove nil shapes))))
+      (reverse (remove nil shapes)))))
 
 (defun map-over-output-record-tree (fn record)
   "Call FN on RECORD and all descendents of RECORD."
