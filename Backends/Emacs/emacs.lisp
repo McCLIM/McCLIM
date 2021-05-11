@@ -144,7 +144,7 @@
     (multiple-value-bind (width height x y baseline)
         (text-size medium sub :text-style text-style)
       (declare (ignore baseline))
-      (values x y (+ x width) (+ y height)))))
+      (values (- x width) y width (+ y height)))))
 
 (defparameter *svg-string-size-cache*
   (make-hash-table :test 'equal))
@@ -477,11 +477,14 @@ four-element vector: width, height, ascent, descent")
        (let ((medium (make-instance 'emacs-medium)))
          (with-slots (ink text-style string point-x point-y
                       climi::align-x climi::align-y
-                      climi::toward-x climi::toward-y)
+                      climi::toward-x climi::toward-y
+                      transformation)
              record
            (multiple-value-bind (width height final-x final-y baseline)
                (text-size medium string :text-style text-style)
              (declare (ignore height final-x final-y))
+             (setf (values point-x point-y)
+                   (transform-position transformation point-x point-y))
              (ecase climi::align-y
                (:top (incf point-y (text-style-ascent text-style medium)))
                (:center (incf point-y (- baseline (/ (text-style-height text-style medium) 2))))
@@ -507,8 +510,9 @@ four-element vector: width, height, ascent, descent")
   (flet ((zeroize (n) (if (< (abs n) 1e-6) 0 n)))
     (let* ((p (atan (* (/ r1 r2) (- (tan angle)))))
            (x (zeroize (* r1 (cos p))))
-           (y (zeroize (* r2 (sin p)))))
-      (cons x y))))
+           (y (zeroize (* r2 (sin p))))
+           (sign (if (< (/ pi 2) angle (/ pi 3/4)) -1 1)))
+      (cons (* sign x) (* sign y)))))
 
 
 ;;;; SVG
