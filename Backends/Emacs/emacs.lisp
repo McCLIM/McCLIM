@@ -3,25 +3,6 @@
 ;;; This file provides a backend to render McCLIM graphics in Emacs via SLIME.
 ;;; CLIM drawing operations are mapped onto an SVG canvas and shipped to Emacs
 ;;; via socket connection.
-;;;
-;;; This is all in one file for the moment because I find that I get lost
-;;; otherwise.
-;;;
-;;; - [X] Define Emacs backend with SVG medium
-;;; - [X] Display results in SLIME REPL
-;;; - [ ] Drawing operations
-;;;   - [X] Rectangle
-;;;   - [X] Polygon
-;;;   - [ ] Circle
-;;;   - [X] Ellipse
-;;;   - [ ] Line
-;;;   - [ ] Points
-;;;   - [ ] Text
-;;; - [ ] Support mouse events
-;;; - [ ] Support mouse-sensitive regions for accepting input
-;;; - [ ] Commands
-;;; - [ ] Menus
-;;; - [ ] ... what else?
 
 (in-package #:common-lisp-user)
 (defpackage #:clim-emacs
@@ -396,7 +377,7 @@ four-element vector: width, height, ascent, descent")
       (map-over-output-record-tree (lambda (record)
                                      (push (output-record-to-list record x-min y-min) shapes))
                                    root)
-      (remove nil shapes))))
+      (reverse (remove nil shapes)))))
 
 (defun map-over-output-record-tree (fn record)
   "Call FN on RECORD and all descendents of RECORD."
