@@ -124,8 +124,8 @@
          (text-style (or text-style (medium-text-style medium))))
     (multiple-value-bind (width height x y baseline)
         (text-size medium sub :text-style text-style)
-      (declare (ignore baseline))
-      (values (- x width) y width (+ y height)))))
+      (declare (ignore x y))
+      (values 0 (- baseline) width (- height baseline)))))
 
 (defparameter *svg-string-size-cache*
   (make-hash-table :test 'equal))
