@@ -299,6 +299,11 @@ four-element vector: width, height, ascent, descent")
 (defun emacs-right-margin ()
   (swank:ed-rpc 'window-width-for-margin))
 
+(defmethod sheet-region ((sheet clim-emacs-stream)) ; FIXME emacs-graft?
+  (make-rectangle* 0 0
+                   (emacs-right-margin)
+                   100)) ; FIXME ?? perhaps we should do 80 x 43 chars
+
 (defun output-record-to-svg (record)
   (multiple-value-bind (x-min y-min x-max y-max) (bounding-rectangle* record)
     (let ((width  (ceiling (- x-max x-min)))
