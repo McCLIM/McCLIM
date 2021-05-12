@@ -121,10 +121,22 @@
                                            &key text-style start end align-x align-y direction)
   (declare (ignore align-x align-y direction))
   (let* ((sub (subseq string (or start 0) (or end (length string))))
-         (text-style (or text-style (medium-text-style medium)))
-         (svg-data (text-to-svg string text-style))
-         (image-size (svg-image-size svg-data)))
-    (values 0 0 (car image-size) (cdr image-size))))
+         (text-style (or text-style (medium-text-style medium))))
+    (multiple-value-bind (width height x y baseline)
+        (text-size medium sub :text-style text-style)
+      (declare (ignore x y))
+      (values 0 (- baseline) width (- height baseline)))))
+
+(defparameter *svg-string-size-cache*
+  (make-hash-table :test 'equal))
+
+(defun get-svg-string-size (string text-style)
+  (let ((cache-key (cons string (text-style-metrics-cache-key text-style))))
+    (alexandria:if-let ((cache-value (gethash cache-key *svg-string-size-cache*)))
+      cache-value
+      (let* ((svg-data (text-to-svg string text-style))
+             (image-size (svg-image-size svg-data)))
+        (setf (gethash cache-key *svg-string-size-cache*) image-size)))))
 
 (defun svg-image-size (svg-data)
   (swank:ed-rpc 'svg-image-size svg-data))
@@ -143,7 +155,7 @@
                                   (- total-height (text-style-descent text-style medium))))
       (setf width (if (zerop (length line))
                       0
-                      (car (svg-image-size (text-to-svg line text-style)))))
+                      (car (get-svg-string-size line text-style))))
       (incf total-height line-height)
       (alexandria:maxf max-width width))))
 
@@ -199,7 +211,7 @@ four-element vector: width, height, ascent, descent")
   (get-text-style-metric text-style
                          :descent
                          #'(lambda () (- (cdr (svg-image-size (text-to-svg "y" text-style)))
-                                         (cdr (text-style-base text-style))))))
+                                         (cdr (svg-image-size (text-to-svg "v" text-style)))))))
 
 (defmethod text-style-height ((text-style standard-text-style) (medium emacs-medium))
   (get-text-style-metric text-style
@@ -286,6 +298,11 @@ four-element vector: width, height, ascent, descent")
 ;;  out how to use it when initializing the stream - jqs 2020-05-08
 (defun emacs-right-margin ()
   (swank:ed-rpc 'window-width-for-margin))
+
+(defmethod sheet-region ((sheet clim-emacs-stream)) ; FIXME emacs-graft?
+  (make-rectangle* 0 0
+                   (emacs-right-margin)
+                   100)) ; FIXME ?? perhaps we should do 80 x 43 chars
 
 (defun output-record-to-svg (record)
   (multiple-value-bind (x-min y-min x-max y-max) (bounding-rectangle* record)
@@ -446,33 +463,30 @@ four-element vector: width, height, ascent, descent")
        (let ((medium (make-instance 'emacs-medium)))
          (with-slots (ink text-style string point-x point-y
                       climi::align-x climi::align-y
-                      climi::toward-x climi::toward-y)
+                      climi::toward-x climi::toward-y
+                      transformation)
              record
-           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
+           (multiple-value-bind (width height final-x final-y baseline)
+               (text-size medium string :text-style text-style)
+             (declare (ignore height final-x final-y))
+             (setf (values point-x point-y)
+                   (transform-position transformation point-x point-y))
              (ecase climi::align-y
-               (:baseline (incf y1 (text-style-ascent text-style medium)))
-               (:top nil)
-               (:center (incf y1 (/ (text-style-height text-style medium) 2)))
-               (:bottom (incf y1 (text-style-height text-style medium))))
-             ;; FIXME Pretty sure this is wrong, especially if we just set everything
-             ;;  to zero again - jqs 2020-05-08
+               (:top (incf point-y (text-style-ascent text-style medium)))
+               (:center (incf point-y (- baseline (/ (text-style-height text-style medium) 2))))
+               (:baseline nil)
+               (:bottom (decf point-y (text-style-descent text-style medium))))
              (ecase climi::align-x
                (:left nil)
-               (:right (rotatef x1 x2))
-               (:center (let ((half (/ x2 2)))
-                          (decf x1 half)
-                          (decf x2 half))))
+               (:center (decf point-x (/ width 2)))
+               (:right (decf point-x width)))
              (list :text
-                   ink
-                   text-style
                    string
-                   (x x1)
-                   (y y1)
-                   (x x2)
-                   (y y2)
-                   (x point-x)
-                   (y point-y)
-                   ;; FXIME We don't actually use these. The mismatch between CLIM's
+                   point-x
+                   point-y
+                   text-style
+                   ink
+                   ;; FIXME We don't actually use these. The mismatch between CLIM's
                    ;;  notions of ltr and tb etc. and CSS3's are too great for now
                    ;;  - jqs 2020-05-08
                    climi::toward-x
@@ -482,8 +496,9 @@ four-element vector: width, height, ascent, descent")
   (flet ((zeroize (n) (if (< (abs n) 1e-6) 0 n)))
     (let* ((p (atan (* (/ r1 r2) (- (tan angle)))))
            (x (zeroize (* r1 (cos p))))
-           (y (zeroize (* r2 (sin p)))))
-      (cons x y))))
+           (y (zeroize (* r2 (sin p))))
+           (sign (if (< (/ pi 2) angle (/ pi 3/4)) -1 1)))
+      (cons (* sign x) (* sign y)))))
 
 
 ;;;; SVG
@@ -591,12 +606,12 @@ four-element vector: width, height, ascent, descent")
              (svg-stroke-line-join line-style)
              (and (not filled) (not closed) (svg-stroke-line-cap line-style))
              (svg-stroke-dasharray line-style)))
-    ((:text ink text-style string x1 y1 x2 y2 point-x point-y toward-x toward-y)
-     (declare (ignore toward-x toward-y x2 y2 point-x point-y))
+    ((:text string x y text-style ink toward-x toward-y)
+     (declare (ignore toward-x toward-y))
      (format stream "~&<text style='~A;' xml:space='preserve' fill='~A'><tspan x='~F' y='~F'><tspan>~A</tspan></tspan></text>"
              (svg-text-style text-style)
              (svg-color ink)
-             x1 y1
+             x y
              string))))
 
 (defun svg-point (x y line-style ink)
