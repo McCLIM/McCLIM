@@ -469,8 +469,6 @@ four-element vector: width, height, ascent, descent")
            (multiple-value-bind (width height final-x final-y baseline)
                (text-size medium string :text-style text-style)
              (declare (ignore height final-x final-y))
-             (setf (values point-x point-y)
-                   (transform-position transformation point-x point-y))
              (ecase climi::align-y
                (:top (incf point-y (text-style-ascent text-style medium)))
                (:center (incf point-y (- baseline (/ (text-style-height text-style medium) 2))))
@@ -486,6 +484,7 @@ four-element vector: width, height, ascent, descent")
                    point-y
                    text-style
                    ink
+                   transformation
                    ;; FIXME We don't actually use these. The mismatch between CLIM's
                    ;;  notions of ltr and tb etc. and CSS3's are too great for now
                    ;;  - jqs 2020-05-08
@@ -606,11 +605,19 @@ four-element vector: width, height, ascent, descent")
              (svg-stroke-line-join line-style)
              (and (not filled) (not closed) (svg-stroke-line-cap line-style))
              (svg-stroke-dasharray line-style)))
-    ((:text string x y text-style ink toward-x toward-y)
+    ((:text string x y text-style ink transformation toward-x toward-y)
      (declare (ignore toward-x toward-y))
-     (format stream "~&<text style='~A;' xml:space='preserve' fill='~A'><tspan x='~F' y='~F'><tspan>~A</tspan></tspan></text>"
+     (format stream "~&<text style='~A;' xml:space='preserve' ~
+                     fill='~A' ~
+                     ~@[transform='matrix(~{~F~^ ~})' ~] >~
+                     <tspan x='~F' y='~F'>~
+                     <tspan>~A</tspan></tspan></text>"
              (svg-text-style text-style)
              (svg-color ink)
+             (when (and transformation
+                        (not (identity-transformation-p transformation)))
+               (multiple-value-list
+                (climi::get-transformation transformation)))
              x y
              string))))
 
