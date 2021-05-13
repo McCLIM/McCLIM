@@ -866,9 +866,13 @@ were added."
     (function (record standard-tree-output-record) x y
      &optional x-offset y-offset &rest function-args)
   (declare (ignore x-offset y-offset))
-  (map-over-tree-output-records function record
-    (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y)) :most-recent-first
-                                function-args))
+  (flet ((refined-test-function (record)
+           (when (output-record-refined-position-test record x y)
+             (apply function record function-args))))
+    (declare (dynamic-extent #'refined-test-function))
+    (let ((rectangle (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y))))
+      (map-over-tree-output-records
+       #'refined-test-function record rectangle :most-recent-first nil))))
 
 (defmethod map-over-output-records-overlapping-region
     (function (record standard-tree-output-record) region

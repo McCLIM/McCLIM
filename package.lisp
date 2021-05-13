@@ -455,6 +455,7 @@
    #:basic-medium                       ;class
    #:basic-pane                         ;class
    #:basic-port                         ;class
+   #:basic-output-record                ;class
    #:basic-sheet                        ;class
    #:bboard-pane                        ;pane
    #:beep                               ;generic function
