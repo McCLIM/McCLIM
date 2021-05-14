@@ -1050,12 +1050,40 @@ calculated by `drei-bounding-rectangle*'."
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
-(defmethod replay-output-record ((drei drei-area) (stream extended-output-stream) &optional
-                                 (x-offset 0) (y-offset 0) (region +everywhere+))
+(defvar %%replay-output-record-drei-area-kludge%% nil)
+(defmethod replay-output-record
+    ((drei drei-area) (stream extended-output-stream)
+     &optional (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
-  (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
-    (invalidate-all-strokes (view drei))
-    (display-drei-view-contents stream (view drei))))
+  ;; FIXME this ugly kludge is to sidestep a problem in Drei. Namely Drei
+  ;; doesn't distinguish between displaying and replaying output records.  When
+  ;; drei cursor is replayed it is used to decide whether the sheet should be
+  ;; scrolled. That leads to a call to a SCROLL-EXTEND in the DISPLAY-DREI-AREA.
+  ;; the SCROLL-EXTEND may change the mirror transformation and that leads to a
+  ;; call to REPAINT-SHEET which in turn causes a recursive call to the
+  ;; REPLAY-OUTPUT-RECORD. Drei doesn't catch up to that and instead of:
+  ;;
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;
+  ;; It executes things in this order:
+  ;;
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;
+  ;; So the line count is incorrectly summed to 2. Later when we measure the
+  ;; bounding rectangle in display-drei-area we iterate over lines and we try to
+  ;; access a line that is out of bounds.
+  (when %%replay-output-record-drei-area-kludge%%
+    (return-from replay-output-record))
+  (let ((%%replay-output-record-drei-area-kludge%% t))
+    (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
+      (invalidate-all-strokes (view drei))
+      (display-drei-view-contents stream (view drei)))))
 
 (defmethod replay-output-record ((cursor drei-cursor) stream &optional
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
@@ -1073,21 +1101,17 @@ calculated by `drei-bounding-rectangle*'."
                     (null (output-record-parent drei)))
           (recompute-extent-for-changed-child (output-record-parent drei) drei
                                               old-x1 old-y1 old-x2 old-y2))))
-    (when (point-cursor drei)
+    (when (and (point-cursor drei) (active drei))
       (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
-        (when (pane-viewport stream)
-          (let* ((viewport (pane-viewport stream))
-                 (viewport-height (bounding-rectangle-height viewport))
-                 (viewport-width (bounding-rectangle-width viewport))
-                 (viewport-region (pane-viewport-region stream)))
-            ;; Scroll if point went outside the visible area.
-            (when (and (active drei)
-                       (pane-viewport stream)
-                       (not (and (region-contains-position-p viewport-region x2 y2)
-                                 (region-contains-position-p viewport-region x1 y1))))
-              (scroll-extent stream
-                             (max 0 (- x2 viewport-width))
-                             (max 0 (- y2 viewport-height))))))))
+        (alexandria:when-let ((viewport (pane-viewport stream)))
+          (with-bounding-rectangle* (:height height :width width) viewport
+            (let ((region (pane-viewport-region stream)))
+              ;; Scroll if point went outside the visible area.
+              (when (and (not (region-contains-position-p region x2 y2))
+                         (not (region-contains-position-p region x1 y1)))
+                (scroll-extent stream
+                               (max 0 (- x2 width))
+                               (max 0 (- y2 height)))))))))
     (finish-output stream)))
 
 ;;; Drei pane redisplay.
