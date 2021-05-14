@@ -730,10 +730,10 @@ type (found via `presentation-type-of') to generate output."
            (pump-state (pump-state-for-offset view start-offset))
            (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane)))
            (current-line-height 0))
-      ;; For invalidation of the parts of the display that have
-      ;; changed.
-      (synchronize-view view :begin (offset (top view)) :end (max (offset (bot view))
-                                                                  (offset (top view))))
+      ;; For invalidation of the parts of the display that have changed.
+      (synchronize-view view :begin (offset (top view))
+                             :end (max (offset (bot view))
+                                       (offset (top view))))
       (setf (displayed-lines-count view) 0
             (max-line-width view) 0)
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
