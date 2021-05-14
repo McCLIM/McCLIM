@@ -340,8 +340,9 @@ modifier key."))
     ,(frame-command-table *application-frame*)))
 
 (defclass drei-area (drei displayed-output-record region
-                          command-processor
-                          instant-macro-execution-mixin)
+                     climi::gs-text-style-mixin
+                     command-processor
+                     instant-macro-execution-mixin)
   ((%background-ink :initarg :background-ink
                     :reader background-ink
                     :initform +background-ink+)
