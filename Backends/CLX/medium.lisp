@@ -444,23 +444,26 @@ translated, so they begin at different position than [0,0])."))
                                         (clime:effective-transformed-design ink))))
   (let* ((drawable (clx-drawable medium))
          (rgba-pattern (climi::%collapse-pattern ink))
-         (pm (compute-rgb-image drawable rgba-pattern)))
-    (let ((gc (xlib:create-gcontext :drawable drawable)))
-      (setf (xlib:gcontext-fill-style gc) :tiled
-            (xlib:gcontext-tile gc) pm
-            (xlib:gcontext-clip-x gc) 0
-            (xlib:gcontext-clip-y gc) 0
-            (xlib:gcontext-ts-x gc) 0
-            (xlib:gcontext-ts-y gc) 0)
-      (if-let ((mask (and (not (typep ink* 'clime:rectangular-tile))
-                          (let* ((tr (clime:transformed-design-transformation ink))
-                                 (region (medium-device-region medium))
-                                 (region (untransform-region tr region)))
-                            (compute-rgb-mask drawable rgba-pattern region)))))
-        (setf (xlib:gcontext-clip-mask gc) mask)
-        (%set-gc-clipping-region medium gc))
-      (push #'(lambda () (xlib:free-gcontext gc)) ^cleanup)
-      gc)))
+         (pm (compute-rgb-image drawable rgba-pattern))
+         (gc (xlib:create-gcontext :drawable drawable)))
+    (setf (xlib:gcontext-fill-style gc) :tiled
+          (xlib:gcontext-tile gc) pm
+          (xlib:gcontext-clip-x gc) 0
+          (xlib:gcontext-clip-y gc) 0
+          (xlib:gcontext-ts-x gc) 0
+          (xlib:gcontext-ts-y gc) 0)
+    (if-let ((mask (and (not (typep ink* 'clime:rectangular-tile))
+                        ;; We need to return a mask, that is the clipping
+                        ;; region in the ink's coordinate system. -- jd 2021-05-18
+                        (let* ((ink-tr (clime:transformed-design-transformation ink))
+                               (dev-tr (medium-device-transformation medium))
+                               (res-tr (compose-transformations ink-tr dev-tr))
+                               (region (untransform-region res-tr (medium-device-region medium))))
+                          (compute-rgb-mask drawable rgba-pattern region)))))
+      (setf (xlib:gcontext-clip-mask gc) mask)
+      (%set-gc-clipping-region medium gc))
+    (push #'(lambda () (xlib:free-gcontext gc)) ^cleanup)
+    gc))
 
 ;;;;
 
