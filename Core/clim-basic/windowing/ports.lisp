@@ -377,50 +377,53 @@ is a McCLIM extension.")
   ;; - Pressing the button sends the focus event
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (let ((grabbed-sheet (port-grabbed-sheet port)))
-    (when (sheetp grabbed-sheet)
-      (return-from distribute-event
-        (unless (typep event 'pointer-boundary-event)
-          (dispatch-event-copy grabbed-sheet event)))))
-  ;; Synthesize boundary events and update the port-pointer-sheet.
-  (let ((pressed-sheet (port-pressed-sheet port))
-        (new-pointer-sheet (synthesize-boundary-events port event)))
-    ;; Set the pointer cursor.
-    (when-let ((cursor-sheet (or pressed-sheet new-pointer-sheet)))
-      (let* ((event-sheet (event-sheet event))
-             (old-pointer-cursor
-               (port-lookup-current-pointer-cursor port event-sheet))
-             (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
-        (unless (eql old-pointer-cursor new-pointer-cursor)
-          (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
-    ;; Handle some events specially.
-    (typecase event
-      ;; Pressing the pointer button over a sheet makes a sheet pressed and
-      ;; focused. The pressed sheet is assigned only when there is currently
-      ;; none, while the event for focusing the sheet is always dispatched.
-      (pointer-button-press-event
-       (when (null pressed-sheet)
-         (setf (port-pressed-sheet port) new-pointer-sheet))
-       (when new-pointer-sheet
-         (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event)))
-      ;; Releasing the button sets the pressed sheet to NIL without changing
-      ;; the focus.
-      (pointer-button-release-event
-       (when pressed-sheet
-         (unless (eql pressed-sheet new-pointer-sheet)
-           (dispatch-event-copy pressed-sheet event))
-         (setf (port-pressed-sheet port) nil)))
-      ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
-      (pointer-boundary-event
-       (return-from distribute-event))
-      ;; Unless pressed sheet is already a target of the motion event,
-      ;; event is duplicated and dispatched to it.
-      (pointer-motion-event
-       (when (and pressed-sheet (not (eql pressed-sheet new-pointer-sheet)))
-         (dispatch-event-copy pressed-sheet event))))
-    ;; Distribute event to the innermost child (may be none).
-    (when new-pointer-sheet
-      (dispatch-event-copy new-pointer-sheet event))))
+  (flet ((update-cursor (cursor-sheet)
+           (let* ((event-sheet (event-sheet event))
+                  (old-pointer-cursor
+                    (port-lookup-current-pointer-cursor port event-sheet))
+                  (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
+             (unless (eql old-pointer-cursor new-pointer-cursor)
+               (set-sheet-pointer-cursor port event-sheet new-pointer-cursor)))))
+    (when-let ((grabbed-sheet (port-grabbed-sheet port)))
+      (unless (sheetp grabbed-sheet)
+        (setf grabbed-sheet (synthesize-boundary-events port event)))
+      (update-cursor grabbed-sheet)
+      (unless (typep event 'pointer-boundary-event)
+        (dispatch-event-copy grabbed-sheet event))
+      (return-from distribute-event))
+    ;; Synthesize boundary events and update the port-pointer-sheet.
+    (let ((pressed-sheet (port-pressed-sheet port))
+          (pointer-sheet (synthesize-boundary-events port event)))
+      ;; Set the pointer cursor.
+      (update-cursor (or pressed-sheet pointer-sheet))
+      ;; Handle some events specially.
+      (typecase event
+        ;; Pressing the pointer button over a sheet makes a sheet pressed and
+        ;; focused. The pressed sheet is assigned only when there is currently
+        ;; none, while the event for focusing the sheet is always dispatched.
+        (pointer-button-press-event
+         (when (null pressed-sheet)
+           (setf (port-pressed-sheet port) pointer-sheet))
+         (when pointer-sheet
+           (dispatch-event-copy pointer-sheet event 'window-manager-focus-event)))
+        ;; Releasing the button sets the pressed sheet to NIL without changing
+        ;; the focus.
+        (pointer-button-release-event
+         (when pressed-sheet
+           (unless (eql pressed-sheet pointer-sheet)
+             (dispatch-event-copy pressed-sheet event))
+           (setf (port-pressed-sheet port) nil)))
+        ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
+        (pointer-boundary-event
+         (return-from distribute-event))
+        ;; Unless pressed sheet is already a target of the motion event,
+        ;; event is duplicated and dispatched to it.
+        (pointer-motion-event
+         (when (and pressed-sheet (not (eql pressed-sheet pointer-sheet)))
+           (dispatch-event-copy pressed-sheet event))))
+      ;; Distribute event to the innermost child (may be none).
+      (when pointer-sheet
+        (dispatch-event-copy pointer-sheet event)))))
 
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))
