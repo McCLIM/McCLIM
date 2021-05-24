@@ -79,7 +79,7 @@
                  (:pane                  * :conflicts (:panes :layouts))
                  (:panes                 * :conflicts (:pane))
                  (:layouts               * :conflicts (:pane))
-                 (:command-table         1 :type (cons symbol list))
+                 (:command-table         1 :type list)
                  (:command-definer       1 :type symbol)
                  (:menu-bar              1 :type (or symbol list))
                  (:disabled-commands     *)
