@@ -107,15 +107,32 @@
             (clim-to-svg-face face)
             (clim-to-svg-size size))))
 
+(defun escape-for-svg (string)
+  (with-output-to-string (out)
+    (loop for char across string
+          do (case char
+               ((#\<) (write-string "&lt;" out))
+               #+(or)((#\>) (write-string "&gt;" out))
+               #+(or)((#\") (write-string "&quot;" out))
+               #+(or)((#\') (write-string "&#039;" out))
+               ((#\&) (write-string "&amp;" out))
+               (otherwise (write-char char out))))))
+
 (defun text-to-svg (string text-style)
   ;; FiXME We include "xml:space = preserve" to avoid whitespace being collapsed.
   ;;  This might mean that multi-line text will get a bounding-rectangle using
   ;;  the libsvg layout algorithm, but a `text-size` using a different
   ;;  layout algorithm. Perhaps it doesn't matter, and this just
   ;;  shouldn't be called with multi-line text - jqs 2020-05-08
-  (format nil "<svg xmlns='http://www.w3.org/2000/svg'><text style='~A;' xml:space='preserve'><tspan x='0' y='0'><tspan>~A</tspan></tspan></text></svg>"
+  (format nil "<svg xmlns='http://www.w3.org/2000/svg'>~
+                  <text style='~A;' xml:space='preserve'>~
+                    <tspan x='0' y='0'>~
+                      <tspan>~A</tspan>~
+                    </tspan>~
+                  </text>~
+                </svg>"
           (svg-text-style text-style)
-          string))
+          (escape-for-svg string)))
 
 (defmethod climb:text-bounding-rectangle* ((medium emacs-medium) string
                                            &key text-style start end align-x align-y direction)
@@ -619,7 +636,7 @@ four-element vector: width, height, ascent, descent")
                (multiple-value-list
                 (climi::get-transformation transformation)))
              x y
-             string))))
+             (escape-for-svg string)))))
 
 (defun svg-point (x y line-style ink)
   (let ((radius (/ (line-style-thickness line-style) 2))
