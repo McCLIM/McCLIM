@@ -198,9 +198,20 @@ documentation produced by presentations.")))
 ;;; SMP and non-SMP systems). Thanks to that we have a single loop processing
 ;;; events. Alternative approach is executed with window-stream frames which
 ;;; have a standalone-event-loop (see panes.lisp). -- jd 2018-12-27
-(defmethod initialize-instance :after ((obj standard-application-frame)
-                                       &key (icon nil icon-supplied-p)
-                                       &allow-other-keys)
+(defmethod initialize-instance :after ((obj standard-application-frame) &key)
+  (unless (frame-event-queue obj)
+    (when-let* ((calling-frame (frame-calling-frame obj))
+                (calling-queue (frame-event-queue calling-frame)))
+      (setf (frame-event-queue obj) calling-queue)
+      (return-from initialize-instance))
+    (setf (frame-event-queue obj)
+          (if *multiprocessing-p*
+              (make-instance 'concurrent-event-queue)
+              (make-instance 'simple-event-queue)))))
+
+(defmethod shared-initialize :after
+    ((obj standard-application-frame) slot-names
+     &key (icon nil icon-supplied-p) &allow-other-keys)
   (labels ((coerce-to-icon (thing)
              (typecase thing
                ((or string pathname)
@@ -215,19 +226,18 @@ documentation produced by presentations.")))
                 ((null icon)
                  nil)
                 (t
-                 (coerce-to-icon icon)))))
-  (unless (frame-event-queue obj)
-    (when-let* ((calling-frame (frame-calling-frame obj))
-                (calling-queue (frame-event-queue calling-frame)))
-      (setf (frame-event-queue obj) calling-queue)
-      (return-from initialize-instance))
-    (setf (frame-event-queue obj)
-          (if *multiprocessing-p*
-              (make-instance 'concurrent-event-queue)
-              (make-instance 'simple-event-queue)))))
+                 (coerce-to-icon icon))))))
+
+(defmethod reinitialize-instance :after
+    ((frame standard-application-frame)
+     &key (icon nil ip) (pretty-name nil pp) (command-table nil cp))
+  (let ((fm (frame-manager frame)))
+    (and ip (note-frame-icon-changed fm frame icon))
+    (and pp (note-frame-pretty-name-changed fm frame pretty-name))
+    (and cp (note-frame-command-table-changed fm frame command-table))))
 
 (defmethod (setf frame-pretty-name) :after (new-value frame)
-  (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
+  (note-frame-pretty-name-changed (frame-manager frame) frame new-value))
 
 (defmethod (setf frame-icon) :after (new-value frame)
   (note-frame-icon-changed (frame-manager frame) frame new-value))
@@ -276,20 +286,18 @@ documentation produced by presentations.")))
             (frame-pointer-documentation-output frame) pointer-documentation))))
 
 (defmethod layout-frame ((frame application-frame) &optional width height)
-  (when (and (or width height)
-             (not (and width height)))
+  (when (alexandria:xor width height)
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (let ((pane (frame-top-level-sheet frame)))
+  (let ((tpl-sheet (frame-top-level-sheet frame)))
     (when (and (null width) (null height))
       (let (;;I guess this might be wrong. --GB 2004-06-01
-            (space (compose-space pane)))
+            (space (compose-space tpl-sheet)))
         (setq width (space-requirement-width space))
         (setq height (space-requirement-height space))))
-    (let ((tpl-sheet (frame-top-level-sheet frame)))
-      (unless (and (= width (bounding-rectangle-width tpl-sheet))
-                   (= height (bounding-rectangle-height tpl-sheet)))
-        (resize-sheet tpl-sheet width height)))
-    (allocate-space pane width height)))
+    (unless (and (= width (bounding-rectangle-width tpl-sheet))
+                 (= height (bounding-rectangle-height tpl-sheet)))
+      (resize-sheet tpl-sheet width height))
+    (allocate-space tpl-sheet width height)))
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
@@ -313,7 +321,7 @@ documentation produced by presentations.")))
   nil)
 
 
-#+nil
+#+ (or)
 (defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
   (map-over-sheets
    (lambda (sheet)
