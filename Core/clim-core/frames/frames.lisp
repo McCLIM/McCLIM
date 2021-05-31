@@ -487,8 +487,7 @@
            'command-line-read-remaining-arguments-for-partial-command)
           (prompt "Command: "))
   ;; Give each pane a fresh start first time through.
-  (let ((needs-redisplay t)
-        (first-time t))
+  (let ((needs-redisplay t))
     (loop
       ;; The variables are rebound each time through the loop because the
       ;; values of frame-standard-input et al. might be changed by a command.
@@ -513,9 +512,8 @@
                        (setq needs-redisplay t)
                        (execute-frame-command frame command))))
               (when needs-redisplay
-                (redisplay-frame-panes frame :force-p first-time)
-                (setq first-time nil
-                      needs-redisplay nil))
+                (redisplay-frame-panes frame)
+                (setq needs-redisplay nil))
               (when interactorp
                 (setf (cursor-visibility (stream-text-cursor frame-query-io)) nil)
                 (when prompt
