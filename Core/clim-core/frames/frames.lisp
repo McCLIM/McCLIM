@@ -75,101 +75,130 @@
    (pdoc-bar
     :initarg :pointer-documentation
     :initform t)
-   (command-table :initarg :command-table
-                  :initform nil
-                  :accessor frame-command-table)
-   (panes :initform nil :accessor frame-panes
-          :documentation "The tree of panes in the current layout.")
-   (current-panes :initform nil :accessor frame-current-panes)
-   (layouts :initform nil
-            :initarg :layouts
-            :reader frame-layouts)
-   (current-layout :initform nil
-                   :initarg :current-layout
-                   :accessor frame-current-layout)
-   (panes-for-layout :initform nil :accessor frame-panes-for-layout
-                     :documentation "alist of names and panes
-                                     (as returned by make-pane)")
-   (resize-frame :initarg :resize-frame
-                 :initform nil
-                 :accessor frame-resize-frame)
-   (output-pane :initform nil
-                :accessor frame-standard-output
-                :accessor frame-error-output)
-   (input-pane :initform nil
-               :accessor frame-standard-input)
-   (documentation-pane :initform nil
-                       :accessor frame-pointer-documentation-output)
-
-   (top-level-sheet :initform nil
-                    :reader frame-top-level-sheet)
-   (menu-bar-pane :initform nil
-                  :accessor frame-menu-bar-pane)
-   (state :initarg :state
-          :initform :disowned
-          :reader frame-state)
-   (manager :initform nil
-            :reader frame-manager
-            :accessor %frame-manager)
-   (properties :accessor %frame-properties
-               :initarg :properties
-               :initform nil)
-   (top-level-lambda :initarg :top-level-lambda
-                     :reader frame-top-level-lambda)
-   (highlited-presentation :initform nil
-                           :initarg :highlited-presentation
-                           :accessor frame-highlited-presentation)
-   (process :accessor frame-process :initform nil)
-   (client-settings :accessor client-settings :initform nil)
-   (event-queue :initarg :frame-event-queue
-                :initform nil
-                :accessor frame-event-queue
-                :documentation "The event queue that, by default, will be
-                                shared by all panes in the frame")
-   (input-buffer :initarg :frame-input-buffer
-                 :initform (make-instance 'concurrent-event-queue :port nil)
-                 :accessor frame-input-buffer
-                 :documentation "The input buffer queue that, by default, will
-                                 be shared by all input streams in the frame")
+   (command-table
+    :initarg :command-table
+    :initform nil
+    :accessor frame-command-table)
+   (panes
+    :initform nil
+    :accessor frame-panes
+    :documentation "The tree of panes in the current layout.")
+   (current-panes
+    :initform nil
+    :accessor frame-current-panes
+    :documentation "The sorted list of named panes in the current layout.")
+   (layouts
+    :initform nil
+    :initarg :layouts
+    :reader frame-layouts)
+   (current-layout
+    :initform nil
+    :initarg :current-layout
+    :accessor frame-current-layout)
+   (panes-for-layout
+    :initform nil
+    :accessor frame-panes-for-layout
+    :documentation "alist of names and panes (as returned by make-pane).")
+   (resize-frame
+    :initarg :resize-frame
+    :initform nil
+    :accessor frame-resize-frame)
+   (output-pane
+    :initform nil
+    :accessor frame-standard-output
+    :accessor frame-error-output)
+   (input-pane
+    :initform nil
+    :accessor frame-standard-input)
+   (documentation-pane
+    :initform nil
+    :accessor frame-pointer-documentation-output)
+   (top-level-sheet
+    :initform nil
+    :reader frame-top-level-sheet)
+   (menu-bar-pane
+    :initform nil
+    :accessor frame-menu-bar-pane)
+   (state
+    :initarg :state
+    :initform :disowned
+    :reader frame-state)
+   (manager
+    :initform nil
+    :reader frame-manager
+    :accessor %frame-manager)
+   (properties
+    :accessor %frame-properties
+    :initarg :properties
+    :initform nil)
+   (top-level-lambda
+    :initarg :top-level-lambda
+    :reader frame-top-level-lambda)
+   (highlited-presentation
+    :initform nil
+    :initarg :highlited-presentation
+    :accessor frame-highlited-presentation)
+   (process
+    :accessor frame-process
+    :initform nil)
+   (client-settings
+    :accessor client-settings
+    :initform nil)
+   (event-queue
+    :initarg :frame-event-queue
+    :initform nil
+    :accessor frame-event-queue
+    :documentation "The event queue that, by default, will be shared by all
+                    panes in the frame.")
+   (input-buffer
+    :initarg :frame-input-buffer
+    :initform (make-instance 'concurrent-event-queue :port nil)
+    :accessor frame-input-buffer
+    :documentation "The input buffer queue that, by default, will be shared by
+                    all input streams in the frame.")
    ;; This slot is true during the execution of the FRAME-READ-COMMAND. It is
    ;; used by the EXECUTE-FRAME-COMMAND to decide, whether the synchronous[1]
-   ;; command execution should be performed immedietely or enqueued in the
-   ;; event queue. This is to ensure advancement of the top level loop and
-   ;; redisplay of panes after the command execution.
+   ;; command execution should be performed immedietely or enqueued in the event
+   ;; queue. This is to ensure advancement of the top level loop and redisplay
+   ;; of panes after the command execution.
    ;;
    ;; The frame-command-queue is used to schedule a command for the next
-   ;; iteration of the frame top level when the input context inside the call
-   ;; to FRAME-READ-COMMAND is different than the command (that may happen i.e
-   ;; when the frame has a temporarily amended command table or is waiting for
-   ;; an argument of the command that is currently parsed).
+   ;; iteration of the frame top level when the input context inside the call to
+   ;; FRAME-READ-COMMAND is different than the command (that may happen i.e when
+   ;; the frame has a temporarily amended command table or is waiting for an
+   ;; argument of the command that is currently parsed).
    ;;
-   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in
-   ;; the frame's process.
+   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in the
+   ;; frame's process.
    ;;
    ;; -- jd 2020-12-10
-   (reading-command-p :initform nil
-                      :accessor frame-reading-command-p)
-   (command-queue :initform (make-instance 'concurrent-event-queue :port nil)
-                  :reader frame-command-queue)
-   (documentation-state :accessor frame-documentation-state
-                        :initform nil
-                        :documentation "Used to keep of track of what
-  needs to be rendered in the pointer documentation frame.")
-   (calling-frame :reader frame-calling-frame
-                  :initarg :calling-frame
-                  :initform nil
-                  :documentation "The frame that is the parent of this
-frame, if any")
-   (disabled-commands :accessor disabled-commands
-                      :accessor frame-disabled-commands
-                      :initarg :disabled-commands
-                      :initform nil
-                      :documentation "A list of command names that have been
-                                      disabled in this frame")
-   (documentation-record :accessor documentation-record
-                         :initform nil
-                         :documentation "updating output record for pointer
-documentation produced by presentations.")))
+   (reading-command-p
+    :initform nil
+    :accessor frame-reading-command-p)
+   (command-queue
+    :initform (make-instance 'concurrent-event-queue :port nil)
+    :reader frame-command-queue)
+   (documentation-state
+    :accessor frame-documentation-state
+    :initform nil
+    :documentation "Used to keep of track of what needs to be rendered in the
+                    pointer documentation frame.")
+   (calling-frame
+    :reader frame-calling-frame
+    :initarg :calling-frame
+    :initform nil
+    :documentation "The frame that is the parent of this frame, if any.")
+   (disabled-commands
+    :accessor disabled-commands
+    :accessor frame-disabled-commands
+    :initarg :disabled-commands
+    :initform nil
+    :documentation "A list of command names that have been disabled in this frame.")
+   (documentation-record
+    :accessor documentation-record
+    :initform nil
+    :documentation "Updating output record for pointer documentation produced by
+                    presentations.")))
 
 (defmethod port ((frame standard-application-frame))
   (if-let ((manager (frame-manager frame)))
