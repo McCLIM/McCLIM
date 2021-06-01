@@ -45,6 +45,7 @@
 
 (defun generate-generate-panes-form (class-name panes layouts)
   `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
+     (disown-frame-panes fm frame)
      (with-look-and-feel-realization (fm frame)
        (unless (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
@@ -56,6 +57,7 @@
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
                  ,@layouts))))
+     (adopt-frame-panes fm frame (frame-current-layout frame))
      ;; Update frame-current-panes and the special pane slots.
      (update-frame-pane-lists frame)))
 

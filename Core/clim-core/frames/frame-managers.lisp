@@ -186,8 +186,7 @@
                ;; sheet is enabled from enable-frame
                :enabled-p nil))
 
-(defmethod generate-panes :before
-    ((fm standard-frame-manager) (frame standard-application-frame))
+(defun disown-frame-panes (fm frame)
   (declare (ignore fm))
   (when-let ((panes (frame-panes frame)))
     (let ((top-level-sheet (frame-top-level-sheet frame)))
@@ -195,11 +194,51 @@
         (sheet-disown-child top-level-sheet (sheet-child top-level-sheet)))))
   (loop for (nil . pane) in (frame-panes-for-layout frame)
         for parent = (sheet-parent pane)
-        if  parent
+        when parent
           do (sheet-disown-child parent pane)))
+
+(defun adopt-frame-panes (fm frame layout)
+  (declare (ignore layout))
+  (flet ((maybe-add-auxiliary-panes (frame)
+           (let ((root (frame-panes frame))
+                 (menu (slot-value frame 'menu-bar))
+                 (pdoc (slot-value frame 'pdoc-bar)))
+             (when menu
+               (setf (frame-menu-bar-pane frame)
+                     (cond ((eq menu t)
+                            (make-menu-bar (frame-command-table frame)
+                                           frame 'hmenu-pane))
+                           ((consp menu)
+                            (make-menu-bar (make-command-table nil :menu menu)
+                                           frame 'hmenu-pane))
+                           (menu
+                            (make-menu-bar menu frame 'hmenu-pane))))
+               (setf menu (frame-menu-bar-pane frame)))
+             (when pdoc
+               (if (frame-pointer-documentation-output frame)
+                   (setf pdoc nil)
+                   (multiple-value-bind (pane stream)
+                       (make-clim-pointer-documentation-pane)
+                     (setf pdoc pane
+                           (frame-pointer-documentation-output frame) stream))))
+             (if (or menu pdoc)
+                 (make-instance 'vrack-pane
+                                :contents (remove nil (list menu root pdoc))
+                                :port (port frame))
+                 root))))
+    (let ((tpl-sheet (frame-top-level-sheet frame)))
+      (sheet-adopt-child tpl-sheet (maybe-add-auxiliary-panes frame))
+      (unless (sheet-parent tpl-sheet)
+        (sheet-adopt-child (find-graft :port (port fm)) tpl-sheet))
+      ;; Find the size of the new frame.
+      (multiple-value-bind (w h) (frame-geometry* frame)
+        (change-space-requirements tpl-sheet :width w :height h :resize-frame t)
+        (setf (sheet-region tpl-sheet) (make-bounding-rectangle 0 0 w h))
+        (allocate-space tpl-sheet w h)))))
 
 (defmethod generate-panes
     ((fm standard-frame-manager) (frame standard-application-frame))
+  (disown-frame-panes fm frame)
   (with-look-and-feel-realization (fm frame)
     (unless (frame-panes-for-layout frame)
       (setf (frame-panes-for-layout frame)
@@ -208,53 +247,8 @@
             (alexandria:assoc-value (frame-panes-for-layout frame)
                                     'single-pane :test #'eq)))
       (setf (frame-panes frame) single-pane)))
+  (adopt-frame-panes fm frame (frame-current-layout frame))
   (update-frame-pane-lists frame))
-
-(defun maybe-add-auxiliary-panes (frame)
-  (let ((root (frame-panes frame))
-        (menu (slot-value frame 'menu-bar))
-        (pdoc (slot-value frame 'pdoc-bar)))
-    (when menu
-      (setf (frame-menu-bar-pane frame)
-            (cond ((eq menu t)
-                   (make-menu-bar (frame-command-table frame) frame 'hmenu-pane))
-                  ((consp menu)
-                   (make-menu-bar (make-command-table nil :menu menu)
-                                  frame 'hmenu-pane))
-                  (menu
-                   (make-menu-bar menu frame 'hmenu-pane))))
-      (setf menu (frame-menu-bar-pane frame)))
-    (when pdoc
-      (if (frame-pointer-documentation-output frame)
-          (setf pdoc nil)
-          (multiple-value-bind (pane stream)
-              (make-clim-pointer-documentation-pane)
-            (setf pdoc pane
-                  (frame-pointer-documentation-output frame) stream))))
-    (if (or menu pdoc)
-        (make-instance 'vrack-pane
-                       :contents (remove nil (list menu root pdoc))
-                       :port (port frame))
-        root)))
-
-(defmethod generate-panes :after
-    ((fm standard-frame-manager) (frame standard-application-frame))
-  (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (sheet-adopt-child top-level-sheet (maybe-add-auxiliary-panes frame))
-    (unless (sheet-parent top-level-sheet)
-      (sheet-adopt-child (find-graft :port (port fm)) top-level-sheet))
-    ;; Find the size of the new frame
-    (multiple-value-bind (w h) (frame-geometry* frame)
-      ;; automatically generates a window-configuation-event
-      ;; which then calls allocate-space
-      ;;
-      ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
-      ;; window is mapped and do the space allocation now, so that all
-      ;; sheets will have their correct geometry at once. --GB
-      (change-space-requirements top-level-sheet :width w :height h
-                                                 :resize-frame t)
-      (setf (sheet-region top-level-sheet) (make-bounding-rectangle 0 0 w h))
-      (allocate-space top-level-sheet w h))))
 
 (defmethod note-frame-enabled
     ((fm standard-frame-manager) (frame standard-application-frame))
