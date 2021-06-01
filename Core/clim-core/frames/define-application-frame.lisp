@@ -5,7 +5,6 @@
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000 by Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  (c) copyright 2019, 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
@@ -43,17 +42,20 @@
       ,@(loop for (name . form) in panes
               collect `(cons ',name ,(generate-pane-form name form))))))
 
-(defun generate-generate-panes-form (class-name panes layouts)
-  `(defmethod generate-panes ((fm standard-frame-manager) (frame ,class-name))
-     (disown-frame-panes fm frame)
-     (with-look-and-feel-realization (fm frame)
-       (unless (frame-panes-for-layout frame)
+(defun generate-panes-constructor (panes)
+  `(lambda (fm frame)
+     (or (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
-               ,(generate-panes-for-layout-form panes)))
+               (with-look-and-feel-realization (fm frame)
+                 ,(generate-panes-for-layout-form panes))))))
+
+(defun generate-layout-constructor (panes layouts)
+  `(lambda (fm frame)
+     (disown-frame-panes fm frame)
+     (let ((named-panes (frame-panes-for-layout frame)))
        (let ,(loop for (name . form) in panes
                    collect `(,name (alexandria:assoc-value
-                                    (frame-panes-for-layout frame)
-                                    ',name :test #'eq)))
+                                    named-panes ',name :test #'eq)))
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
                  ,@layouts))))
@@ -199,12 +201,18 @@
                             user-default-initargs
                             other-options
                             ;; Helpers
-                            (current-layout (first (first layouts)))
+                            current-layout
                             (frame-arg (gensym "FRAME-ARG")))
       (parse-define-application-frame-options options)
     (when (eq command-definer t)
       (setf command-definer
             (alexandria:symbolicate '#:define- name '#:-command)))
+    (unless (or panes layouts)
+      (setf panes `((single-pane :interactor))))
+    (unless layouts
+      (setf layouts `((:default (vertically () ,@(mapcar #'car panes))))))
+    (unless current-layout
+      (setf current-layout (first (first layouts))))
     `(progn
        (defclass ,name ,superclasses
          ,slots
@@ -222,12 +230,11 @@
           :top-level-lambda (lambda (,frame-arg)
                               (,(car top-level) ,frame-arg
                                ,@(cdr top-level)))
+          :panes-constructor ,(generate-panes-constructor panes)
+          :layout-constructor ,(generate-layout-constructor panes layouts)
           ,@geometry
           ,@user-default-initargs)
          ,@other-options)
-
-       ,@(when (or panes layouts)
-           `(,(generate-generate-panes-form name panes layouts)))
 
        ,@(when command-table
            `((define-command-table ,@command-table)))

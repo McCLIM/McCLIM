@@ -79,6 +79,22 @@
     :initarg :command-table
     :initform nil
     :accessor frame-command-table)
+   ;; Panes and layout constructors are stored in the frame instance to ensure
+   ;; that after redefining the frame class the existing frames are not changed.
+   ;; Previously setting panes and layout was implemented directly in the method
+   ;; generate-panes defined by the define-application-frame. -- jd 2021-06-01
+   (panes-constructor
+    :initarg :panes-constructor
+    :accessor frame-panes-constructor
+    :documentation "A function responsible for filling panes-for-layout.")
+   (layout-constructor
+    :initarg :layout-constructor
+    :accessor frame-layout-constructor
+    :documentation "A function responsible for constructing the layout.")
+   (panes-for-layout
+    :initform nil
+    :accessor frame-panes-for-layout
+    :documentation "alist of names and panes (as returned by make-pane).")
    (panes
     :initform nil
     :accessor frame-panes
@@ -95,10 +111,6 @@
     :initform nil
     :initarg :current-layout
     :accessor frame-current-layout)
-   (panes-for-layout
-    :initform nil
-    :accessor frame-panes-for-layout
-    :documentation "alist of names and panes (as returned by make-pane).")
    (resize-frame
     :initarg :resize-frame
     :initform nil

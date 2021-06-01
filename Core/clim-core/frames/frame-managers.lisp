@@ -238,17 +238,8 @@
 
 (defmethod generate-panes
     ((fm standard-frame-manager) (frame standard-application-frame))
-  (disown-frame-panes fm frame)
-  (with-look-and-feel-realization (fm frame)
-    (unless (frame-panes-for-layout frame)
-      (setf (frame-panes-for-layout frame)
-            `((single-pane . ,(make-clim-interactor-pane :name 'single-pane)))))
-    (let ((single-pane
-            (alexandria:assoc-value (frame-panes-for-layout frame)
-                                    'single-pane :test #'eq)))
-      (setf (frame-panes frame) single-pane)))
-  (adopt-frame-panes fm frame (frame-current-layout frame))
-  (update-frame-pane-lists frame))
+  (funcall (frame-panes-constructor frame) fm frame)
+  (funcall (frame-layout-constructor frame) fm frame))
 
 (defmethod note-frame-enabled
     ((fm standard-frame-manager) (frame standard-application-frame))
