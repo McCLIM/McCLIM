@@ -254,8 +254,8 @@ by the number of variables in VARS."
              (3 'cdddr)
              (4 'cddddr)
              (t `(lambda (list) (nthcdr ,n list))))))
-    (alexandria:with-unique-names (body-fun i)
-      (alexandria:once-only (sequence)
+    (with-gensyms (body-fun i)
+      (once-only (sequence)
         (let* ((vars        (alexandria:ensure-list vars))
                (count       (length vars))
                (vector-args (loop for j from 0 below count
@@ -682,8 +682,8 @@ index being halfway between INDEX-1 and INDEX-2."
 
 (defmacro dolines ((line string &optional result) &body body)
   "Iterates over lines in string separated by #\newline."
-  (alexandria:with-gensyms (substr end)
-    (alexandria:once-only (string)
+  (with-gensyms (substr end)
+    (once-only (string)
       `(do* ((,substr ,string (subseq ,substr (1+ ,end)))
              (,end  #1=(position #\newline ,substr) #1#)
              (,line #2=(subseq ,substr 0 ,end) #2#))
@@ -977,7 +977,7 @@ COUNT specifies how many breaks we want to collect."
 
 ;;; Convenience macro
 (defmacro gesture-case (event &body cases)
-  (alexandria:once-only (event)
+  (once-only (event)
     (flet ((make-match (match body)
              `((event-matches-gesture-name-p ,event ,match) ,@body)))
       `(cond ,@(loop for (match . body) in cases

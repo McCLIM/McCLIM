@@ -19,7 +19,7 @@
   (gethash selection (standard-port-selections port)))
 
 (defsetf stored-object (port selection) (value)
-  (alexandria:once-only (port selection)
+  (once-only (port selection)
     `(progn
        (check-type ,port standard-port)
        (check-type ,selection symbol)

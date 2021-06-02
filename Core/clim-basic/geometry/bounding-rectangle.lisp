@@ -55,7 +55,7 @@
                         (unless (eq name ,expression)
                           (list (list name ,expression)))))
                    (ref (name)
-                     `(alexandria:assoc-value bindings ',name)))
+                     `(assoc-value bindings ',name)))
           `(let* (,@(when (or x1 width  center-x)
                       (bind x1 (nth 0 coordinate-expressions)))
                   ,@(when (or y1 height center-y)

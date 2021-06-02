@@ -403,6 +403,7 @@
   nil)
 
 (defmacro with-possible-double-buffering ((frame pane) &body body)
+  (declare (ignore frame pane))
   `(progn ,@body))
 
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane

@@ -2146,9 +2146,11 @@
                 #:ensure-gethash
                 #:last-elt
                 #:with-gensyms
+                #:once-only
                 #:if-let
                 #:when-let
-                #:when-let*)
+                #:when-let*
+                #:assoc-value)
   (:intern #:letf))
 
 (defpackage :clim-user

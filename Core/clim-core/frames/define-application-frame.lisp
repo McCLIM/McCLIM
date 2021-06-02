@@ -54,8 +54,7 @@
      (disown-frame-panes fm frame)
      (let ((named-panes (frame-panes-for-layout frame)))
        (let ,(loop for (name . form) in panes
-                   collect `(,name (alexandria:assoc-value
-                                    named-panes ',name :test #'eq)))
+                   collect `(,name (assoc-value named-panes ',name :test #'eq)))
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
                  ,@layouts))))
