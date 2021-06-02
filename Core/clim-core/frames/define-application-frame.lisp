@@ -65,10 +65,10 @@
     (destructuring-bind (name type &rest options) spec
       (unless (symbolp name)
         (error "~@<~S is not a valid pane name. It must be a symbol.~@:>" name))
-      (if reinitialize-panes
+      (if (and reinitialize-panes (symbolp type))
           (with-gensyms (pane)
             `(let ((,pane (assoc-value ,reinitialize-panes ',name :test #'eq)))
-               (or (and ,pane (try-reinitialize-pane ,pane ,type ,@options))
+               (or (and ,pane (try-reinitialize-pane ,pane ',type ,@options))
                    ,(generate-make-pane name type options))))
           (generate-make-pane name type options)))))
 
@@ -160,7 +160,9 @@
                  (:geometry              * :type (satisfies geometry-specification-p))
                  (:resize-frame          1)
                  ;; McCLIM extensions
+                 (:current-layout        1 :type symbol)
                  (:pointer-documentation 1)
+                 (:reinitialize-frames   * :type (or symbol list))
                  ;; Default initargs
                  (:pretty-name           1)
                  ;; Common Lisp
@@ -247,23 +249,24 @@
     (setq superclasses '(standard-application-frame)))
   (destructuring-bind (&key panes
                             layouts
-                            (command-table (list name))
+                            (command-table (list name) command-table-p)
                             (command-definer t)
-                            (menu-bar t)
+                            (menu-bar t menu-bar-p)
                             disabled-commands
                             (top-level '(default-frame-top-level))
                             (icon nil icon-supplied-p)
                             geometry
                             resize-frame
                             ;; McCLIM extensions
-                            pointer-documentation
+                            (pointer-documentation nil pdoc-bar-p)
+                            reinitialize-frames
                             ;; Default initargs
-                            (pretty-name (string-capitalize name))
+                            (pretty-name (string-capitalize name) pretty-name-p)
                             ;; Common Lisp
                             user-default-initargs
                             other-options
                             ;; Helpers
-                            current-layout
+                            (current-layout nil current-layout-p)
                             (frame-arg (gensym "FRAME-ARG")))
       (parse-define-application-frame-options options)
     (when (eq command-definer t)
@@ -299,6 +302,29 @@
          ,@other-options)
 
        ,(generate-reinitialize-instance name panes layouts)
+
+       ,@(if (car reinitialize-frames)
+             `((defmethod update-instance-for-redefined-class :after
+                   ((*application-frame* ,name) as ds pl &rest initargs)
+                 (declare (ignore as ds pl initargs))
+                 (reinitialize-instance
+                  *application-frame*
+                  ,@(and (rest reinitialize-frames) reinitialize-frames)
+                  ,@(and current-layout-p `(:current-layout ',current-layout))
+                  ,@(and pretty-name-p    `(:pretty-name ,pretty-name))
+                  ,@(and icon-supplied-p  `(:icon ,icon))
+                  ,@(and command-table-p  `(:command-table
+                                            (find-command-table
+                                             ',(first command-table))))
+                  ,@(and menu-bar-p       `(:menu-bar ',menu-bar))
+                  ,@(and pdoc-bar-p       `(:pointer-documentation
+                                            ,pointer-documentation))))
+               (make-instances-obsolete (find-class ',name))
+               (map-over-ports (lambda (p)
+                                 (map-over-frames #'frame-name :port p))))
+             `((defmethod update-instance-for-redefined-class :after
+                   ((instance ,name) as ds pl &rest initargs)
+                 (declare (ignore instance as ds pl initargs)))))
 
        ,@(when command-table
            `((define-command-table ,@command-table)))
