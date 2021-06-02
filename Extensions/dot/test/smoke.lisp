@@ -70,8 +70,10 @@ R. Gansner, Eleftherios Koutsofios, Stephen C. North, Kiem-phong Vo")
   (finishes
     (mcclim-raster-image:with-output-to-raster-image-file
         (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-default.png"))
-      (format-graph *simple-graph* s :digraph)))
+      (clim:surrounding-output-with-border (s :background clim:+white+)
+        (format-graph *simple-graph* s :digraph))))
   (finishes
     (mcclim-raster-image:with-output-to-raster-image-file
         (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot.png"))
-      (format-graph *simple-graph* s :dot-digraph))))
+      (clim:surrounding-output-with-border (s :background clim:+white+)
+        (format-graph *simple-graph* s :dot-digraph)))))
