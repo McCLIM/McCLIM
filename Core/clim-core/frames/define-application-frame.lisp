@@ -5,8 +5,10 @@
 ;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
 ;;;  (c) copyright 2000 by Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
 ;;;  (c) copyright 2000 by Julien Boninfante (boninfan@emi.u-bordeaux.fr)
+;;;  (c) copyright 2000,2014 by Robert Strandh (robert.strandh@gmail.com)
 ;;;  (c) copyright 2004 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2019, 2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2019,2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -19,35 +21,69 @@
   (setf (slot-value pane 'name) name)
   pane)
 
-(defun generate-panes-for-layout-form (panes)
-  (flet ((generate-pane-form (name form)
-           (destructuring-bind (pane &rest options) form
-             (cond
-               ;; Single form which is a function call
-               ((and (null options) (listp pane))
-                `(coerce-pane-name ,pane ',name))
-               ;; Standard panes denoted by a keyword
-               ((eq pane :application)
-                `(make-clim-application-pane :name ',name ,@options))
-               ((eq pane :interactor)
-                `(make-clim-interactor-pane :name ',name ,@options))
-               ((eq pane :pointer-documentation)
-                `(make-clim-pointer-documentation-pane :name ',name ,@options))
-               ((eq pane :command-menu)
-                `(make-clim-command-menu-pane :name ',name ,@options))
-               ;; Non-standard pane designator passed to the `make-pane'
-               (t
-                `(make-pane ',pane :name ',name ,@options))))))
-    `(list
-      ,@(loop for (name . form) in panes
-              collect `(cons ',name ,(generate-pane-form name form))))))
+(defun try-reinitialize-pane (pane type &rest initargs)
+  (when-let* ((pane-class (find-concrete-pane-class *pane-realizer* type))
+              (inner-pane (find-pane-of-type pane pane-class)))
+    (unless (eq inner-pane pane)
+      (when-let ((parent (sheet-parent inner-pane)))
+        (sheet-disown-child parent inner-pane)))
+    (if (member type '(:application :interactor :pointer-documentation :command-menu))
+        (multiple-value-bind (stream-options wrapper-options wrapper-space)
+            (separate-stream-pane-initargs
+             (if (intersection initargs '(:scroll-bar :scroll-bars))
+                 initargs
+                 (list* :scroll-bars (ecase type
+                                       (:interactor :vertical)
+                                       (:application t)
+                                       (:pointer-documentation nil)
+                                       (:command-menu t))
+                        initargs)))
+          (apply #'reinitialize-instance inner-pane stream-options)
+          (apply #'wrap-stream-pane inner-pane wrapper-space wrapper-options))
+        (apply #'reinitialize-instance inner-pane initargs))))
+
+(defun generate-make-pane (name type options)
+  (cond
+    ;; Single form which is a function call
+    ((and (null options) (listp type))
+     `(coerce-pane-name ,type ',name))
+    ;; Standard panes denoted by a keyword
+    ((eq type :application)
+     `(make-clim-application-pane :name ',name ,@options))
+    ((eq type :interactor)
+     `(make-clim-interactor-pane :name ',name ,@options))
+    ((eq type :pointer-documentation)
+     `(make-clim-pointer-documentation-pane :name ',name ,@options))
+    ((eq type :command-menu)
+     `(make-clim-command-menu-pane :name ',name ,@options))
+    ;; Non-standard pane designator passed to the `make-pane'
+    (t
+     `(make-pane ',type :name ',name ,@options))))
+
+(defun generate-ensure-pane (spec reinitialize-panes)
+  (with-current-source-form (spec)
+    (destructuring-bind (name type &rest options) spec
+      (unless (symbolp name)
+        (error "~@<~S is not a valid pane name. It must be a symbol.~@:>" name))
+      (if reinitialize-panes
+          (with-gensyms (pane)
+            `(let ((,pane (assoc-value ,reinitialize-panes ',name :test #'eq)))
+               (or (and ,pane (try-reinitialize-pane ,pane ,type ,@options))
+                   ,(generate-make-pane name type options))))
+          (generate-make-pane name type options)))))
+
+(defun generate-panes-for-layout-form (panes reinitialize)
+  `(list
+    ,@(loop for spec in panes
+            for (name . form) = spec
+            collect `(cons ',name ,(generate-ensure-pane spec reinitialize)))))
 
 (defun generate-panes-constructor (panes)
   `(lambda (fm frame)
      (or (frame-panes-for-layout frame)
          (setf (frame-panes-for-layout frame)
                (with-look-and-feel-realization (fm frame)
-                 ,(generate-panes-for-layout-form panes))))))
+                 ,(generate-panes-for-layout-form panes nil))))))
 
 (defun generate-layout-constructor (panes layouts)
   `(lambda (fm frame)
@@ -61,6 +97,33 @@
      (adopt-frame-panes fm frame (frame-current-layout frame))
      ;; Update frame-current-panes and the special pane slots.
      (update-frame-pane-lists frame)))
+
+(defun generate-reinitialize-instance (class-name panes layouts)
+  (with-gensyms (old-panes)
+    `(defmethod reinitialize-instance :after ((frame ,class-name) &rest args)
+       (declare (ignore args))
+       (setf (frame-panes-constructor frame)
+             ,(generate-panes-constructor panes)
+             (frame-layout-constructor frame)
+             ,(generate-layout-constructor panes layouts))
+       (let ((all-layouts ',layouts))
+         (setf (slot-value frame 'layouts) all-layouts)
+         (unless (member (frame-current-layout frame) all-layouts
+                         :key #'car :test #'eq)
+           (setf (slot-value frame 'current-layout) (car (first all-layouts)))))
+       (when-let* ((fm (frame-manager frame))
+                   (,old-panes (frame-panes-for-layout frame)))
+         (with-bounding-rectangle* (:width width :height height)
+             (frame-top-level-sheet frame)
+           (changing-space-requirements ()
+             (with-look-and-feel-realization (fm frame)
+               (setf (frame-panes-for-layout frame)
+                     ,(generate-panes-for-layout-form panes old-panes)))
+             (funcall (frame-layout-constructor frame) fm frame)
+             (layout-frame frame width height)))
+         ;; This is to ensure that we start a new iteration of the top-level
+         ;; loop with new bindings etc.
+         (signal 'frame-layout-changed :frame frame)))))
 
 (defun geometry-specification-p (thing)
   (and (alexandria:proper-list-p thing)
@@ -234,6 +297,8 @@
           ,@geometry
           ,@user-default-initargs)
          ,@other-options)
+
+       ,(generate-reinitialize-instance name panes layouts)
 
        ,@(when command-table
            `((define-command-table ,@command-table)))

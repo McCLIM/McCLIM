@@ -277,6 +277,13 @@
     (and pp (note-frame-pretty-name-changed fm frame pretty-name))
     (and cp (note-frame-command-table-changed fm frame command-table))))
 
+(defmethod reinitialize-instance :around
+    ((frame standard-application-frame) &key)
+  (with-synchronization (frame-top-level-sheet frame)
+      (let ((process (frame-process frame)))
+        (or (null process) (eq process (current-process))))
+    (call-next-method)))
+
 (defmethod (setf frame-pretty-name) :after (new-value frame)
   (note-frame-pretty-name-changed (frame-manager frame) frame new-value))
 
