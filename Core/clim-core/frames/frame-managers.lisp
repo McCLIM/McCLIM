@@ -232,9 +232,7 @@
         (sheet-adopt-child (find-graft :port (port fm)) tpl-sheet))
       ;; Find the size of the new frame.
       (multiple-value-bind (w h) (frame-geometry* frame)
-        (change-space-requirements tpl-sheet :width w :height h :resize-frame t)
-        (setf (sheet-region tpl-sheet) (make-bounding-rectangle 0 0 w h))
-        (allocate-space tpl-sheet w h)))))
+        (change-space-requirements tpl-sheet :width w :height h :resize-frame t)))))
 
 (defmethod generate-panes
     ((fm standard-frame-manager) (frame standard-application-frame))
