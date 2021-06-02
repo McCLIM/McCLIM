@@ -88,6 +88,9 @@
          (defmethod event-type ((event ,name))
            ',type)))))
 
+(define-event-class lambda-event (standard-event)
+  ((thunk :initarg :thunk :reader lambda-event-thunk)))
+
 ;;; We have three pairs of the pointer event coordinates in different
 ;;; coordinate systems:
 ;;;
