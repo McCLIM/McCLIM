@@ -1,0 +1,62 @@
+(defpackage #:clim-demo.reinitialize-frame
+  (:use #:clim-lisp #:clim)
+  (:export #:example-frame))
+(in-package #:clim-demo.reinitialize-frame)
+
+(define-application-frame example-frame ()
+  ((value :initarg :value :accessor frame-value))
+  (:default-initargs :value 42)
+  (:panes (lab :label :label "Try redefining this frame in its file.")
+          (app :application :display-function 'display :display-time :no-clear)
+          (but :push-button :label "Redisplay!"
+                            :activate-callback 'activate-redisplay))
+  (:layouts (l1 (vertically () app but lab))
+            (l2 (vertically () app)))
+  (:current-layout l1)
+  (:pretty-name "Fancy name!")
+  (:reinitialize-frames t)
+  (:menu-bar t))
+
+#+ (or)
+(define-application-frame example-frame ()
+  ((value :initarg :value :accessor frame-value))
+  (:default-initargs :value 42)
+  (:panes (app :application :display-function nil :scroll-bars :both))
+  (:pretty-name "uh")
+  (:reinitialize-frames nil)
+  (:menu-bar t))
+
+#+ (or)
+(define-application-frame example-frame ()
+  ((value :initarg :value :accessor frame-value))
+  (:default-initargs :value 42)
+  (:panes (app :interactor))
+  (:pretty-name "Some pretty name.")
+  (:reinitialize-frames :pretty-name "<interactor frame>")
+  (:pointer-documentation t))
+
+#+ (or)
+(define-application-frame example-frame ()
+  ((value :initarg :value :accessor frame-value))
+  (:default-initargs :value 42)
+  (:pane :application :display-function 'display*)
+  (:pretty-name "Some pretty name.")
+  (:reinitialize-frames :pretty-name "<not that much frame>")
+  (:pointer-documentation nil))
+
+(define-example-frame-command (com-foo :menu t) ()
+  (with-application-frame (frame)
+    (decf (frame-value frame))))
+
+(defun display (frame pane)
+  (format pane "frame value: ~a~%" (frame-value frame)) )
+
+(defun display* (frame pane)
+  (declare (ignore frame))
+  (draw-rectangle* pane 10 10 90 90 :ink +blue+))
+
+(defun activate-redisplay (gadget)
+  (redisplay-frame-panes (pane-frame gadget)))
+
+(defun example-frame ()
+  (find-application-frame 'example-frame))

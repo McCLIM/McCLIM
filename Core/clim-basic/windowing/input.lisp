@@ -472,6 +472,19 @@ use condition-variables nor locks."))
   (with-lock-held ((event-queue-schedule-lock queue))
     (call-next-method)))
 
+(defmethod handle-event ((client sheet) (event lambda-event))
+  (declare (ignore client))
+  (funcall (lambda-event-thunk event)))
+
+(defmacro with-synchronization (sheet test &body body)
+  `(if ,test
+       (progn ,@body)
+       ,(once-only (sheet)
+          `(dispatch-event ,sheet
+                           (make-instance 'lambda-event
+                                          :sheet ,sheet
+                                          :thunk (lambda () ,@body))))))
+
 
 ;;; STANDARD-SHEET-INPUT-MIXIN
 
@@ -498,8 +511,9 @@ use condition-variables nor locks."))
 
 (defmethod handle-event ((sheet standard-sheet-input-mixin) event)
   ;; Standard practice is to ignore events
-  (declare (ignore event))
-  nil)
+  (declare (ignore sheet event))
+  (when (next-method-p)
+    (call-next-method)))
 
 (defmethod event-read ((sheet standard-sheet-input-mixin))
   (with-slots (queue) sheet
@@ -534,7 +548,8 @@ use condition-variables nor locks."))
 
 (defmethod handle-event ((sheet immediate-sheet-input-mixin) event)
   (declare (ignore sheet event))
-  nil)
+  (when (next-method-p)
+    (call-next-method)))
 
 (define-condition sheet-is-mute-for-input (error)
     ())
@@ -555,7 +570,7 @@ use condition-variables nor locks."))
   (error 'sheet-is-mute-for-input))
 
 (defmethod handle-event ((sheet sheet-mute-input-mixin) event)
-  (declare (ignore event))
+  (declare (ignore sheet event))
   (error 'sheet-is-mute-for-input))
 
 (defmethod event-read ((sheet sheet-mute-input-mixin))

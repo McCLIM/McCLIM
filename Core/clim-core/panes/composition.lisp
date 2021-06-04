@@ -292,7 +292,7 @@
   (unless (pane-space-requirement pane)
     (setf (pane-space-requirement pane)
           (compose-space pane)))
-  (alexandria:when-let ((child (sheet-child pane)))
+  (when-let ((child (sheet-child pane)))
     (allocate-space child
                     (clamp width  (sr-min-width pane)  (sr-max-width pane))
                     (clamp height (sr-min-height pane) (sr-max-height pane)))))

@@ -40,8 +40,8 @@
                                  (getf *families/names* family)))
                 (face-name (if (stringp face)
                                face
-                               (alexandria:assoc-value *families/faces* (list family face)
-                                                       :test #'equal))))
+                               (assoc-value *families/faces*
+                                            (list family face) :test #'equal))))
            (flet ((try (encoding)
                     (open-font display
                                (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"

@@ -49,7 +49,7 @@
 (defun make-modifier-state (&rest modifiers)
   (reduce #'logior modifiers
           :key (lambda (modifier-key-name)
-                 (or (alexandria:assoc-value
+                 (or (assoc-value
                       +gesture-modifier-key-to-event-modifier+ modifier-key-name)
                      (error "~@<~S is not a known modifier key ~
                             name. Valid modifier key names are ~{~S~^, ~
@@ -72,8 +72,7 @@
     (values (cond ((or (eq key-or-name t)
                        (characterp key-or-name))
                    key-or-name)
-                  ((alexandria:assoc-value
-                    +gesture-key-name-to-char+ key-or-name))
+                  ((assoc-value +gesture-key-name-to-char+ key-or-name))
                   (t
                    #+ (or)
                    (warn "~@<~S is not a known symbolic key ~
@@ -101,8 +100,7 @@
       (alexandria:ensure-list gesture-spec) ; extension
     (values (cond ((eq button-name t)
                    button-name)
-                  ((alexandria:assoc-value
-                    +gesture-button-to-event-button+ button-name))
+                  ((assoc-value +gesture-button-to-event-button+ button-name))
                   (t
                    (error "~@<~S is not a known pointer button. Known ~
                            buttons are ~{~S~^, ~}.~@:>"
@@ -170,8 +168,7 @@
        (make-keyboard-gesture designator))
       (symbol ; could be a key name or a gesture name
        (make-keyboard-gesture
-        (if-let ((character (alexandria:assoc-value
-                             +gesture-key-name-to-char+ designator)))
+        (if-let ((character (assoc-value +gesture-key-name-to-char+ designator)))
           character
           designator))))))
 

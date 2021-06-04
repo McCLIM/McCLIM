@@ -771,7 +771,7 @@
     (error "COPY-AREA on a stream is not implemented")))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
-  (alexandria:once-only (sheet width height)
+  (once-only (sheet width height)
     (if (and width height)
         (alexandria:with-gensyms (pixmap port)
           `(let* ((,pixmap (allocate-pixmap ,sheet ,width ,height))

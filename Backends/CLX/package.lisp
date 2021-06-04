@@ -67,7 +67,8 @@
                 #:event-listen-or-wait
                 #:sheet-mirror-geometry
                 #:with-standard-rectangle*
-                #:standard-port)
+                #:standard-port
+                #:assoc-value)
   (:export
    #:clx-port
    #:clx-render-port

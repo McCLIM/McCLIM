@@ -63,6 +63,7 @@
                (:file "presentation-translators-test")
                (:file "graph-formatting-test")
                (:file "asynchronous-commands")
+               (:file "reinitialize-frame")
                (:file "demodemo")))
 
 (defsystem "clim-examples/superapp"

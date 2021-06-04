@@ -2,6 +2,7 @@
 @chapter Extensions
 
 @menu
+* Frame redefinition semantics::
 * Frame and sheet icons::
 * Frame and sheet names::
 * Frame and sheet shrinking::
@@ -14,6 +15,66 @@
 * Raster Images::
 * Additional arguments to drawing functions::
 @end menu
+
+@node Frame redefinition semantics
+@section Frame redefinition semantics
+
+By default when the application frame class is redefined with the
+macro @code{clim:define-application-frame} panes and layouts of the
+existing instances are not changed. To update the frame programmer
+must call the function @code{reinitialize-instance}. The function may
+be called on a running frame ouside of its event loop.
+
+@mcclim{} extends the macro @code{clim:define-application-frame} to
+update existing frames automatically when the new option
+@code{:reinitialize-frames} is not @code{nil}. Instances are updated
+by defining a method @code{update-instance-for-redefined-class :after}
+and making all instances obsolete. Then a slot of each adopted frame
+is read to trigger the update without delay.
+
+@itemize @bullet
+@item
+When the option is @code{nil} (a default) then nothing happens.
+
+@item
+When the option is @code{t} then all instances are updated by calling
+on them the function @code{reinitialize-instance} (running frames are
+updated immedietely and the reset whenever the implementation chose to
+call the function @code{update-instance-for-redefined-class}).
+
+@item
+When the option is a plist then additionally this plist is prepended
+to initargs applied to the function @code{reinitialize-instance}.
+@end itemize
+
+The following initargs when present in the class definition are
+applied to @code{reinitialize-instance}: @code{:current-layout},
+@code{:pretty-name}, @code{:icon}, @code{:command-table},
+@code{:menu-bar} and @code{:pointer-documentation}. For example:
+
+@lisp
+(define-application-frame example-frame ()
+  ((xxx :initarg :xxx :reader xxx))
+  (:panes (i :interactor)
+          (y :push-button :label "BAMasdf  DIM DOM"))
+  (:layouts (l1 (vertically () i y))
+            (l2 (vertically () y)))
+  (:pointer-documentation t)
+  (:current-layout l2)
+  (:pretty-name "hellobo")
+  (:reinitialize-frames :pretty-name "foo" :xxx 15))
+@end lisp
+
+After compiling the above form all instances of the class
+example-frame will be reinitialized with:
+
+@example
+(reinitialize-instance instance :pretty-name "foo"
+                                :xxx 15
+                                :current-layout 'l2
+                                :pretty-name "hellobo"
+                                :pointer-documentation T)
+@end example
 
 @node Frame and sheet icons
 @section Frame and sheet icons

@@ -154,10 +154,10 @@
                                 :after-line-break-subsequent))
     (with-gensyms (continuation old-fresh-line-fn fresh-line-fn
                                 initial-indent ink text-style)
-      (alexandria:once-only (after-line-break
-                             after-line-break-composed
-                             after-line-break-initially
-                             after-line-break-subsequent)
+      (once-only (after-line-break
+                  after-line-break-composed
+                  after-line-break-initially
+                  after-line-break-subsequent)
         `(let ((,initial-indent (stream-cursor-initial-position ,stream))
                (,old-fresh-line-fn (after-line-break ,stream))
                (,ink (medium-ink ,stream))
