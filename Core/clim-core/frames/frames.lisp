@@ -269,9 +269,13 @@
                 (t
                  (coerce-to-icon icon))))))
 
+(defgeneric reinitialize-panes-and-layouts (frame)
+  (:method (frame) nil))
+
 (defmethod reinitialize-instance :after
     ((frame standard-application-frame)
      &key (icon nil ip) (pretty-name nil pp) (command-table nil cp))
+  (reinitialize-panes-and-layouts frame)
   (let ((fm (frame-manager frame)))
     (and ip (note-frame-icon-changed fm frame icon))
     (and pp (note-frame-pretty-name-changed fm frame pretty-name))

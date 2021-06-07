@@ -100,8 +100,9 @@
 
 (defun generate-reinitialize-instance (class-name panes layouts)
   (with-gensyms (old-panes)
-    `(defmethod reinitialize-instance :after ((frame ,class-name) &rest args)
-       (declare (ignore args))
+    ;; what about inherited methods? perhaps this should be a function that is
+    ;; called fro mthe method reinitialize-instance defined in frames.lisp?
+    `(defmethod reinitialize-panes-and-layouts ((frame ,class-name))
        (setf (frame-panes-constructor frame)
              ,(generate-panes-constructor panes)
              (frame-layout-constructor frame)
