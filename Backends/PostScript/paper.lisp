@@ -1,24 +1,12 @@
-;;; -*- Mode: Lisp; Package: CLIM-POSTSCRIPT -*-
-
-;;;  (c) copyright 2002 by
-;;;           Alexey Dejneka (adejneka@comail.ru)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2002 by Alexey Dejneka (adejneka@comail.ru)
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
 
-(in-package :clim-postscript)
+(in-package #:clim-postscript)
 
 (defparameter *paper-sizes*
   '((:letter 612 . 792)
@@ -56,8 +44,7 @@
         (make-rectangle* 0 0 width height))))
 
 (defun make-postscript-transformation (page output scale-to-fit)
-  (with-bounding-rectangle* (left top right bottom) page
-    (declare (ignore left top))
+  (with-bounding-rectangle* (nil nil right bottom) page
     (let ((drawing-region (make-rectangle* 0 0 right bottom)))
       (cond
         (scale-to-fit

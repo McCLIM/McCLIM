@@ -1,6 +1,7 @@
+(in-package #:asdf-user)
 
-(defsystem #:mcclim-null
-  :depends-on (#:clim)
+(defsystem "mcclim-null"
+  :depends-on ("clim")
   :components
   ((:file "package")
    (:file "port" :depends-on ("package"))

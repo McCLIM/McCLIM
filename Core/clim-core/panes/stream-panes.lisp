@@ -10,13 +10,14 @@
 ;;;  (c) copyright 2001-2002, 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;  (c) copyright 2002-2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2021 by Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Implementation of the 29.4 CLIM Stream Panes.
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; A class that implements the display function invocation. It's put
 ;;; in a super class of clim-stream-pane so that redisplay-frame-pane
@@ -175,9 +176,8 @@
 
 (defmethod allocate-space ((pane clim-stream-pane) width height)
   (multiple-value-bind (w h)
-      (untransform-distance (sheet-device-transformation pane) width height)
-    (multiple-value-bind (min-x min-y)
-        (bounding-rectangle-position (stream-output-history pane))
+      (untransform-distance (sheet-native-transformation pane) width height)
+    (with-bounding-rectangle* (min-x min-y) (stream-output-history pane)
       (let* ((x0 (clamp min-x (- w) 0))
              (y0 (clamp min-y (- h) 0)))
         (setf (sheet-region pane)
@@ -218,8 +218,7 @@
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (multiple-value-bind (x y) (bounding-rectangle* (stream-output-history pane))
-    (values x y)))
+  (bounding-rectangle-position (stream-output-history pane)))
 
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y)
@@ -238,9 +237,8 @@
 (defmethod redisplay-frame-pane ((frame application-frame)
                                  (pane symbol)
                                  &key force-p)
-  (let ((actual-pane (get-frame-pane frame pane)))
-    (when actual-pane
-      (redisplay-frame-pane frame actual-pane :force-p force-p))))
+  (when-let ((actual-pane (get-frame-pane frame pane)))
+    (redisplay-frame-pane frame actual-pane :force-p force-p)))
 
 (define-presentation-method presentation-type-history-for-stream
     ((type t) (stream clim-stream-pane))
@@ -270,9 +268,7 @@
 ;;; analogous to the mouse-wheel / select-and-paste handling in
 ;;; DISPATCH-EVENT, just in a slightly different place.
 (defmethod frame-input-context-button-press-handler :before
-    ((frame standard-application-frame)
-     (stream interactor-pane)
-     button-press-event)
+    ((frame application-frame) (stream interactor-pane) button-press-event)
   (let ((previous (stream-set-input-focus stream)))
     (when (and previous (typep previous 'gadget))
       (let ((client (gadget-client previous))
@@ -309,10 +305,9 @@
   (let* ((title-string (title-string pane))
          (a (text-style-ascent (pane-text-style pane) pane))
          (tw (text-size pane title-string)))
-    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-      (declare (ignore y2))
+    (with-bounding-rectangle* (x1 y1 x2 nil :center-x cx) (sheet-region pane)
       (multiple-value-bind (tx ty)
-          (values (- (/ (- x2 x1) 2) (/ tw 2))
+          (values (- cx (/ tw 2))
                   (+ y1 2 a))
         (draw-text* pane title-string tx ty)))))
 
@@ -360,92 +355,116 @@ current background message was set."))
     (window-clear pane)))
 
 
-;;;
-;;; CONSTRUCTORS
-;;;
-(defun make-clim-stream-pane (&rest options
-                              &key (type 'clim-stream-pane)
-                                   label
-                                   (label-alignment nil label-alignment-p)
-                                   (display-after-commands nil display-after-commands-p)
-                                   (scroll-bar :vertical)
-                                   (scroll-bars scroll-bar)
-                                   (borders t)
-                              &allow-other-keys)
+;;; Constructors
+
+(defconstant +stream-pane-wrapper-initargs+
+  '(:label :label-alignment :scroll-bar :scroll-bars :borders))
+
+(defconstant +space-requirement-initargs+
+  '(:width :min-width :max-width :height :min-height :max-height))
+
+(defun separate-stream-pane-initargs (initargs)
+  ;; If :scroll-bars isn't a cons the user space requirement options belong to
+  ;; the outermost container of the stream (scroller-pane, label-pane or
+  ;; outline-pane). If :scroll-bars is a cons the user space requirement options
+  ;; belong to the clim stream and it is possible to set the space requirement
+  ;; of the scroller using the cdr of :scroll-bars as: :SCROLL-BARS '(:VERTICAL
+  ;; :WIDTH 300) -- admich 2020-10-13
+  (loop with any-wrapper-p = nil
+        with complex-scroll-bars-p = nil
+        for (key value) on initargs by #'cddr
+        if (and (member key +space-requirement-initargs+ :test #'eq)
+                (not (eq value :compute)))
+          nconc (list key value) into space-options
+        else if (member key +stream-pane-wrapper-initargs+)
+               nconc (list key value) into wrapper-options
+               and do (case key
+                        (:borders
+                         (when value (setf any-wrapper-p t)))
+                        (:label
+                         (when value (setf any-wrapper-p t)))
+                        (:scroll-bars
+                         (when value (setf any-wrapper-p t))
+                         (when (consp value) (setf complex-scroll-bars-p t))))
+        else
+          nconc (list key value) into stream-options
+        finally
+           (return
+             (if (or (not any-wrapper-p) complex-scroll-bars-p)
+                 (values (append stream-options space-options) wrapper-options '())
+                 (values stream-options wrapper-options space-options)))))
+
+(defun make-unwrapped-stream-pane
+    (type &rest initargs
+          &key (display-after-commands nil display-after-commands-p)
+          &allow-other-keys)
   (when display-after-commands-p
     (check-type display-after-commands (member nil t :no-clear))
-    (when (member :display-time options)
-      (error "MAKE-CLIM-STREAM-PANE can not be called with both
-    :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
-  (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders
-                                   :label :label-alignment :display-after-commands))
-    ;; If :scroll-bars isn't a cons the user space requirement options
-    ;; belong to the most external container of the stream
-    ;; (scroller-pane, label-pane or outline-pane). If :scroll-bars is
-    ;; a cons the user space requirement options belong to the clim
-    ;; stream and it is possible to set the space requirement of the
-    ;; scroller using the cdr of :scroll-bars as:
-    ;; :SCROLL-BARS '(:VERTICAL :WIDTH 300)
-    ;; -- admich 2020-10-13
-    (let* ((space-keys '(:width :height :max-width :max-height
-                         :min-width :min-height))
-           (user-sr nil)
-           (pane-options nil))
-      (loop for (key value) on options by #'cddr
-            if (and (member key space-keys :test #'eq)
-                    (not (eq value :compute)))
-              nconc (list key value) into space-options
-            else
-              nconc (list key value) into other-options
-            end
-              finally (progn
-                        (setq user-sr space-options)
-                        (setq pane-options other-options)))
-      (let* ((pane (apply #'make-pane type (append pane-options
-                                                   (when display-after-commands-p
-                                                     (list :display-time
-                                                           (if (eq display-after-commands t)
-                                                               :command-loop
-                                                               display-after-commands)))
-                                                   (when (or (consp scroll-bars)
-                                                             (not (or scroll-bars
-                                                                      label
-                                                                      borders)))
-                                                     user-sr))))
-             (stream pane))
-        (when scroll-bars
-          (setq pane (apply #'make-pane 'scroller-pane
-                            :contents (list (make-pane 'viewport-pane
-                                                       :contents (list pane)))
-                            (append
-                             ;; From the Franz manual if :scroll-bars is a
-                             ;; cons the car is treated as the non-cons
-                             ;; argument and the cdr is a list of keyword
-                             ;; argument pairs to be used as options of
-                             ;; the scroller-pane
-                             (if (consp scroll-bars)
-                                 `(:scroll-bar ,@scroll-bars)
-                                 `(:scroll-bar ,scroll-bars))
-                             (unless (or (consp scroll-bars) label borders)
-                               user-sr)))))
-        (when label
-          (setq pane (apply #'make-pane 'label-pane
-                            :label label
-                            :contents (list pane)
-                            (append
-                             (when label-alignment-p
-                               (list :label-alignment label-alignment))
-                             (unless (or (consp scroll-bars) borders)
-                               user-sr)))))
-        (when borders
-          (setq pane (apply #'make-pane 'outlined-pane
-                            :thickness (if (not (numberp borders))
-                                           1
-                                           borders)
-                            :contents (list pane)
-                            (unless (consp scroll-bars)
-                              user-sr))))
-        (values pane stream)))))
+    (when (member :display-time initargs)
+      (error "MAKE-CLIM-STREAM-PANE can not be called with both ~
+              :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
+  (apply #'make-pane type (append (alexandria:remove-from-plist
+                                   initargs :display-after-commands)
+                                  (when display-after-commands-p
+                                    (list :display-time
+                                          (if (eq display-after-commands t)
+                                              :command-loop
+                                              display-after-commands))))))
+
+(defun wrap-stream-pane (stream-pane user-space-requirements
+                         &key label
+                              (label-alignment :top)
+                              (scroll-bar :vertical)
+                              (scroll-bars scroll-bar)
+                              (borders t))
+  (let* ((pane stream-pane)
+         (stream pane))
+    (when scroll-bars
+      (setf pane (make-pane 'viewport-pane :contents (list pane)))
+      (setf pane (apply #'make-pane 'scroller-pane
+                        :contents (list pane)
+                        (append
+                         ;; From the Franz manual if :scroll-bars is a cons the
+                         ;; car is treated as the non-cons argument and the cdr
+                         ;; is a list of keyword argument pairs to be used as
+                         ;; options of the scroller-pane.
+                         (if (consp scroll-bars)
+                             `(:scroll-bar ,@scroll-bars)
+                             `(:scroll-bar ,scroll-bars))
+                         (when (and user-space-requirements
+                                    (not (or label borders)))
+                           user-space-requirements)))))
+    (when label
+      (setf pane (apply #'make-pane 'label-pane
+                        :label label
+                        :label-alignment label-alignment
+                        :contents (list pane)
+                        (when (and user-space-requirements (not borders))
+                          user-space-requirements))))
+    (when borders
+      (setf pane (apply #'make-pane 'outlined-pane
+                        :thickness (if (not (numberp borders))
+                                       1
+                                       borders)
+                        :contents (list pane)
+                        user-space-requirements)))
+    (values pane stream)))
+
+(defun make-clim-stream-pane (&rest options &key (type 'clim-stream-pane)
+                                                 (label nil)
+                                                 (label-alignment :top)
+                                                 (scroll-bar :vertical)
+                                                 (scroll-bars scroll-bar)
+                                                 (borders t)
+                              &allow-other-keys)
+  (declare (ignore label label-alignment))
+  (multiple-value-bind (stream-options wrapper-options wrapper-space-options)
+      (separate-stream-pane-initargs
+       (list* :scroll-bar scroll-bar :scroll-bars scroll-bars :borders borders
+              (alexandria:remove-from-plist
+               options :type :scroll-bar :scroll-bars :borders)))
+    (let ((stream (apply #'make-unwrapped-stream-pane type stream-options)))
+      (apply #'wrap-stream-pane stream wrapper-space-options wrapper-options))))
 
 (macrolet
     ((define (name type default-scroll-bar)
@@ -461,115 +480,3 @@ current background message was set."))
   (define make-clim-application-pane application-pane t)
   (define make-clim-pointer-documentation-pane pointer-documentation-pane nil)
   (define make-clim-command-menu-pane command-menu-pane t))
-
-;;;
-;;; 29.4.5 Creating a Standalone CLIM Window
-;;; WINDOW STREAM
-;;;
-
-(defclass window-stream (clim-stream-pane)
-  ())
-
-(define-application-frame a-window-stream (standard-encapsulating-stream
-                                           standard-extended-input-stream
-                                           fundamental-character-output-stream
-                                           standard-application-frame)
-  ((scroll-bars :initform :vertical
-                :initarg :scroll-bars)
-   stream
-   pane)
-  (:pane
-   (with-slots (stream pane scroll-bars) *application-frame*
-     (multiple-value-setq (pane stream)
-       (make-clim-stream-pane :name 'a-window-stream-pane
-                              :display-time nil
-                              :type 'window-stream
-                              :scroll-bars scroll-bars
-                              :height 400 :width 700))
-     pane)))
-
-(defmethod close ((stream window-stream) &key abort)
-  (declare (ignore abort))
-  (when-let* ((frame (pane-frame stream))
-              (fm (frame-manager frame)))
-    (disown-frame fm frame))
-  (when (next-method-p)
-    (call-next-method)))
-
-(defun open-window-stream (&key port
-                             left top right bottom width height
-                             foreground background
-                             text-style
-                             (vertical-spacing 2)
-                             end-of-line-action
-                             end-of-page-action
-                             output-record
-                             (draw t)
-                             (record t)
-                             (initial-cursor-visibility :off)
-                             text-margin
-                             save-under
-                             input-buffer
-                             (scroll-bars :vertical)
-                             borders
-                             label)
-  (declare (ignorable foreground background
-                      text-style
-                      vertical-spacing
-                      end-of-line-action
-                      end-of-page-action
-                      output-record
-                      draw
-                      record
-                      initial-cursor-visibility
-                      text-margin
-                      save-under
-                      borders
-                      label))
-  (setf port (or port (find-port)))
-  ;; Input buffers in the spec are not well defined for panes but at least we
-  ;; know that they are vectors while event queues are deliberately
-  ;; unspecified. OPEN-WINDOW-STREAM description is fudged in this regard by
-  ;; allowing to specify input-buffer as either. -- jd 2019-06-21
-  (let* ((fm (find-frame-manager :port port))
-         (frame (apply #'make-application-frame
-                       'a-window-stream
-                       :frame-manager fm
-                       :pretty-name (or label "")
-                       :left left
-                       :top top
-                       :right right
-                       :bottom bottom
-                       :width width
-                       :height height
-                       :scroll-bars scroll-bars
-                       (typecase input-buffer
-                         (event-queue (list :event-queue input-buffer))
-                         (vector      (list :input-buffer input-buffer))
-                         (otherwise   nil)))))
-    ;; Adopt and enable the pane
-    (when (eq (frame-state frame) :disowned)
-      (adopt-frame fm frame))
-    (unless (or (eq (frame-state frame) :enabled)
-                (eq (frame-state frame) :shrunk))
-      (enable-frame frame))
-    ;; Start a new thread to run the event loop, if necessary.
-    (let ((*application-frame* frame))
-      (stream-set-input-focus (encapsulating-stream-stream frame)))
-    #+clim-mp
-    (unless input-buffer
-      (redisplay-frame-panes frame :force-p t)
-      (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-                                          (standalone-event-loop)))))
-    (encapsulating-stream-stream frame)))
-
-(defun standalone-event-loop ()
-  "An simple event loop for applications that want all events to be handled by
- handle-event methods, which also handles FRAME-EXIT."
-  (let ((frame *application-frame*))
-    (handler-case
-        (let ((queue (frame-event-queue frame)))
-          (loop for event = (event-queue-read queue)
-                ;; EVENT-QUEUE-READ in single-process mode calls PROCESS-NEXT-EVENT itself.
-                do (handle-event (event-sheet event) event)))
-      (frame-exit () (disown-frame (frame-manager frame) frame)))))

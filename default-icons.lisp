@@ -4,7 +4,7 @@
          (let* ((file-pathname #.(or *compile-file-pathname*
                                      *load-pathname*))
                 (icon-pathname (merge-pathnames
-                                (make-pathname :directory '(:relative "data")
+                                (make-pathname :directory '(:relative "data" "icons")
                                                :name name
                                                :type "png")
                                 file-pathname)))

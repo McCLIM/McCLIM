@@ -43,18 +43,17 @@
 
 (defmacro define-drag-and-drop-translator
     (name (from-type to-type destination-type command-table
-                     &rest args &key
-                     (gesture :select)
-                     (tester 'default-translator-tester)
-                     (destination-tester 'default-translator-tester)
-                     documentation
-                     (pointer-documentation nil pointer-doc-p)
-                     (menu t)
-                     (priority 0)
-                     (feedback 'frame-drag-and-drop-feedback)
-                     (highlighting 'frame-drag-and-drop-highlighting)
-                     (finish-on-release *finish-on-release*)
-                     (multiple-window nil))
+           &rest args &key (gesture :select)
+                           (tester 'default-translator-tester)
+                           (destination-tester 'default-translator-tester)
+                           documentation
+                           (pointer-documentation nil pointer-doc-p)
+                           (menu t)
+                           (priority 0)
+                           (feedback 'frame-drag-and-drop-feedback)
+                           (highlighting 'frame-drag-and-drop-highlighting)
+                           (finish-on-release *finish-on-release*)
+                           (multiple-window nil))
      arglist &body body)
   (declare (ignore tester gesture documentation pointer-documentation
                    menu priority finish-on-release))
@@ -115,8 +114,7 @@
                              (collect-translator trans)))
                          from-presentation (list context-type) frame
                          window x y
-                         :modifier-state (and (null event)
-                                              (window-modifier-state window))
+                         :modifier-state (and (null event) 0)
                          :event event)
                         (collect-translator)))
          ;; Default feedback and highlight functions are those of the

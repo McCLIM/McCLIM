@@ -49,8 +49,7 @@ navigation has yet been performed."))
 a specific type."))
 
 (define-default-presentation-method presentation-type-history (type)
-  (if (and *application-frame*
-           (frame-maintain-presentation-histories *application-frame*))
+  (if (frame-maintain-presentation-histories *application-frame*)
       (with-presentation-type-decoded (name)
         type
         (let* ((ptype (get-ptype-metaclass name))

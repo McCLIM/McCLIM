@@ -1,28 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2001, 2014, 2016 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000,2001 Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001 Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001,2014,2016 Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 ;;; Think about rewriting this macro to be nicer.
 (defmacro peek-event ((display &rest keys) &body body)
@@ -149,7 +137,7 @@
              ;; release event. We ignore the latter. -- jd 2019-09-01
              (when (eq event-key :button-press)
                (make-instance 'climi::pointer-scroll-event
-                              :pointer 0
+                              :pointer (port-pointer *clx-port*)
                               :button button :x x :y y
                               :graft-x root-x
                               :graft-y root-y
@@ -167,7 +155,7 @@
              (make-instance (if (eq event-key :button-press)
                                 'pointer-button-press-event
                                 'pointer-button-release-event)
-                            :pointer 0
+                            :pointer (port-pointer *clx-port*)
                             :button button :x x :y y
                             :graft-x root-x
                             :graft-y root-y
@@ -199,7 +187,7 @@
                                            (:grab 'pointer-grab-enter-event)
                                            (:ungrab 'pointer-ungrab-enter-event)
                                            (t 'pointer-enter-event))))
-                        :pointer 0 :button code
+                        :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
@@ -244,7 +232,7 @@
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
                                                                    state)))
          (make-instance 'pointer-motion-event
-                        :pointer 0 :button code
+                        :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
                         :graft-x root-x
                         :graft-y root-y
@@ -334,7 +322,7 @@
         (values nil :wait-function)))
     (let ((event (xlib:process-event (clx-port-display port)
                                      :timeout timeout
-				     :handler #'event-handler
+                                     :handler #'event-handler
                                      :discard-p t
                                      :force-output-p t)))
       (case event
@@ -389,8 +377,8 @@
 
 (defmethod synthesize-pointer-motion-event ((pointer clx-basic-pointer))
   (when-let* ((port (port pointer))
-              ;; XXX Should we rely on port-pointer-sheet being correct? -- moore
-              (sheet (port-pointer-sheet port))
+              ;; XXX Should we rely on pointer-sheet being correct? -- moore
+              (sheet (pointer-sheet pointer))
               (ancestor (sheet-mirrored-ancestor sheet))
               (mirror (sheet-direct-mirror ancestor)))
     (multiple-value-bind (x y same-screen-p child mask root-x root-y)
@@ -402,7 +390,7 @@
                 (values x y)
                 (untransform-position (sheet-native-transformation sheet) x y))
           (make-instance 'pointer-motion-event
-                         :pointer 0 :button (button-from-state mask)
+                         :pointer pointer :button (button-from-state mask)
                          :x x :y y :graft-x root-x :graft-y root-y
                          :sheet sheet
                          :modifier-state (clim-xcommon:x-event-state-modifiers
@@ -412,8 +400,8 @@
                               &key multiple-window)
   (let ((window (window (sheet-mirror sheet)))
         (events '(:button-press :button-release
-	          :leave-window :enter-window
-	          :pointer-motion)))
+                  :leave-window :enter-window
+                  :pointer-motion)))
     ;; Probably we want to set :cursor here..
     (eq :success (xlib:grab-pointer window events :owner-p multiple-window))))
 
@@ -464,13 +452,13 @@
 ;;; that a keysym name is a Common Lisp symbol in the KEYWORD package.
 (defmethod clim-xcommon:modifier-mapping ((port clx-basic-port))
   (let* ((display (clx-port-display port))
-	 (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
-	 (modifier-map (make-array (length x-modifiers) :initial-element nil)))
+         (x-modifiers (multiple-value-list (xlib:modifier-mapping display)))
+         (modifier-map (make-array (length x-modifiers) :initial-element nil)))
     (loop
        for keycodes in x-modifiers
        for i from 0
        do (setf (aref modifier-map i)
-		(mapcan (lambda (keycode)
-			  (modifier-keycode->keysyms display keycode))
-			keycodes)))
+                (mapcan (lambda (keycode)
+                          (modifier-keycode->keysyms display keycode))
+                        keycodes)))
     modifier-map))

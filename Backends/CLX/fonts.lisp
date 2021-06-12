@@ -1,14 +1,3 @@
-;;;; -*- Mode: Lisp; Syntax: Common-Lisp; indent-tabs-mode: nil; Package: SYSTEM -*-
-;;;; vim: set filetype=lisp tabstop=8 shiftwidth=2 expandtab:
-
-;;;;
-;;;;  fonts.lisp  -- Font access abstraction for CLX backend
-;;;;
-;;;;  Copyright (c) 2016, Daniel Kochmański
-;;;;
-;;;;    see toplevel file 'copyright' for the copyright details.
-;;;;
-
 (in-package #:clim-clx)
 
 (defparameter *families/names*
@@ -51,8 +40,8 @@
                                  (getf *families/names* family)))
                 (face-name (if (stringp face)
                                face
-                               (alexandria:assoc-value *families/faces* (list family face)
-                                                       :test #'equal))))
+                               (assoc-value *families/faces*
+                                            (list family face) :test #'equal))))
            (flet ((try (encoding)
                     (open-font display
                                (format nil "-~a-~a-*-*-~d-*-*-*-*-*-~a"

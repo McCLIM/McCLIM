@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Inspection methods for subclasses of `number' .
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -77,16 +76,14 @@
                                               (state  inspected-object)
                                               (style  (eql :badges))
                                               (stream t))
-  #+sbcl (let ((has-value-p t))
-           (macrolet ((maybe-special-float (predicate label)
-                        `(when (,predicate object)
-                           (setf has-value-p nil)
-                           (write-char #\Space stream)
-                           (badge stream ,label))))
-             (maybe-special-float sb-ext:float-infinity-p     "infinity")
-             (maybe-special-float sb-ext:float-denormalized-p "denormalized")
-             (maybe-special-float sb-ext:float-nan-p          "nan")
-             (maybe-special-float sb-ext:float-trapping-nan-p "trapping-nan"))))
+  #+sbcl (macrolet ((maybe-special-float (predicate label)
+                      `(when (,predicate object)
+                         (write-char #\Space stream)
+                         (badge stream ,label))))
+           (maybe-special-float sb-ext:float-infinity-p     "infinity")
+           (maybe-special-float sb-ext:float-denormalized-p "denormalized")
+           (maybe-special-float sb-ext:float-nan-p          "nan")
+           (maybe-special-float sb-ext:float-trapping-nan-p "trapping-nan")))
 
 (defmethod inspect-object-using-state :after ((object number)
                                               (state  inspected-object)

@@ -1,4 +1,4 @@
-(in-package :mcclim-harfbuzz)
+(in-package #:mcclim-harfbuzz)
 
 (defmacro with-buffer ((sym) &body body)
   (alexandria:with-gensyms (buffer)

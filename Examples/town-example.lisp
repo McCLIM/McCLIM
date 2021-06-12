@@ -1,18 +1,21 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: TOWN-EXAMPLE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Example CLIM Application: Large Cities of Germany
-;;;    Topics: custom view classes, different present presentation methods for
-;;;            different views, completion for accept presentation methods,
-;;;            accepting-values dialogues, presentation to command translators,
-;;;            partial commands in menus, automatically generated menus, 
-;;;            and keystroke gestures for commands.
-;;;     Usage: Compile and load the file and call (town-example:run) afterwards.
-;;;   Created: 2005-08-17, Version 1.3 (same date)
-;;;    Author: Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2005 by Max-Gerd Retzlaff
-
-;;; define the package
+;;;
+;;;  (c) copyright 2005 Max-Gerd Retzlaff <m.retzlaff@gmx.net>, http://bl0rg.net/~mgr
+;;;  (c) copyright 2017 Nisar Ahmad <nisarahmad1324@gmail.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Example CLIM Application: Large Cities of Germany.
+;;;
+;;; To run the example application, call (clim-demo.town-example:run).
+;;;
+;;; Covered topics: custom view classes, different present presentation methods
+;;; for different views, completion for accept presentation methods,
+;;; accepting-values dialogues, presentation to command translators, partial
+;;; commands in menus, automatically generated menus, and keystroke gestures for
+;;; commands.
 
 (defpackage #:clim-demo.town-example
   (:use #:clim #:clim-lisp)
@@ -36,7 +39,7 @@
         :background +dark-blue+  :display-function #'draw-map
         :default-view +graphical-view+)
    (pointer-doc :pointer-documentation)
-   (interactor :interactor :height 163 ;; 130 105 95
+   (interactor :interactor :height 163 ; 130 105 95
                :scroll-bars nil))
    (:layouts
     (default (vertically ()
@@ -74,8 +77,8 @@
 
 ;;; a command to quit the program
 
-(define-town-example-command (com-quit :name t :menu t ;; show in menu
-                                       :keystroke (#\q :meta)) ;; a keystroke
+(define-town-example-command (com-quit :name t :menu t ; show in menu
+                                       :keystroke (#\q :meta)) ; a keystroke
     ()
   (frame-exit *application-frame*))
 
@@ -84,7 +87,7 @@
 (defclass town ()
   ((name :initarg :name :accessor town-name)
    (coordinates :initarg :coordinates :accessor town-coordinates
-               :initform (make-point 156 68)) ;; Helogoland..
+               :initform (make-point 156 68)) ; Helogoland..
    (population :initarg :population :accessor town-population
                :initform nil)))
 
@@ -100,8 +103,8 @@
     (when population
       (setf (town-population town) population))
     town))
-  
-;;; clos magic to automatically store all created towns in the hash
+
+;;; automatically store all created towns in the hash
 
 (defmethod initialize-instance :after ((town town) &key)
   (setf (gethash (town-name town) *towns*) town))
@@ -147,7 +150,6 @@
 (make-town "Mannheim"          172 349  310000)
 (make-town "Karlsruhe"         168 377  280000)
 
-
 ;;; a presantation type for town would look like this:
 ;;;
 ;;; (clim:define-presentation-type town ())
@@ -161,7 +163,7 @@
 ;;; accept method for a town presentation (in any view mode):
 
 (define-presentation-method accept ((type town) stream view &key)
-  (values               ;suppress values after the first
+  (values ; suppress values after the first
    ;; provide completion over the names of the towns
    (completing-from-suggestions (Stream :partial-completers '(#\Space))
      (maphash #'suggest *towns*))))
@@ -181,20 +183,20 @@ Factor to reduce the size of the circles")
 
 (defun population->town-circle-diameter (town)
   "Towns are graphically represented as circles."
-;;;; first version: diameter is linearly proportional to the population
-;;;   (round (/ (or (town-population town) 150000)
-;;;             *population->town-circle-factor*))) ;; 100000
-;;;
-;;;; second version: area of the circle is linearly proportional to the population
-;;;   (round (sqrt (/ (or (town-population town) 15000)
-;;;                   *population->town-circle-factor* ;; 8000
-;;;                   pi))))
-;;;
-;;;; third version: produces pleasant proportions
-   (round (expt (/ (or (town-population town) 150000)
-                   *population->town-circle-factor* ;; 20000
-                   pi)
-                3/4)))
+  ;; first version: diameter is linearly proportional to the population
+  ;;   (round (/ (or (town-population town) 150000)
+  ;;             *population->town-circle-factor*))) ; 100000
+  ;;
+  ;; second version: area of the circle is linearly proportional to the population
+  ;;   (round (sqrt (/ (or (town-population town) 15000)
+  ;;                   *population->town-circle-factor* ; 8000
+  ;;                   pi))))
+  ;;
+  ;; third version: produces pleasant proportions
+  (round (expt (/ (or (town-population town) 150000)
+                  *population->town-circle-factor* ; 20000
+                  pi)
+               3/4)))
 
 (define-presentation-method present (town (type town) stream
                                           (view graphical-view) &key)
@@ -212,20 +214,20 @@ Factor to reduce the size of the circles")
   (maphash (lambda (key value)
              (declare (ignore key))
              (clim:present value 'town))
-             *towns*))
+           *towns*))
 
 ;;; show info about a town (using a pop-up window)
 
 (define-town-example-command (com-show-town-info :name t :menu t
                                                  :keystroke (#\i :meta))
-    ((town town :prompt " Which town? "))
+    ((town town :prompt "Which town?"))
   ;; (present town 'town :view +textual-view+)
   (notify-user *application-frame*
-	       (format nil "~A has ~:d inhabitants."
-		       (town-name town)
-		       (or (town-population town) "some"))
-	       :title (format nil "Information on ~A" (town-name town))
-	       :text-style '(:serif :roman 15)))
+               (format nil "~A has ~:d inhabitants."
+                       (town-name town)
+                       (or (town-population town) "some"))
+               :title (format nil "Information on ~A" (town-name town))
+               :text-style '(:serif :roman 15)))
 
 ;;; show info on town :select gesture (left click)
 
@@ -236,57 +238,23 @@ Factor to reduce the size of the circles")
     (object)
   (list object))
 
+;;; distance between two towns
 
-;;; get distance between two towns
-
-(defun get-distance-between-points (a b)
-  "Ask Pythagoras or Euclid."
-  (round (sqrt (+  (expt (- (point-x a)
-                            (point-x b))
-                         2)
-                   (expt (- (point-y a)
-                            (point-y b))
-                         2)))))
+(defun distance-between-points (a b)
+  (round (sqrt (+ (expt (- (point-x a) (point-x b)) 2)
+                  (expt (- (point-y a) (point-y b)) 2)))))
 
 (define-town-example-command (com-get-distance :name t :menu t
                                                :keystroke (#\d :meta))
-    ((town-a town :prompt "Town a")
+    ((town-a town :prompt "Town a"
+                  :gesture (:describe
+                            :documentation "Get distance from this town to another."))
      (town-b town :prompt "Town b"))
   (notify-user *application-frame*
-	       (format nil "It's ~d pixels from ~a to ~a."
-		       (get-distance-between-points (town-coordinates town-a)
-						    (town-coordinates town-b))
-		       (town-name town-a)
-		       (town-name town-b))
-	       :title "Distance"
-	       :text-style '(:serif :roman 15)))
-
-;;; get distance on :describe gesture (middle click)
-;;; (ask via accept for the second town)
-
-;;; Defunct and not really nice. Note that the version below is simpler,
-;;; working, more elegant, and more intuitive, as the user sees the same
-;;; as if he had entered the com-get-distance command via the keyboard.
-;;;
-;;; (define-presentation-to-command-translator distance-between-two-towns
-;;;     (town com-get-distance town-example
-;;;           :gesture :describe
-;;;           :documentation "Get distance from this town to another.")
-;;;     (object)
-;;;   (list object
-;;;         (let (town-b)
-;;;           (accepting-values-with-style-and-title (stream)
-;;;             (format stream "~&Get distance~%")
-;;;             (format stream "~%From ~a to: " (town-name object))
-;;;             (setf town-b (accept 'town :prompt nil :stream stream :query-identifier 'tag)))
-;;;           town-b)))
-
-(define-presentation-to-command-translator distance-between-two-towns
-    (town com-get-distance town-example
-          :gesture :describe
-          :documentation "Get distance from this town to another.")
-    (object)
-  (list object
-        (let ((stream *query-io*))
-          (format stream "  Get distance (Town a) ~a (Town b) " (town-name object))
-          (accept 'town :prompt nil :stream stream :query-identifier 'tag))))
+               (format nil "It's ~d pixels from ~a to ~a."
+                       (distance-between-points (town-coordinates town-a)
+                                                (town-coordinates town-b))
+                       (town-name town-a)
+                       (town-name town-b))
+               :title "Distance"
+               :text-style '(:serif :roman 15)))

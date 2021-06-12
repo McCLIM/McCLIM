@@ -1,100 +1,74 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000, 2014, 2016 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2001 by
-;;;           Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;           Lionel Salabartan (salabart@emi.u-bordeaux.fr)
-;;;  (c) copyright 2001, 2002 by Alexey Dejneka (adejneka@comail.ru)
-;;;  (c) copyright 2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998,1999,2000,2001,2003 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000-2003,2009-2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2001 Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001 Lionel Salabartan <salabart@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001,2002 Alexey Dejneka <adejneka@comail.ru>
+;;;  (c) copyright 2002,2003,2004 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2002,2003,2004,2005 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) copyright 2003-2008 Andy Hefner <ahefner@common-lisp.net>
+;;;  (c) copyright 2005,2006 Christophe Rhodes <crhodes@common-lisp.net>
+;;;  (c) copyright 2006 Andreas Fuchs <afuchs@common-lisp.net>
+;;;  (c) copyright 2007 David Lichteblau <dlichteblau@common-lisp.net>
+;;;  (c) copyright 2007 Robert Goldman <rgoldman@common-lisp.net>
+;;;  (c) copyright 2017 Cyrus Harmon <cyrus@bobobeach.com>
+;;;  (c) copyright 2018 Elias Martenson <lokedhs@gmail.com>
+;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Machinery for creating, querying and modifying output records.
+;;;
 
 ;;; TODO:
 ;;;
 ;;; - Scrolling does not work correctly. Region is given in "window"
-;;; coordinates, without bounding-rectangle-position transformation.
-;;; (Is it still valid?)
+;;;   coordinates, without bounding-rectangle-position transformation.
+;;;   (Is it still valid?)
 ;;;
 ;;; - Redo setf*-output-record-position, extent recomputation for
-;;; compound records
+;;;   compound records
 ;;;
 ;;; - When DRAWING-P is NIL, should stream cursor move?
 ;;;
 ;;; - :{X,Y}-OFFSET.
 ;;;
 ;;; - (SETF OUTPUT-RECORD-START-CURSOR-POSITION) does not affect the
-;;; bounding rectangle. What does it affect?
+;;;   bounding rectangle. What does it affect?
 ;;;
 ;;; - How should (SETF OUTPUT-RECORD-POSITION) affect the bounding
-;;; rectangle of the parent? Now its bounding rectangle is accurately
-;;; recomputed, but it is very inefficient for table formatting. It
-;;; seems that CLIM is supposed to keep a "large enougn" rectangle and
-;;; to shrink it to the correct size only when the layout is complete
-;;; by calling TREE-RECOMPUTE-EXTENT.
+;;;   rectangle of the parent? Now its bounding rectangle is
+;;;   accurately recomputed, but it is very inefficient for table
+;;;   formatting. It seems that CLIM is supposed to keep a "large
+;;;   enough" rectangle and to shrink it to the correct size only when
+;;;   the layout is complete by calling TREE-RECOMPUTE-EXTENT.
 ;;;
 ;;; - Computation of the bounding rectangle of lines/polygons ignores
-;;; LINE-STYLE-CAP-SHAPE.
+;;;   LINE-STYLE-CAP-SHAPE.
 ;;;
 ;;; - Rounding of coordinates.
 ;;;
-;;; - Document carefully the interface of
-;;; STANDARD-OUTPUT-RECORDING-STREAM.
+;;; - Document carefully the interface of STANDARD-OUTPUT-RECORDING-STREAM.
 ;;;
 ;;; - COORD-SEQ is a sequence, not a list.
-
-;;; Troubles
-
-;;; DC
 ;;;
-;;; Some GFs are defined to have "a default method on CLIM's standard
-;;; output record class". What does it mean? What is "CLIM's standard
-;;; output record class"? Is it OUTPUT-RECORD or BASIC-OUTPUT-RECORD?
-;;; Now they are defined on OUTPUT-RECORD.
+;;; - Some GFs are defined to have "a default method on CLIM's
+;;;   standard output record class". What does it mean? What is
+;;;   "CLIM's standard output record class"? Is it OUTPUT-RECORD or
+;;;   BASIC-OUTPUT-RECORD?  Now they are defined on OUTPUT-RECORD.
 
-(in-package :clim-internals)
-
-;;; 16.2.1. The Basic Output Record Protocol (extras)
-
-(defgeneric (setf output-record-parent) (parent record)
-  (:documentation "Additional protocol generic function. PARENT may be
-an output record or NIL."))
-
-;;; 16.2.2. Output Record "Database" Protocol (extras)
-;;; From the Franz CLIM user's guide but not in the spec... clearly necessary.
-
-(defgeneric map-over-output-records-1
-    (continuation record continuation-args))
-
-(defun map-over-output-records
-    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
-  "Maps over all of the children of the RECORD, calling FUNCTION on
-each one. It is a function of one or more arguments and called with
-all of FUNCTION-ARGS as APPLY arguments."
-  (declare (ignore x-offset y-offset))
-  (map-over-output-records-1 function record function-args))
+(in-package #:clim-internals)
 
 ;;; Forward definition
 (defclass stream-output-history-mixin ()
   ((stream :initarg :stream :reader output-history-stream)))
 
-;;; 21.3 Incremental Redisplay Protocol.  These generic functions need
-;;; to be implemented for all the basic displayed-output-records, so
-;;; they are defined in this file.
+;;; These generic functions need to be implemented for all the basic
+;;; displayed-output-records, so they are defined in this file.
 ;;;
 ;;; MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD, as defined in
 ;;; the CLIM spec, are pretty silly.  How does incremental redisplay
@@ -103,16 +77,14 @@ all of FUNCTION-ARGS as APPLY arguments."
 ;;; match... why not define the search function and the predicate on
 ;;; two records then!
 ;;;
+;;; These gf's use :MOST-SPECIFIC-LAST because one of the least
+;;; specific methods will check the bounding boxes of the records,
+;;; which should cause an early out most of the time.
+;;;
 ;;; We'll implement MATCH-OUTPUT-RECORDS and FIND-CHILD-OUTPUT-RECORD,
 ;;; but we won't actually use them.  Instead, output-record-equal will
 ;;; match two records, and find-child-record-equal will search for the
 ;;; equivalent record.
-
-(defgeneric match-output-records (record &rest args))
-
-;;; These gf's use :MOST-SPECIFIC-LAST because one of the least
-;;; specific methods will check the bounding boxes of the records,
-;;; which should cause an early out most of the time.
 
 (defgeneric match-output-records-1 (record &key)
   (:method-combination and :most-specific-last))
@@ -248,17 +220,19 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 ;;;; Implementation
 
 (defclass basic-output-record (standard-bounding-rectangle output-record)
-  ((parent :initarg :parent ; XXX
-           :initform nil
+  ((parent :initform nil
            :accessor output-record-parent)) ; XXX
   (:documentation "Implementation class for the Basic Output Record Protocol."))
 
 (defmethod initialize-instance :after ((record basic-output-record)
                                        &key (x-position 0.0d0 x-position-p)
-                                            (y-position 0.0d0 y-position-p))
+                                            (y-position 0.0d0 y-position-p)
+                                            (parent nil))
   (when (or x-position-p y-position-p)
     (setf (rectangle-edges* record)
-          (values x-position y-position x-position y-position))))
+          (values x-position y-position x-position y-position)))
+  (when parent
+    (add-output-record record parent)))
 
 ;;; We need to remember initial record position (hence x,y slots) in case when
 ;;; we add children expanding record in top-left direction and then call
@@ -280,8 +254,7 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (bounding-rectangle-position record))
 
 (defmethod* (setf output-record-position) (nx ny (record basic-output-record))
-  (with-standard-rectangle (x1 y1 x2 y2)
-     record
+  (with-standard-rectangle* (x1 y1 x2 y2) record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (setf (rectangle-edges* record)
@@ -292,17 +265,16 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
             (nx ny (record basic-output-record))
   (with-bounding-rectangle* (min-x min-y max-x max-y) record
     (call-next-method)
-    (let ((parent (output-record-parent record)))
-      (when (and parent (not (and (typep parent 'compound-output-record)
-                                  (slot-value parent 'in-moving-p)))) ; XXX
+    (when-let ((parent (output-record-parent record)))
+      (unless (and (typep parent 'compound-output-record)
+                   (slot-value parent 'in-moving-p)) ; XXX
         (recompute-extent-for-changed-child parent record
                                             min-x min-y max-x max-y)))
     (values nx ny)))
 
 (defmethod* (setf output-record-position)
   :before (nx ny (record compound-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (letf (((slot-value record 'in-moving-p) t))
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -457,15 +429,14 @@ the associated sheet can be determined."
 (defmethod add-output-record :after (child (record compound-output-record))
   (recompute-extent-for-new-child record child)
   (when (eq record (output-record-parent child))
-    (let ((sheet (find-output-record-sheet record)))
-      (when sheet (note-output-record-got-sheet child sheet)))))
+    (when-let ((sheet (find-output-record-sheet record)))
+      (note-output-record-got-sheet child sheet))))
 
 (defmethod delete-output-record :before (child (record basic-output-record)
                                          &optional (errorp t))
   (declare (ignore errorp))
-  (let ((sheet (find-output-record-sheet record)))
-    (when sheet
-      (note-output-record-lost-sheet child sheet))))
+  (when-let ((sheet (find-output-record-sheet record)))
+    (note-output-record-lost-sheet child sheet)))
 
 (defmethod delete-output-record (child (record basic-output-record)
                                  &optional (errorp t))
@@ -482,17 +453,15 @@ the associated sheet can be determined."
   (error "Cannot clear ~S." record))
 
 (defmethod clear-output-record :before ((record compound-output-record))
-  (let ((sheet (find-output-record-sheet record)))
-    (when sheet
-      (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet))))
+  (when-let ((sheet (find-output-record-sheet record)))
+    (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet)))
 
 (defmethod clear-output-record :around ((record compound-output-record))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
     (call-next-method)
     (assert (null-bounding-rectangle-p record))
-    (when (output-record-parent record)
-      (recompute-extent-for-changed-child
-       (output-record-parent record) record x1 y1 x2 y2))))
+    (when-let ((parent (output-record-parent record)))
+      (recompute-extent-for-changed-child parent record x1 y1 x2 y2))))
 
 (defmethod clear-output-record :after ((record compound-output-record))
   (with-slots (x y) record
@@ -508,7 +477,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added last" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records
     (function (record compound-output-record)
      &optional (x-offset 0) (y-offset 0)
@@ -526,7 +495,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added first" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records-containing-position
     (function (record compound-output-record) x y
      &optional (x-offset 0) (y-offset 0)
@@ -550,7 +519,7 @@ the associated sheet can be determined."
 
 ;;; This needs to work in "most recently added last" order. Is this
 ;;; implementation right? -- APD, 2002-06-13
-#+nil
+#+(or)
 (defmethod map-over-output-records-overlapping-region
     (function (record compound-output-record) region
      &optional (x-offset 0) (y-offset 0)
@@ -562,10 +531,11 @@ the associated sheet can be determined."
        (output-record-children record)))
 
 ;;; XXX Dunno about this definition... -- moore
-;;; Your apprehension is justified, but we lack a better means by which
-;;; to distinguish "empty" compound records (roots of trees of compound
-;;; records, containing no non-compound records). Such subtrees should
-;;; not affect bounding rectangles.  -- Hefner
+;;;
+;;; Your apprehension is justified, but we lack a better means by which to
+;;; distinguish "empty" compound records (roots of trees of compound records,
+;;; containing no non-compound records). Such subtrees should not affect
+;;; bounding rectangles.  -- Hefner
 (defun null-bounding-rectangle-p (bbox)
   (with-bounding-rectangle* (x1 y1 x2 y2) bbox
     (and (= x1 x2)
@@ -587,10 +557,9 @@ the associated sheet can be determined."
            (setf (rectangle-edges* record)
                  (values (min old-x1 x1-child) (min old-y1 y1-child)
                          (max old-x2 x2-child) (max old-y2 y2-child))))))
-      (let ((parent (output-record-parent record)))
-        (when parent
-          (recompute-extent-for-changed-child
-           parent record old-x1 old-y1 old-x2 old-y2)))))
+      (when-let ((parent (output-record-parent record)))
+        (recompute-extent-for-changed-child
+         parent record old-x1 old-y1 old-x2 old-y2))))
   record)
 
 (defun %tree-recompute-extent* (record)
@@ -623,69 +592,56 @@ the associated sheet can be determined."
 (defmethod recompute-extent-for-changed-child
     ((record compound-output-record) changed-child
      old-min-x old-min-y old-max-x old-max-y)
-  (with-bounding-rectangle* (ox1 oy1 ox2 oy2)  record
+  (with-bounding-rectangle* (ox1 oy1 ox2 oy2) record
     (with-bounding-rectangle* (cx1 cy1 cx2 cy2) changed-child
-      ;; If record is currently empty, use the child's bbox
-      ;; directly. Else..  Does the new rectangle of the child contain
-      ;; the original rectangle?  If so, we can use min/max to grow
-      ;; record's current rectangle.  If not, the child has shrunk,
-      ;; and we need to fully recompute.
+      ;; If record is currently empty, use the child's bbox directly. Else..
+      ;; Does the new rectangle of the child contain the original rectangle?  If
+      ;; so, we can use min/max to grow record's current rectangle.  If not, the
+      ;; child has shrunk, and we need to fully recompute.
       (multiple-value-bind (nx1 ny1 nx2 ny2)
           (cond
-            ;; The child has been deleted; who knows what the
-            ;; new bounding box might be.
-            ;; This case shouldn't be really necessary.
+            ;; The child has been deleted; who knows what the new bounding box
+            ;; might be. This case shouldn't be really necessary.
             ((not (output-record-parent changed-child))
              (%tree-recompute-extent* record))
-            ;; Only one child of record, and we already have the bounds.
-            ((eql (output-record-count record) 1)
-             ;; See output-record-children for why this assert breaks:
-             ;; (assert (eq changed-child (elt (output-record-children
-             ;; record) 0)))
+            ;; 1) Only one child of record, and we already have the bounds.
+            ;; 2) Our record occupied no space so the new child is the rectangle.
+            ((or (eql (output-record-count record) 1)
+                 (null-bounding-rectangle-p record))
              (values cx1 cy1 cx2 cy2))
-            ;; If our record occupied no space (had no children, or
-            ;; had only children similarly occupying no space,
-            ;; hackishly determined by null-bounding-rectangle-p),
-            ;; recompute the extent now, otherwise the next COND
-            ;; clause would, as an optimization, attempt to extend our
-            ;; current bounding rectangle, which is invalid.
-            ((null-bounding-rectangle-p record)
-             (%tree-recompute-extent* record))
-            ;; In the following cases, we can grow the new bounding
-            ;; rectangle from its previous state:
+            ;; In the following cases, we can grow the new bounding rectangle
+            ;; from its previous state:
             ((or
-              ;; If the child was originally empty, it could not have
-              ;; affected previous computation of our bounding
-              ;; rectangle.  This is hackish for reasons similar to
-              ;; the above.
+              ;; If the child was originally empty, it could not have affected
+              ;; previous computation of our bounding rectangle.  This is
+              ;; hackish for reasons similar to the above.
               (and (= old-min-x old-max-x) (= old-min-y old-max-y))
-              ;; For each edge of the original child bounds, if it was
-              ;; within its respective edge of the old parent bounding
-              ;; rectangle, or if it has not changed:
+              ;; For each edge of the original child bounds, if it was within
+              ;; its respective edge of the old parent bounding rectangle, or if
+              ;; it has not changed:
               (and (or (> old-min-x ox1) (= old-min-x cx1))
                    (or (> old-min-y oy1) (= old-min-y cy1))
                    (or (< old-max-x ox2) (= old-max-x cx2))
                    (or (< old-max-y oy2) (= old-max-y cy2)))
-              ;; New child bounds contain old child bounds, so use
-              ;; min/max to extend the already-calculated rectangle.
+              ;; New child bounds contain old child bounds, so use min/max to
+              ;; extend the already-calculated rectangle.
               (and (<= cx1 old-min-x) (<= cy1 old-min-y)
                    (>= cx2 old-max-x) (>= cy2 old-max-y)))
              (values (min cx1 ox1) (min cy1 oy1)
                      (max cx2 ox2) (max cy2 oy2)))
-            ;; No shortcuts - we must compute a new bounding box from
-            ;; those of all our children. We want to avoid this - in
-            ;; worst cases, such as a toplevel output history, large
-            ;; graph, or table, there may exist thousands of
-            ;; children. Without the above optimizations, construction
-            ;; becomes O(N^2) due to bounding rectangle calculation.
-            (t (%tree-recompute-extent* record)))
+            ;; No shortcuts - we must compute a new bounding box from those of
+            ;; all our children. We want to avoid this - in worst cases, such as
+            ;; a toplevel output history, there may exist thousands of children.
+            ;; Without the above optimizations, construction becomes O(N^2) due
+            ;; to the bounding rectangle calculation.
+            (t
+             (%tree-recompute-extent* record)))
         (with-slots (x y) record
           (setf x nx1 y ny1)
-          (setf (rectangle-edges* record) (values  nx1 ny1 nx2 ny2))
-          (let ((parent (output-record-parent record)))
-            (unless (or (null parent)
-                        (and (= nx1 ox1) (= ny1 oy1)
-                             (= nx2 ox2) (= nx2 oy2)))
+          (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2))
+          (when-let ((parent (output-record-parent record)))
+            (unless (and (= nx1 ox1) (= ny1 oy1)
+                         (= nx2 ox2) (= nx2 oy2))
               (recompute-extent-for-changed-child parent record
                                                   ox1 oy1 ox2 oy2)))))))
   record)
@@ -721,10 +677,8 @@ the associated sheet can be determined."
     (call-next-method)
     (with-bounding-rectangle* (x1 y1 x2 y2) record
       (when-let ((parent (output-record-parent record)))
-        (when (not (and (= old-x1 x1)
-                        (= old-y1 y1)
-                        (= old-x2 x2)
-                        (= old-y2 y2)))
+        (unless (and (= old-x1 x1) (= old-y1 y1)
+                     (= old-x2 x2) (= old-y2 y2))
           (recompute-extent-for-changed-child parent record
                                               old-x1 old-y1
                                               old-x2 old-y2)))))
@@ -743,16 +697,15 @@ the associated sheet can be determined."
 (defmethod delete-output-record (child (record standard-sequence-output-record)
                                  &optional (errorp t))
   (with-slots (children) record
-    (let ((pos (position child children :test #'eq)))
-      (if (null pos)
-          (when errorp
-            (error "~S is not a child of ~S" child record))
-          (progn
-            (setq children (replace children children
-                                    :start1 pos
-                                    :start2 (1+ pos)))
-            (decf (fill-pointer children))
-            (setf (output-record-parent child) nil))))))
+    (if-let ((pos (position child children :test #'eq)))
+      (progn
+        (setq children (replace children children
+                                :start1 pos
+                                :start2 (1+ pos)))
+        (decf (fill-pointer children))
+        (setf (output-record-parent child) nil))
+      (when errorp
+        (error "~S is not a child of ~S" child record)))))
 
 (defmethod clear-output-record ((record standard-sequence-output-record))
   (let ((children (output-record-children record)))
@@ -813,17 +766,18 @@ were added."
       (inserted-nr :initarg :inserted-nr
                    :accessor tree-output-record-entry-inserted-nr)))
 
+(defconstant %infinite-rectangle%
+  (rectangles:make-rectangle)
+  "This constant should be used to map over all tree output records.")
+
 (defun make-tree-output-record-entry (record inserted-nr)
   (make-instance 'tree-output-record-entry
-    :record record
-    :inserted-nr inserted-nr))
+                 :record record
+                 :inserted-nr inserted-nr))
 
-(defun %record-to-spatial-tree-rectangle (r)
-  (rectangles:make-rectangle
-   :lows `(,(bounding-rectangle-min-x r)
-            ,(bounding-rectangle-min-y r))
-   :highs `(,(bounding-rectangle-max-x r)
-             ,(bounding-rectangle-max-y r))))
+(defun %record-to-spatial-tree-rectangle (record)
+  (with-bounding-rectangle* (x1 y1 x2 y2) record
+    (rectangles:make-rectangle :lows `(,x1 ,y1) :highs `(,x2 ,y2))))
 
 (defun %output-record-entry-to-spatial-tree-rectangle (r)
   (when (null (tree-output-record-entry-cached-rectangle r))
@@ -837,41 +791,26 @@ were added."
                         :rectfun #'%output-record-entry-to-spatial-tree-rectangle))
 
 (defclass standard-tree-output-record (compound-output-record)
-  ((children :initform (%make-tree-output-record-tree)
-             :accessor %tree-record-children)
+  ((children-tree :initform (%make-tree-output-record-tree)
+                  :accessor %tree-record-children)
    (children-hash :initform (make-hash-table :test #'eql)
                   :reader %tree-record-children-cache)
    (child-count :initform 0)
    (last-insertion-nr :initform 0 :accessor last-insertion-nr)))
 
-(defun %entry-in-children-cache (record entry)
-  (gethash entry (%tree-record-children-cache record)))
+(defun %entry-in-children-cache (record child)
+  (gethash child (%tree-record-children-cache record)))
 
-(defun (setf %entry-in-children-cache) (new-val record entry)
-  (setf (gethash entry (%tree-record-children-cache record)) new-val))
+(defun (setf %entry-in-children-cache) (new-val record child)
+  (setf (gethash child (%tree-record-children-cache record)) new-val))
 
-(defun %remove-entry-from-children-cache (record entry)
-  (remhash entry (%tree-record-children-cache record)))
+(defun %remove-entry-from-children-cache (record child)
+  (remhash child (%tree-record-children-cache record)))
 
 (defmethod output-record-children ((record standard-tree-output-record))
-  (with-bounding-rectangle* (min-x min-y max-x max-y) record
-    (map 'list
-         #'tree-output-record-entry-record
-         (spatial-trees:search
-          ;; Originally, (%record-to-spatial-tree-rectangle record).
-          ;; The form below intends to fix output-record-children not
-          ;; reporting empty children, which may lie outside the
-          ;; reported bounding rectangle of their parent.
-          ;; Assumption: null bounding records are always at the
-          ;; origin.  I've never noticed this violated, but it's out
-          ;; of line with what null-bounding-rectangle-p checks, and
-          ;; setf of output-record-position may invalidate it. Seems
-          ;; to work, but fix that and try again later.  Note that max
-          ;; x or y may be less than zero..
-          (rectangles:make-rectangle
-           :lows  (list (min 0 min-x) (min 0 min-y))
-           :highs (list (max 0 max-x) (max 0 max-y)))
-          (%tree-record-children record)))))
+  (map 'list #'tree-output-record-entry-record
+       (spatial-trees:search %infinite-rectangle%
+                             (%tree-record-children record))))
 
 (defmethod add-output-record (child (record standard-tree-output-record))
   (let ((entry (make-tree-output-record-entry
@@ -884,17 +823,17 @@ were added."
 
 (defmethod delete-output-record
     (child (record standard-tree-output-record) &optional (errorp t))
-  (let ((entry (find child (spatial-trees:search
-                            (%entry-in-children-cache record child)
-                            (%tree-record-children record))
-                     :key #'tree-output-record-entry-record)))
-    (decf (slot-value record 'child-count))
-    (cond
-      ((not (null entry))
-       (spatial-trees:delete entry (%tree-record-children record))
-       (%remove-entry-from-children-cache record child)
-       (setf (output-record-parent child) nil))
-      (errorp (error "~S is not a child of ~S" child record)))))
+  (if-let ((entry (find child (spatial-trees:search
+                               (%entry-in-children-cache record child)
+                               (%tree-record-children record))
+                        :key #'tree-output-record-entry-record)))
+    (progn
+      (decf (slot-value record 'child-count))
+      (spatial-trees:delete entry (%tree-record-children record))
+      (%remove-entry-from-children-cache record child)
+      (setf (output-record-parent child) nil))
+    (when errorp
+      (error "~S is not a child of ~S" child record))))
 
 (defmethod clear-output-record ((record standard-tree-output-record))
   (map nil (lambda (child)
@@ -902,6 +841,7 @@ were added."
              (%remove-entry-from-children-cache record child))
        (output-record-children record))
   (setf (slot-value record 'child-count) 0)
+  (setf (last-insertion-nr record) 0)
   (setf (%tree-record-children record) (%make-tree-output-record-tree)))
 
 (defmethod output-record-count ((record standard-tree-output-record))
@@ -917,18 +857,22 @@ were added."
                        :key #'tree-output-record-entry-inserted-nr))
     (apply function (tree-output-record-entry-record child) function-args)))
 
-(defmethod map-over-output-records-1 (function (record standard-tree-output-record) function-args)
-  (map-over-tree-output-records function record
-    (%record-to-spatial-tree-rectangle record) :most-recent-last
-                                function-args))
+(defmethod map-over-output-records-1
+    (function (record standard-tree-output-record) args)
+  (map-over-tree-output-records
+   function record %infinite-rectangle% :most-recent-last args))
 
 (defmethod map-over-output-records-containing-position
     (function (record standard-tree-output-record) x y
      &optional x-offset y-offset &rest function-args)
   (declare (ignore x-offset y-offset))
-  (map-over-tree-output-records function record
-    (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y)) :most-recent-first
-                                function-args))
+  (flet ((refined-test-function (record)
+           (when (output-record-refined-position-test record x y)
+             (apply function record function-args))))
+    (declare (dynamic-extent #'refined-test-function))
+    (let ((rectangle (rectangles:make-rectangle :lows `(,x ,y) :highs `(,x ,y))))
+      (map-over-tree-output-records
+       #'refined-test-function record rectangle :most-recent-first nil))))
 
 (defmethod map-over-output-records-overlapping-region
     (function (record standard-tree-output-record) region
@@ -949,12 +893,16 @@ were added."
                 :most-recent-last
                 '()))))
 
-(defmethod recompute-extent-for-changed-child :around ((record standard-tree-output-record) child old-min-x old-min-y old-max-x old-max-y)
+(defmethod recompute-extent-for-changed-child :around
+    ((record standard-tree-output-record) child
+     old-min-x old-min-y old-max-x old-max-y)
   (when (eql record (output-record-parent child))
-    (let ((entry (%entry-in-children-cache record child)))
-     (spatial-trees:delete entry (%tree-record-children record))
-     (setf (tree-output-record-entry-cached-rectangle entry) nil)
-     (spatial-trees:insert entry (%tree-record-children record))))
+    ;; The child is _not_ being deleted. Update the spatial tree.
+    (let ((entry (%entry-in-children-cache record child))
+          (tree (%tree-record-children record)))
+      (spatial-trees:delete entry tree)
+      (setf (tree-output-record-entry-cached-rectangle entry) nil)
+      (spatial-trees:insert entry tree)))
   (call-next-method))
 
 ;;;
@@ -970,12 +918,13 @@ were added."
 
 (defmethod* (setf output-record-position) :before
     (nx ny (record gs-ink-mixin))
-    (with-standard-rectangle* (:x1 x1 :y1 y1) record
+    (with-standard-rectangle* (x1 y1) record
       (let* ((dx (- nx x1))
              (dy (- ny y1))
              (tr (make-translation-transformation dx dy)))
         (with-slots (ink) record
-          (setf ink (transform-region tr ink))))))
+          (setf (graphics-state-ink record)
+                (transform-region tr ink))))))
 
 (defrecord-predicate gs-ink-mixin (ink)
   (if-supplied (ink)
@@ -991,6 +940,15 @@ were added."
         (call-next-method)
         (with-drawing-options (stream :clipping-region record-clip)
           (call-next-method)))))
+
+(defmethod* (setf output-record-position) :before
+  (new-x new-y (record gs-clip-mixin))
+  (with-standard-rectangle* (old-x old-y) record
+    (let* ((dx          (- new-x old-x))
+           (dy          (- new-y old-y))
+           (translation (make-translation-transformation dx dy)))
+      (setf (graphics-state-clip record)
+            (transform-region translation (graphics-state-clip record))))))
 
 (defrecord-predicate gs-clip-mixin (clipping-region)
   (if-supplied (clipping-region)
@@ -1093,8 +1051,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record coord-seq-mixin))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (let ((dx (- nx x1))
           (dy (- ny y1))
           (coords (slot-value record 'coord-seq)))
@@ -1117,8 +1074,20 @@ were added."
 (defmethod match-output-records-1 and ((record coord-seq-mixin)
                                        &key (coord-seq nil coord-seq-p))
   (or (null coord-seq-p)
-      (let* ((my-coord-seq (slot-value record 'coord-seq)))
+      (let ((my-coord-seq (slot-value record 'coord-seq)))
         (sequence= my-coord-seq coord-seq #'coordinate=))))
+
+(defun fix-line-style-unit (graphic medium)
+  (let* ((line-style (graphics-state-line-style graphic))
+         (thickness (line-style-effective-thickness line-style medium)))
+    (unless (eq (line-style-unit line-style) :normal)
+      (let ((dashes (line-style-effective-dashes line-style medium)))
+        (setf (slot-value graphic 'line-style)
+              (make-line-style :thickness thickness
+                               :joint-shape (line-style-joint-shape line-style)
+                               :cap-shape (line-style-cap-shape line-style)
+                               :dashes dashes))))
+    thickness))
 
 (defmacro generate-medium-recording-body (class-name args)
   (let ((arg-list (alexandria:mappend
@@ -1139,32 +1108,32 @@ were added."
        (when (stream-drawing-p stream)
          (call-next-method)))))
 
-;;; DEF-GRECORDING: This is the central interface through which
-;;; recording is implemented for drawing functions. The body provided
-;;; is used to compute the bounding rectangle of the rendered
-;;; output. DEF-GRECORDING will define a class for the output record,
-;;; with slots corresponding to the drawing function arguments. It
-;;; also defines an INITIALIZE-INSTANCE method computing the bounding
-;;; rectangle of the record. It defines a method for the medium
+;;; DEF-GRECORDING: This is the central interface through which recording is
+;;; implemented for drawing functions. The body provided is used to compute the
+;;; bounding rectangle of the rendered output. DEF-GRECORDING will define a
+;;; class for the output record, with slots corresponding to the drawing
+;;; function arguments. It also defines an INITIALIZE-INSTANCE method computing
+;;; the bounding rectangle of the record. It defines a method for the medium
 ;;; drawing function specialized on output-recording-stream, which is
-;;; responsible for creating the output record and adding it to the
-;;; stream history. It also defines a REPLAY-OUTPUT-RECORD method,
-;;; which calls the medium drawing function based on the recorded
-;;; slots.
+;;; responsible for creating the output record and adding it to the stream
+;;; history. It also defines a REPLAY-OUTPUT-RECORD method, which calls the
+;;; medium drawing function based on the recorded slots.
 ;;;
 ;;; The macro lambda list of DEF-GRECORDING is loosely based on that
 ;;; of DEFCLASS with a few differences:
-;;; * The name can either be just a symbol or a list of a symbol
-;;;   followed by keyword arguments which control what aspects should
-;;;   be generated: class, medium-fn and replay-fn.
-;;; * Instead of slot specifications, a list of argument descriptions
-;;;   is supplied which is used to defined slots as well as arguments.
-;;;   An argument is either a symbol or a list of the form
-;;;   (NAME INITFORM STOREP) where INITFORM computes the value to
-;;;   store in the output record and STOREP controls whether a slot
-;;;   for the argument should be present in the output record at all.
-;;; * DEFCLASS options are not accepted, but a body is, as described
-;;;   above.
+;;;
+;;; * The name can either be just a symbol or a list of a symbol followed by
+;;;   keyword arguments which control what aspects should be generated: class,
+;;;   medium-fn and replay-fn.
+;;;
+;;; * Instead of slot specifications, a list of argument descriptions is
+;;;   supplied which is used to defined slots as well as arguments.  An argument
+;;;   is either a symbol or a list of the form (NAME INITFORM STOREP) where
+;;;   INITFORM computes the value to store in the output record and STOREP
+;;;   controls whether a slot for the argument should be present in the output
+;;;   record at all.
+;;;
+;;; * DEFCLASS options are not accepted, but a body is, as described above.
 (defmacro def-grecording (name-and-options (&rest mixins) (&rest args)
                           &body body)
   (destructuring-bind (name &key (class t) (medium-fn t) (replay-fn t))
@@ -1206,7 +1175,7 @@ were added."
          ,@(when replay-fn
              `((defmethod replay-output-record ((record ,class-name) stream
                                                 &optional (region +everywhere+)
-                                                          (x-offset 0) (y-offset 0))
+                                                  (x-offset 0) (y-offset 0))
                  (declare (ignore x-offset y-offset region))
                  (with-slots (,@slot-names) record
                    (let ((,medium (sheet-medium stream)))
@@ -1215,7 +1184,7 @@ were added."
 
 (def-grecording draw-point (gs-line-style-mixin)
     (point-x point-y)
-  (let ((border (graphics-state-line-style-border graphic medium)))
+  (let ((border (/ (fix-line-style-unit graphic medium) 2)))
     (with-transformed-position ((medium-transformation medium) point-x point-y)
       (setf (slot-value graphic 'point-x) point-x
             (slot-value graphic 'point-y) point-y)
@@ -1226,8 +1195,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-point-output-record))
-    (with-standard-rectangle* (:x1 x1 :y1 y1)
-        record
+    (with-standard-rectangle* (x1 y1) record
       (with-slots (point-x point-y) record
         (let ((dx (- nx x1))
               (dy (- ny y1)))
@@ -1242,21 +1210,21 @@ were added."
        (if-supplied (point-y coordinate)
          (coordinate= (slot-value record 'point-y) point-y))))
 
-;;; Initialize the output record with a copy of COORD-SEQ, as the
-;;; replaying code will modify it to be positioned relative to the
-;;; output-record's position and making a temporary is (arguably) less
-;;; bad than untransforming the coords back to how they were.
+;;; Initialize the output record with a copy of COORD-SEQ, as the replaying code
+;;; will modify it to be positioned relative to the output-record's position and
+;;; making a temporary is (arguably) less bad than untransforming the coords
+;;; back to how they were.
 (def-grecording draw-points (coord-seq-mixin gs-line-style-mixin)
     ((coord-seq (copy-sequence-into-vector coord-seq)))
-  (let ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
-        (border (graphics-state-line-style-border graphic medium)))
+  (let* ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
+         (border (/ (fix-line-style-unit graphic medium) 2)))
     (setf (slot-value graphic 'coord-seq) transformed-coord-seq)
     (coord-seq-bounds transformed-coord-seq border)))
 
 (def-grecording draw-line (gs-line-style-mixin)
     (point-x1 point-y1 point-x2 point-y2)
-  (let ((transform (medium-transformation medium))
-        (border (graphics-state-line-style-border graphic medium)))
+  (let* ((transform (medium-transformation medium))
+         (border (/ (fix-line-style-unit graphic medium) 2)))
     (with-transformed-position (transform point-x1 point-y1)
       (with-transformed-position (transform point-x2 point-y2)
         (setf (slot-value graphic 'point-x1) point-x1
@@ -1270,8 +1238,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-line-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (point-x1 point-y1 point-x2 point-y2) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1298,7 +1265,7 @@ were added."
     ((coord-seq (copy-sequence-into-vector coord-seq)))
   (let* ((transformation (medium-transformation medium))
          (transformed-coord-seq (transform-positions transformation coord-seq))
-         (border (graphics-state-line-style-border graphic medium)))
+         (border (/ (fix-line-style-unit graphic medium) 2)))
     (setf coord-seq transformed-coord-seq)
     (coord-seq-bounds transformed-coord-seq border)))
 
@@ -1347,7 +1314,7 @@ were added."
                              2 (- len 4)))
                (ecase (line-style-joint-shape line-style)
                  (:miter
-                  ;;FIXME: Remove successive positively proportional segments
+                  ;; FIXME: Remove successive positively proportional segments
                   (loop with sin-limit = (sin (* 0.5 miter-limit))
                         and xn and yn
                         for i from initial-index to final-index by 2
@@ -1364,26 +1331,34 @@ were added."
                                (normalize-coords (- x xp) (- y yp))
                              (multiple-value-bind (ex2 ey2)
                                  (normalize-coords (- x xn) (- y yn))
-                               (let* ((cos-a (+ (* ex1 ex2) (* ey1 ey2)))
-                                      (sin-a/2 (sqrt (* 0.5 (- 1.0 cos-a)))))
-                                 (if (< sin-a/2 sin-limit)
-                                     (let ((nx (* border
-                                                  (max (abs ey1) (abs ey2))))
-                                           (ny (* border
-                                                  (max (abs ex1) (abs ex2)))))
-                                       (minf min-x (- x nx))
-                                       (minf min-y (- y ny))
-                                       (maxf max-x (+ x nx))
-                                       (maxf max-y (+ y ny)))
-                                     (let ((length (/ border sin-a/2)))
-                                       (multiple-value-bind (dx dy)
-                                           (normalize-coords (+ ex1 ex2)
-                                                             (+ ey1 ey2)
-                                                             length)
-                                         (minf min-x (+ x dx))
-                                         (minf min-y (+ y dy))
-                                         (maxf max-x (+ x dx))
-                                         (maxf max-y (+ y dy))))))))))
+                               (let ((cos-a)
+                                     (sin-a/2))
+                                 (cond ((or (and (zerop ex1) (zerop ey2)) ; axis-aligned right angle
+                                            (and (zerop ey1) (zerop ex2)))
+                                        (minf min-x (- x border))
+                                        (minf min-y (- y border))
+                                        (maxf max-x (+ x border))
+                                        (maxf max-y (+ y border)))
+                                       ((progn
+                                          (setf cos-a (+ (* ex1 ex2) (* ey1 ey2))
+                                                sin-a/2 (sqrt (* 0.5 (- 1.0f0 cos-a))))
+                                          (< sin-a/2 sin-limit)) ; almost straight, any direction
+                                        (let ((nx (* border (max (abs ey1) (abs ey2))))
+                                              (ny (* border (max (abs ex1) (abs ex2)))))
+                                          (minf min-x (- x nx))
+                                          (minf min-y (- y ny))
+                                          (maxf max-x (+ x nx))
+                                          (maxf max-y (+ y ny))))
+                                       (t ; general case
+                                        (let ((length (/ border sin-a/2)))
+                                          (multiple-value-bind (dx dy)
+                                              (normalize-coords (+ ex1 ex2)
+                                                                (+ ey1 ey2)
+                                                                length)
+                                            (minf min-x (+ x dx))
+                                            (minf min-y (+ y dy))
+                                            (maxf max-x (+ x dx))
+                                            (maxf max-y (+ y dy)))))))))))
                  ((:bevel :none)
                   (loop with xn and yn
                         for i from initial-index to final-index by 2
@@ -1395,8 +1370,7 @@ were added."
                                  (if (eql i final-index)
                                      (values final-xn final-yn)
                                      (values (elt coord-seq (+ i 2))
-                                             (elt coord-seq (+ i
-                                                                 3)))))
+                                             (elt coord-seq (+ i 3)))))
                            (multiple-value-bind (ex1 ey1)
                                (normalize-coords (- x xp) (- y yp))
                              (multiple-value-bind (ex2 ey2)
@@ -1421,8 +1395,10 @@ were added."
 (def-grecording draw-polygon (coord-seq-mixin gs-line-style-mixin)
     ((coord-seq (copy-sequence-into-vector coord-seq))
      closed filled)
-  (let ((transformed-coord-seq (transform-positions (medium-transformation medium) coord-seq))
-        (border (graphics-state-line-style-border graphic medium)))
+  (let* ((transform (medium-transformation medium))
+         (transformed-coord-seq (transform-positions transform coord-seq))
+         (border (unless filled
+                   (/ (fix-line-style-unit graphic medium) 2))))
     (setf coord-seq transformed-coord-seq)
     (polygon-record-bounding-rectangle transformed-coord-seq
                                        closed filled line-style border
@@ -1437,9 +1413,10 @@ were added."
 (def-grecording (draw-rectangle :medium-fn nil) (gs-line-style-mixin)
     (left top right bottom filled)
   (let* ((transform (medium-transformation medium))
-         (border     (graphics-state-line-style-border graphic medium))
          (pre-coords (expand-rectangle-coords left top right bottom))
-         (coords     (transform-positions transform pre-coords)))
+         (coords (transform-positions transform pre-coords))
+         (border (unless filled
+                   (/ (fix-line-style-unit graphic medium) 2))))
     (setf (values left top) (transform-position transform left top))
     (setf (values right bottom) (transform-position transform right bottom))
     (polygon-record-bounding-rectangle coords t filled line-style border
@@ -1459,7 +1436,8 @@ were added."
 (def-grecording (draw-rectangles :medium-fn nil) (coord-seq-mixin gs-line-style-mixin)
     (coord-seq filled)
   (let* ((transform (medium-transformation medium))
-         (border (graphics-state-line-style-border graphic medium)))
+         (border (unless filled
+                   (/ (fix-line-style-unit graphic medium) 2))))
     (let ((transformed-coord-seq
             (map-repeated-sequence 'vector 2
                                    (lambda (x y)
@@ -1486,8 +1464,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-rectangle-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (left top right bottom) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1537,7 +1514,7 @@ were added."
                                             :end-angle end-angle))
       (if filled
           (values min-x min-y max-x max-y)
-          (let ((border (graphics-state-line-style-border graphic medium)))
+          (let ((border (/ (fix-line-style-unit graphic medium) 2)))
             (values (floor (- min-x border))
                     (floor (- min-y border))
                     (ceiling (+ max-x border))
@@ -1545,8 +1522,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record draw-ellipse-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (center-x center-y) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1562,26 +1538,30 @@ were added."
                     (coordinate= (slot-value record 'center-y) center-y))
        (if-supplied (filled)
                     (eql (slot-value record 'filled) filled))))
-;;;; Patterns
 
-;;;; Text
+;;; Patterns
 
-(defun enclosing-transform-polygon (transformation positions)
-  (when (null positions)
-    (error "Need at least one coordinate"))
-  (loop
-    with min-x = most-positive-fixnum
-    with min-y = most-positive-fixnum
-    with max-x = most-negative-fixnum
-    with max-y = most-negative-fixnum
-    for (xp yp) on positions by #'cddr
-    do (multiple-value-bind (x y)
-           (transform-position transformation xp yp)
-         (setf min-x (min min-x x))
-         (setf min-y (min min-y y))
-         (setf max-x (max max-x x))
-         (setf max-y (max max-y y)))
-    finally (return (values min-x min-y max-x max-y))))
+;;; Text
+
+(declaim (inline %enclosing-transform-polygon))
+(defun %enclosing-transform-polygon (transformation x1 y1 x2 y2)
+  (let (min-x min-y max-x max-y)
+    (setf (values min-x min-y) (transform-position transformation x1 y1)
+          (values max-x max-y) (values min-x min-y))
+    (flet ((do-point (x y)
+             (with-transformed-position (transformation x y)
+               (cond ((< x min-x)
+                      (setf min-x x))
+                     ((> x max-x)
+                      (setf max-x x)))
+               (cond ((< y min-y)
+                      (setf min-y y))
+                     ((> y max-y)
+                      (setf max-y y))))))
+      (do-point x1 y2)
+      (do-point x2 y1)
+      (do-point x2 y2))
+    (values min-x min-y max-x max-y)))
 
 (def-grecording (draw-text :replay-fn nil) (gs-text-style-mixin gs-transformation-mixin)
     ((string (subseq string (or start 0) end))
@@ -1591,26 +1571,23 @@ were added."
      align-x align-y
      toward-x toward-y transform-glyphs)
   ;; FIXME!!! Text direction.
-  (let* ((transformation (medium-transformation medium))
+  (let* ((transformation (graphics-state-transformation medium))
          (text-style (graphics-state-text-style graphic)))
-    (setf (graphics-state-transformation graphic) transformation)
     (multiple-value-bind (left top right bottom)
         (text-bounding-rectangle* medium string
                                   :align-x align-x :align-y align-y
                                   :text-style text-style)
       (if transform-glyphs
-          (enclosing-transform-polygon transformation (list (+ point-x left)  (+ point-y top)
-                                                            (+ point-x right) (+ point-y top)
-                                                            (+ point-x left)  (+ point-y bottom)
-                                                            (+ point-x right) (+ point-y bottom)))
+          (%enclosing-transform-polygon
+           transformation
+           (+ point-x left) (+ point-y top) (+ point-x right) (+ point-y bottom))
           (with-transformed-position (transformation point-x point-y)
             (values (+ point-x left) (+ point-y top)
                     (+ point-x right) (+ point-y bottom)))))))
 
 (defmethod* (setf output-record-position) :around
   (nx ny (record draw-text-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      record
+  (with-standard-rectangle* (x1 y1) record
     (let ((dx (- nx x1))
           (dy (- ny y1)))
       (multiple-value-prog1 (call-next-method)
@@ -1734,7 +1711,7 @@ were added."
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1) record
+  (with-standard-rectangle* (x1 y1) record
     (with-slots (start-x start-y end-x end-y strings baseline) record
       (let ((dx (- nx x1))
             (dy (- ny y1)))
@@ -1787,8 +1764,7 @@ were added."
 
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      text-record
+  (with-standard-rectangle* (nil y1) text-record
     (with-slots (max-height left right) text-record
       (setf (rectangle-edges* text-record)
             (values (coordinate left)
@@ -2117,10 +2093,10 @@ according to the flags RECORD and DRAW."
 ;;; rotation, scaling or translation in the current medium transformation.
 (defmethod invoke-with-room-for-graphics (cont (stream extended-output-stream)
                                           &key (first-quadrant t)
-                                          height
-                                          (move-cursor t)
-                                          (record-type
-                                           'standard-sequence-output-record))
+                                               height
+                                               (move-cursor t)
+                                               (record-type
+                                                'standard-sequence-output-record))
   ;; I am not sure what exactly :height should do.           ; [avengers pun]
   ;; --GB 2003-05-25                                         ; -----------------
   ;; The current behavior is consistent with 'classic' CLIM  ; where is genera?
@@ -2138,45 +2114,59 @@ according to the flags RECORD and DRAW."
   ;; record it will be the only means to assure space in case of the
   ;; FIRST-QUADRANT = T (Y-axis inverted). -- jd
   ;;
-  ;; FIXME: clip the output record to HEIGHT if the argument is supplied.
   ;; ADDME: add width argument for clipping (McCLIM extension)
-  (multiple-value-bind (cx cy)
-      (stream-cursor-position stream)
+  (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (with-sheet-medium (medium stream)
-      (letf (((medium-transformation medium)
-              (if first-quadrant
-                  (make-scaling-transformation 1 -1)
-                  +identity-transformation+)))
-        (let ((record (with-output-to-output-record (stream record-type)
-                        (funcall cont stream))))
-          ;; Bounding  rectangle is in sheet coordinates!
-          (with-bounding-rectangle* (x1 y1 x2 y2)
-              record
-            (declare (ignore x2))
-            (if first-quadrant
-                (setf (output-record-position record)
-                      (values (max cx (+ cx x1))
-                              (if height
-                                  (max cy (+ cy (- height (abs y1))))
-                                  cy)))
-                (setf (output-record-position record)
-                      (values (max cx (+ cx x1)) (max cy (+ cy y1)))))
-            (when (stream-recording-p stream)
-              (stream-add-output-record stream record))
-            (when (stream-drawing-p stream)
-              (replay record stream))
-            (if move-cursor
-                (let ((record-height (- y2 y1)))
-                  (setf (stream-cursor-position stream)
-                        (values cx
-                                (if first-quadrant
-                                    (+ cy (max (- y1)
-                                               (or height 0)
-                                               record-height))
-                                    (+ cy (max (or height 0)
-                                               record-height))))))
-                (setf (stream-cursor-position stream) (values cx cy)))
-            record))))))
+      (let ((clip-region (graphics-state-clip medium)))
+        (letf (((medium-transformation medium)
+                (if first-quadrant
+                    (make-scaling-transformation 1 -1)
+                    +identity-transformation+))
+               ((medium-clipping-region medium)
+                +everywhere+))
+          (let ((record (with-output-to-output-record (stream record-type)
+                          (funcall cont stream))))
+            ;; Bounding rectangle is in sheet coordinates!
+            (with-bounding-rectangle* (x1 y1 x2 y2) record
+              (let* ((record-height (- y2 y1))
+                     (height-clip   (when (and height
+                                               (< height record-height))
+                                      (make-rectangle*
+                                       cx cy (+ cx (- x2 x1)) (+ cy height))))
+                     (new-x         (max cx (+ cx x1)))
+                     (new-y         (cond ((not first-quadrant)
+                                           (max cy (+ cy y1)))
+                                          (height
+                                           (+ cy (- height record-height)))
+                                          (t
+                                           cy))))
+                (setf (output-record-position record) (values new-x new-y))
+                ;; Clip all output records to HEIGHT and/or the medium clipping
+                ;; region. All clipping region are in sheet coordinates.
+                (when-let ((clip-region
+                            (cond ((and (not (eq clip-region +everywhere+))
+                                        height-clip)
+                                   (region-intersection clip-region height-clip))
+                                  (height-clip)
+                                  ((not (eq clip-region +everywhere+))
+                                   clip-region))))
+                  (map-over-output-records
+                   (lambda (record)
+                     (when (typep record 'gs-clip-mixin)
+                       (setf (graphics-state-clip record) clip-region)))
+                   record))
+                ;; And and/or replay the clipped and repositioned RECORD.
+                (when (stream-recording-p stream)
+                  (stream-add-output-record stream record))
+                (when (stream-drawing-p stream)
+                  (replay record stream))
+                ;; Restore the cursor position or move the cursor.
+                (setf (stream-cursor-position stream)
+                      (values cx (+ cy (if move-cursor
+                                           (max (if first-quadrant (- y1) 0)
+                                                (or height record-height))
+                                           0)))))
+              record)))))))
 
 ;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
 ;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
@@ -2199,18 +2189,14 @@ according to the flags RECORD and DRAW."
                       dy))))
         (funcall cont stream)))))
 
-;;; ----------------------------------------------------------------------------
-;;;  Baseline
-;;;
+;;; Baseline
 
 (defgeneric output-record-baseline (record))
 
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
-  (with-bounding-rectangle* (x1 y1 x2 y2)
-      record
-    (declare (ignore x1 x2))
-    (values (- y2 y1) nil)))
+  (with-bounding-rectangle* (:height height) record
+    (values height nil)))
 
 (defmethod output-record-baseline ((record standard-text-displayed-output-record))
   (with-slots (baseline) record
@@ -2226,9 +2212,7 @@ according to the flags RECORD and DRAW."
                            record)
   (call-next-method))
 
-;;; ----------------------------------------------------------------------------
-;;;  copy-textual-output
-;;;
+;;; copy-textual-output
 
 (defun copy-textual-output-history (window stream &optional region record)
   (unless region (setf region +everywhere+))

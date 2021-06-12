@@ -260,10 +260,7 @@ designator) inherits menu items."
     (function command-table &key (inherited t))
   (let ((command-table (find-command-table command-table)))
     (flet ((map-func (table)
-             (maphash #'(lambda (key val)
-                          (declare (ignore val))
-                          (funcall function key))
-                      (slot-value table 'commands))))
+             (alexandria:maphash-keys function (slot-value table 'commands))))
       (if inherited
           (apply-with-command-table-inheritance #'map-func command-table)
           (map-func command-table)))))
@@ -288,17 +285,17 @@ designator) inherits menu items."
                    (command-name-from-symbol command-name)))
               ((consp menu)
                (values (car menu) (cdr menu))))
-      (let* ((item (if (or menu keystroke)
-                       (apply #'make-menu-item
-                              menu-name :command (alexandria:ensure-list menu-command)
-                                        :command-name command-name
-                                        :command-line-name name
-                                        `(,@(and keystroke `(:keystroke ,keystroke))
-                                          ,@menu-options))
-                       (make-instance 'command-item
-                                      :command-name command-name
-                                      :command-line-name name)))
-             (after (getf menu-options :after)))
+      (let ((item (if (or menu keystroke)
+                      (apply #'make-menu-item
+                             menu-name :command (alexandria:ensure-list menu-command)
+                                       :command-name command-name
+                                       :command-line-name name
+                                       `(,@(when keystroke `(:keystroke ,keystroke))
+                                         ,@menu-options))
+                      (make-instance 'command-item
+                                     :command-name command-name
+                                     :command-line-name name)))
+            (after (getf menu-options :after)))
         (when (and errorp (gethash command-name (commands table)))
           (error 'command-already-present :command-table-name command-table))
         (remove-command-from-command-table command-name table :errorp nil)
@@ -439,7 +436,7 @@ menu item to see if it is `:menu'."
 
 (defun find-keystroke-item (gesture table
                             &key (test #'event-matches-gesture-name-p)
-                              (errorp t))
+                                 (errorp t))
   (flet ((fun (item table)
            (when-let ((keystroke (command-menu-item-keystroke item)))
              (when (funcall test gesture keystroke)
@@ -502,8 +499,7 @@ menu item to see if it is `:menu'."
                          (otherwise nil))))
     ;; Return a literal command, or create a partial command from a
     ;; command-name.
-    (when (or (null *application-frame*)
-              (command-enabled (command-name command) *application-frame*))
+    (when (command-enabled (command-name command) *application-frame*)
       (return-from lookup-keystroke-command-item
         (substitute-numeric-argument-marker
          (if (symbolp command)

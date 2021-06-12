@@ -1,28 +1,16 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000,2001 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2001 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;; Server path and global port registry
 
@@ -88,14 +76,14 @@
 
 (defclass basic-port (port)
   ((server-path :initform nil
-		:initarg :server-path
-		:reader port-server-path)
+                :initarg :server-path
+                :reader port-server-path)
    (properties :initform nil
-	       :initarg :properties)
+               :initarg :properties)
    (grafts :initform nil
-	   :accessor port-grafts)
+           :accessor port-grafts)
    (frame-managers :initform nil
-		   :reader frame-managers)
+                   :reader frame-managers)
    (event-process
     :initform nil
     :initarg  :event-process
@@ -110,8 +98,8 @@
    (focused-sheet :initform nil :accessor port-focused-sheet
                   :reader port-keyboard-input-focus
                   :documentation "The sheet for the keyboard events, if any")
-   (pointer-sheet :initform nil :accessor port-pointer-sheet
-		  :documentation "The sheet the pointer is over, if any")
+   (pointer :initform nil :initarg :pointer :accessor port-pointer
+                  :documentation "The pointer of the port")
    ;; The difference between grabbed-sheet and pressed-sheet is that
    ;; the former takes all pointer events while pressed-sheet receives
    ;; replicated pointer motion events. -- jd 2019-08-21
@@ -120,9 +108,9 @@
    ;; :MULTIPLE-WINDOW T, that is events should be delivered to their owner.
    ;; -- jd 2020-11-02
    (grabbed-sheet :initform nil :accessor port-grabbed-sheet
-		  :documentation "The sheet the pointer is grabbing, if any")
+                  :documentation "The sheet the pointer is grabbing, if any")
    (pressed-sheet :initform nil :accessor port-pressed-sheet
-		  :documentation "The sheet the pointer is pressed on, if any")))
+                  :documentation "The sheet the pointer is pressed on, if any")))
 
 (defgeneric note-input-focus-changed (sheet state)
   (:documentation "Called when a sheet receives or loses the keyboard input
@@ -275,14 +263,15 @@ is a McCLIM extension.")
 ;;; as part of this process.
 (defun synthesize-boundary-events (port event)
   (let* ((event-sheet (event-sheet event))
-         (old-pointer-sheet (port-pointer-sheet port))
+         (pointer (pointer-event-pointer event))
+         (old-pointer-sheet (pointer-sheet pointer))
          (new-pointer-sheet old-pointer-sheet)
          (dispatch-event-p nil))
     ;; First phase: compute new pointer sheet for PORT.
     (flet ((update-pointer-sheet (new-sheet)
              (when new-sheet
                (unless (eql old-pointer-sheet new-sheet)
-                 (setf (port-pointer-sheet port) new-sheet
+                 (setf (pointer-sheet pointer) new-sheet
                        new-pointer-sheet new-sheet)))))
       (typecase event
         ;; Ignore grab-enter and ungrab-leave boundary events.
@@ -388,50 +377,53 @@ is a McCLIM extension.")
   ;; - Pressing the button sends the focus event
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
-  (let ((grabbed-sheet (port-grabbed-sheet port)))
-    (when (sheetp grabbed-sheet)
-      (return-from distribute-event
-        (unless (typep event 'pointer-boundary-event)
-          (dispatch-event-copy grabbed-sheet event)))))
-  ;; Synthesize boundary events and update the port-pointer-sheet.
-  (let ((pressed-sheet (port-pressed-sheet port))
-        (new-pointer-sheet (synthesize-boundary-events port event)))
-    ;; Set the pointer cursor.
-    (when-let ((cursor-sheet (or pressed-sheet new-pointer-sheet)))
-      (let* ((event-sheet (event-sheet event))
-             (old-pointer-cursor
-               (port-lookup-current-pointer-cursor port event-sheet))
-             (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
-        (unless (eql old-pointer-cursor new-pointer-cursor)
-          (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))
-    ;; Handle some events specially.
-    (typecase event
-      ;; Pressing the pointer button over a sheet makes a sheet pressed and
-      ;; focused. The pressed sheet is assigned only when there is currently
-      ;; none, while the event for focusing the sheet is always dispatched.
-      (pointer-button-press-event
-       (when (null pressed-sheet)
-         (setf (port-pressed-sheet port) new-pointer-sheet))
-       (when new-pointer-sheet
-         (dispatch-event-copy new-pointer-sheet event 'window-manager-focus-event)))
-      ;; Releasing the button sets the pressed sheet to NIL without changing
-      ;; the focus.
-      (pointer-button-release-event
-       (when pressed-sheet
-         (unless (eql pressed-sheet new-pointer-sheet)
-           (dispatch-event-copy pressed-sheet event))
-         (setf (port-pressed-sheet port) nil)))
-      ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
-      (pointer-boundary-event
-       (return-from distribute-event))
-      ;; Unless pressed sheet is already a target of the motion event,
-      ;; event is duplicated and dispatched to it.
-      (pointer-motion-event
-       (when (and pressed-sheet (not (eql pressed-sheet new-pointer-sheet)))
-         (dispatch-event-copy pressed-sheet event))))
-    ;; Distribute event to the innermost child (may be none).
-    (when new-pointer-sheet
-      (dispatch-event-copy new-pointer-sheet event))))
+  (flet ((update-cursor (cursor-sheet)
+           (let* ((event-sheet (event-sheet event))
+                  (old-pointer-cursor
+                    (port-lookup-current-pointer-cursor port event-sheet))
+                  (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
+             (unless (eql old-pointer-cursor new-pointer-cursor)
+               (set-sheet-pointer-cursor port event-sheet new-pointer-cursor)))))
+    (when-let ((grabbed-sheet (port-grabbed-sheet port)))
+      (unless (sheetp grabbed-sheet)
+        (setf grabbed-sheet (synthesize-boundary-events port event)))
+      (update-cursor grabbed-sheet)
+      (unless (typep event 'pointer-boundary-event)
+        (dispatch-event-copy grabbed-sheet event))
+      (return-from distribute-event))
+    ;; Synthesize boundary events and update the port-pointer-sheet.
+    (let ((pressed-sheet (port-pressed-sheet port))
+          (pointer-sheet (synthesize-boundary-events port event)))
+      ;; Set the pointer cursor.
+      (update-cursor (or pressed-sheet pointer-sheet))
+      ;; Handle some events specially.
+      (typecase event
+        ;; Pressing the pointer button over a sheet makes a sheet pressed and
+        ;; focused. The pressed sheet is assigned only when there is currently
+        ;; none, while the event for focusing the sheet is always dispatched.
+        (pointer-button-press-event
+         (when (null pressed-sheet)
+           (setf (port-pressed-sheet port) pointer-sheet))
+         (when pointer-sheet
+           (dispatch-event-copy pointer-sheet event 'window-manager-focus-event)))
+        ;; Releasing the button sets the pressed sheet to NIL without changing
+        ;; the focus.
+        (pointer-button-release-event
+         (when pressed-sheet
+           (unless (eql pressed-sheet pointer-sheet)
+             (dispatch-event-copy pressed-sheet event))
+           (setf (port-pressed-sheet port) nil)))
+        ;; Boundary events are dispatched in SYNTHESIZE-BOUNDARY-EVENTS.
+        (pointer-boundary-event
+         (return-from distribute-event))
+        ;; Unless pressed sheet is already a target of the motion event,
+        ;; event is duplicated and dispatched to it.
+        (pointer-motion-event
+         (when (and pressed-sheet (not (eql pressed-sheet pointer-sheet)))
+           (dispatch-event-copy pressed-sheet event))))
+      ;; Distribute event to the innermost child (may be none).
+      (when pointer-sheet
+        (dispatch-event-copy pointer-sheet event)))))
 
 (defmacro with-port-locked ((port) &body body)
   (let ((fn (gensym "CONT.")))
@@ -477,16 +469,16 @@ is a McCLIM extension.")
   (mapc function (port-grafts port)))
 
 (defun find-graft (&key (port nil)
-		     (server-path *default-server-path*)
-		     (orientation :default)
-		     (units :device))
+                     (server-path *default-server-path*)
+                     (orientation :default)
+                     (units :device))
   (when (null port)
     (setq port (find-port :server-path server-path)))
   (map-over-grafts #'(lambda (graft)
-		       (if (and (eq orientation (graft-orientation graft))
-				(eq units (graft-units graft)))
-			   (return-from find-graft graft)))
-		   port)
+                       (if (and (eq orientation (graft-orientation graft))
+                                (eq units (graft-units graft)))
+                           (return-from find-graft graft)))
+                   port)
   (make-graft port :orientation orientation :units units))
 
 (defgeneric port-force-output (port)
@@ -526,8 +518,8 @@ is a McCLIM extension.")
                                 &body body)
   (with-gensyms (the-port the-sheet the-pointer)
     `(let* ((,the-port ,port)
-	    (,the-sheet ,sheet)
-	    (,the-pointer (or ,pointer (port-pointer ,the-port))))
+            (,the-sheet ,sheet)
+            (,the-pointer (or ,pointer (port-pointer ,the-port))))
        (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet
                                    :multiple-window ,multiple-window))
            (warn "Port ~A failed to grab a pointer." ,the-port)
@@ -535,12 +527,12 @@ is a McCLIM extension.")
                 (handler-bind
                     ((serious-condition
                       #'(lambda (c)
-			  (declare (ignore c))
-			  (port-ungrab-pointer ,the-port
+                          (declare (ignore c))
+                          (port-ungrab-pointer ,the-port
                                                ,the-pointer
                                                ,the-sheet))))
                   ,@body)
-	     (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
+             (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
 
 (defgeneric set-sheet-pointer-cursor (port sheet cursor)
   (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
@@ -621,8 +613,8 @@ to list all faces of a font family."))
 (defmethod print-object ((object font-face) stream)
   (print-unreadable-object (object stream :type t :identity nil)
     (format stream "~A, ~A"
-	    (font-family-name (font-face-family object))
-	    (font-face-name object))))
+            (font-family-name (font-face-family object))
+            (font-face-name object))))
 
 ;;; fallback font listing implementation:
 
@@ -632,18 +624,18 @@ to list all faces of a font family."))
 (defmethod port-all-font-families ((port basic-port) &key invalidate-cache)
   (declare (ignore invalidate-cache))
   (flet ((make-basic-font-family (name)
-	   (make-instance 'basic-font-family :port port :name name)))
+           (make-instance 'basic-font-family :port port :name name)))
     (list (make-basic-font-family "FIX")
-	  (make-basic-font-family "SERIF")
-	  (make-basic-font-family "SANS-SERIF"))))
+          (make-basic-font-family "SERIF")
+          (make-basic-font-family "SANS-SERIF"))))
 
 (defmethod font-family-all-faces ((family basic-font-family))
   (flet ((make-basic-font-face (name)
-	   (make-instance 'basic-font-face :family family :name name)))
+           (make-instance 'basic-font-face :family family :name name)))
     (list (make-basic-font-face "ROMAN")
-	  (make-basic-font-face "BOLD")
-	  (make-basic-font-face "BOLD-ITALIC")
-	  (make-basic-font-face "ITALIC"))))
+          (make-basic-font-face "BOLD")
+          (make-basic-font-face "BOLD-ITALIC")
+          (make-basic-font-face "ITALIC"))))
 
 (defmethod font-face-all-sizes ((face basic-font-face))
   (list 1 2 3 4 5 6 7))
@@ -654,7 +646,7 @@ to list all faces of a font family."))
 (defmethod font-face-text-style ((face basic-font-face) &optional size)
   (make-text-style
    (find-symbol (string-upcase (font-family-name (font-face-family face)))
-		:keyword)
+                :keyword)
    (if (string-equal (font-face-name face) "BOLD-ITALIC")
        '(:bold :italic)
        (find-symbol (string-upcase (font-face-name face)) :keyword))

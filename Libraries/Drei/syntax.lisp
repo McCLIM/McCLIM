@@ -1,26 +1,16 @@
-;;; -*- Mode: Lisp; Package: DREI-SYNTAX -*-
-
-;;;  (c) copyright 2004, 2005, 2014 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2004,2005,2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2006-200 Troels Henriksen <thenriksen@common-lisp.net>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Generic syntax infrastructure.
 
-(in-package :drei-syntax)
+(in-package #:drei-syntax)
 
 (defclass syntax (name-mixin observable-mixin)
   ((%buffer :initarg :buffer :reader buffer)
@@ -68,8 +58,8 @@ buffer of `syntax', respectively."
 (define-condition no-such-operation (simple-error)
   ()
   (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (format stream "Operation unavailable for this syntax")))
+             (declare (ignore condition))
+             (format stream "Operation unavailable for this syntax")))
   (:documentation "This condition is signaled whenever an attempt is
 made to execute an operation that is unavailable for the particular syntax" ))
 
@@ -92,8 +82,6 @@ the buffer region that has an up-to-date parse.")
 
 (defgeneric eval-defun (mark syntax))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Syntax command tables.
 
 (defclass syntax-command-table (standard-command-table)
@@ -152,8 +140,6 @@ specified in the usual way with :inherit-from."
                     '(,name)
                     (command-table-inherit-from (find-command-table ',name))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Commenting
 
 (defgeneric syntax-line-comment-string (syntax)
@@ -171,12 +157,12 @@ every line in the region"))
     (unless (beginning-of-line-p mark)
       (end-of-line mark)
       (unless (end-of-buffer-p mark)
-	(forward-object mark)))
+        (forward-object mark)))
     (loop while (mark< mark mark2)
-	  do (insert-sequence mark (syntax-line-comment-string syntax))
-	     (end-of-line mark)
-	     (unless (end-of-buffer-p mark)
-	       (forward-object mark)))))
+          do (insert-sequence mark (syntax-line-comment-string syntax))
+             (end-of-line mark)
+             (unless (end-of-buffer-p mark)
+               (forward-object mark)))))
 
 (defgeneric line-uncomment-region (syntax mark1 mark2)
   (:documentation "inset a line comment string at the beginning of
@@ -189,13 +175,13 @@ every line in the region"))
     (unless (beginning-of-line-p mark)
       (end-of-line mark)
       (unless (end-of-buffer-p mark)
-	(forward-object mark)))
+        (forward-object mark)))
     (loop while (mark< mark mark2)
-	  do (when (looking-at mark (syntax-line-comment-string syntax))
-	       (delete-range mark (length (syntax-line-comment-string syntax))))
-	     (end-of-line mark)
-	     (unless (end-of-buffer-p mark)
-	       (forward-object mark)))))
+          do (when (looking-at mark (syntax-line-comment-string syntax))
+               (delete-range mark (length (syntax-line-comment-string syntax))))
+             (end-of-line mark)
+             (unless (end-of-buffer-p mark)
+               (forward-object mark)))))
 
 (defgeneric comment-region (syntax mark1 mark2)
   (:documentation "turn the region between the two marks into a comment
@@ -206,8 +192,6 @@ in the specific syntax.")
   (:documentation "remove comment around region")
   (:method (syntax mark1 mark2) nil))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Name for info-pane
 
 (defgeneric name-for-info-pane (syntax &key &allow-other-keys)
@@ -222,8 +206,6 @@ in the specific syntax.")
   (:method (syntax stream &rest args &key)
     (princ (apply #'name-for-info-pane syntax args) stream)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Syntax completion
 
 (defparameter *syntaxes* '())
@@ -241,33 +223,33 @@ mandated by file types or attribute lists.")
 
 (defmacro define-syntax (class-name superclasses slots &rest options)
   (let ((defclass-options nil)
-	(default-initargs nil)
-	(name nil)
+        (default-initargs nil)
+        (name nil)
         (command-table nil)
-	(pathname-types nil))
+        (pathname-types nil))
     (dolist (option options)
       (case (car option)
-	((:name)
-	 (if name
-	     (error "More than one ~S option provided to ~S"
-		    ':name 'define-syntax)
-	     (setf name (cadr option))))
-	((:pathname-types)
-	 (if pathname-types
-	     (error "More than one ~S option provided to ~S"
-		    ':pathname-types 'define-syntax)
-	     (setf pathname-types (cdr option))))
+        ((:name)
+         (if name
+             (error "More than one ~S option provided to ~S"
+                    ':name 'define-syntax)
+             (setf name (cadr option))))
+        ((:pathname-types)
+         (if pathname-types
+             (error "More than one ~S option provided to ~S"
+                    ':pathname-types 'define-syntax)
+             (setf pathname-types (cdr option))))
         ((:command-table)
          (if command-table
              (error "More than one ~S option provided to ~S"
                     ':command-table 'define-syntax)
              (setf command-table `',(cadr option))))
-	((:default-initargs)
-	 (if default-initargs
-	     (error "More than one ~S option provided to ~S"
-		    ':default-initargs 'define-syntax)
+        ((:default-initargs)
+         (if default-initargs
+             (error "More than one ~S option provided to ~S"
+                    ':default-initargs 'define-syntax)
              (setf default-initargs (cdr option))))
-	(t (push (cdr option) defclass-options))))
+        (t (push (cdr option) defclass-options))))
     (unless name
       (error "~S not supplied to ~S" ':name 'define-syntax))
     ;; FIXME: the :NAME initarg looks, well, a bit generic, and could
@@ -341,21 +323,21 @@ mandated by file types or attribute lists.")
 #+nil
 (defmacro define-syntax (class-name (name superclasses) &body body)
   `(progn (push '(,name . ,class-name) *syntaxes*)
-	  (defclass ,class-name ,superclasses
-	       ,@body
-	    (:default-initargs :name ,name))))
+          (defclass ,class-name ,superclasses
+               ,@body
+            (:default-initargs :name ,name))))
 
 (define-presentation-method accept
     ((type syntax) stream (view textual-view) &key)
   (multiple-value-bind (object success string)
       (complete-input stream
-		      (lambda (so-far action)
-			(complete-from-possibilities
-			 so-far *syntaxes* '() :action action
-			 :name-key #'syntax-description-name
-			 :value-key #'syntax-description-class-name))
-		      :partial-completers '(#\Space)
-		      :allow-any-input t)
+                      (lambda (so-far action)
+                        (complete-from-possibilities
+                         so-far *syntaxes* '() :action action
+                         :name-key #'syntax-description-name
+                         :value-key #'syntax-description-class-name))
+                      :partial-completers '(#\Space)
+                      :allow-any-input t)
     (declare (ignore success))
     (if (find string *syntaxes* :key #'first :test #'string=)
         (values object type)
@@ -364,18 +346,14 @@ mandated by file types or attribute lists.")
 
 (defun syntax-from-name (syntax)
   (let ((description (find syntax *syntaxes*
-			   :key #'syntax-description-name
-			   :test #'string-equal)))
+                           :key #'syntax-description-name
+                           :test #'string-equal)))
     (when description
       (find-class (syntax-description-class-name description)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Incremental Earley parser
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; parse tree
+;;; Parse tree
 
 (defclass parse-tree ()
   ((start-mark :initform nil :initarg :start-mark :reader start-mark)
@@ -401,8 +379,8 @@ character of a parse tree."))
 (defmethod (setf start-offset) ((offset mark) (tree parse-tree))
   (with-slots (start-mark) tree
      (if (null start-mark)
-	 (setf start-mark (clone-mark offset))
-	 (setf (offset start-mark) (offset offset)))))
+         (setf start-mark (clone-mark offset))
+         (setf (offset start-mark) (offset offset)))))
 
 (defgeneric end-offset (parse-tree)
   (:documentation "The offset in the buffer of the character
@@ -430,9 +408,7 @@ following the last one of a parse tree."))
     (when start-mark
       (buffer start-mark))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; lexer
+;;; Lexer
 
 (defclass lexer ()
   ((buffer :initarg :buffer
@@ -498,27 +474,25 @@ incrementally."))
 position in the lexemes of LEXER"
   (with-slots (lexemes) lexer
      (let ((start 1)
-	   (end (nb-elements lexemes)))
+           (end (nb-elements lexemes)))
        ;; use binary search to find the first lexeme to delete
        (loop while (< start end)
-	     do (let ((middle (floor (+ start end) 2)))
-		  (if (mark< (end-offset (element* lexemes middle)) from)
-		      (setf start (1+ middle))
-		      (setf end middle))))
+             do (let ((middle (floor (+ start end) 2)))
+                  (if (mark< (end-offset (element* lexemes middle)) from)
+                      (setf start (1+ middle))
+                      (setf end middle))))
        ;; delete lexemes
        (loop until (or (= start (nb-elements lexemes))
-		       (mark> (start-mark (element* lexemes start)) to))
-	     do (delete* lexemes start))
+                       (mark> (start-mark (element* lexemes start)) to))
+             do (delete* lexemes start))
        start)))
 
 (defmethod skip-inter-lexeme-objects ((lexer incremental-lexer) scan)
   (loop until (end-of-buffer-p scan)
-	while (inter-lexeme-object-p lexer (object-after scan))
-	do (forward-object scan)))
+        while (inter-lexeme-object-p lexer (object-after scan))
+        do (forward-object scan)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; grammar
+;;; Grammar
 
 (defclass rule ()
   ((left-hand-side :initarg :left-hand-side :reader left-hand-side)
@@ -535,49 +509,49 @@ position in the lexemes of LEXER"
 (defmacro grammar-rule ((left-hand-side arrow arglist &body body) &key predict-test)
   (declare (ignore arrow))
   (labels ((var-of (arg)
-	     (if (symbolp arg)
-		 arg
-		 (car arg)))
-	   (sym-of (arg)
-	     (cond ((symbolp arg) arg)
-		   ((= (length arg) 3) (cadr arg))
-		   ((symbolp (cadr arg)) (cadr arg))
-		   (t (car arg))))
-	   (test-of (arg)
-	     (cond ((symbolp arg) t)
-		   ((= (length arg) 3) (caddr arg))
-		   ((symbolp (cadr arg)) t)
-		   (t (cadr arg))))
-	   (build-rule (arglist body)
-	     (if (null arglist)
-		 body
-		 (let ((arg (car arglist)))
-		   `(lambda (,(var-of arg))
-		      (when (and (typep ,(var-of arg) ',(sym-of arg))
-				 ,(test-of arg))
-			,(build-rule (cdr arglist) body)))))))
+             (if (symbolp arg)
+                 arg
+                 (car arg)))
+           (sym-of (arg)
+             (cond ((symbolp arg) arg)
+                   ((= (length arg) 3) (cadr arg))
+                   ((symbolp (cadr arg)) (cadr arg))
+                   (t (car arg))))
+           (test-of (arg)
+             (cond ((symbolp arg) t)
+                   ((= (length arg) 3) (caddr arg))
+                   ((symbolp (cadr arg)) t)
+                   (t (cadr arg))))
+           (build-rule (arglist body)
+             (if (null arglist)
+                 body
+                 (let ((arg (car arglist)))
+                   `(lambda (,(var-of arg))
+                      (when (and (typep ,(var-of arg) ',(sym-of arg))
+                                 ,(test-of arg))
+                        ,(build-rule (cdr arglist) body)))))))
     `(make-instance 'rule
-	:left-hand-side ',left-hand-side
-	:right-hand-side
-	,(build-rule arglist
-		     (if (or (null body)
-			     (symbolp (car body)))
-			 `(make-instance ',left-hand-side ,@body)
-			 `(progn ,@body)))
-	:symbols ,(coerce (mapcar #'sym-of arglist) 'vector)
-	:predict-test ,predict-test)))
+        :left-hand-side ',left-hand-side
+        :right-hand-side
+        ,(build-rule arglist
+                     (if (or (null body)
+                             (symbolp (car body)))
+                         `(make-instance ',left-hand-side ,@body)
+                         `(progn ,@body)))
+        :symbols ,(coerce (mapcar #'sym-of arglist) 'vector)
+        :predict-test ,predict-test)))
 
 
 (defmacro grammar (&body body)
   "Create a grammar object from a set of rules."
   (let ((rule (gensym "RULE"))
-	(rules (gensym "RULES"))
-	(result (gensym "RESULT")))
+        (rules (gensym "RULES"))
+        (result (gensym "RESULT")))
     `(let* ((,rules (list ,@(loop for rule in body
-				  collect `(grammar-rule ,rule))))
-	    (,result (make-instance 'grammar)))
+                                  collect `(grammar-rule ,rule))))
+            (,result (make-instance 'grammar)))
        (dolist (,rule ,rules ,result)
-	 (add-rule ,rule ,result)))))
+         (add-rule ,rule ,result)))))
 
 (defgeneric add-rule (rule grammar))
 
@@ -591,14 +565,12 @@ position in the lexemes of LEXER"
       (setf rhs-symbols (union rhs-symbols (coerce (symbols rule) 'list))))
     (dolist (rule (rules grammar))
       (let ((lhs-symbol (left-hand-side rule)))
-	(dolist (rhs-symbol rhs-symbols)
-	  (when (or (subtypep lhs-symbol rhs-symbol)
-		    (subtypep rhs-symbol lhs-symbol))
-	    (pushnew rule (gethash rhs-symbol (hash grammar)))))))))
+        (dolist (rhs-symbol rhs-symbols)
+          (when (or (subtypep lhs-symbol rhs-symbol)
+                    (subtypep rhs-symbol lhs-symbol))
+            (pushnew rule (gethash rhs-symbol (hash grammar)))))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; parser
+;;; Parser
 
 (defclass parser ()
   ((grammar :initarg :grammar :reader parser-grammar)
@@ -619,47 +591,47 @@ position in the lexemes of LEXER"
 (defmethod print-object ((item incomplete-item) stream)
   (format stream "[~a ->" (left-hand-side (rule item)))
   (loop for i from 0 below (dot-position item)
-	do (format stream " ~a" (aref (symbols (rule item)) i)))
+        do (format stream " ~a" (aref (symbols (rule item)) i)))
   (format stream " *")
   (loop for i from (dot-position item) below (length (symbols (rule item)))
-	do (format stream " ~a" (aref (symbols (rule item)) i)))
+        do (format stream " ~a" (aref (symbols (rule item)) i)))
   (format stream "]"))
 
 (defun derive-and-handle-item (prev-item parse-tree orig-state to-state)
   (let ((remaining (funcall (suffix prev-item) parse-tree)))
     (cond ((null remaining)
-	   nil)
-	  ((functionp remaining)
-	   (handle-incomplete-item
-	    (make-instance 'incomplete-item
-	       :orig-state (orig-state prev-item)
-	       :predicted-from (predicted-from prev-item)
-	       :rule (rule prev-item)
-	       :dot-position (1+ (dot-position prev-item))
-	       :parse-trees (cons parse-tree (parse-trees prev-item))
-	       :suffix remaining)
-	    orig-state to-state))
-	  (t
-	   (let* ((parse-trees (cons parse-tree (parse-trees prev-item)))
-		  (start (find-if-not #'null parse-trees
-				      :from-end t :key #'start-offset))
-		  (end (find-if-not #'null parse-trees :key #'end-offset)))
-	     (with-slots (start-mark size) remaining
-		(when start
-		  (setf start-mark (start-mark start)
-			size (- (end-offset end) (start-offset start))))
-		(potentially-handle-parse-tree remaining orig-state to-state)))))))
+           nil)
+          ((functionp remaining)
+           (handle-incomplete-item
+            (make-instance 'incomplete-item
+               :orig-state (orig-state prev-item)
+               :predicted-from (predicted-from prev-item)
+               :rule (rule prev-item)
+               :dot-position (1+ (dot-position prev-item))
+               :parse-trees (cons parse-tree (parse-trees prev-item))
+               :suffix remaining)
+            orig-state to-state))
+          (t
+           (let* ((parse-trees (cons parse-tree (parse-trees prev-item)))
+                  (start (find-if-not #'null parse-trees
+                                      :from-end t :key #'start-offset))
+                  (end (find-if-not #'null parse-trees :key #'end-offset)))
+             (with-slots (start-mark size) remaining
+                (when start
+                  (setf start-mark (start-mark start)
+                        size (- (end-offset end) (start-offset start))))
+                (potentially-handle-parse-tree remaining orig-state to-state)))))))
 
 (defun item-equal (item1 item2)
   (declare (optimize speed))
   (and (eq (rule item1) (rule item2))
        (do ((trees1 (parse-trees item1) (cdr trees1))
-	    (trees2 (parse-trees item2) (cdr trees2)))
-	   ((and (null trees1) (null trees2)) t)
-	 (when (or (null trees1) (null trees2))
-	   (return nil))
-	 (when (not (parse-tree-equal (car trees1) (car trees2)))
-	   (return nil)))))
+            (trees2 (parse-trees item2) (cdr trees2)))
+           ((and (null trees1) (null trees2)) t)
+         (when (or (null trees1) (null trees2))
+           (return nil))
+         (when (not (parse-tree-equal (car trees1) (car trees2)))
+           (return nil)))))
 
 (defun parse-tree-equal (tree1 tree2)
   (eq (class-of tree1) (class-of tree2)))
@@ -672,9 +644,9 @@ position in the lexemes of LEXER"
 (defclass parser-state ()
   ((parser :initarg :parser :reader parser)
    (incomplete-items :initform (make-hash-table :test #'eq)
-		     :reader incomplete-items)
+                     :reader incomplete-items)
    (parse-trees :initform (make-hash-table :test #'eq)
-		:reader parse-trees)
+                :reader parse-trees)
    (last-nonempty-state :initarg :last-nonempty-state :accessor last-nonempty-state)
    (predicted-rules)))
 
@@ -682,64 +654,64 @@ position in the lexemes of LEXER"
   (declare (ignore args))
   (with-slots (predicted-rules) state
      (setf predicted-rules
-	   (make-array (slot-value (parser-grammar (parser state))
-				   'number-of-rules)
-		       :element-type 'bit
-		       :initial-element 0))))
+           (make-array (slot-value (parser-grammar (parser state))
+                                   'number-of-rules)
+                       :element-type 'bit
+                       :initial-element 0))))
 
 (defun map-over-incomplete-items (state fun)
   (maphash (lambda (key incomplete-items)
-	     (loop for incomplete-item in incomplete-items
-		   do (funcall fun key incomplete-item)))
-	   (incomplete-items state)))
+             (loop for incomplete-item in incomplete-items
+                   do (funcall fun key incomplete-item)))
+           (incomplete-items state)))
 
 (defun potentially-handle-parse-tree (parse-tree from-state to-state)
   (let ((parse-trees (parse-trees to-state)))
     (flet ((handle-parse-tree ()
-	     (map-over-incomplete-items from-state
-	       (lambda (orig-state incomplete-item)
-		 (derive-and-handle-item incomplete-item parse-tree orig-state to-state)))))
+             (map-over-incomplete-items from-state
+               (lambda (orig-state incomplete-item)
+                 (derive-and-handle-item incomplete-item parse-tree orig-state to-state)))))
       (cond ((find parse-tree (gethash from-state parse-trees)
-		   :test #'parse-tree-better)
-	     (setf (gethash from-state parse-trees)
-		   (cons parse-tree
-			 (remove parse-tree (gethash from-state parse-trees)
-				 :test #'parse-tree-better)))
-	     (handle-parse-tree))
-	    ((find parse-tree (gethash from-state parse-trees)
-		   :test (lambda (x y) (or (parse-tree-better y x) (parse-tree-equal y x))))
-	     nil)
-	    (t (push parse-tree (gethash from-state parse-trees))
-	       (handle-parse-tree))))))
+                   :test #'parse-tree-better)
+             (setf (gethash from-state parse-trees)
+                   (cons parse-tree
+                         (remove parse-tree (gethash from-state parse-trees)
+                                 :test #'parse-tree-better)))
+             (handle-parse-tree))
+            ((find parse-tree (gethash from-state parse-trees)
+                   :test (lambda (x y) (or (parse-tree-better y x) (parse-tree-equal y x))))
+             nil)
+            (t (push parse-tree (gethash from-state parse-trees))
+               (handle-parse-tree))))))
 
 (defun predict (item state tokens)
   (dolist (rule (gethash (aref (symbols (rule item)) (dot-position item))
-			 (hash (parser-grammar (parser state)))))
+                         (hash (parser-grammar (parser state)))))
     (if (functionp (right-hand-side rule))
-	(let ((predicted-rules (slot-value state 'predicted-rules))
-	      (rule-number (slot-value rule 'number))
-	      (predict-test (predict-test rule)))
-	  (when (zerop (sbit predicted-rules rule-number))
-	    (setf (sbit predicted-rules rule-number) 1)
-	    (when (or (null predict-test)
-		      (some predict-test tokens))
-	      (handle-and-predict-incomplete-item
-	       (make-instance 'incomplete-item
-		  :orig-state state
-		  :predicted-from item
-		  :rule rule
-		  :dot-position 0
-		  :suffix (right-hand-side rule))
-	       state tokens))))
-	(potentially-handle-parse-tree (right-hand-side rule) state state)))
+        (let ((predicted-rules (slot-value state 'predicted-rules))
+              (rule-number (slot-value rule 'number))
+              (predict-test (predict-test rule)))
+          (when (zerop (sbit predicted-rules rule-number))
+            (setf (sbit predicted-rules rule-number) 1)
+            (when (or (null predict-test)
+                      (some predict-test tokens))
+              (handle-and-predict-incomplete-item
+               (make-instance 'incomplete-item
+                  :orig-state state
+                  :predicted-from item
+                  :rule rule
+                  :dot-position 0
+                  :suffix (right-hand-side rule))
+               state tokens))))
+        (potentially-handle-parse-tree (right-hand-side rule) state state)))
   (loop for parse-tree in (gethash state (parse-trees state))
-	do (derive-and-handle-item item parse-tree state state)))
+        do (derive-and-handle-item item parse-tree state state)))
 
 (defun handle-incomplete-item (item orig-state to-state)
   (declare (optimize speed))
   (cond ((find item (the list (gethash orig-state (incomplete-items to-state)))
                :test #'item-equal)
-	  nil)
+          nil)
         (t
          (push item (gethash orig-state (incomplete-items to-state))))))
 
@@ -747,10 +719,10 @@ position in the lexemes of LEXER"
   (declare (optimize speed))
   (cond ((find item (the list (gethash state (incomplete-items state)))
                :test #'item-equal)
-	  nil)
+          nil)
         (t
          (push item (gethash state (incomplete-items state)))
-	 (predict item state tokens))))
+         (predict item state tokens))))
 
 (defmethod initialize-instance :after ((parser parser) &rest args)
   (declare (ignore args))
@@ -758,52 +730,50 @@ position in the lexemes of LEXER"
      (setf initial-state (make-instance 'parser-state :parser parser))
      (setf (last-nonempty-state initial-state) initial-state)
      (loop for rule in (rules grammar)
-	   do (when (let ((sym (left-hand-side rule)))
-		      (or (subtypep (target parser) sym)
-			  (subtypep sym (target parser))))
-		(if (functionp (right-hand-side rule))
-		    (let ((predicted-rules (slot-value initial-state 'predicted-rules))
-			  (rule-number (slot-value rule 'number))
-			  (predict-test (predict-test rule)))
-		      (when (zerop (sbit predicted-rules rule-number))
-			(setf (sbit predicted-rules rule-number) 1)
-			(when (null predict-test)
-			  (handle-and-predict-incomplete-item
-			   (make-instance 'incomplete-item
-					  :orig-state initial-state
-					  :predicted-from nil
-					  :rule rule
-					  :dot-position 0
-					  :suffix (right-hand-side rule))
-			   initial-state nil))))
-		    (potentially-handle-parse-tree
-		     (right-hand-side rule) initial-state initial-state))))))
+           do (when (let ((sym (left-hand-side rule)))
+                      (or (subtypep (target parser) sym)
+                          (subtypep sym (target parser))))
+                (if (functionp (right-hand-side rule))
+                    (let ((predicted-rules (slot-value initial-state 'predicted-rules))
+                          (rule-number (slot-value rule 'number))
+                          (predict-test (predict-test rule)))
+                      (when (zerop (sbit predicted-rules rule-number))
+                        (setf (sbit predicted-rules rule-number) 1)
+                        (when (null predict-test)
+                          (handle-and-predict-incomplete-item
+                           (make-instance 'incomplete-item
+                                          :orig-state initial-state
+                                          :predicted-from nil
+                                          :rule rule
+                                          :dot-position 0
+                                          :suffix (right-hand-side rule))
+                           initial-state nil))))
+                    (potentially-handle-parse-tree
+                     (right-hand-side rule) initial-state initial-state))))))
 
 (defun state-contains-target-p (state)
   (loop with target = (target (parser state))
-	for parse-tree in (gethash (initial-state (parser state))
-				   (parse-trees state))
-	when (typep parse-tree target)
-	  do (return parse-tree)))
+        for parse-tree in (gethash (initial-state (parser state))
+                                   (parse-trees state))
+        when (typep parse-tree target)
+          do (return parse-tree)))
 
 (defun advance-parse (parser tokens state)
   (maphash (lambda (from-state items)
-	     (declare (ignore from-state))
-	     (dolist (item items)
-	       (predict item state tokens)))
-	   (incomplete-items state))
+             (declare (ignore from-state))
+             (dolist (item items)
+               (predict item state tokens)))
+           (incomplete-items state))
   (let ((new-state (make-instance 'parser-state :parser parser)))
     (loop for token in tokens
-	  do (potentially-handle-parse-tree token state new-state))
+          do (potentially-handle-parse-tree token state new-state))
     (setf (last-nonempty-state new-state)
-	  (if (or (plusp (hash-table-count (incomplete-items new-state)))
-		  (state-contains-target-p new-state))
-	      new-state
-	      (last-nonempty-state state)))
+          (if (or (plusp (hash-table-count (incomplete-items new-state)))
+                  (state-contains-target-p new-state))
+              new-state
+              (last-nonempty-state state)))
     new-state))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Code for analysing parse stack
 
 (defun parse-stack-top (state)
@@ -811,9 +781,9 @@ position in the lexemes of LEXER"
 is empty in that state."
   (when (plusp (hash-table-count (incomplete-items state)))
     (maphash (lambda (state items)
-	       (declare (ignore state))
-	       (return-from parse-stack-top (car items)))
-	     (incomplete-items state))))
+               (declare (ignore state))
+               (return-from parse-stack-top (car items)))
+             (incomplete-items state))))
 
 (defun target-parse-tree (state)
   "for a given state, return a target parse tree, or NIL if this state does not
@@ -843,21 +813,19 @@ internal state of the parser.  Do not alter it!"
 
 (defun map-over-parse-trees (function state)
   (labels ((map-incomplete-item (item)
-	     (unless (null (predicted-from item))
-	       (map-incomplete-item (predicted-from item)))
-	     (loop for parse-tree in (reverse (parse-trees item))
-		   do (funcall function parse-tree))))
+             (unless (null (predicted-from item))
+               (map-incomplete-item (predicted-from item)))
+             (loop for parse-tree in (reverse (parse-trees item))
+                   do (funcall function parse-tree))))
     (let ((state (last-nonempty-state state)))
       (if (plusp (hash-table-count (incomplete-items state)))
-	  (maphash (lambda (state items)
-		     (declare (ignore state))
-		     (map-incomplete-item (car items))
-		     (return-from map-over-parse-trees nil))
-		   (incomplete-items state))
-	  (funcall function (state-contains-target-p state))))))
+          (maphash (lambda (state items)
+                     (declare (ignore state))
+                     (map-incomplete-item (car items))
+                     (return-from map-over-parse-trees nil))
+                   (incomplete-items state))
+          (funcall function (state-contains-target-p state))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Syntax querying functions.
 
 (defgeneric word-constituentp (syntax obj)

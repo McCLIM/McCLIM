@@ -80,9 +80,8 @@
                                                  *command-parser-table*))))
     (if (encapsulating-stream-p stream)
         (let ((interactor (encapsulating-stream-stream stream)))
-          (with-bounding-rectangle* (x1 y1 x2 y2)
+          (with-bounding-rectangle* (:x1 x1 :y2 y2)
               (input-editing-stream-output-record stream)
-            (declare (ignore y1 x2))
             ;; Start the dialog below the editor area
             (letf (((stream-cursor-position interactor) (values x1 y2)))
               (fresh-line interactor)
@@ -338,8 +337,7 @@
 (define-presentation-method presentation-typep (object (type command))
   (and (consp object)
        (command-accessible-in-command-table-p (car object) command-table)
-       (or (null *application-frame*)
-           (command-enabled (car object) *application-frame*))))
+       (command-enabled (car object) *application-frame*)))
 
 (define-presentation-method presentation-subtypep
     ((type command) maybe-supertype)

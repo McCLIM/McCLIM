@@ -1,60 +1,55 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
-;;; ----------------------------------------------------------------------------
-;;;     Title: The CLIM Region Datatype
-;;;   Created: 1998-12-02 19:26
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
-;;;       $Id: regions.lisp,v 1.39 2009/06/03 20:33:16 ahefner Exp $
-;;; ----------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999,2001 by Gilbert Baumann
-;;;  (c) copyright 2001 by Arnaud Rouanet (rouanet@emi.u-bordeaux.fr)
-;;;  (c) copyright 2014 by Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2002 Gilbert Baumann <gbaumann@common-lisp.net>
+;;;  (c) copyright 2001 Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
+;;;  (c) copyright 2001 Julien Boninfan
+;;;  (c) copyright 2002-2004 Timothy Moore <tmoore@common-lisp.net>
+;;;  (c) copyright 2002 Alexey Dejneka
+;;;  (c) copyright 2004-2009 Andy Hefner <ahefner@common-lisp.net>
+;;;  (c) copyright 2006-2008 Christophe Rhodes <crhodes@common-lisp.net>
+;;;  (c) copyright 2014-2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2017 Peter <craven@gmx.net>
+;;;  (c) copyright 2017-2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2017,2018 Cyrus Harmon <cyrus@bobobeach.com>
+;;;  (c) copyright 2018,2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-;;; ---- TODO ------------------------------------------------------------------
-
+;;; ----------------------------------------------------------------------------
+;;;
+;;; Class and protocol implementations of the geometry module.
+;;;
+;;; TODO
+;;;
 ;;; - ellipses: The intersection of two ellipses is there, but
 ;;;   handling the start/end angle is not implemented.
-
+;;;
 ;;; - provide better (faster) implementations for REGION-EQUAL,
 ;;;   REGION-CONTAINS-REGION-P, and REGION-INTERSECTS-REGION-P.
-
+;;;
 ;;; - Compute a union/intersection/difference of an union of polygon
 ;;;   vs another polygon or union of polygons directly via POLYGON-OP.
-
+;;;
 ;;; - STANDARD-REGION-UNION should either become a subclass
 ;;;   'STANDARD-DISJUNCT-REGION-UNION' or a flag. Some set operations
 ;;;   could take advantage out the information, if the subregions of
 ;;;   an union are disjunct.
-
+;;;
 ;;; - provide sensible PRINT-OBJECT methods.
-
+;;;
 ;;; - while you are are at it; provide a reasonable fast vertical scan
 ;;;   routine.  polygons should make use of the sweep line algorithm.
-
+;;;
 ;;; - MAKE-POLY{LINE,GON} should canonise its arguments; no edges of
 ;;;   length 0 and no co-linear vertexes. Maybe: canonise rectangles?
 ;;;   Also a polygon of less than three vertexes is to be considered
 ;;;   empty aka +nowhere+.
+;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
-;;;; Design <-> Region Equivalences
-
+;;; Design <-> Region Equivalences
+;;;
 ;;; As Gilbert points in his notes, transparent ink is in every
 ;;; respect interchangable with the nowhere region, and likewise
 ;;; foreground ink is interchangable with the everywhere region.
@@ -97,11 +92,11 @@
                    (declare (ignorable a b))
                    ,(pop bodies)))))
            `(progn ,@(butlast (methods)))))))
-  (def-method region-intersects-region-p t nil t nil nil nil t nil)
-  (def-method region-contains-region-p t t t nil nil nil nil t)
-  (def-method region-equal t nil nil nil t nil nil nil)
-  (def-method region-union a a a b b b b a)
-  (def-method region-intersection b b b a a a a b)
+  (def-method region-intersects-region-p t nil t   nil nil nil t   nil)
+  (def-method region-contains-region-p   t t   t   nil nil nil nil t)
+  (def-method region-equal               t nil nil nil t   nil nil nil)
+  (def-method region-union               a a   a   b   b   b   b   a)
+  (def-method region-intersection        b b   b   a   a   a   a   b)
   ;; We don't support unbounded regions which are not +everywhere+ or
   ;; +nowhere+ (that would complicate the geometry module). If we
   ;; decide otherwise don't use standard-region-difference because it
@@ -132,7 +127,7 @@
   ((a :initarg :a :reader standard-region-difference-a)
    (b :initarg :b :reader standard-region-difference-b)))
 
-;;; -- 2.5.2 CLIM Point Objects ----------------------------------------------
+;;; 2.5.2 CLIM Point Objects
 
 (defclass standard-point (point)
   ((x :type coordinate :initarg :x)
@@ -164,12 +159,13 @@
 (defmethod point-y ((region point))
   (nth-value 1 (point-position region)))
 
-;;; -- 2.5.3 Polygons and Polylines in CLIM ----------------------------------
+;;; 2.5.3 Polygons and Polylines in CLIM
 
 (defclass cached-polygon-bbox-mixin ()
   ((bbox :reader bounding-rectangle)))
 
-;; Protocol:
+;;; Protocol:
+
 (defclass standard-polyline (cached-polygon-bbox-mixin polyline)
   ((points :initarg :points :reader polygon-points)
    (closed :initarg :closed)))
@@ -184,7 +180,7 @@
   (maybe-print-readably (region sink)
     (print-unreadable-object (region sink :identity t :type t))))
 
-;;; -- 2.5.3.1 Constructors for CLIM Polygons and Polylines  -----------------
+;;; 2.5.3.1 Constructors for CLIM Polygons and Polylines
 
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))
@@ -241,7 +237,7 @@
     closed))
 
 
-;;; -- 2.5.4 Lines in CLIM ---------------------------------------------------
+;;; 2.5.4 Lines in CLIM
 
 ;;; Line protocol: line-start-point* line-end-point*
 
@@ -281,7 +277,7 @@
   (multiple-value-bind (x y) (line-end-point* line)
     (make-point x y)))
 
-;;; polyline protocol for standard-line's:
+;;; Polyline protocol for standard-line's
 
 (defmethod polygon-points ((line standard-line))
   (with-slots (x1 y1 x2 y2) line
@@ -308,10 +304,9 @@
          (with-slots (x1 y1 x2 y2) region
            (format sink "~D ~D ~D ~D" x1 y1 x2 y2)))))
 
-;;; -- 2.5.5 Rectangles in CLIM ----------------------------------------------
+;;; 2.5.5 Rectangles in CLIM
 
-;;; protocol:
-;;;     rectangle-edges*
+;;; Protocol: rectangle-edges*
 
 (defclass standard-rectangle (rectangle)
   ((coordinates :initform (make-array 4 :element-type 'coordinate))))
@@ -326,31 +321,33 @@
     (setf (aref coords 2) x2)
     (setf (aref coords 3) y2)))
 
-(defmacro with-standard-rectangle ((x1 y1 x2 y2) rectangle &body body)
-  (with-gensyms (coords)
-    `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type standard-rectangle-coordinate-vector ,coords))
-       (let ((,x1 (aref ,coords 0))
-             (,y1 (aref ,coords 1))
-             (,x2 (aref ,coords 2))
-             (,y2 (aref ,coords 3)))
-         (declare (type coordinate ,x1 ,y1 ,x2 ,y2))
-         ,@body))))
-
-(defmacro with-standard-rectangle* ((&key x1 y1 x2 y2) rectangle &body body)
-  (with-gensyms (coords)
-    `(let ((,coords (slot-value ,rectangle 'coordinates)))
-       (declare (type standard-rectangle-coordinate-vector ,coords))
-       (let (,@(and x1 `((,x1 (aref ,coords 0))))
-             ,@(and y1 `((,y1 (aref ,coords 1))))
-             ,@(and x2 `((,x2 (aref ,coords 2))))
-             ,@(and y2 `((,y2 (aref ,coords 3)))))
-         (declare (type coordinate
-                        ,@(and x1 `(,x1))
-                        ,@(and y1 `(,y1))
-                        ,@(and x2 `(,x2))
-                        ,@(and y2 `(,y2))))
-         ,@body))))
+;;; - VARIABLES before first keyword are positional and correspond to
+;;;   X1, Y1, X2, Y2.
+;;;   - Fewer than all four can be provided.
+;;;   - Any of the positional variables can be `nil' indicating that
+;;;     the binding should not be established.
+;;; - The first keyword initiates the keyword part of the variable
+;;;   list (can start after between zero and four positional
+;;;   variables).
+(defmacro with-standard-rectangle* ((&rest variables) rectangle &body body)
+  (let* ((index      (position-if #'keywordp variables))
+         (positional (subseq variables 0 index))
+         (keyword    (when index
+                       (subseq variables index))))
+    (destructuring-bind (&key (x1 (nth 0 positional))
+                              (y1 (nth 1 positional))
+                              (x2 (nth 2 positional))
+                              (y2 (nth 3 positional))
+                              width height center-x center-y)
+        keyword
+      (declare (ignore width height center-x center-y))
+      (with-gensyms (coords)
+        `(let ((,coords (slot-value ,rectangle 'coordinates)))
+           (declare (type standard-rectangle-coordinate-vector ,coords))
+           ,(generate-rectangle-bindings
+             (list* :x1 x1 :y1 y1 :x2 x2 :y2 y2 keyword)
+             `((aref ,coords 0) (aref ,coords 1) (aref ,coords 2) (aref ,coords 3))
+             body))))))
 
 (defun make-rectangle (point1 point2)
   (make-rectangle* (point-x point1) (point-y point1)
@@ -373,8 +370,7 @@
         (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
 
 (defmethod rectangle-edges* ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (values x1 y1 x2 y2)))
 
 ;;; standard-rectangles are immutable and all that, but we still need
@@ -391,118 +387,67 @@
     (setf (aref coords 3) y2))
   (values x1 y1 x2 y2))
 
-(defmethod rectangle-min-point ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x2 y2))
-    (make-point x1 y1)))
+(macrolet
+    ((def (name &rest parts)
+       (destructuring-bind (first-part &optional second-part) parts
+         (let ((result-form (if (not second-part)
+                                (second first-part)
+                                `(,(if (eq (first first-part) :width)
+                                       'values
+                                       'make-point)
+                                  ,(second first-part)
+                                  ,(second second-part)))))
+           `(progn
+              (defmethod ,name ((rect standard-rectangle))
+                (with-standard-rectangle* (,@(apply #'append parts)) rect
+                  ,result-form))
 
-(defmethod rectangle-min-point ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1 :y1 y1)
-      rect
-    (make-point x1 y1)))
+              (defmethod ,name ((rect rectangle))
+                (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
+                  (declare (type coordinate x1 y1 x2 y2)
+                           (ignorable x1 y1 x2 y2))
+                  ,(generate-rectangle-bindings
+                    (apply #'append parts)
+                    '(x1 y1 x2 y2)
+                    `(,result-form)))))))))
+  (def rectangle-min-point (:x1 x1) (:y1 y1))
+  (def rectangle-max-point (:x2 x2) (:y2 y2))
+  (def rectangle-min-x     (:x1 x1))
+  (def rectangle-min-y     (:y1 y1))
+  (def rectangle-max-x     (:x2 x2))
+  (def rectangle-max-y     (:y2 y2))
+  (def rectangle-width     (:width  width))
+  (def rectangle-height    (:height height))
+  (def rectangle-size      (:width  width) (:height height)))
 
-(defmethod rectangle-max-point ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x1 y1))
-    (make-point x2 y2)))
-
-(defmethod rectangle-max-point ((rect standard-rectangle))
-  (with-standard-rectangle* (:x2 x2 :y2 y2)
-      rect
-    (make-point x2 y2)))
-
-(defmethod rectangle-min-x ((rect rectangle))
-  (nth-value 0 (rectangle-edges* rect)))
-
-(defmethod rectangle-min-x ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1)
-      rect
-    x1))
-
-(defmethod rectangle-min-y ((rect rectangle))
-  (nth-value 1 (rectangle-edges* rect)))
-
-(defmethod rectangle-min-y ((rect standard-rectangle))
-  (with-standard-rectangle* (:y1 y1)
-      rect
-    y1))
-
-(defmethod rectangle-max-x ((rect rectangle))
-  (nth-value 2 (rectangle-edges* rect)))
-
-(defmethod rectangle-max-x ((rect standard-rectangle))
-  (with-standard-rectangle* (:x2 x2)
-      rect
-    x2))
-
-(defmethod rectangle-max-y ((rect rectangle))
-  (nth-value 3 (rectangle-edges* rect)))
-
-(defmethod rectangle-max-y ((rect standard-rectangle))
-  (with-standard-rectangle* (:y2 y2)
-      rect
-    y2))
-
-(defmethod rectangle-width ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore y1 y2))
-    (- x2 x1)))
-
-(defmethod rectangle-width ((rect standard-rectangle))
-  (with-standard-rectangle* (:x1 x1 :x2 x2)
-      rect
-    (- x2 x1)))
-
-(defmethod rectangle-height ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (declare (ignore x1 x2))
-    (- y2 y1)))
-
-(defmethod rectangle-height ((rect standard-rectangle))
-  (with-standard-rectangle* (:y1 y1 :y2 y2)
-      rect
-    (- y2 y1)))
-
-(defmethod rectangle-size ((rect rectangle))
-  (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-    (values (- x2 x1) (- y2 y1))))
-
-(defmethod rectangle-size ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
-    (values (- x2 x1) (- y2 y1))))
-
-;;; polyline/polygon protocol for STANDARD-RECTANGLEs
+;;; Polyline/polygon protocol for STANDARD-RECTANGLEs
 
 (defmethod polygon-points ((rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (list (make-point x1 y1)
           (make-point x1 y2)
           (make-point x2 y2)
           (make-point x2 y1))))
 
 (defmethod map-over-polygon-coordinates (fun (rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (funcall fun x1 y1)
     (funcall fun x1 y2)
     (funcall fun x2 y2)
     (funcall fun x2 y1)))
 
 (defmethod map-over-polygon-segments (fun (rect standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2)
-      rect
+  (with-standard-rectangle* (x1 y1 x2 y2) rect
     (funcall fun x1 y1 x1 y2)
     (funcall fun x1 y2 x2 y2)
     (funcall fun x2 y2 x2 y1)
     (funcall fun x2 y1 x1 y1)))
 
-;;; -- 2.5.6 Ellipses and Elliptical Arcs in CLIM ----------------------------
+;;; 2.5.6 Ellipses and Elliptical Arcs in CLIM
 
-;;; internal protocol
+;;; Internal protocol
 (defgeneric polar->screen (ellipse)
-  ;; specialized on t, we expect that ellipse protocol is implemented.
+  ;; Specialized on t, we expect that ellipse protocol is implemented.
   (:method (ellipse)
     (nest
      (multiple-value-bind (rdx1 rdy1 rdx2 rdy2) (ellipse-radii ellipse))
@@ -540,7 +485,7 @@
 (defclass standard-ellipse (elliptical-thing ellipse) ())
 (defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
 
-;;; -- 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM -
+;;; 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM
 
 (defun make-ellipse (center-point
                      radius-1-dx radius-1-dy
@@ -603,7 +548,7 @@
           ((null end-angle) (setf end-angle (* 2 pi))))
     (make-instance class :tr tr :start-angle start-angle :end-angle end-angle)))
 
-;;; -- 2.5.6.2 Accessors for CLIM Elliptical Objects -------------------------
+;;; 2.5.6.2 Accessors for CLIM Elliptical Objects
 
 (defmethod ellipse-center-point* ((region elliptical-thing))
   (with-slots (tr) region
@@ -627,7 +572,7 @@
   (with-slots (end-angle) region
     end-angle))
 
-;;; -- Rectangle Sets --------------------------------------------------------
+;;; Rectangle Sets
 
 (defclass standard-rectangle-set (region-set)
   ((bands
@@ -736,10 +681,10 @@
   (declare (ignorable normalize))
   (funcall fun region))
 
-;;;; ===========================================================================
+;;; ===========================================================================
 
 (defmethod simple-pprint-object-args (stream (object standard-rectangle))
-  (with-standard-rectangle (x1 y1 x2 y2) object
+  (with-standard-rectangle* (x1 y1 x2 y2) object
     (loop for (slot-name slot-value) in `((x1 ,x1)
                                           (y1 ,y1)
                                           (x2 ,x2)
@@ -757,8 +702,7 @@
 (defmethod print-object ((region standard-rectangle) stream)
   (maybe-print-readably (region stream)
     (print-unreadable-object (region stream :type t :identity nil)
-      (with-standard-rectangle (x1 y1 x2 y2)
-          region
+      (with-standard-rectangle* (x1 y1 x2 y2) region
         (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
 
 ;;; Internal helpers

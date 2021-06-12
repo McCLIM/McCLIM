@@ -1,5 +1,5 @@
-(defpackage :mcclim-harfbuzz
-  (:use :cl)
+(defpackage #:mcclim-harfbuzz
+  (:use #:cl)
   (:documentation "CFFI interface to Harfbuzz")
   (:export #:with-buffer
            #:hb-buffer-create

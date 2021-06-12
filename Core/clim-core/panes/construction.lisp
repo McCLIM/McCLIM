@@ -79,11 +79,7 @@ returned or error is signaled depending on the argument ERRORP.")
                     (error "Concrete class for a pane ~s not found." pane-type)))))
           (find-class pane-type errorp)))))
 
-(defmethod make-pane-1
-    ((fm frame-manager) (frame application-frame) type &rest args)
-  (apply #'make-instance (find-concrete-pane-class fm type)
-         :frame frame :manager fm :port (port frame)
-         args))
+(defvar *pane-realizer* nil)
 
 (defun make-pane (type &rest args)
   (apply #'make-pane-1 (or *pane-realizer*

@@ -1,17 +1,19 @@
-;;; -*- Mode: Lisp; Package: DREI-CORE -*-
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006,2007 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2007 Andy Hefner <ahefner@common-lisp.net>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Core functionality of Drei.
 
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-(in-package :drei-core)
+(in-package #:drei-core)
 
 (defgeneric proper-line-indentation (view mark)
   (:documentation "Return the offset to which `mark' should
@@ -20,8 +22,6 @@ ideally be indented to according to `view'."))
 (defmethod proper-line-indentation ((view drei-syntax-view) (mark mark))
   (syntax-line-indentation (syntax view) mark (tab-space-count view)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
 ;;; Misc stuff
 
 (defun possibly-fill-line ()
@@ -59,12 +59,12 @@ ideally be indented to according to `view'."))
 (defun delete-horizontal-space (mark syntax &optional (backward-only-p nil))
   (let ((mark2 (clone-mark mark)))
     (loop until (beginning-of-line-p mark)
-	  while (whitespacep syntax (object-before mark))
-	  do (backward-object mark))
+          while (whitespacep syntax (object-before mark))
+          do (backward-object mark))
     (unless backward-only-p
       (loop until (end-of-line-p mark2)
-	    while (whitespacep syntax (object-after mark2))
-	    do (forward-object mark2)))
+            while (whitespacep syntax (object-after mark2))
+            do (forward-object mark2)))
     (delete-region mark mark2)))
 
 (defun indent-current-line (view point)
@@ -74,12 +74,12 @@ ideally be indented to according to `view'."))
 
 (defun insert-pair (mark syntax &optional (count 0) (open #\() (close #\)))
   (cond ((> count 0)
-	 (loop while (and (not (end-of-buffer-p mark))
-			  (whitespacep syntax (object-after mark)))
-	       do (forward-object mark)))
-	((< count 0)
-	 (setf count (- count))
-	 (loop repeat count do (backward-expression mark syntax))))
+         (loop while (and (not (end-of-buffer-p mark))
+                          (whitespacep syntax (object-after mark)))
+               do (forward-object mark)))
+        ((< count 0)
+         (setf count (- count))
+         (loop repeat count do (backward-expression mark syntax))))
   (unless (or (beginning-of-buffer-p mark)
               (char= open (object-before mark))
               (whitespacep syntax (object-before mark)))
@@ -87,19 +87,19 @@ ideally be indented to according to `view'."))
   (insert-object mark open)
   (let ((saved-offset (offset mark)))
     (loop repeat count
-	  do (forward-expression mark syntax))
+          do (forward-expression mark syntax))
     (insert-object mark close)
 
     (unless (or (end-of-buffer-p mark)
                 (char= close (object-after mark))
-		(whitespacep syntax
+                (whitespacep syntax
                              (object-after mark)))
       (insert-object mark #\Space))
     (setf (offset mark) saved-offset)))
 
 (defun move-past-close-and-reindent (view point)
   (loop until (eql (object-after point) #\))
-	do (forward-object point))
+        do (forward-object point))
   (forward-object point)
   (indent-current-line view point))
 
@@ -108,39 +108,39 @@ ideally be indented to according to `view'."))
 
 (defun goto-line (mark line-number)
   (loop with m = (clone-mark mark :right)
-	initially (beginning-of-buffer m)
-       	repeat (1- line-number)
-	until (end-of-buffer-p m)
-       	do (end-of-line m)
-	do (incf (offset m))
-	   (end-of-line m)
-	finally (beginning-of-line m)
-		(setf (offset mark) (offset m))))
+        initially (beginning-of-buffer m)
+                repeat (1- line-number)
+        until (end-of-buffer-p m)
+                do (end-of-line m)
+        do (incf (offset m))
+           (end-of-line m)
+        finally (beginning-of-line m)
+                (setf (offset mark) (offset m))))
 
 (defun replace-one-string (mark length newstring &optional (use-region-case t))
   "Replace LENGTH objects at MARK with NEWSTRING,
 using the case of those objects if USE-REGION-CASE is true."
   (let* ((start (offset mark))
-	 (end (+ start length))
-	 (region-case (and use-region-case
-			   (buffer-region-case (buffer mark)
-					       start
-					       end)))) 
+         (end (+ start length))
+         (region-case (and use-region-case
+                           (buffer-region-case (buffer mark)
+                                               start
+                                               end))))
     (delete-range mark length)
     (insert-sequence mark newstring)
     (when (and use-region-case region-case)
       (let ((buffer (buffer mark))
-	    (end2 (+ start (length newstring))))
-	(funcall (case region-case
-		   (:upper-case #'upcase-buffer-region)
-		   (:lower-case #'downcase-buffer-region)
-		   (:capitalized #'capitalize-buffer-region))
-		 buffer
-		 start
-		 end2)))))
+            (end2 (+ start (length newstring))))
+        (funcall (case region-case
+                   (:upper-case #'upcase-buffer-region)
+                   (:lower-case #'downcase-buffer-region)
+                   (:capitalized #'capitalize-buffer-region))
+                 buffer
+                 start
+                 end2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Character case
 
 (defun downcase-word (mark syntax &optional (n 1))
@@ -168,7 +168,7 @@ using the case of those objects if USE-REGION-CASE is true."
        (capitalize-region offset mark))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Indentation
 
 (defun indent-region (view mark1 mark2)
@@ -182,11 +182,11 @@ function."
                                          (tab-space-count view))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Auto fill
 
 (defun fill-line (mark line-indentation-function fill-column tab-width syntax
-		  &optional (compress-whitespaces t))
+                  &optional (compress-whitespaces t))
   "Breaks the contents of line pointed to by MARK up to MARK into
 multiple lines such that none of them is longer than FILL-COLUMN. If
 COMPRESS-WHITESPACES is non-nil, whitespaces are compressed after the
@@ -209,17 +209,17 @@ compression means just the deletion of trailing whitespaces."
                  (t
                   (incf column))))
              (when (and (>= column fill-column)
-			(/= (offset begin-mark) line-beginning-offset))
-	       (when compress-whitespaces
-		 (let ((offset (buffer-search-backward
-				(buffer begin-mark)
-				(offset begin-mark)
-				#(nil)
-				:test #'(lambda (o1 o2)
-					  (declare (ignore o2))
-					  (not (whitespacep syntax o1))))))
-		   (when offset
-		     (delete-region begin-mark (1+ offset)))))
+                        (/= (offset begin-mark) line-beginning-offset))
+               (when compress-whitespaces
+                 (let ((offset (buffer-search-backward
+                                (buffer begin-mark)
+                                (offset begin-mark)
+                                #(nil)
+                                :test #'(lambda (o1 o2)
+                                          (declare (ignore o2))
+                                          (not (whitespacep syntax o1))))))
+                   (when offset
+                     (delete-region begin-mark (1+ offset)))))
                (insert-object begin-mark #\Newline)
                (incf (offset begin-mark))
                (let ((indentation
@@ -250,7 +250,7 @@ mark<= `mark2.'"
                  compress-whitespaces))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Indentation
 
 (defgeneric indent-line (mark indentation tab-width)
@@ -267,13 +267,13 @@ spaces only."))
        do (delete-range mark2 1))
     (loop until (zerop indentation)
        do (cond ((and tab-width (>= indentation tab-width))
-		 (insert-object mark2 #\Tab)
-		 (when left             ; spaces must follow tabs
-		   (forward-object mark2))
-		 (decf indentation tab-width))
-		(t
-		 (insert-object mark2 #\Space)
-		 (decf indentation))))))
+                 (insert-object mark2 #\Tab)
+                 (when left             ; spaces must follow tabs
+                   (forward-object mark2))
+                 (decf indentation tab-width))
+                (t
+                 (insert-object mark2 #\Space)
+                 (decf indentation))))))
 
 (defmethod indent-line ((mark left-sticky-mark) indentation tab-width)
   (indent-line* mark indentation tab-width t))
@@ -314,11 +314,11 @@ is."))
        while (whitespacep syntax (object-before mark))
        do (delete-range mark -1))
     (when (and (not (beginning-of-buffer-p mark))
-	       (constituentp (object-before mark)))
+               (constituentp (object-before mark)))
       (insert-object mark #\Space))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Syntax handling
 
 (defgeneric set-syntax (view syntax)
@@ -338,13 +338,13 @@ a known syntax."))
 (defmethod set-syntax ((view drei-syntax-view) (syntax string))
   (let ((syntax-class (syntax-from-name syntax)))
     (cond (syntax-class
-	   (set-syntax view (make-syntax-for-view view syntax-class)))
-	  (t
-	   (beep)
-	   (display-message "No such syntax: ~A." syntax)))))
+           (set-syntax view (make-syntax-for-view view syntax-class)))
+          (t
+           (beep)
+           (display-message "No such syntax: ~A." syntax)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; 
+;;;
 ;;; Narrowing buffers
 
 (defgeneric invoke-with-narrowed-buffer (drei low-mark high-mark continuation &optional soft)

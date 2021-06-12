@@ -91,6 +91,7 @@
                 :serial     t
                 :components ((:file        "util")
                              (:file        "sequence")
-                             (:file        "list"))))
+                             (:file        "list")
+                             (:file        "array"))))
   :perform    (test-op (operation component)
                 (uiop:symbol-call '#:clouseau.test '#:run-tests)))

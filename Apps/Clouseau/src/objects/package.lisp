@@ -14,12 +14,8 @@
 
 ;;; `package-data-place-mixin'
 
-(defclass package-data-place-mixin ()
+(defclass package-data-place-mixin (read-only-descendants-mixin)
   ())
-
-(defmethod supportsp ((place     package-data-place-mixin)
-                      (operation (eql 'modify-descendants)))
-  nil)
 
 (defmethod supportsp :around ((place     package-data-place-mixin)
                               (operation (eql 'setf)))
@@ -96,7 +92,7 @@
          (old-value (value place))
          (added     (set-difference new-value old-value :test #'eq))
          (removed   (set-difference old-value new-value :test #'eq)))
-    (use-package added package)
+    (use-package   added   package)
     (unuse-package removed package)))
 
 ;;; `package-used-by-list-place'
@@ -108,6 +104,45 @@
 
 (defmethod value ((place package-used-by-list-place))
   (package-used-by-list (container place)))
+
+;;; `package-local-nickname-list-place'
+
+#+sbcl (defclass package-local-nickname-list-place (package-data-place-mixin
+                                                    read-only-place)
+         ())
+
+#+sbcl (defmethod value ((place package-local-nickname-list-place))
+         (sb-ext:package-local-nicknames (container place)))
+
+#+sbcl (defmethod object-state-class ((object null)
+                                      (place  package-local-nickname-list-place))
+         'inspected-local-nickname-list)
+
+#+sbcl (defmethod object-state-class ((object cons)
+                                      (place  package-local-nickname-list-place))
+         'inspected-local-nickname-list)
+
+;;; `package-locally-nicknamed-by-list-place'
+
+#+sbcl (defclass package-locally-nicknamed-by-list-place (package-data-place-mixin
+                                                          package-list-place-mixin
+                                                          read-only-place)
+         ())
+
+#+sbcl (defmethod value ((place package-locally-nicknamed-by-list-place))
+         (sb-ext:package-locally-nicknamed-by-list (container place)))
+
+;;; `symbol-in-package-place'
+
+(defclass symbol-in-package-place (package-data-place-mixin
+                                   pseudo-place)
+  ())
+
+(defmethod make-object-state ((object symbol) (place symbol-in-package-place))
+  (make-instance (object-state-class object place)
+                 :place           place
+                 :context-package (container place)
+                 :style           :name-only))
 
 ;;; Object states
 
@@ -132,6 +167,11 @@
 (defclass inspected-package-list (inspected-proper-list)
   ())
 
+;;; `inspected-local-nickname-list'
+
+(defclass inspected-local-nickname-list (inspected-alist)
+  ())
+
 ;;; `inspected-symbol-list'
 
 (defclass inspected-symbol-list (inspected-proper-list)
@@ -139,17 +179,17 @@
 
 ;;; Object inspection methods
 
-(defun package-symbols (package &key filter)
+(defun map-package-symbols (function package &key filter)
   (let ((result (make-array 100 :adjustable t :fill-pointer 0)))
     (do-external-symbols (symbol package)
-      (when (and (eq (symbol-package symbol) package)
-                 (or (not filter)
-                     (funcall filter symbol)))
+      (when (or (not filter)
+                (funcall filter symbol))
         (vector-push-extend symbol result)))
-    (sort result #'string-lessp :key #'symbol-name)))
+    (sort result #'string-lessp :key #'symbol-name)
+    (map nil function result)))
 
 (defmethod inspect-object-using-state :after ((object package)
-                                              (state  inspected-object)
+                                              (state  inspected-package)
                                               (style  (eql :badges))
                                               (stream t))
   (when (package-locked-p object)
@@ -175,8 +215,12 @@
                             :label "Uses")
         (format-place-cells stream object 'package-used-by-list-place nil
                             :label "Used by"))
-      #+sbcl (format-place-row stream object 'reader-place 'sb-ext:package-local-nicknames
-                               :label "Local nicknames")))
+      #+sbcl
+      (formatting-row (stream)
+        (format-place-cells stream object 'package-local-nickname-list-place nil
+                            :label "Local nicknames")
+        (format-place-cells stream object 'package-locally-nicknamed-by-list-place nil
+                            :label "Locally nicknamed by"))))
 
   (print-documentation object stream)
 
@@ -191,8 +235,8 @@
 
         (flet ((symbol-row (symbol)
                  (formatting-row (stream)
-                   (formatting-place (object 'pseudo-place symbol nil inspect* :place-var place)
-                     (formatting-cell (stream) (inspect* stream))
+                   (formatting-place (object 'symbol-in-package-place symbol nil present-object)
+                     (formatting-cell (stream) (present-object stream))
                      ;; Value slot
                      (formatting-place (symbol 'symbol-value-place nil present inspect)
                        (formatting-cell (stream) (present stream) (inspect stream)))
@@ -202,6 +246,6 @@
                      ;; Type slot
                      (formatting-place (symbol 'symbol-type-place nil present inspect)
                        (formatting-cell (stream) (present stream) (inspect stream)))))))
-          (map nil #'symbol-row (package-symbols object :filter (symbol-filter state))))))))
+          (map-package-symbols #'symbol-row object :filter (symbol-filter state)))))))
 
 ;; TODO command: trace all symbols

@@ -1,0 +1,6 @@
+@anchor{Generic-Function clim-extensions:note-frame-command-table-changed}
+@deffn {Generic Function} {clim-extensions:note-frame-command-table-changed} frame-manager frame new-command-table
+@findex clim-extensions:note-frame-command-table-changed
+McCLIM extension: Notify client that the command-table of
+FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE.
+@end deffn

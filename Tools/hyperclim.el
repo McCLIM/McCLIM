@@ -1,9 +1,12 @@
-;;; hyperclim.el --- Browse a HTML conversion of the CLIM2
-;;; specification inside emacs.
+;;; hyperclim.el --- Browse CLIM2 specification inside Emacs.
 
-;; This code is in the public domain.
+;;; Commentary:
+;;;
+;;; This code is in the public domain.
+;;;
+;;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
 
-;; Orginally written by Andy Hefner (andy.hefner@verizon.net)
+;;; Code:
 
 (require 'cl-lib nil t)
 (require 'cl-lib "lib/cl-lib")
@@ -12,14 +15,14 @@
 
 ;;; Override base URL of CLIM specification, set this if you want
 ;;; to use one of the above from your local disk.
-(setq clim-url-base-override nil)
+(defvar clim-url-base-override nil)
 
 ;;; Selection of CLIM spec according to preference -- uncomment one of
 ;;; the lines below
 ;; MikeMac conversion of the CLIM specification
 ;(setq clim-dataset 'clim-mikemac-spec)
 ;; Gilbert Baumann conversion of the CLIM specification
-(setq clim-dataset 'clim-gilberth-spec)
+(defvar clim-dataset 'clim-gilberth-spec)
 
 ;;; Internal bits
 
@@ -29,10 +32,10 @@
   (symbol-value clim-dataset))
 
 (defun clim-get-symbol-table ()
-  (rest (clim-get-dataset)))
+  (cl-rest (clim-get-dataset)))
 
 (defun clim-get-url-base ()
-  (first (clim-get-dataset)))
+  (cl-first (clim-get-dataset)))
 
 (defun clim-remove-package-name (string)
   (if (string-match-p "^:.*" string)
@@ -57,21 +60,21 @@
 ;;    Also, you can use a prefix arg to force prompting.
 
 (defun clim-lookup (p)
+  "Look up the symbol P or symbol under point."
   (interactive "p")
   (let ((symbol-name (thing-at-point 'symbol)))
     (unless (and (= 1 p) (stringp symbol-name))
-      (setq symbol-name (let ((symbols (mapcar #'car (rest clim-gilberth-spec))))
+      (setq symbol-name (let ((symbols (mapcar #'car (cl-rest clim-gilberth-spec))))
                           (completing-read "Symbol name: " symbols nil t symbol-name 'clim-history))))
     (let ((url (clim-find-symbol-url (downcase symbol-name))))
       (if url
           (browse-url url)
           (message "Symbol %s not found." symbol-name)))))
 
-
 ;;; CLIM spec datasets
 
-;; Gilbert Baumann one
-(setq clim-gilberth-spec
+;;; Gilbert Baumann one
+(defvar clim-gilberth-spec
  '("http://bauhh.dyndns.org:8000/clim-spec/"
    ("+yellow+" . "13-3.html#_700") ("+white+" . "13-3.html#_702")
    ("+transparent-ink+" . "13-4.html#_710")
@@ -125,8 +128,10 @@
    ("*accelerator-gestures*" . "22-2.html#_1090")
    (":y-spacing" . "29-3.html#_1615") (":y-spacing" . "17-3.html#_933")
    (":y-spacing" . "17-3.html#_965") (":y-position" . "16-2.html#_841")
+   (":y" . "8-2.html#_345")
    (":x-spacing" . "29-3.html#_1614") (":x-spacing" . "17-3.html#_932")
    (":x-spacing" . "17-3.html#_964") (":x-position" . "16-2.html#_840")
+   (":x" . "8-2.html#_344")
    ("write-token" . "24-4.html#_1340") ("without-scheduling" . "B-2.html#_1895")
    (":within-generation-separation" . "18-2.html#_988")
    ("with-translation" . "10-2.html#_533") ("with-text-style" . "11-2.html#_589")
@@ -183,6 +188,7 @@
    ("window-erase-viewport" . "29-4.html#_1694")
    ("window-configuration-event" . "8-2.html#_369")
    ("window-clear" . "29-4.html#_1691") ("window" . "29-4.html#_1690")
+   (":width" . "29-3.html#_1605")
    ("vrack-pane" . "29-3.html#_1623") ("volatile" . "2-4.html#_16")
    ("viewport" . "29-3.html#_1639") ("viewp" . "23-6.html#_1210")
    ("view" . "23-6.html#_1209") (":view" . "23-2.html#_1134")
@@ -192,6 +198,7 @@
    ("vbox-pane" . "29-3.html#_1620")
    (":value-key" . "30-4.html#_1841")
    (":value-key" . "30-4.html#_1849")
+   (":value" . "30-3.html#_1733")
    ("value-gadget" . "30-3.html#_1732")
    (":value-changed-callback" . "30-3.html#_1734")
    ("value-changed-callback" . "30-3.html#_1738")
@@ -340,7 +347,7 @@
    ("stream-add-character-output" . "16-4.html#_907")
    ("stream-accept" . "23-5.html#_1203") (":stream" . "C-1.html#_1911")
    ("stencil" . "14-2.html#_737") (":state" . "28-2.html#_1477")
-   ("state" . "15-3.html#_785")
+   ("state" . "15-3.html#_785") ; this is a concept, not a symbol in the CLIM package
    ("standard-updating-output-record" . "21-3.html#_1031")
    ("standard-tree-output-record" . "16-3.html#_873")
    ("standard-tree-output-history" . "16-3.html#_885")
@@ -661,7 +668,9 @@
    ("nil" . "23-8.html#_1254") ("new-page" . "E-1.html#_1965")
    (":ncolumns" . "30-4.html#_1860") (":name-key" . "30-4.html#_1840")
    (":name-key" . "30-4.html#_1848") (":name" . "29-2.html#_1595")
-   (":name" . "28-2.html#_1470") (":n-rows" . "17-3.html#_968")
+   (":name" . "28-2.html#_1470")
+   (":n-rows" . "17-3.html#_968")
+   (":n-columns" . "17-3.html#_969")
    ("mutable" . "2-4.html#_14")
    (":multiple-columns-x-spacing" . "17-3.html#_934")
    ("move-sheet" . "7-3.html#_275") ("move-and-resize-sheet" . "7-3.html#_277")
@@ -806,11 +815,15 @@
    ("layout-graph-edges" . "18-2.html#_995") ("layout-frame" . "28-3.html#_1512")
    ("labelling" . "29-3.html#_1635")
    ("labelled-gadget-mixin" . "30-3.html#_1746")
-   ("label-pane" . "29-3.html#_1634") ("keyword" . "23-8.html#_1258")
+   ("label-pane" . "29-3.html#_1634")
+   (":label" . "30-3.html#_1747")
+   ("keyword" . "23-8.html#_1258")
    ("keyboard-event-key-name" . "8-2.html#_337")
    ("keyboard-event-character" . "8-2.html#_338")
    ("keyboard-event" . "8-2.html#_335") ("key-release-event" . "8-2.html#_340")
-   ("key-press-event" . "8-2.html#_339") (":items" . "30-4.html#_1839")
+   ("key-press-event" . "8-2.html#_339")
+   (":key-name" . "8-2.html#_336")
+   (":items" . "30-4.html#_1839")
    (":items" . "30-4.html#_1847")
    ("item-list-output-record-p" . "17-3.html#_963")
    ("item-list-output-record" . "17-3.html#_962")
@@ -845,7 +858,9 @@
    ("immediate-rescan" . "24-1.html#_1313")
    ("immediate-repainting-mixin" . "8-4.html#_433")
    ("identity-transformation-p" . "5-3.html#_194")
-   (":id-test" . "21-3.html#_1027") ("hrack-pane" . "29-3.html#_1622")
+   (":id-test" . "21-3.html#_1027")
+   (":id" . "30-3.html#_1715")
+   ("hrack-pane" . "29-3.html#_1622")
    ("horizontally" . "29-3.html#_1619")
    ("highlight-presentation" . "23-3.html#_1172")
    ("highlight-output-record" . "16-2.html#_856")
@@ -920,7 +935,8 @@
    ("frame-pretty-name" . "28-3.html#_1492")
    ("frame-pointer-documentation-output" . "28-3.html#_1501")
    ("frame-parent" . "28-3.html#_1503") ("frame-panes" . "28-3.html#_1504")
-   ("frame-name" . "28-3.html#_1491") ("frame-mananger-p" . "28-5.html#_1547")
+   ("frame-name" . "28-3.html#_1491")
+   ("frame-manager-p" . "28-5.html#_1547")
    ("frame-manager-notify-user" . "28-5.html#_1570")
    ("frame-manager-menu-choose" . "25.html#_1355")
    ("frame-manager-frames" . "28-5.html#_1555")
@@ -996,7 +1012,9 @@
    ("ellipse-end-angle" . "3-2.html#_147")
    ("ellipse-center-point" . "3-2.html#_144")
    ("ellipse-center-point*" . "3-2.html#_143") ("ellipse" . "3-2.html#_132")
-   ("ellipse" . "3-2.html#_129") ("draw-text" . "12-5.html#_636")
+   ("ellipse" . "3-2.html#_129")
+   (":editable-p" . "30-4.html#_1855")
+   ("draw-text" . "12-5.html#_636")
    ("draw-text*" . "12-5.html#_637") ("draw-standard-menu" . "25.html#_1357")
    ("draw-rectangles" . "12-5.html#_630") ("draw-rectangles*" . "12-5.html#_631")
    ("draw-rectangle" . "12-5.html#_628") ("draw-rectangle*" . "12-5.html#_629")
@@ -1210,7 +1228,8 @@
    ("add-gesture-name" . "22-3.html#_1101")
    ("add-command-to-command-table" . "27-2.html#_1400")
    ("add-character-output-to-text-record" . "16-3.html#_880")
-   ("active" . "15-3.html#_784") ("activation-gesture-p" . "24-2.html#_1327")
+   ("active" . "15-3.html#_784") ; this is a concept, not a symbol in the CLIM package
+   ("activation-gesture-p" . "24-2.html#_1327")
    ("activate-gadget" . "30-3.html#_1727")
    (":activate-callback" . "30-3.html#_1740")
    ("activate-callback" . "30-3.html#_1742")
@@ -1228,3 +1247,43 @@
    ("abort-gesture-event" . "22-2.html#_1089")
    ("abort-gesture" . "22-2.html#_1088")
    ("*abort-gestures*" . "22-2.html#_1087")))
+
+;;; Font lock highlighting for CLIM-specified symbols
+
+(defvar hyperclim-specification-keyword-exceptions
+  '("t" "nil"
+    "boolean"
+    "integer" "ratio" "rational" "float" "real" "complex" "number"
+    "character" "string" "symbol" "keyword" "pathname" "sequence"
+    "null" "not" "and" "or" "member"
+    "active" "state") ; concepts, not exported symbols
+  "Entries that should not be highlighted.
+Either because they coincide with Common Lisp symbols that are
+frequently used for other purposes or because the entries
+designate concepts that do not correspond to symbols in the CLIM
+package.")
+
+(defface font-lock-clim-specified-face
+  '((t . (:underline "gray40")))
+  "Face for symbols specified in the CLIM specification."
+  :group 'slime)
+
+(defun hyperclim-add-specification-keywords ()
+  "Add highlighting for CLIM-specified symbols."
+  (let ((keywords '()))
+    (dolist (entry (cl-rest clim-gilberth-spec))
+      (let ((symbol (car entry)))
+        (unless (cl-member symbol hyperclim-specification-keyword-exceptions
+                           :test #'string=)
+          (let ((regex (format "\\_<\\(%s\\)\\_>" (regexp-quote symbol))))
+            (push `(,regex 1 'font-lock-clim-specified-face)
+                  keywords)))))
+    (font-lock-add-keywords nil keywords)))
+
+(add-hook 'lisp-mode-hook
+          (lambda ()
+            (when (string-match-p "/mcclim/" (buffer-file-name))
+              (hyperclim-add-specification-keywords))))
+
+(provide 'hyperclim)
+;;; hyperclim.el ends here

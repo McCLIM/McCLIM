@@ -1,25 +1,12 @@
-;;;; ----------------------------------------------------------------------
-;;;;     Title: X11 standard keysym interpretation rules
-;;;;   Created: 2016-01-25
-;;;;    Author: Robert Strandh <robert.strandh@gmail.com>
-;;;;   License: LGPL (See file COPYING for details).
-;;;; ----------------------------------------------------------------------
-;;;;  (c) copyright 2016 by Robert Strandh
-
-;;;; This library is free software; you can redistribute it and/or
-;;;; modify it under the terms of the GNU Library General Public
-;;;; License as published by the Free Software Foundation; either
-;;;; version 2 of the License, or (at your option) any later version.
-;;;;
-;;;; This library is distributed in the hope that it will be useful,
-;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;;; Library General Public License for more details.
-;;;;
-;;;; You should have received a copy of the GNU Library General Public
-;;;; License along with this library; if not, write to the 
-;;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) copyright 2016 Robert Strandh <robert.strandh@gmail.com>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; X11 standard keysym interpretation rules
 
 (cl:in-package #:clim-clx)
 
@@ -52,13 +39,13 @@
   ;; Loop over the modifier positions corresponding to Mod1
   ;; through Mod5.
   (loop with mask = #b00000000
-	with keysym = (clim-xcommon:keysym-name-to-keysym :MODE-SWITCH)
-	for index from 3 to 7
-	for keycodes = (nth-value index (xlib:modifier-mapping display))
-	do (loop for keycode in keycodes
-		 when (= keysym (xlib:keycode->keysym display keycode 0))
-		   do (setf mask (logior mask (ash 1 index))))
-	finally (return mask)))
+        with keysym = (clim-xcommon:keysym-name-to-keysym :MODE-SWITCH)
+        for index from 3 to 7
+        for keycodes = (nth-value index (xlib:modifier-mapping display))
+        do (loop for keycode in keycodes
+                 when (= keysym (xlib:keycode->keysym display keycode 0))
+                   do (setf mask (logior mask (ash 1 index))))
+        finally (return mask)))
 
 ;;;; Which keysym to use within a group is controlled by rules
 ;;;; described below.  To understand those rules, we need to
@@ -87,13 +74,13 @@
   ;; Loop over the modifier positions corresponding to Mod1
   ;; through Mod5.
   (loop with mask = #b00000000
-	with keysym = (clim-xcommon:keysym-name-to-keysym :NUM-LOCK)
-	for index from 3 to 7
-	for keycodes = (nth-value index (xlib:modifier-mapping display))
-	do (loop for keycode in keycodes
-		 when (= keysym (xlib:keycode->keysym display keycode 0))
-		   do (setf mask (logior mask (ash 1 index))))
-	finally (return mask)))
+        with keysym = (clim-xcommon:keysym-name-to-keysym :NUM-LOCK)
+        for index from 3 to 7
+        for keycodes = (nth-value index (xlib:modifier-mapping display))
+        do (loop for keycode in keycodes
+                 when (= keysym (xlib:keycode->keysym display keycode 0))
+                   do (setf mask (logior mask (ash 1 index))))
+        finally (return mask)))
 
 ;;;; Whether a caps-lock or a shift-lock modifier is in effect is a
 ;;;; bit trickier, because there is only one bit position in the
@@ -119,11 +106,11 @@
 ;;;; interpreted as a caps-lock modifier.
 (defun compute-caps-lock-mask (display)
   (let* ((keysym (clim-xcommon:keysym-name-to-keysym :CAPS-LOCK))
-	 (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
+         (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
     (loop for keycode in keycodes
-	  when (= keysym (xlib:keycode->keysym display keycode 0))
-	    return #b00000010
-	finally (return #b00000000))))
+          when (= keysym (xlib:keycode->keysym display keycode 0))
+            return #b00000010
+        finally (return #b00000000))))
 
 ;;;; SHIFT-LOCK: Whether shift-lock is in effect is controlled by the
 ;;;; lock bit position in the modifier mask in effect when a key-press
@@ -141,11 +128,11 @@
   (if (not (zerop (compute-caps-lock-mask display)))
       #b00000000
       (let* ((keysym (clim-xcommon:keysym-name-to-keysym :SHIFT-LOCK))
-	     (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
-	(loop for keycode in keycodes
-	      when (= keysym (xlib:keycode->keysym display keycode 0))
-		return #b00000010
-	      finally (return #b00000000)))))
+             (keycodes  (nth-value 1 (xlib:modifier-mapping display))))
+        (loop for keycode in keycodes
+              when (= keysym (xlib:keycode->keysym display keycode 0))
+                return #b00000010
+              finally (return #b00000000)))))
 
 ;;;; There are two steps involved in this process.
 ;;;;
@@ -160,17 +147,17 @@
   (;; This slot contains a mask to be applied to an X11 modifier mask
    ;; to determine whether the "mode switch" modifier is in effect.
    (%mode-switch-mask :initarg :mode-switch-mask
-		      :initform #b00000000
-		      :accessor mode-switch-mask)
+                      :initform #b00000000
+                      :accessor mode-switch-mask)
    (%num-lock-mask :initarg :num-lock-mask
-		   :initform #b00000000
-		   :accessor num-lock-mask)
+                   :initform #b00000000
+                   :accessor num-lock-mask)
    (%shift-lock-mask :initarg :shift-lock-mask
-		     :initform #b00000000
-		     :accessor shift-lock-mask)
+                     :initform #b00000000
+                     :accessor shift-lock-mask)
    (%caps-lock-mask :initarg :caps-lock-mask
-		    :initform #b00000000
-		    :accessor caps-lock-mask)))
+                    :initform #b00000000
+                    :accessor caps-lock-mask)))
 
 (defun compute-keysym-interpretation (display)
   (make-instance 'keysym-interpretation
@@ -225,8 +212,8 @@
 (defparameter *keypad-table*
   (let ((result (make-hash-table :test #'eql)))
     (loop for keysym-name in *keypad-keysym-names*
-	  for keysym = (clim-xcommon:keysym-name-to-keysym keysym-name)
-	  do (setf (gethash keysym result) t))
+          for keysym = (clim-xcommon:keysym-name-to-keysym keysym-name)
+          do (setf (gethash keysym result) t))
     result))
 
 (defun keypad-keysym-p (keysym)
@@ -238,25 +225,25 @@
   (let ((result (make-hash-table :test #'eql)))
     ;; ASCII lower-case characters.
     (loop for keysym from #x61 to #x7a
-	  do (setf (gethash keysym result) (- keysym #x20)))
+          do (setf (gethash keysym result) (- keysym #x20)))
     ;; More Latin-1 characters.
     (loop for keysym from #xe0 to #xf6
-	  do (setf (gethash keysym result) (- keysym #x20)))
+          do (setf (gethash keysym result) (- keysym #x20)))
     (loop for keysym from #xf8 to #xff
-	  do (setf (gethash keysym result) (- keysym #x20)))
+          do (setf (gethash keysym result) (- keysym #x20)))
     ;; Latin-2 characters.
     (loop for keysym in '(#x1b1 #x1b3 #x1b5 #x1b6 #x1b9
-			  #x1ba #x1bb #x1bc #x1be #x1bf)
-	  do (setf (gethash keysym result) (- keysym #x10)))
+                          #x1ba #x1bb #x1bc #x1be #x1bf)
+          do (setf (gethash keysym result) (- keysym #x10)))
     (loop for keysym in '(#x1e0 #x1e3 #x1e5 #x1e6 #x1e8 #x1ea #x1ec #x1ef
-			  #x1f0 #x1f1 #x1f2 #x1f5 #x1fb #x1f8 #x1f9 #x1f0e)
-	  do (setf (gethash keysym result) (- keysym #x20)))
+                          #x1f0 #x1f1 #x1f2 #x1f5 #x1fb #x1f8 #x1f9 #x1f0e)
+          do (setf (gethash keysym result) (- keysym #x20)))
     ;; Latin-3 characters.
     (loop for keysym in '(#x3b3 #x3b5 #x3b6 #x3ba #x3bb #x3bc)
-	  do (setf (gethash keysym result) (- keysym #x10)))
+          do (setf (gethash keysym result) (- keysym #x10)))
     (loop for keysym in '(#x3e0 #x3e7 #x3ec #x3ef #x3e0
-			  #x3f1 #x3f2 #x3f3 #x3f9 #x3fd #x3fe)
-	  do (setf (gethash keysym result) (- keysym #x20)))
+                          #x3f1 #x3f2 #x3f3 #x3f9 #x3fd #x3fe)
+          do (setf (gethash keysym result) (- keysym #x20)))
     ;; Latin-9 characters.
     (setf (gethash #x13bd result) #x13bc)
     ;; FIXME, do more characters
@@ -271,15 +258,15 @@
 ;;; used and 2 if group 2 is to be used.
 (defun rule-1 (display keysym-interpretation keycode modifier-mask offset)
   (if (and (num-lock-in-effect-p keysym-interpretation modifier-mask)
-	   (keypad-keysym-p (xlib:keycode->keysym display keycode (1+ offset))))
+           (keypad-keysym-p (xlib:keycode->keysym display keycode (1+ offset))))
       ;; Rule 1 applies.
       (xlib:keycode->keysym
        display
        keycode
        (if (or (shift-in-effect-p modifier-mask)
-	       (shift-lock-in-effect-p keysym-interpretation modifier-mask))
-	   offset
-	   (1+ offset)))
+               (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+           offset
+           (1+ offset)))
       ;; Rule 1 does not apply.  Return false.
       nil))
 
@@ -288,7 +275,7 @@
 ;;; then the first keysym in the group is returned.
 (defun rule-2 (display keycode modifier-mask offset)
   (if (not (or (shift-in-effect-p modifier-mask)
-	       (lock-in-effect-p modifier-mask)))
+               (lock-in-effect-p modifier-mask)))
       ;; Rule 2 applies.
       (xlib:keycode->keysym
        display
@@ -301,10 +288,10 @@
 ;;; modifier is on.
 (defun rule-3 (display keysym-interpretation keycode modifier-mask offset)
   (if (and (not (shift-in-effect-p modifier-mask))
-	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
+           (caps-lock-in-effect-p keysym-interpretation modifier-mask))
       (let* ((first (xlib:keycode->keysym display keycode offset))
-	     (upper (lower-case-keysym-p first)))
-	(if (null upper) first upper))
+             (upper (lower-case-keysym-p first)))
+        (if (null upper) first upper))
       ;; Rule 3 does not apply.  Return false.
       nil))
 
@@ -312,11 +299,11 @@
 ;;; are both on.
 (defun rule-4 (display keysym-interpretation keycode modifier-mask offset)
   (if (and (shift-in-effect-p modifier-mask)
-	   (caps-lock-in-effect-p keysym-interpretation modifier-mask))
+           (caps-lock-in-effect-p keysym-interpretation modifier-mask))
       ;; Rule 4 applies.
       (let* ((second (xlib:keycode->keysym display keycode (1+ offset)))
-	     (upper (lower-case-keysym-p second)))
-	(if (null upper) second upper))
+             (upper (lower-case-keysym-p second)))
+        (if (null upper) second upper))
       ;; Rule 4 does not apply.  Return false.
       nil))
 
@@ -324,7 +311,7 @@
 ;;; are both on.
 (defun rule-5 (display keysym-interpretation keycode modifier-mask offset)
   (if (and (shift-in-effect-p modifier-mask)
-	   (shift-lock-in-effect-p keysym-interpretation modifier-mask))
+           (shift-lock-in-effect-p keysym-interpretation modifier-mask))
       ;; Rule 5 applies.
       (xlib:keycode->keysym display keycode (1+ offset))
       ;; Rule 5 does not apply.  Return false.
@@ -332,10 +319,10 @@
 
 (defun keycode-to-keysym (display keysym-interpretation keycode modifier-mask)
   (let ((offset (if (mode-switch-in-effect-p keysym-interpretation modifier-mask)
-		    0
-		    2)))
+                    0
+                    2)))
     (or (rule-1 display keysym-interpretation keycode modifier-mask offset)
-	(rule-2 display keycode modifier-mask offset)
-	(rule-3 display keysym-interpretation keycode modifier-mask offset)
-	(rule-4 display keysym-interpretation keycode modifier-mask offset)
-	(rule-5 display keysym-interpretation keycode modifier-mask offset))))
+        (rule-2 display keycode modifier-mask offset)
+        (rule-3 display keysym-interpretation keycode modifier-mask offset)
+        (rule-4 display keysym-interpretation keycode modifier-mask offset)
+        (rule-5 display keysym-interpretation keycode modifier-mask offset))))

@@ -2,12 +2,11 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2019-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2019-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; Inspection methods for characters.
-;;;
 
 (cl:in-package #:clouseau)
 
@@ -41,8 +40,8 @@
                                        (style  (eql :expanded-body))
                                        (stream t))
   (formatting-table (stream)
-    (format-place-row stream object 'reader-place 'char-name :label "Name")
-    (format-place-row stream object 'reader-place 'char-code :label "Code")
+    (format-place-row stream object 'deep-reader-place 'char-name :label "Name")
+    (format-place-row stream object 'deep-reader-place 'char-code :label "Code")
     (when-let ((weight (digit-char-p object)))
       (format-place-row stream object 'pseudo-place weight :label "Weight"))))
 

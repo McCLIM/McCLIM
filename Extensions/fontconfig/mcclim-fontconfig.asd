@@ -1,14 +1,16 @@
-(asdf:defsystem #:mcclim-fontconfig
+(in-package #:asdf-user)
+
+(defsystem "mcclim-fontconfig"
   :description "CFFI interface to Fontconfig"
   :license "Apache"
-  :defsystem-depends-on (:cffi-grovel)
+  :defsystem-depends-on ("cffi-grovel")
   :serial t
-  :depends-on (:cffi
-               :alexandria)
+  :depends-on ("cffi"
+               "alexandria")
   :components ((:module src
-                        :serial t
-                        :components ((:file "package")
-                                     (cffi-grovel:grovel-file "grovel")
-                                     (:file "conditions")
-                                     (:file "functions")
-                                     (:file "fontconfig")))))
+                :serial t
+                :components ((:file "package")
+                             (cffi-grovel:grovel-file "grovel")
+                             (:file "conditions")
+                             (:file "functions")
+                             (:file "fontconfig")))))

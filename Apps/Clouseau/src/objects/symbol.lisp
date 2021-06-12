@@ -131,20 +131,30 @@
 
 (defmethod make-object-state ((object class)
                               (place  symbol-type-place))
-  (make-instance (object-state-class object place) :place place
-                                                   :style :name-only))
+  (let ((package (symbol-package (container place))))
+    (make-instance (object-state-class object place) :place           place
+                                                     :context-package package
+                                                     :style           :name-only)))
 
 ;; Object states
 
 ;;; `inspected-symbol'
 
-(defclass inspected-symbol (inspected-object)
+(defclass inspected-symbol (remembered-collapsed-style-mixin
+                            context-package-mixin
+                            inspected-object)
   ())
 
 (defmethod object-state-class ((object symbol) (place t))
   'inspected-symbol)
 
 ;;; Object inspection methods
+
+(defmethod inspect-object-using-state ((object symbol)
+                                       (state  inspected-symbol)
+                                       (style  (eql :name-only))
+                                       (stream t))
+  (print-symbol-in-context object (context-package state) stream))
 
 (defmethod inspect-object-using-state :after ((object symbol)
                                               (state  inspected-symbol)

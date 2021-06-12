@@ -1,26 +1,15 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 2002 by Tim Moore (moore@bricoworks.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2002 by Tim Moore <moore@bricoworks.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Commands and presentation translators that live in the global-command-table.
+;;;
 
-(in-package :clim-internals)
-
-;;; Commands and presentation translators that live in the
-;;; global-command-table.
+(in-package #:clim-internals)
 
 ;;; Global help command
 (define-command (com-null-command :command-table global-command-table :name nil)
@@ -31,13 +20,11 @@
     ((kind '(completion (("Keyboard" keyboard) ("Commands" commands))
              :value-key cadr)
              :prompt "with"
-             :default 'keyboard
+             :default 'commands
              :display-default nil))
   (if (eq kind 'keyboard)
       (format *query-io* "Input editor commands are like Emacs.~%")
-      (let ((command-table (if *application-frame*
-                               (frame-command-table *application-frame*)
-                               'global-command-table))
+      (let ((command-table (frame-command-table *application-frame*))
             (command-names nil))
         (map-over-command-table-names #'(lambda (name command)
                                           (push (cons name command)
@@ -54,6 +41,10 @@
           (format-textual-list command-names #'show :stream *query-io*)
           (princ "." *query-io*)
           nil))))
+
+(define-command (com-quit :command-table global-command-table :name "Quit")
+    ()
+  (frame-exit *application-frame*))
 
 
 ;;; Describe command.  I don't know if this should go in the global command
@@ -416,30 +407,35 @@
                (unread-gesture gesture :stream stream))
              (return (values object ptype))))))
 
+(defun substitute-read-with-accept-p (stream)
+  (or (typep stream 'input-editing-stream)
+      (typep stream 'extended-input-stream)))
 
+;;; FIXME shouldn't we patch these symbols instead of redefining functions?
+;;; -- jd 2021-03-26
 (with-system-redefinition-allowed
-    (defun read (&optional (stream *standard-input*)
-                   (eof-error-p t)
-                   (eof-value nil)
-                   (recursivep nil))
-      (if (typep stream 'input-editing-stream)
-          (let ((*eof-error-p* eof-error-p)
-                (*eof-value* eof-value)
-                (*recursivep* recursivep))
-            (accept '((expression) :auto-activate t :preserve-whitespace nil)
-                    :stream stream :prompt nil))
-          (funcall *sys-read* stream eof-error-p eof-value recursivep)))
+
+  (defun read (&optional (stream *standard-input*)
+                 (eof-error-p t)
+                 (eof-value nil)
+                 (recursivep nil))
+    (if (substitute-read-with-accept-p stream)
+        (let ((*eof-error-p* eof-error-p)
+              (*eof-value* eof-value)
+              (*recursivep* recursivep))
+          (accept '((expression) :auto-activate t :preserve-whitespace nil)
+                  :stream stream :prompt nil))
+        (funcall *sys-read* stream eof-error-p eof-value recursivep)))
 
   (defun read-preserving-whitespace (&optional (stream *standard-input*)
                                        (eof-error-p t)
                                        (eof-value nil)
                                        (recursivep nil))
-    (if (typep stream 'input-editing-stream)
+    (if (substitute-read-with-accept-p stream)
         (let ((*eof-error-p* eof-error-p)
               (*eof-value* eof-value)
               (*recursivep* recursivep))
           (accept '((expression) :auto-activate t :preserve-whitespace t)
                   :stream stream :prompt nil))
         (funcall *sys-read-preserving-whitespace*
-                 stream eof-error-p eof-value recursivep)))
-) ; with-system-redefinition-allowed
+                 stream eof-error-p eof-value recursivep))))

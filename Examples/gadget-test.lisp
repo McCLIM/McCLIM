@@ -1,27 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Package: CLIM-DEMO; Base: 10; Lowercase: Yes -*-
-
-;;;  (c) copyright 2000 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
-(in-package :clim-demo)
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Gadget Test/Demo
+;;;
+
+(in-package #:clim-demo)
 
 (defun gadget-test (&optional frame-manager-name)
   (run-frame-top-level
@@ -215,7 +204,7 @@
                            (list 0.20 0.09 0.60 0.20)))))
 
 (defmethod note-sheet-grafted ((sheet radar-pane))
-  (clim-internals::schedule-timer-event sheet 'radiate 0.1))
+  (clime:schedule-event sheet (make-instance 'timer-event :sheet sheet) 0.1))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
   (with-slots (points) pane
@@ -251,4 +240,4 @@
                                  rx 0
                                  :ink +black+ :filled nil)))))))))
   (when (sheet-grafted-p pane)
-    (clim-internals::schedule-timer-event pane 'radiate 0.1)))
+    (clime:schedule-event pane (make-instance 'timer-event :sheet pane) 0.1)))

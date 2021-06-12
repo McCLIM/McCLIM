@@ -1,34 +1,18 @@
-;;; -*- Mode: Lisp; Package: DREI-LISP-SYNTAX; -*-
-
-;;;  (c) copyright 2004-2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2004-2005 by
-;;;           Elliott Johnson (ejohnson@fasl.info)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;;  (c) copyright 2004-2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2004-2005 Elliott Johnson <ejohnson@fasl.info>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;; -------------------------------------------------------------------------
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
 ;;; Commands specific to the Lisp syntax for Drei.
 
-(in-package :drei-lisp-syntax)
+(in-package #:drei-lisp-syntax)
 
 ;;; This command table is used when Drei runs as a pane.
 (make-command-table 'pane-lisp-table
@@ -37,7 +21,7 @@
 (defmethod additional-command-tables append ((drei drei-pane) (command-table lisp-table))
   '(pane-lisp-table))
 
-;; Movement commands.
+;;; Movement commands.
 (drei-commands:define-motion-commands expression lisp-table)
 (drei-commands:define-motion-commands definition lisp-table)
 (drei-commands:define-motion-commands up lisp-table
@@ -51,14 +35,14 @@
 (drei-commands:define-editing-commands expression lisp-table)
 (drei-commands:define-deletion-commands expression lisp-table)
 
-(define-command (com-fill-paragraph :name t :command-table lisp-table) 
+(define-command (com-fill-paragraph :name t :command-table lisp-table)
     ()
   "Fill paragraph at point. Will have no effect unless there is a
 string at point."
   (let* ((token (form-around (current-syntax) (offset (point))))
          (fill-column (auto-fill-column (current-view))))
     (when (form-string-p token)
-      (with-accessors ((offset1 start-offset) 
+      (with-accessors ((offset1 start-offset)
                        (offset2 end-offset)) token
         (fill-region (make-buffer-mark (current-buffer) offset1 :right)
                      (make-buffer-mark (current-buffer) offset2 :right)
@@ -108,7 +92,7 @@ argument hints in the minibuffer."
 (define-command (com-complete-symbol :name t :command-table lisp-table)
     ()
   "Attempt to complete the symbol at mark. If successful, move point
-to end of symbol.  
+to end of symbol.
 
 If more than one completion is available, a list of possible
 completions will be displayed. If there is no symbol at mark, all
@@ -200,8 +184,6 @@ confirmation before anything is actually done."
             (display-message "Couldn't turn \"~A\" into valid operator: ~A"
                              (form-string (current-syntax) (form e)) (problem e)))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Gesture bindings
 
 (set-key 'com-fill-paragraph
@@ -285,12 +267,12 @@ confirmation before anything is actually done."
          '((#\c :control) (#\e :control)))
 
 (set-key `(com-backward-kill-expression ,*numeric-argument-marker*)
-	 'lisp-table
-	 '((#\Backspace :control :meta)))
+         'lisp-table
+         '((#\Backspace :control :meta)))
 
 (set-key `(com-kill-expression ,*numeric-argument-marker*)
-	 'lisp-table
-	 '((#\Rubout :control :meta)))
+         'lisp-table
+         '((#\Rubout :control :meta)))
 
 (set-key 'com-remove-definition
          'lisp-table

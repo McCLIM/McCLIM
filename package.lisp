@@ -455,6 +455,7 @@
    #:basic-medium                       ;class
    #:basic-pane                         ;class
    #:basic-port                         ;class
+   #:basic-output-record                ;class
    #:basic-sheet                        ;class
    #:bboard-pane                        ;pane
    #:beep                               ;generic function
@@ -1332,6 +1333,7 @@
    #:standard-encapsulating-stream      ;class
    #:standard-extended-input-stream     ;class
    #:standard-extended-output-stream    ;class
+   #:standard-frame-manager             ;class
    #:standard-graph-node-output-record  ;class
    #:standard-graph-output-record       ;class
    #:standard-input-editing-stream      ;class
@@ -1889,6 +1891,8 @@
    #:event-listen-or-wait
    #:schedule-event
    #:window-manager-focus-event
+   ;; frame managers
+   #:headless-frame-manager
    ;; frames
    #:frame-icon
    ;; sheets
@@ -1903,8 +1907,8 @@
    #:never-repaint-background-mixin
    #:background
    #:foreground
-   ;; #:line-style-effective-thickness
-   ;; #:line-style-effective-dashes
+   #:line-style-effective-thickness
+   #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
    #:medium-draw-circle*
@@ -1985,6 +1989,7 @@
    #:find-frame-type
    #:note-frame-pretty-name-changed
    #:note-frame-icon-changed
+   #:note-frame-command-table-changed
    ;; images
    #:rgb-image
    #:xpm-parse-file
@@ -2004,7 +2009,7 @@
 ;;; To start with, I grabbed the methods defined by the CLX backend
 ;;; whose symbol package is CLIM or CLIMI.
 
-(defpackage :clim-backend
+(defpackage #:clim-backend
   (:nicknames :climb)
   (:use :clim :clim-extensions)
   (:export
@@ -2021,8 +2026,7 @@
    #:with-pointer-grabbed
    #:port-set-mirror-name
    #:port-set-mirror-icon
-   #:port-set-mirror-region
-   #:port-set-mirror-transformation
+   #:port-set-mirror-geometry
    #:queue-callback
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
@@ -2097,7 +2101,6 @@
    #:medium-text-style
    #:note-space-requirements-changed
    #:pointer-button-state
-   #:pointer-modifier-state
    #:pointer-position
    #:realize-mirror
    #:text-size
@@ -2143,9 +2146,11 @@
                 #:ensure-gethash
                 #:last-elt
                 #:with-gensyms
+                #:once-only
                 #:if-let
                 #:when-let
-                #:when-let*)
+                #:when-let*
+                #:assoc-value)
   (:intern #:letf))
 
 (defpackage :clim-user

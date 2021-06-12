@@ -1,9 +1,9 @@
 ;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
 
-(in-package :common-lisp-user)
+(in-package #:common-lisp-user)
 
-(defpackage :clim-xcommon
-  (:use :clim :clim-lisp)
+(defpackage #:clim-xcommon
+  (:use #:clim #:clim-lisp)
   (:export #:keysym-port-mixin
            #:keysym-to-keysym-name
            #:modifier-mapping
@@ -11,9 +11,9 @@
            #:x-event-state-modifiers
            #:x-keysym-to-clim-modifiers))
 
-(defpackage :clim-clx
-  (:use :clim :clim-lisp :clim-backend)
-  (:import-from :climi
+(defpackage #:clim-clx
+  (:use #:clim #:clim-lisp #:clim-backend)
+  (:import-from #:climi
                 #:+alt-key+
                 ;;
                 #:port-text-style-mappings
@@ -25,12 +25,13 @@
                 ;;
                 #:clamp
                 #:get-environment-variable
-                #:port-pointer-sheet
                 #:map-repeated-sequence
                 #:do-sequence
                 #:with-transformed-position
                 #:with-transformed-positions
                 #:with-medium-options
+                #:line-style-effective-thickness
+                #:line-style-effective-dashes
                 ;;
                 #:pixmap
                 #:top-level-sheet-mixin
@@ -64,9 +65,10 @@
                 #:when-let*)
   (:import-from #:climi
                 #:event-listen-or-wait
-                #:%sheet-mirror-region
-                #:%sheet-mirror-transformation
-                #:standard-port)
+                #:sheet-mirror-geometry
+                #:with-standard-rectangle*
+                #:standard-port
+                #:assoc-value)
   (:export
    #:clx-port
    #:clx-render-port

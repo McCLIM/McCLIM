@@ -76,9 +76,9 @@
 
 ;;; `inspected-slot-definition'
 
-(defclass inspected-slot-definition (inspected-instance
-                                     remembered-collapsed-style-mixin
-                                     context-class-mixin)
+(defclass inspected-slot-definition (remembered-collapsed-style-mixin
+                                     context-class-mixin
+                                     inspected-instance)
   ())
 
 (defmethod object-state-class ((object c2mop:slot-definition) (place t))
@@ -103,9 +103,9 @@
 
 ;;; `inspected-class'
 
-(defclass inspected-class (inspected-instance
-                           remembered-collapsed-style-mixin
-                           context-class-mixin)
+(defclass inspected-class (remembered-collapsed-style-mixin
+                           context-package-mixin
+                           inspected-instance)
   ()
   (:default-initargs
    :slot-style nil))

@@ -1,92 +1,37 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
-
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2018 Elias Mårtenson <lokedhs@gmail.com>
+;;;  (c) copyright 2018 Daniel Kochmanski <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Declarations and definitions of the generic functions and helper
 ;;; utilities needed for the Drei redisplay engine
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Display of Drei instances.
 ;;;
 ;;; The basic Drei redisplay functions:
 
-(defgeneric display-drei-view-contents (stream view)
-  (:documentation "The purpose of this function is to display the
-contents of a Drei view to some output surface. `Stream' is the
-CLIM output stream that redisplay should be performed on, `view'
-is the Drei view instance that is being displayed. Methods
-defined for this generic function can draw whatever they want,
-but they should not assume that they are the only user of
-`stream', unless the `stream' argument has been specialized to
-some application-specific pane class that can guarantee this. For
-example, when accepting multiple values using the
-`accepting-values' macro, several Drei instances will be
-displayed simultaneously on the same stream. It is permitted to
-only specialise `stream' on `clim-stream-pane' and not
-`extended-output-stream'. When writing methods for this function,
-be aware that you cannot assume that the buffer will contain only
-characters, and that any subsequence of the buffer is coercable
-to a string. Drei buffers can contain arbitrary objects, and
-redisplay methods are required to handle this (though they are
-not required to handle it nicely, they can just ignore the
-object, or display the `princ'ed representation.)")
-  (:method :around ((stream extended-output-stream) (view drei-view))
-           (letf (((stream-default-view stream) view))
-             (call-next-method))))
+(defmethod display-drei-view-contents
+    :around ((stream extended-output-stream) (view drei-view))
+  (letf (((stream-default-view stream) view))
+    (call-next-method)))
 
-(defgeneric display-drei-view-cursor (stream view cursor)
-  (:documentation "The purpose of this function is to display a
-visible indication of a cursor of a Drei view to some output
-surface. `Stream' is the CLIM output stream that drawing should
-be performed on, `view' is the Drei view object that is being
-redisplayed, `cursor' is the cursor object to be displayed (a
-subclass of `drei-cursor') and `syntax' is the syntax object of
-`view'. Methods on this generic function can draw whatever they
-want, but they should not assume that they are the only user of
-`stream', unless the `stream' argument has been specialized to
-some application-specific pane class that can guarantee this. It
-is permitted to only specialise `stream' on `clim-stream-pane'
-and not `extended-output-stream'. It is recommended to use the
-function `offset-to-screen-position' to determine where to draw
-the visual representation for the cursor. It is also recommended
-to use the ink specified by `cursor' to perform the drawing, if
-applicable. This method will only be called by the Drei redisplay
-engine when the cursor is active and the buffer position it
-refers to is on display - therefore, `offset-to-screen-position'
-is *guaranteed* to not return NIL or T.")
-  (:method :around ((stream extended-output-stream) (view drei-view)
-                    (cursor drei-cursor))
-           (when (visible-p cursor)
-             (letf (((stream-default-view stream) view))
-               (call-next-method)))))
+(defmethod display-drei-view-cursor
+    :around ((stream extended-output-stream) (view drei-view)
+             (cursor drei-cursor))
+  (when (visible-p cursor)
+    (letf (((stream-default-view stream) view))
+      (call-next-method))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The standard redisplay implementation for buffer views.
 
 (defstruct face
@@ -458,9 +403,9 @@ dimensions."
   (let ((dimensions (stroke-dimensions stroke)))
     (setf (stroke-dirty stroke) (and (stroke-dirty stroke) (not drawn))
           (stroke-modified stroke) nil
-	  (stroke-parts stroke) parts
+          (stroke-parts stroke) parts
           (stroke-widths stroke) widths
-	  (x1 dimensions) x1
+          (x1 dimensions) x1
           (y1 dimensions) y1
           (x2 dimensions) x2
           (y2 dimensions) y2
@@ -474,11 +419,11 @@ with a char-code of less than #o200, \"\\[octal code]\" for those above
 NOTE: Assumes an ASCII/Unicode character encoding."
   (let ((code (char-code object)))
     (cond ((eql object #\Tab)
-	   object)
-	  ((< code #o200)
-	   (format nil "^~C" (code-char (+ code (char-code #\@)))))
-	  (t
-	   (format nil "\\~O" code)))))
+           object)
+          ((< code #o200)
+           (format nil "^~C" (code-char (+ code (char-code #\@)))))
+          (t
+           (format nil "\\~O" code)))))
 
 (defun analyse-stroke-string (string)
   "Return a list of parts of `string', where each part is a continuous
@@ -486,18 +431,18 @@ run of graphic characters or a single non-graphic character. Each element
 in the list is of the form START, END, and one of NIL (meaning a run
 of graphic characters) or an object representing the non-graphic char."
   (loop with len = (length string)
-	for left = 0 then (+ right 1)
-	for right = (or (position-if-not #'graphic-char-p string :start left)
-			len)
-	unless (= left right)
-	  collect (list left right)
-	  into parts
-	until (>= right len)
-	collect (list right 
-		      (+ right 1) 
-		      (non-graphic-char-rep (aref string right)))
-	  into parts
-	finally (return parts)))
+        for left = 0 then (+ right 1)
+        for right = (or (position-if-not #'graphic-char-p string :start left)
+                        len)
+        unless (= left right)
+          collect (list left right)
+          into parts
+        until (>= right len)
+        collect (list right
+                      (+ right 1)
+                      (non-graphic-char-rep (aref string right)))
+          into parts
+        finally (return parts)))
 
 (defun calculate-stroke-width (stroke-string text-style stream x-position)
   "Calculate the width information of `stroke-string' when
@@ -512,8 +457,8 @@ of the stroke."
      for (start end object) in parts
      do (cond ((eql object #\Tab)
                (incf width
-		     (next-tab-stop stream (stream-default-view stream)
-				    (+ width x-position)))
+                     (next-tab-stop stream (stream-default-view stream)
+                                    (+ width x-position)))
                (vector-push-extend width widths))
               (object
                (multiple-value-bind (w)
@@ -547,8 +492,8 @@ any actual output takes place."
                    (end-offset stroke-end-offset)
                    (dimensions stroke-dimensions)
                    (drawing-options stroke-drawing-options)
-		   (widths stroke-widths)
-		   (parts stroke-parts)) stroke
+                   (widths stroke-widths)
+                   (parts stroke-parts)) stroke
     (let* ((stroke-string (in-place-buffer-substring
                            (buffer view) (cache-string view)
                            start-offset end-offset))
@@ -563,9 +508,9 @@ any actual output takes place."
            (text-style-descent (text-style-descent roman-text-style (sheet-medium stream))))
       (with-accessors ((x1 x1) (x2 x2) (center center)) dimensions
         (multiple-value-bind (width stroke-parts part-widths)
-	    (if (stroke-modified stroke)
-		(calculate-stroke-width stroke-string merged-text-style stream cursor-x)
-		(values (- x2 x1) parts widths))
+            (if (stroke-modified stroke)
+                (calculate-stroke-width stroke-string merged-text-style stream cursor-x)
+                (values (- x2 x1) parts widths))
           (when draw
             (loop
               for (start end object) in stroke-parts
@@ -585,10 +530,10 @@ any actual output takes place."
                                     :text-style merged-text-style
                                     :ink (face-ink (drawing-options-face drawing-options))
                                     :align-y :baseline)))))
-	  (record-stroke stroke stroke-parts part-widths
+          (record-stroke stroke stroke-parts part-widths
                          cursor-x (- cursor-y text-style-ascent)
-			 (+ width cursor-x) (+ cursor-y text-style-descent)
-			 draw text-style-ascent))))))
+                         (+ width cursor-x) (+ cursor-y text-style-descent)
+                         draw text-style-ascent))))))
 
 (defun update-stroke-dimensions (stream view stroke cursor-x cursor-y)
   "Calculate the dimensions of `stroke' on `stream'
@@ -740,8 +685,7 @@ are the old dimensions of the display of `view' in device units."
           (return)
           (progn (setf (stroke-start-offset stroke) nil)
                  (invalidate-stroke stroke :modified t)))))
-  (with-bounding-rectangle* (x1 y1 x2 y2) view
-    (declare (ignore x2))
+  (with-bounding-rectangle* (x1 y1 nil y2) view
     (when (> old-height (- y2 y1))
       (clear-rectangle* pane x1 y2 (+ x1 old-width) (+ y1 old-height)))))
 
@@ -752,8 +696,8 @@ region, which will be presented with its appropriate presentation
 type (found via `presentation-type-of') to generate output."
   (let (output-record
         baseline
-	(widths (make-array 2 :initial-contents (list 0 0)))
-	(parts (list 0 1)))
+        (widths (make-array 2 :initial-contents (list 0 0)))
+        (parts (list 0 1)))
     #'(lambda (stream view stroke cursor-x cursor-y
                default-drawing-fn draw)
         (declare (ignore default-drawing-fn))
@@ -774,24 +718,22 @@ type (found via `presentation-type-of') to generate output."
                     (values (+ cursor-x 0.1) (- cursor-y baseline)))
               (when draw
                 (replay output-record stream))
-	      (setf (aref widths 1) width)
+              (setf (aref widths 1) width)
               (record-stroke stroke parts widths
                              cursor-x (- cursor-y baseline)
                              (+ width cursor-x) cursor-y
                              draw baseline)))))))
 
 (defmethod display-drei-view-contents ((pane basic-pane) (view drei-buffer-view))
-  (with-bounding-rectangle* (x1 y1 x2 y2) view
-    (let* ((old-width (- x2 x1))
-           (old-height (- y2 y1))
-           (start-offset (offset (beginning-of-line (top view))))
+  (with-bounding-rectangle* (:width old-width :height old-height) view
+    (let* ((start-offset (offset (beginning-of-line (top view))))
            (pump-state (pump-state-for-offset view start-offset))
            (pane-height (bounding-rectangle-height (or (pane-viewport pane) pane)))
            (current-line-height 0))
-      ;; For invalidation of the parts of the display that have
-      ;; changed.
-      (synchronize-view view :begin (offset (top view)) :end (max (offset (bot view))
-                                                                  (offset (top view))))
+      ;; For invalidation of the parts of the display that have changed.
+      (synchronize-view view :begin (offset (top view))
+                             :end (max (offset (bot view))
+                                       (offset (top view))))
       (setf (displayed-lines-count view) 0
             (max-line-width view) 0)
       (multiple-value-bind (cursor-x cursor-y) (stream-cursor-position pane)
@@ -817,7 +759,7 @@ type (found via `presentation-type-of') to generate output."
 
 (defstruct (pump-state
              (:constructor make-pump-state
-                           (line-index offset chunk-index))) 
+                           (line-index offset chunk-index)))
   "A pump state object used by the `drei-buffer-view'. `Line' is
 the line object `offset' is in, and `line-index' is the index of
 `line' in the list of lines maintained by the view that created
@@ -930,17 +872,17 @@ strokes. `Offset' is the offset of the next stroke to be pumped."
 `stroke', relative to the starting position of `stroke'. `Offset'
 is an absolute offset into the buffer of `view',"
   (let ((string (in-place-buffer-substring
-		 (buffer view) (cache-string view)
-		 (stroke-start-offset stroke) offset)))
+                 (buffer view) (cache-string view)
+                 (stroke-start-offset stroke) offset)))
     (loop with pos = (- offset (stroke-start-offset stroke))
-	  for width across (stroke-widths stroke)
-	  for next upfrom 1
-	  for (start end object) in (stroke-parts stroke)
-	  when (and object (= pos end))
-	    do (return (aref (stroke-widths stroke) next))
-	  when (<= start pos end)
-	    do (return (+ width
-			  (text-size stream string
+          for width across (stroke-widths stroke)
+          for next upfrom 1
+          for (start end object) in (stroke-parts stroke)
+          when (and object (= pos end))
+            do (return (aref (stroke-widths stroke) next))
+          when (<= start pos end)
+            do (return (+ width
+                          (text-size stream string
                                      :start start
                                      :end pos
                                      :text-style (merge-text-styles
@@ -1055,8 +997,7 @@ the end of the buffer."))
                              (stroke-dimensions stroke) x1 y1 x2 y2)
                             (setf (stroke-dirty stroke) t)
                             (setf (stroke-modified stroke) t))))))))
-        (with-bounding-rectangle* (vx1 vy1 vx2 vy2) view
-          (declare (ignore vy1 vx2 vy2))
+        (with-bounding-rectangle* (:x1 vx1) view
           (setf (max-line-width view)
                 (max (max-line-width view)
                      (- x2 vx1))))))))
@@ -1105,18 +1046,44 @@ calculated by `drei-bounding-rectangle*'."
     (declare (ignore y1))
     (- x2 x1)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei area redisplay.
 
 ;; XXX: Full redraw for every replay, should probably use the `region'
 ;; parameter to only invalidate some strokes.
-(defmethod replay-output-record ((drei drei-area) (stream extended-output-stream) &optional
-                                 (x-offset 0) (y-offset 0) (region +everywhere+))
+(defvar %%replay-output-record-drei-area-kludge%% nil)
+(defmethod replay-output-record
+    ((drei drei-area) (stream extended-output-stream)
+     &optional (x-offset 0) (y-offset 0) (region +everywhere+))
   (declare (ignore x-offset y-offset region))
-  (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
-    (invalidate-all-strokes (view drei))
-    (display-drei-view-contents stream (view drei))))
+  ;; FIXME this ugly kludge is to sidestep a problem in Drei. Namely Drei
+  ;; doesn't distinguish between displaying and replaying output records.  When
+  ;; drei cursor is replayed it is used to decide whether the sheet should be
+  ;; scrolled. That leads to a call to a SCROLL-EXTEND in the DISPLAY-DREI-AREA.
+  ;; the SCROLL-EXTEND may change the mirror transformation and that leads to a
+  ;; call to REPAINT-SHEET which in turn causes a recursive call to the
+  ;; REPLAY-OUTPUT-RECORD. Drei doesn't catch up to that and instead of:
+  ;;
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;
+  ;; It executes things in this order:
+  ;;
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (setf (displayed-lines-count view) 0) ; display-drei-view-contents
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;   (incf (displayed-lines-count view))   ; draw-line-strokes
+  ;;
+  ;; So the line count is incorrectly summed to 2. Later when we measure the
+  ;; bounding rectangle in display-drei-area we iterate over lines and we try to
+  ;; access a line that is out of bounds.
+  (when %%replay-output-record-drei-area-kludge%%
+    (return-from replay-output-record))
+  (let ((%%replay-output-record-drei-area-kludge%% t))
+    (letf (((stream-cursor-position stream) (output-record-start-cursor-position drei)))
+      (invalidate-all-strokes (view drei))
+      (display-drei-view-contents stream (view drei)))))
 
 (defmethod replay-output-record ((cursor drei-cursor) stream &optional
                                  (x-offset 0) (y-offset 0) (region +everywhere+))
@@ -1134,25 +1101,19 @@ calculated by `drei-bounding-rectangle*'."
                     (null (output-record-parent drei)))
           (recompute-extent-for-changed-child (output-record-parent drei) drei
                                               old-x1 old-y1 old-x2 old-y2))))
-    (when (point-cursor drei)
+    (when (and (point-cursor drei) (active drei))
       (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
-        (when (pane-viewport stream)
-          (let* ((viewport (pane-viewport stream))
-                 (viewport-height (bounding-rectangle-height viewport))
-                 (viewport-width (bounding-rectangle-width viewport))
-                 (viewport-region (pane-viewport-region stream)))
-            ;; Scroll if point went outside the visible area.
-            (when (and (active drei)
-                       (pane-viewport stream)
-                       (not (and (region-contains-position-p viewport-region x2 y2)
-                                 (region-contains-position-p viewport-region x1 y1))))
-              (scroll-extent stream
-                             (max 0 (- x2 viewport-width))
-                             (max 0 (- y2 viewport-height))))))))
+        (alexandria:when-let ((viewport (pane-viewport stream)))
+          (with-bounding-rectangle* (:height height :width width) viewport
+            (let ((region (pane-viewport-region stream)))
+              ;; Scroll if point went outside the visible area.
+              (when (and (not (region-contains-position-p region x2 y2))
+                         (not (region-contains-position-p region x1 y1)))
+                (scroll-extent stream
+                               (max 0 (- x2 width))
+                               (max 0 (- y2 height)))))))))
     (finish-output stream)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Drei pane redisplay.
 
 (defgeneric handle-redisplay (pane view region)
@@ -1232,8 +1193,7 @@ has `view'."))
 
 (defmethod fix-pane-viewport :after ((pane drei-pane) (view point-mark-view))
   (when (and (pane-viewport pane) (active pane))
-    (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor pane)
-      (declare (ignore y1))
+    (with-bounding-rectangle* (x1 nil x2 y2) (point-cursor pane)
       (multiple-value-bind (x-position y-position) (transform-position (sheet-transformation pane) 0 0)
         (let ((viewport-width (bounding-rectangle-width (or (pane-viewport pane) pane)))
               (viewport-height (bounding-rectangle-height (or (pane-viewport pane) pane))))

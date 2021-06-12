@@ -1,16 +1,14 @@
-(in-package :cl-user)
-
-(defpackage :command-and-command-table-utilities
+(defpackage #:command-and-command-table-utilities
   (:use :clim :clim-extensions :clim-lisp)
   (:export :command-of-command-table
            :command-or-commands-of-command-table
            :expand-command-tables))
 
-(defpackage :creating-assoc
+(defpackage #:creating-assoc
   (:use :cl)
   (:export :creating-assoc))
 
-(defpackage :conditional-commands
+(defpackage #:conditional-commands
   (:use :clim :clim-extensions :clim-lisp
         :command-and-command-table-utilities :creating-assoc)
   (:export :define-conditional-application-frame

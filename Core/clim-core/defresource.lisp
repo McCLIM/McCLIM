@@ -1,37 +1,17 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-INTERNALS; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: CLIM-2 Chapter 32.1 Resources
-;;;   Created: 2001-05-21
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2001 by Gilbert Baumann
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the 
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
+;;; 32.1 Resources
+;;;
 
-;;;; Changes
+(in-package #:clim-internals)
 
-;;;  When        Who    What
-;;; --------------------------------------------------------------------------------------
-;;;  2002-02-10  GB     named allocator function
-;;;  2001-05-21  GB     created
 
-(in-package :clim-internals)
-
-;;;; 32.1 Resources
 
 ;;; TODO
 ;; - provide a "real" using-resource expansion
@@ -74,7 +54,7 @@
   objects               ;a list of RESOURCE-OBJECTs
   lock                  ;A regular process lock to protect the OBJECTS slot.
   allocator             ;function to allocate an object
-                        ; takes the resource and the parameters. 
+                        ; takes the resource and the parameters.
                         ; Returns two values: the object and its
                         ; descriptor (a RESOURCE-OBJECT)
                         ; [cf. Genera's definition allocate-resource]
@@ -86,7 +66,7 @@
 (defstruct resource-object
   ;; One resourced object
   object                ;the object itself
-  lock                  ;homebrew lock 
+  lock                  ;homebrew lock
                         ; is >= 1, if resource is allocated or investigated
                         ; is 0, if resource is free
   parameters)           ;list of parameters supplied, while allocating this
@@ -128,7 +108,7 @@
             (,r. (or (car (the cons ,evil-cell))
                      (setf (car (the cons ,evil-cell))
                        (find-resource ',name)))))
-       ;; Q: Why this EVIL-CELL hack? And not 
+       ;; Q: Why this EVIL-CELL hack? And not
        ;;    (load-time-value (find-resource ..))?
        ;; A: Since the time of actual evaluation of the LOAD-TIME-VALUE is
        ;;    unspecified with regard to other [top level] forms in a file[,
@@ -194,10 +174,10 @@
              (if (consp (first parameter))
                  (pushnew (second (first parameter)) pvars)
                (pushnew (first parameter) pvars))
-             (when (third parameter) 
+             (when (third parameter)
                (pushnew (third parameter) pvars)))))
     (setf pvars (reverse pvars))
-    
+
     (let ((parameters-needed-p
            (or (null matcher)
                (not (null deinitializer)))))
@@ -205,7 +185,7 @@
                  ;; Allocate a fresh object
                  (let ((ro. (gensym "RO.")))
                    `(let ((,ro.
-                           (make-resource-object 
+                           (make-resource-object
                             :object ,constructor
                             :lock (list 1)
                             :parameters ,(if parameters-needed-p
@@ -214,7 +194,7 @@
                       (with-lock-held ((resource-lock ,r.))
                         (push ,ro. (resource-objects ,r.)))
                       ,ro.)) )
-               
+
                (match-expr (ro.)
                  ;; Compilation of the matcher
                  (let ((q. (gensym "Q.")))
@@ -225,9 +205,9 @@
                      `(let ((,q. (resource-object-parameters ,ro.)))
                         (declare (ignorable ,q.))
                         (and
-                         ,@(loop for p in pvars collect 
+                         ,@(loop for p in pvars collect
                                  `(equal (pop ,q.) ,p)))))))
-               
+
                (find-expr (r.)
                  ;; Find an object, which matches or allocate a fresh one.
                  ;;
@@ -249,7 +229,7 @@
                         (declare (type cons ,lock.))
                         (when (= 0 (the fixnum (car ,lock.)))
                           (resource-atomic-incf (the fixnum (car ,lock.)))
-                          (cond ((and (= 1 (the fixnum 
+                          (cond ((and (= 1 (the fixnum
                                              (locally
                                                #+excl (declare (optimize (safety 3))) ;EXCL bug
                                                (car ,lock.))))
@@ -257,7 +237,7 @@
                                  (return ,ro.))
                                 (t
                                  (resource-atomic-decf (the fixnum (car ,lock.)))) ))))))
-               
+
                (allocator ()
                  ;; Function for ALLOCATE-RESOURCE
                  (let ((r.  (gensym "R."))
@@ -278,7 +258,7 @@
                                 (values (resource-object-object ,ro.)
                                         ,ro.))))
                      #',fn.)))
-               
+
                (install-parameters-expr (ro.)
                  (and parameters-needed-p
                       (let ((q. (gensym "Q.")))
@@ -286,7 +266,7 @@
                            (declare (ignorable ,q.))
                            ,@(loop for p in pvars collect
                                    `(setf (car ,q.) ,p ,q. (cdr ,q.)))))))
-               
+
                (deallocator ()
                  ;; Function for deallocate-resource
                  (let ((r.    (gensym "R."))
@@ -364,7 +344,7 @@
 ;; chosen to kick us out due to inactivity. With
 ;; PERMANENTLY-DEALLOCATE-RESOURCE it is now possible to selectively clean
 ;; up the those objects. Or do it on demand, while matching.
-   
+
 ;;   (defresource ftp-connection (host &optional (port +ftp-port+))
 ;;      :constructor (make-ftp-connection host port)
 ;;      :matcher     (cond ((connection-dead-p ftp-connection)

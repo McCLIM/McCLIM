@@ -1,9 +1,13 @@
-;;;;  Copyright (c) 1998-2000       Michael McDonald <mikemac@mikemac.com>
-;;;;  Copyright (c) 2000-2014       Robert Strandh <robert.strandh@gmail.com>
-;;;;  Copyright (c) 1998-2002       Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;;  Copyright (c) 2016-2018       Daniel Kochmański <daniel@turtleware.eu>
-;;;;
-;;;;    License:  LGPL-2.1-or-later
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) Copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000-2014 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 1998-2002 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2016-2018 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
 
 ;;; Patterns are a bounded rectangular arrangements of designs, like a
 ;;; checkboard. Pattern may be transformed and composed with other designs.
@@ -94,6 +98,10 @@ pattern, stencil, image etc)."))
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern)))
     (values 0 0 width height)))
+
+(defmethod bounding-rectangle ((pattern %array-pattern))
+  (destructuring-bind (height width) (array-dimensions (pattern-array pattern))
+    (make-bounding-rectangle 0 0 width height)))
 
 (defclass %rgba-pattern (%array-pattern)
   ((array :type (simple-array (unsigned-byte 32) 2)))
@@ -312,8 +320,8 @@ by WRITE-BITMAP-FILE. BODY should return a pathname written."
 
 (define-condition unsupported-bitmap-format (simple-error) ()
   (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (format stream "Unsupported bitmap format")))
+             (declare (ignore condition))
+             (format stream "Unsupported bitmap format")))
   (:documentation "This condition is signaled when trying to read or write a
 bitmap file whose format is not supported." ))
 
@@ -402,8 +410,7 @@ Returns a pattern representing this file."
       (design-ink source-pattern (floor (+ x 0.5)) (floor (+ y 0.5))))))
 
 (defmethod %collapse-pattern ((pattern transformed-pattern))
-  (with-bounding-rectangle* (x1 y1 x2 y2) pattern
-    (declare (ignore x2 y2))
+  (with-bounding-rectangle* (x1 y1) pattern
     (let* ((x1 (round x1))
            (y1 (round y1))
            (height (round (pattern-height pattern)))

@@ -1,4 +1,3 @@
-
 (defpackage #:clim-demo.app
   (:use #:clim #:clim-lisp)
   (:export #:app-main))

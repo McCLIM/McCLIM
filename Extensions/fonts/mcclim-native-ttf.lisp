@@ -1,17 +1,16 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: MCCLIM-TRUETYPE; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Glyph rendering via zpb-ttf and cl-vectors
-;;;   Created: 2008-01-26 16:32
-;;;    Author: Andy Hefner <ahefner@gmail.com>
-;;;   License: LGPL (See file COPYING for details).
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2008 by Andy Hefner
-;;;  (c) copyright 2016 by Daniel Kochmański
 ;;;
-;;;    See toplevel file 'Copyright' for the copyright details.
+;;;  (c) Copyright 2008 by Andy Hefner <ahefner@gmail.com>
+;;;  (c) Copyright 2016 by Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; Glyph rendering via zpb-ttf and cl-vectors.
 ;;;
 
-(in-package :mcclim-truetype)
+(in-package #:mcclim-truetype)
 
 ;;; TODO:
 ;;;  * Implement fixed-font-width-p for zpb-ttf.
@@ -22,16 +21,16 @@
 ;;;    glyphs by tripling the width as passed to cl-vectors and compressing
 ;;;    triplets of pixels together ourselves. I'm not certain how to draw
 ;;;    the result through xrender. I've seen hints on Google that there is
-;;;    subpixel AA support in xrender, which isn't obvious from CLX or the 
-;;;    spec. Failing that, we could use a 24bpp mask with component-alpha. 
-;;;    That might even be how you're supposed to do it. I'm skeptical as to 
+;;;    subpixel AA support in xrender, which isn't obvious from CLX or the
+;;;    spec. Failing that, we could use a 24bpp mask with component-alpha.
+;;;    That might even be how you're supposed to do it. I'm skeptical as to
 ;;;    whether this would be accelerated for most people.
 
 ;;;  * Subpixel positioning. Not hard in principle - render multiple versions
 ;;;    of each glyph, offset by fractions of a pixel. Horizontal positioning
 ;;;    is more important than vertical, so 1/4 pixel horizontal resolution
 ;;;    and 1 pixel vertical resolution should suffice. Given how ugly most
-;;;    CLIM apps are, and the lack of WYSIWYG document editors crying out 
+;;;    CLIM apps are, and the lack of WYSIWYG document editors crying out
 ;;;    for perfect text spacing in small fonts, we don't really need this.
 
 
@@ -95,7 +94,7 @@
 
 (defmethod print-object ((object truetype-font) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (with-slots (size ascent descent units->pixels) object      
+    (with-slots (size ascent descent units->pixels) object
       (format stream " size=~A ascent=~A descent=~A units->pixels=~A"
               size ascent descent units->pixels))))
 

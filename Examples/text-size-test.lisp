@@ -7,8 +7,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Interactively demonstrates text size computations for different
-;;; text styles.
+;;; Interactively demonstrates text size computations for different text styles.
 ;;;
 
 (in-package #:clim-demo)

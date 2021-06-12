@@ -1,8 +1,13 @@
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; Copyright (c) 2016 Daniel Kochmański
+;;;  (c) Copyright (c) 2016 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (defmacro define-opticl-reader (name opticl-reader)
   `(defun ,name (image-pathname)

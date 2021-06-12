@@ -1,0 +1,5 @@
+@anchor{Generic-Function clim-extensions:line-style-effective-dashes}
+@deffn {Generic Function} {@symbol{line-style-effective-dashes,clim-extensions}} line-style medium
+Return a dash length or a sequence of dash lengths device units for a
+dashed line, rendered on @var{medium} with the style @var{line-style}.
+@end deffn

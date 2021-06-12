@@ -12,12 +12,13 @@
 ;;;
 ;;; The frame manager and ad-hoc sheet class generation logic of the
 ;;; CLX backend.
+;;;
 
 (in-package #:clim-clx)
 
 ;;; CLX-FRAME-MANAGER class
 
-(defclass clx-frame-manager (frame-manager)
+(defclass clx-frame-manager (standard-frame-manager)
   ((mirroring :initarg :mirroring
               :initform :full
               :reader mirroring)
@@ -77,13 +78,14 @@
     (concrete-pane-class mirroring
      class-name-prefix class-name-package compute-superclasses)
   (flet ((make-class-name (concrete-class-name)
-           (let ((*package* class-name-package))
-             (alexandria:symbolicate
-              class-name-prefix "-"
-              (if-let ((package (symbol-package concrete-class-name)))
-                (package-name package)
-                "UNINTERNED")
-              ":" (symbol-name concrete-class-name))))
+           (intern (format nil "~A-~A:~A"
+                           class-name-prefix
+                           (if-let ((package (symbol-package
+                                              concrete-class-name)))
+                             (package-name package)
+                             "UNINTERNED")
+                           (symbol-name concrete-class-name))
+                   class-name-package))
          (define-class (metaclass name concrete-class)
            (let* ((superclasses (funcall compute-superclasses concrete-class))
                   (class (make-instance metaclass
@@ -120,7 +122,8 @@
 
 (defgeneric tell-window-manager-about-space-requirements (pane))
 
-(defmethod adopt-frame :after ((fm clx-frame-manager) (frame application-frame))
+(defmethod adopt-frame :after
+    ((fm clx-frame-manager) (frame standard-application-frame))
   (let ((sheet (slot-value frame 'top-level-sheet)))
     (let* ((top-level-sheet (frame-top-level-sheet frame))
            (mirror (sheet-direct-mirror top-level-sheet))

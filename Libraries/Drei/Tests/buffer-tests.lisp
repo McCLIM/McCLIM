@@ -1,31 +1,18 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The test cases in this files test the functions of the buffer
 ;;; protocol and the implementations provided by Drei. The test cases
 ;;; are divided into two FiceAM suites - one for functionality
 ;;; regression testing and one for performance testing.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite buffer-tests :description "The test suite for
 buffer-protocol related tests." :in drei-tests)
@@ -56,10 +43,10 @@ that they are initialized properly."
          (low3 (clone-mark high :left))
          (high3 (clone-mark low :right)))
     ;; They must be of the same class...
-    (is (class-of low) (class-of low2))
-    (is (class-of low2) (class-of low3))
-    (is (class-of high) (class-of high2))
-    (is (class-of high2) (class-of high3))
+    (is (eq (class-of low) (class-of low2)))
+    (is (eq (class-of low2) (class-of low3)))
+    (is (eq (class-of high) (class-of high2)))
+    (is (not (eq (class-of high2) (class-of high3))))
     ;; And have the same offset.
     (is (= (offset low) (offset low2) (offset low3)))
     (is (= (offset high) (offset high2) (offset high3) 0))))
@@ -185,7 +172,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :left))
-	  (m2 (make-buffer-mark buffer 5 :left)))
+          (m2 (make-buffer-mark buffer 5 :left)))
       (insert-sequence m "ClimacS")
       (is (= (size buffer) 14))
       (is (eq (buffer m) (buffer m2)))
@@ -207,7 +194,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :left))
-	  (m2 (make-buffer-mark buffer 5 :left)))
+          (m2 (make-buffer-mark buffer 5 :left)))
       (delete-range m 2)
       (is (= (size buffer) 5))
       (is (eq (buffer m) (buffer m2)))
@@ -217,7 +204,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :right))
-	  (m2 (make-buffer-mark buffer 5 :right)))
+          (m2 (make-buffer-mark buffer 5 :right)))
       (delete-range m -2)
       (is (= (size buffer) 5))
       (is (eq (buffer m) (buffer m2)))
@@ -229,7 +216,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :left))
-	  (m2 (make-buffer-mark buffer 5 :left)))
+          (m2 (make-buffer-mark buffer 5 :left)))
       (delete-region m m2)
       (is (= 5 (size buffer)))
       (is (eq (buffer m) (buffer m2)))
@@ -239,7 +226,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :right))
-	  (m2 (make-buffer-mark buffer 5 :right)))
+          (m2 (make-buffer-mark buffer 5 :right)))
       (delete-region m m2)
       (is (= 5 (size buffer)))
       (is (eq (buffer m) (buffer m2)))
@@ -259,7 +246,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :right))
-	  (m2 (make-buffer-mark buffer 5 :right)))
+          (m2 (make-buffer-mark buffer 5 :right)))
       (delete-region m2 m)
       (is (= 5 (size buffer)))
       (is (eq (buffer m) (buffer m2)))
@@ -277,7 +264,7 @@ exceeded buffer end."))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let ((m (make-buffer-mark buffer 3 :left))
-	  (m2 (make-buffer-mark buffer 5 :left)))
+          (m2 (make-buffer-mark buffer 5 :left)))
       (delete-region m 5)
       (delete-region 1 m2)
       (is (= 3 (size buffer)))
@@ -330,15 +317,15 @@ climacs
 (buffer-test setf-offset
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(make-buffer-mark buffer -1 :left)
+        (insert-buffer-sequence buffer 0 "climacs")
+        (make-buffer-mark buffer -1 :left)
         (fail "Failed to signal when setting offset of mark to
 negative value"))
     (motion-before-beginning (c)
       (is (= (condition-offset c) -1))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
+        (insert-buffer-sequence buffer 0 "climacs")
         (make-buffer-mark buffer 8 :left)
         (fail "Failed to signal when setting offset of mark to
 a value too large for the buffer"))
@@ -349,16 +336,16 @@ a value too large for the buffer"))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let* ((m1 (make-buffer-mark buffer 4 :left))
-	   (m2 (clone-mark m1)))
+           (m2 (clone-mark m1)))
       (backward-object m1 2)
       (is (string= (region-to-string m1 m2) "im"))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(let* ((m1 (make-buffer-mark buffer 2 :right))
-	       (m2 (clone-mark m1)))
-	  (backward-object m1 3)
-	  (region-to-sequence m1 m2)
+        (insert-buffer-sequence buffer 0 "climacs")
+        (let* ((m1 (make-buffer-mark buffer 2 :right))
+               (m2 (clone-mark m1)))
+          (backward-object m1 3)
+          (region-to-sequence m1 m2)
           (fail "Failed to signal when moving mark to before
 buffer start.")))
     (motion-before-beginning (c)
@@ -368,18 +355,18 @@ buffer start.")))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "climacs")
     (let* ((m1 (make-buffer-mark buffer 4 :left))
-	   (m2 (clone-mark m1)))
+           (m2 (clone-mark m1)))
       (forward-object m1 2)
       (is (string= (region-to-string m1 m2) "ac"))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(let* ((m1 (make-buffer-mark buffer 0 :right))
-	       (m2 (clone-mark m1)))
-	  (setf (offset m1) 6
-		(offset m2) 6)
-	  (forward-object m1 3)
-	  (region-to-sequence m1 m2)
+        (insert-buffer-sequence buffer 0 "climacs")
+        (let* ((m1 (make-buffer-mark buffer 0 :right))
+               (m2 (clone-mark m1)))
+          (setf (offset m1) 6
+                (offset m2) 6)
+          (forward-object m1 3)
+          (region-to-sequence m1 m2)
           (fail "Failed to signal when moving mark past end of
 buffer.")))
     (motion-after-end (c)
@@ -392,14 +379,14 @@ buffer.")))
     (is (string= (buffer-contents buffer)  "Climacs")))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(setf (buffer-object buffer 0) #\a)
+        (setf (buffer-object buffer 0) #\a)
         (fail "Failed to signal when setting buffer object at
 offset 0"))
     (offset-after-end (c)
       (is (= (condition-offset c) 0))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(setf (buffer-object buffer -1) #\a)
+        (setf (buffer-object buffer -1) #\a)
         (fail "Failed to signal when setting buffer object at
 negative offset"))
     (offset-before-beginning (c)
@@ -460,9 +447,9 @@ negative offset"))
     (insert-buffer-sequence buffer 0 "climacs
 climacs")
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right)))
+          (m2 (make-buffer-mark buffer 0 :right)))
       (setf (offset m1) 3
-	    (offset m2) 11)
+            (offset m2) 11)
       (is (= 0 (line-number m1) (1- (line-number m2)))))))
 
 (buffer-test buffer-column-number
@@ -482,9 +469,9 @@ climacs")
     (insert-buffer-sequence buffer 0 "climacs
 climacs")
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right)))
+          (m2 (make-buffer-mark buffer 0 :right)))
       (setf (offset m1) 3
-	    (offset m2) 11)
+            (offset m2) 11)
       (is (= 3 (column-number m1) (column-number m2)))))t)
 
 (buffer-test beginning-of-line
@@ -542,16 +529,16 @@ climacs")
     (is (char= (buffer-object buffer 3) #\m)))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(buffer-object buffer -1)
+        (insert-buffer-sequence buffer 0 "climacs")
+        (buffer-object buffer -1)
         (fail "Failed to signal when requesting object with
 negative offset"))
     (no-such-offset (c)
       (is (= (condition-offset c) -1))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(buffer-object buffer 7)
+        (insert-buffer-sequence buffer 0 "climacs")
+        (buffer-object buffer 7)
         (fail "Failed to signal when requesting object past end
 of buffer"))
     (no-such-offset (c)
@@ -560,14 +547,14 @@ of buffer"))
 (buffer-test buffer-sequence
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(buffer-sequence buffer -1 0)
+        (buffer-sequence buffer -1 0)
         (fail "Failed to signal when requesting buffer seuqnce
 with negative offset"))
     (no-such-offset (c)
       (is (= (condition-offset c) -1))))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(buffer-sequence buffer 0 1)
+        (buffer-sequence buffer 0 1)
         (fail "Failed to signal when requesting buffer sequence
 too big for buffer"))
     (no-such-offset (c)
@@ -582,8 +569,8 @@ too big for buffer"))
     (is (char= (object-before (make-buffer-mark buffer 7)) #\s)))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(object-before (make-buffer-mark buffer))
+        (insert-buffer-sequence buffer 0 "climacs")
+        (object-before (make-buffer-mark buffer))
         (fail "Failed to signal when requesting object before
 buffer start"))
     (no-such-offset (c)
@@ -595,8 +582,8 @@ buffer start"))
     (is (char= (object-after (make-buffer-mark buffer)) #\c)))
   (handler-case
       (let ((buffer (make-instance %%buffer)))
-	(insert-buffer-sequence buffer 0 "climacs")
-	(object-after (make-buffer-mark buffer 7))
+        (insert-buffer-sequence buffer 0 "climacs")
+        (object-after (make-buffer-mark buffer 7))
         (fail "Failed to signal when requesting object past
 buffer end"))
     (no-such-offset (c)
@@ -604,37 +591,37 @@ buffer end"))
 
 (buffer-test region-to-sequence
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (let ((seq2 (region-to-string (make-buffer-mark buffer) (make-buffer-mark buffer 7))))
       (is-true (not (eq seq seq2)))
       (is (string= seq2 "climacs"))))
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (let ((seq2 (region-to-string 0 (make-buffer-mark buffer 7))))
       (is-true (not (eq seq seq2)))
       (is (string= seq2 "climacs"))))
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (let ((seq2 (region-to-string (make-buffer-mark buffer 7) 0)))
       (is-true (not (eq seq seq2)))
       (is (string= seq2 "climacs"))))
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (let ((seq2 (region-to-string (make-buffer-mark buffer) 7)))
       (is-true (not (eq seq seq2)))
       (is (string= seq2 "climacs"))))
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (let ((seq2 (region-to-string 7 (make-buffer-mark buffer))))
       (is-true (not (eq seq seq2)))
       (is (string= seq2 "climacs"))))
   (let ((seq "climacs")
-	(buffer (make-instance %%buffer)))
+        (buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 seq)
     (is (string= (region-to-string (make-buffer-mark buffer 7) (make-buffer-mark buffer))
                  "climacs")))

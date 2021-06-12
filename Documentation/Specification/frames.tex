@@ -946,6 +946,12 @@ the port.
 Returns \term{true} if \arg{object} is a \term{frame manager}, otherwise returns
 \term{false}.
 
+\Defclass {standard-frame-manager}
+
+The instantiable standard class that implements a frame manager. By default,
+most frame manager classes will inherit from this class and specialize the host
+window manager integrations when available.
+
 
 \subsection {Finding Frame Managers}
 

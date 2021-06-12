@@ -12,13 +12,13 @@
 ;;; application thread that cause it to refresh the display. The two threads
 ;;; share state variables protected by a lock; the application thread uses a
 ;;; condition variable to signal the simulation thread to change its
-;;; behavior. One could also envision sending the simulation state in a
-;;; message to the application thread and using an event queue to send control
-;;; messages back to the simulation thread, eliminating the need for explicit
+;;; behavior. One could also envision sending the simulation state in a message
+;;; to the application thread and using an event queue to send control messages
+;;; back to the simulation thread, eliminating the need for explicit
 ;;; locks. Perhaps in anothor demo...
 ;;;
-;;; Based on an idea described by Paul Werkowski in the mcclim-devel
-;;; mailing list.
+;;; Based on an idea described by Paul Werkowski in the mcclim-devel mailing
+;;; list.
 
 (defpackage #:clim-demo.stopwatch
   (:use #:clim #:clim-lisp)

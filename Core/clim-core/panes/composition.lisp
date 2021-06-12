@@ -16,7 +16,7 @@
 ;;; Implementation of the 29.3 Composite and Layout Panes (panes).
 ;;;
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ;;;
 ;;; Ambiguities and Obmissions
@@ -249,7 +249,7 @@
   (declare (ignore width height))
   (if-let ((child (sheet-child pane)))
     (apply #'compose-space child args)
-    (make-space-requirement)))
+    (call-next-method)))
 
 (defmethod allocate-space ((pane single-child-composite-pane) width height)
   (resize-sheet pane width height)
@@ -288,15 +288,11 @@
                           (bounding-rectangle-size pane)
                         (layout-frame frame width height)))))))))
 
-(defmethod compose-space ((pane top-level-sheet-pane) &key width height)
-  (declare (ignore width height))
-  (compose-space (sheet-child pane)))
-
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
   (unless (pane-space-requirement pane)
     (setf (pane-space-requirement pane)
           (compose-space pane)))
-  (alexandria:when-let ((child (sheet-child pane)))
+  (when-let ((child (sheet-child pane)))
     (allocate-space child
                     (clamp width  (sr-min-width pane)  (sr-max-width pane))
                     (clamp height (sr-min-height pane) (sr-max-height pane)))))
@@ -1009,17 +1005,19 @@
 (defun spacing-p (pane)
   (typep pane 'spacing-pane))
 
-(defmethod compose-space ((pane spacing-pane) &key width height)
-  (declare (ignore width height))
+(defmethod compose-space ((pane spacing-pane) &key (width 100) (height 100))
   (with-slots (border-width) pane
-    (let ((sr (call-next-method)))
+    (let* ((delta (* 2 border-width))
+           (width (max (- width delta) delta))
+           (height (max (- height delta) delta))
+           (sr (call-next-method pane :width width :height height)))
       (make-space-requirement
-       :width (+ (* 2 border-width) (space-requirement-width sr))
-       :height (+ (* 2 border-width) (space-requirement-height sr))
-       :min-width (+ (* 2 border-width) (space-requirement-min-width sr))
-       :min-height (+ (* 2 border-width) (space-requirement-min-height sr))
-       :max-width (+ (* 2 border-width) (space-requirement-max-width sr))
-       :max-height (+ (* 2 border-width) (space-requirement-max-height sr))))))
+       :width (+ delta (space-requirement-width sr))
+       :height (+ delta (space-requirement-height sr))
+       :min-width (+ delta (space-requirement-min-width sr))
+       :min-height (+ delta (space-requirement-min-height sr))
+       :max-width (+ delta (space-requirement-max-width sr))
+       :max-height (+ delta (space-requirement-max-height sr))))))
 
 (defmethod allocate-space ((pane spacing-pane) width height)
   (resize-sheet pane width height)
@@ -1191,7 +1189,7 @@
 ;;; The scroll-bar's min/max values match the min/max arguments to
 ;;; scroll-extent. The thumb-size is then calculated accordingly.
 
-(defparameter *scrollbar-thickness* 24)
+(defparameter *scrollbar-thickness* 20)
 (defparameter *minimum-thumb-size* 36)
 
 (defvar clim-extensions:*default-vertical-scroll-bar-position*
@@ -1636,15 +1634,15 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
          ;; Margin of surrounding border.
          (+ m0 (/ line-height 2)))))))
 
-(defmethod compose-space ((pane label-pane) &key width height)
-  (declare (ignore width height))
+(defmethod compose-space ((pane label-pane) &key (width 100) (height 100))
   (multiple-value-bind (right top left bottom
                         text-offset text-width text-height)
       (label-pane-margins pane)
     (let* ((padded-width (+ text-width (* 2 text-offset)))
            (padded-height (+ text-height (* 2 text-offset))))
       (if-let ((child (sheet-child pane)))
-        (let ((sr2 (compose-space child)))
+        (let ((sr2 (compose-space child :width (- width left right)
+                                        :height (- height top bottom))))
           (make-space-requirement
            :width      (+ left right (max padded-width (space-requirement-width sr2)))
            :min-width  (+ left right (max padded-width (space-requirement-min-width sr2)))

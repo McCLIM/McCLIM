@@ -6,8 +6,7 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; Demonstrates the application of transforms to image patterns and
-;;; text.
+;;; Demonstrates the application of transforms to image patterns and text.
 
 (defpackage #:clim-demo.image-transform-demo
   (:use #:clim-lisp)

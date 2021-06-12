@@ -1,47 +1,36 @@
-;;; -*- Mode: Lisp; Package: CLIM-CLX; -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2001 by
-;;;           Iban Hatchondo (hatchond@emi.u-bordeaux.fr)
-;;;           Julien Boninfante (boninfan@emi.u-bordeaux.fr)
-;;;  (c) copyright 2000, 2001, 2014, 2016 by
-;;;           Robert Strandh (robert.strandh@gmail.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
+;;;  (c) copyright 2000,2001 Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001 Julien Boninfante <boninfan@emi.u-bordeaux.fr>
+;;;  (c) copyright 2000,2001,2014,2016 Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) copyright 2019 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
-(in-package :clim-clx)
+(in-package #:clim-clx)
 
 (defclass clx-basic-port (standard-port)
   ((display :initform nil
-	    :accessor clx-port-display)
+            :accessor clx-port-display)
    (screen :initform nil
-	   :accessor clx-port-screen)
+           :accessor clx-port-screen)
    (window :initform nil
-	   :accessor clx-port-window)
+           :accessor clx-port-window)
    (font-families :initform nil :accessor font-families)
    (cursor-table :initform (make-hash-table :test #'eq)
-                 :accessor clx-port-cursor-table)
-   (pointer :reader port-pointer)))
+                 :accessor clx-port-cursor-table)))
 
 (defclass clx-basic-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
 
 (defun clx-error-handler (display error-name
-			  &rest args
-			  &key major asynchronous &allow-other-keys)
+                          &rest args
+                          &key major asynchronous &allow-other-keys)
   (warn "Received CLX ~A (~A) in process ~W for display ~W."
         error-name major (clim-sys:process-name (clim-sys:current-process)) display)
   ;; We ignore all asynchronous errors to keep the connection.
@@ -56,20 +45,20 @@
 (defmethod initialize-clx ((port clx-basic-port))
   (let ((options (cdr (port-server-path port))))
     (setf (clx-port-display port)
-	  (xlib:open-display (getf options :host)
-			     :display (getf options :display-id)
-			     :protocol (getf options :protocol)))
+          (xlib:open-display (getf options :host)
+                             :display (getf options :display-id)
+                             :protocol (getf options :protocol)))
     (progn
       (setf (xlib:display-error-handler (clx-port-display port))
-	    #'clx-error-handler)
+            #'clx-error-handler)
       ;; Uncomment this when debugging CLX backend if asynchronous
       ;; errors become troublesome.
       #+nil
       (setf (xlib:display-after-function (clx-port-display port))
-	    #'xlib:display-finish-output))
+            #'xlib:display-finish-output))
     (setf (clx-port-screen port)
-	  (nth (getf options :screen-id)
-	       (xlib:display-roots (clx-port-display port))))
+          (nth (getf options :screen-id)
+               (xlib:display-roots (clx-port-display port))))
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-cursor-table port)
     (make-graft port)
@@ -115,3 +104,22 @@
          (mirror (sheet-direct-mirror sheet)))
     (when (and cursor mirror)
       (setf (xlib:window-cursor (window mirror)) cursor))))
+
+;;; Graft
+
+(defmethod make-graft ((port clx-basic-port) &key (orientation :default)
+                                                  (units       :device))
+  (let* ((screen (clx-port-screen port))
+         (root   (clx-port-window port))
+         (mirror (make-instance 'clx-mirror :window root))
+         (width  (xlib:screen-width screen))
+         (height (xlib:screen-height screen))
+         (region (make-bounding-rectangle 0 0 width height)))
+    (make-instance 'clx-graft :port        port
+                              :region      region
+                              :mirror      mirror
+                              :orientation orientation
+                              :units       units)))
+
+(defmethod graft ((port clx-basic-port))
+  (first (port-grafts port)))

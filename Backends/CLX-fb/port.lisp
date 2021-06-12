@@ -1,8 +1,8 @@
-(in-package :clim-clx-fb)
+(in-package #:clim-clx-fb)
 
 (defclass clx-fb-port (render-port-mixin
-		       clim-xcommon:keysym-port-mixin
-		       clim-clx::clx-basic-port)
+                       clim-xcommon:keysym-port-mixin
+                       clim-clx::clx-basic-port)
   ())
 
 (defmethod find-port-type ((type (eql :clx-fb)))
@@ -11,9 +11,9 @@
 (defmethod initialize-instance :after ((port clx-fb-port) &rest args)
   (declare (ignore args))
   (push (make-instance 'clx-fb-frame-manager :port port)
-	(slot-value port 'frame-managers))
+        (slot-value port 'frame-managers))
   (setf (slot-value port 'pointer)
-	(make-instance 'clim-clx::clx-basic-pointer :port port))
+        (make-instance 'clim-clx::clx-basic-pointer :port port))
   (initialize-clx port)
   (initialize-clx-framebuffer port)
   (clim-extensions:port-all-font-families port))
@@ -35,12 +35,12 @@
    :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure
-			     :key-press :key-release
-			     :button-press :button-release
-			     :owner-grab-button
-			     :enter-window :leave-window
-			     :structure-notify
-			     :pointer-motion :button-motion))
+                             :key-press :key-release
+                             :button-press :button-release
+                             :owner-grab-button
+                             :enter-window :leave-window
+                             :structure-notify
+                             :pointer-motion :button-motion))
 
 (defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (let* ((window (clim-clx::%realize-mirror port sheet))
@@ -69,17 +69,17 @@
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
-		                :event-mask *event-mask*
+                                :event-mask *event-mask*
                                 :map (sheet-enabled-p sheet)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))
   (let ((q (compose-space sheet)))
     (let ((frame (pane-frame sheet))
           (window (clim-clx::realize-mirror-aux port sheet
-				      :event-mask *event-mask*
+                                      :event-mask *event-mask*
                                       :map nil
-                                      :width (clim-clx::round-coordinate (space-requirement-width q))
-                                      :height (clim-clx::round-coordinate (space-requirement-height q)))))
+                                      :width (space-requirement-width q)
+                                      :height (space-requirement-height q))))
       (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
       (setf (xlib:wm-name window) (frame-pretty-name frame))
       (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
@@ -95,28 +95,15 @@
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-sheet-mixin))
   (clim-clx::realize-mirror-aux port sheet
-		      :event-mask *event-mask*
-		      :override-redirect :on
-		      :map nil))
+                      :event-mask *event-mask*
+                      :override-redirect :on
+                      :map nil))
 
 (defmethod make-medium ((port clx-fb-port) sheet)
   (make-instance 'clx-fb-medium
-		 :port port
-		 ;; :graft (find-graft :port port)
-		 :sheet sheet))
-
-(defmethod make-graft ((port clx-fb-port) &key (orientation :default) (units :device))
-  (let* ((mirror (make-instance 'clx-mirror :window (clx-port-window port)))
-         (graft (make-instance 'clx-graft :port port :mirror mirror
-                                          :orientation orientation :units units))
-         (width (xlib:screen-width (clx-port-screen port)))
-         (height (xlib:screen-height (clx-port-screen port))))
-    (let ((region (make-bounding-rectangle 0 0 width height)))
-      (climi::%%set-sheet-region region graft))
-    graft))
-
-(defmethod graft ((port clx-fb-port))
-  (first (port-grafts port)))
+                 :port port
+                 ;; :graft (find-graft :port port)
+                 :sheet sheet))
 
 (defmethod port-force-output ((port clx-fb-port))
   (maphash-values (lambda (image)

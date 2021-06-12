@@ -1,29 +1,16 @@
-;;; -*- Mode: Lisp; Package: COMMON-LISP-USER -*-
-
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006-2008 Troels Henriksen <athas@sigkill.dk>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The test cases in this files test the functions of the DREI-BASE
 ;;; package built on top of the buffer protocol.
 
-(cl:in-package :drei-tests)
+(cl:in-package #:drei-tests)
 
 (def-suite base-tests :description "The test suite for DREI-BASE
 related tests." :in drei-tests)
@@ -193,14 +180,14 @@ climacs")
 
 (buffer-test empty-line-p
   (let* ((buffer (make-instance %%buffer))
-	 (m1 (make-buffer-mark buffer 0 :left))
-	 (m2 (make-buffer-mark buffer 0 :right)))
+         (m1 (make-buffer-mark buffer 0 :left))
+         (m2 (make-buffer-mark buffer 0 :right)))
     (is-true (empty-line-p m1))
     (is-true (empty-line-p m2)))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-object buffer 0 #\a)
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right)))
+          (m2 (make-buffer-mark buffer 0 :right)))
       (is-false (empty-line-p m1))
       (is-false (empty-line-p m2))))
   (let ((buffer (make-instance %%buffer)))
@@ -223,9 +210,9 @@ b")
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "  	climacs")
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right))
-	  (m3 (make-buffer-mark buffer 10 :left))
-	  (m4 (make-buffer-mark buffer 10 :right)))
+          (m2 (make-buffer-mark buffer 0 :right))
+          (m3 (make-buffer-mark buffer 10 :left))
+          (m4 (make-buffer-mark buffer 10 :right)))
       (is (= (line-indentation m1 8) 10))
       (is (= (line-indentation m2 8) 10))
       (is (= (line-indentation m3 8) 10))
@@ -237,9 +224,9 @@ b")
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "  		climacs")
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right))
-	  (m3 (make-buffer-mark buffer 11 :left))
-	  (m4 (make-buffer-mark buffer 11 :right)))
+          (m2 (make-buffer-mark buffer 0 :right))
+          (m3 (make-buffer-mark buffer 11 :left))
+          (m4 (make-buffer-mark buffer 11 :right)))
       (is (= (line-indentation m1 8) 18))
       (is (= (line-indentation m2 8) 18))
       (is (= (line-indentation m3 8) 18))
@@ -251,9 +238,9 @@ b")
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "  	climacs	")
     (let ((m1 (make-buffer-mark buffer 0 :left))
-	  (m2 (make-buffer-mark buffer 0 :right))
-	  (m3 (make-buffer-mark buffer 11 :left))
-	  (m4 (make-buffer-mark buffer 11 :right)))
+          (m2 (make-buffer-mark buffer 0 :right))
+          (m3 (make-buffer-mark buffer 11 :left))
+          (m4 (make-buffer-mark buffer 11 :right)))
       (is (= (line-indentation m1 8) 10))
       (is (= (line-indentation m2 8) 10))
       (is (= (line-indentation m3 8) 10))
@@ -293,17 +280,17 @@ climacs
 climacs
 ")
     (let ((m1l (make-buffer-mark buffer 0 :left))
-	  (m1r (make-buffer-mark buffer 0 :right))
-	  (m2l (make-buffer-mark buffer 1 :left))
-	  (m2r (make-buffer-mark buffer 1 :right))
-	  (m3l (make-buffer-mark buffer 3 :left))
-	  (m3r (make-buffer-mark buffer 3 :right))
-	  (m4l (make-buffer-mark buffer 8 :left))
-	  (m4r (make-buffer-mark buffer 8 :right))
-	  (m5l (make-buffer-mark buffer 15 :left))
-	  (m5r (make-buffer-mark buffer 15 :right))
-	  (m6l (make-buffer-mark buffer 16 :left))
-	  (m6r (make-buffer-mark buffer 16 :right)))
+          (m1r (make-buffer-mark buffer 0 :right))
+          (m2l (make-buffer-mark buffer 1 :left))
+          (m2r (make-buffer-mark buffer 1 :right))
+          (m3l (make-buffer-mark buffer 3 :left))
+          (m3r (make-buffer-mark buffer 3 :right))
+          (m4l (make-buffer-mark buffer 8 :left))
+          (m4r (make-buffer-mark buffer 8 :right))
+          (m5l (make-buffer-mark buffer 15 :left))
+          (m5r (make-buffer-mark buffer 15 :right))
+          (m6l (make-buffer-mark buffer 16 :left))
+          (m6r (make-buffer-mark buffer 16 :right)))
       (is (= (number-of-lines-in-region m1l m1r) 0))
       (is (= (number-of-lines-in-region m1r m1l) 0))
       (is (= (number-of-lines-in-region m1l m2l) 1))
@@ -326,9 +313,9 @@ climacs
     (insert-buffer-sequence buffer 0 "climacs
 climacs")
     (let ((m1l (make-buffer-mark buffer 6 :left))
-	  (m1r (make-buffer-mark buffer 6 :right))
-	  (m2l (make-buffer-mark buffer 7 :left))
-	  (m2r (make-buffer-mark buffer 7 :right)))
+          (m1r (make-buffer-mark buffer 6 :right))
+          (m2l (make-buffer-mark buffer 7 :left))
+          (m2r (make-buffer-mark buffer 7 :right)))
       (is (= (number-of-lines-in-region m1l 10) 1))
       (is (= (number-of-lines-in-region 10 m1l) 1))
       (is (= (number-of-lines-in-region m1r 10) 1))
@@ -366,7 +353,7 @@ climacs")
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 #.(format nil "_CLi~Amac5_" #\Tab))
     (let ((m1 (make-buffer-mark buffer 1 :left))
-	  (m2 (make-buffer-mark buffer 8 :right)))
+          (m2 (make-buffer-mark buffer 8 :right)))
       (downcase-region m2 m1)
       (is (string= (buffer-contents buffer)
                    #.(format nil "_cli~Amac5_" #\Tab)))))
@@ -394,7 +381,7 @@ climacs")
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 #.(format nil "_cli~Amac5_" #\Tab))
     (let ((m1 (make-buffer-mark buffer 1 :left))
-	  (m2 (make-buffer-mark buffer 8 :right)))
+          (m2 (make-buffer-mark buffer 8 :right)))
       (upcase-region m2 m1)
       (is (string= (buffer-contents buffer)
                    #.(format nil "_CLI~AMAC5_" #\Tab)))))
@@ -452,7 +439,7 @@ climacs")
                  #.(format nil "c~Al~Aim~A~Aacs" #\Tab #\Tab #\Tab #\Tab))))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 "c      l       im              acs")
-    (drei-base::tabify-buffer-region buffer 0 (size buffer) 8)    
+    (drei-base::tabify-buffer-region buffer 0 (size buffer) 8)
     (is (string= (buffer-contents buffer)
                  #.(format nil "c      l       im~A       acs" #\Tab)))))
 
@@ -485,7 +472,7 @@ climacs")
                  "c       l       im              acs")))
   (let ((buffer (make-instance %%buffer)))
     (insert-buffer-sequence buffer 0 #.(format nil "c      l       im~A       acs" #\Tab))
-    (drei-base::untabify-buffer-region buffer 0 (size buffer) 8)    
+    (drei-base::untabify-buffer-region buffer 0 (size buffer) 8)
     (is (string= (buffer-contents buffer)
                  "c      l       im              acs")))
   (let ((buffer (make-instance %%buffer)))

@@ -3,11 +3,11 @@
 ;;; The original author has given permission to re-license this code under LGPL2.1+
 ;;; https://mailman.common-lisp.net/pipermail/mcclim-devel/2018-October/002102.html
 
-(defpackage :mcclim-bidi
-  (:use :cl)
+(defpackage #:mcclim-bidi
+  (:use #:cl)
   (:export #:directions))
 
-(in-package :mcclim-bidi)
+(in-package #:mcclim-bidi)
 
 (defun bidi-apply-replacement (list old new)
   "Replace all instances of OLD with NEW in LIST.
@@ -33,14 +33,14 @@ the start of the level run, it will get the type of sor."
   (if (not (member 'cl-unicode-names::nsm types))
       types
       (let ((previous-type sor)
-	    (lst types))
+            (lst types))
         (loop
           while lst
-	  do (progn
+          do (progn
                (if (eq (car lst) 'cl-unicode-names::nsm)
                    (setf (car lst) previous-type)
                    (setq previous-type (car lst)))
-	       (setq lst (cdr lst))))
+               (setq lst (cdr lst))))
         types)))
 
 (defun bidi-apply-w2 (sor types)
@@ -55,20 +55,20 @@ the European number to Arabic number."
   (if (null (member 'cl-unicode-names::en types))
       types
       (let ((previous-type sor)
-	    (lst types)
-	    type)
+            (lst types)
+            type)
         (loop
           while lst
-	  do (progn
+          do (progn
                (setq type (car lst))
-	       (if (eq type 'cl-unicode-names::en)
-	           (when (eq previous-type 'cl-unicode-names::al)
-	             (setf (car lst) 'cl-unicode-names::al))
-	           (when (or (eq type 'cl-unicode-names::r)
-		             (eq type 'cl-unicode-names::l)
-		             (eq type 'cl-unicode-names::al))
-	             (setq previous-type type)))
-	       (setq lst (cdr lst))))
+               (if (eq type 'cl-unicode-names::en)
+                   (when (eq previous-type 'cl-unicode-names::al)
+                     (setf (car lst) 'cl-unicode-names::al))
+                   (when (or (eq type 'cl-unicode-names::r)
+                             (eq type 'cl-unicode-names::l)
+                             (eq type 'cl-unicode-names::al))
+                     (setq previous-type type)))
+               (setq lst (cdr lst))))
         types)))
 
 (defun bidi-apply-w3 (types)
@@ -96,8 +96,8 @@ same type changes to that type."
       while lst
       do (progn
            (when (and (or (eq (nth 1 lst) 'cl-unicode-names::cs)
-	                  (eq (nth 1 lst) 'cl-unicode-names::es))
-	              (eq (nth 2 lst) 'cl-unicode-names::en))
+                          (eq (nth 1 lst) 'cl-unicode-names::es))
+                      (eq (nth 2 lst) 'cl-unicode-names::en))
              (setq lst (cdr lst))
              (setf (car lst) 'cl-unicode-names::en)
              (setq lst (cdr lst)))
@@ -107,10 +107,10 @@ same type changes to that type."
       while lst
       do (progn
            (when (and (eq (nth 1 lst) 'cl-unicode-names::cs)
-		      (eq (nth 2 lst) 'cl-unicode-names::an))
-	     (setq lst (cdr lst))
-	     (setf (car lst) 'cl-unicode-names::an)
-	     (setq lst (cdr lst)))
+                      (eq (nth 2 lst) 'cl-unicode-names::an))
+             (setq lst (cdr lst))
+             (setf (car lst) 'cl-unicode-names::an)
+             (setq lst (cdr lst)))
            (setq lst (member 'cl-unicode-names::en (cdr lst))))))
   types)
 
@@ -124,10 +124,10 @@ Called by `bidi-apply-w5', once for the real list, once for the reversed list."
            (setq lst (cdr lst))
            (loop
              while (and lst
-		        (eq (car lst) 'cl-unicode-names::et))
-	     do (progn
+                        (eq (car lst) 'cl-unicode-names::et))
+             do (progn
                   (setf (car lst) 'cl-unicode-names::en)
-	          (setq lst (cdr lst))))
+                  (setq lst (cdr lst))))
            (setq lst (member 'cl-unicode-names::en lst)))))
   types)
 
@@ -145,7 +145,7 @@ to all European numbers."
       (progn
         (setq types (bidi-apply-w5-sub types))
         (if (not (member 'cl-unicode-names::et types))
-	    types
+            types
             (nreverse (bidi-apply-w5-sub (nreverse types)))))))
 
 (defun bidi-apply-w6 (types)
@@ -176,19 +176,19 @@ type of the European number to L."
   (if (null (member 'cl-unicode-names::en types))
       types
       (let ((previous-type sor)
-	    (lst types)
-	    type)
+            (lst types)
+            type)
         (progn
           (loop
             while lst
             do (progn
                  (setq type (car lst))
                  (if (eq type 'cl-unicode-names::en)
-	             (when (eq previous-type 'cl-unicode-names::l)
-	               (setf (car lst) 'cl-unicode-names::l))
-	             (when (or (eq type 'cl-unicode-names::r)
-		               (eq type 'cl-unicode-names::l))
-	               (setq previous-type type)))
+                     (when (eq previous-type 'cl-unicode-names::l)
+                       (setf (car lst) 'cl-unicode-names::l))
+                     (when (or (eq type 'cl-unicode-names::r)
+                               (eq type 'cl-unicode-names::l))
+                       (setq previous-type type)))
                  (setq lst (cdr lst))))
           types))))
 
@@ -202,7 +202,7 @@ reached.  END-LST remains unmodified.  START-LST is modified in place."
   (let ((start start-lst))
     (loop
       while (and start-lst
-		 (not (eq start-lst end-lst)))
+                 (not (eq start-lst end-lst)))
       do (progn
            (setf (car start-lst) new)
            (setq start-lst (cdr start-lst))))
@@ -224,36 +224,36 @@ Arabic numbers are treated as though they were R. Start-of-level-run
   ;; "stretch of neutrals".  lst points to the current position in the
   ;; list.  The elements between start-lst and lst may be switched.
   (let ((start-lst types)
-	(lst types)
-	(start-type sor)
-	(type (car types)))
+        (lst types)
+        (start-type sor)
+        (type (car types)))
     (loop
       while lst
       do (progn
            (cond ((eq type 'cl-unicode-names::l) ; potential end or start of L stretch
-	          (if (eq start-type 'cl-unicode-names::l)
-		      (bidi-apply-conversion start-lst lst 'cl-unicode-names::l)
-	              (setq start-type 'cl-unicode-names::l))
-	          (setq start-lst (cdr lst)))
-	         ((or (eq type 'cl-unicode-names::r) ; potential end or start of R stretch
-		      (eq type 'cl-unicode-names::en)
-		      (eq type 'cl-unicode-names::an))
-	          (if (eq start-type 'cl-unicode-names::r)
-		      (bidi-apply-conversion start-lst lst 'cl-unicode-names::r)
-	              (setq start-type 'cl-unicode-names::r))
-	          (setq start-lst (cdr lst)))
-	         ;; is the following clause ever needed?
-	         ((not (or (eq type 'cl-unicode-names::b) ; definitely not part of a stretch
-		           (eq type 'cl-unicode-names::s)
-		           (eq type 'cl-unicode-names::ws)
-		           (eq type 'cl-unicode-names::on)))
-	          (setq start-type nil
-		        start-lst nil)))
+                  (if (eq start-type 'cl-unicode-names::l)
+                      (bidi-apply-conversion start-lst lst 'cl-unicode-names::l)
+                      (setq start-type 'cl-unicode-names::l))
+                  (setq start-lst (cdr lst)))
+                 ((or (eq type 'cl-unicode-names::r) ; potential end or start of R stretch
+                      (eq type 'cl-unicode-names::en)
+                      (eq type 'cl-unicode-names::an))
+                  (if (eq start-type 'cl-unicode-names::r)
+                      (bidi-apply-conversion start-lst lst 'cl-unicode-names::r)
+                      (setq start-type 'cl-unicode-names::r))
+                  (setq start-lst (cdr lst)))
+                 ;; is the following clause ever needed?
+                 ((not (or (eq type 'cl-unicode-names::b) ; definitely not part of a stretch
+                           (eq type 'cl-unicode-names::s)
+                           (eq type 'cl-unicode-names::ws)
+                           (eq type 'cl-unicode-names::on)))
+                  (setq start-type nil
+                        start-lst nil)))
            (setq lst (cdr lst)
-	         type (car lst))))
+                 type (car lst))))
     ;; final stretch
     (when (and start-lst
-	       (eq start-type eor))
+               (eq start-type eor))
       (bidi-apply-conversion start-lst nil start-type)))
   types)
 
@@ -310,8 +310,8 @@ For more information in the various rules, see the functions:
  BIDI-APPLY-N1
  BIDI-APPLY-N2"
   (let* ((e (if r2l-context 'cl-unicode-names::r 'cl-unicode-names::l))
-	 (sor e)
-	 (eor e))
+         (sor e)
+         (eor e))
     (let* ((l0 (bidi-apply-w1 sor types))
            (l1 (bidi-apply-w2 sor l0))
            (l2 (bidi-apply-w3 l1))
@@ -340,21 +340,21 @@ direction, those of type L, EN or AN go up one level."
     (loop
       while types
       do (let ((type (car types))
-	        (level (car levels)))
-	   (if (evenp level)
-	       ;; I1: even (left-to-right) embedding direction
-	       (cond ((eq type 'cl-unicode-names::r)
-		      (setf (car levels) (1+ level)))
-		     ((or (eq type 'cl-unicode-names::an)
-		          (eq type 'cl-unicode-names::en))
-		      (setf (car levels) (+ 2 level))))
-	       ;; I2: odd (right-to-left) embedding direction
-	       (when (or (eq type 'cl-unicode-names::l)
-		         (eq type 'cl-unicode-names::en)
-		         (eq type 'cl-unicode-names::an))
-	         (setf (car levels) (1+ level))))
-	   (setq types (cdr types))
-	   (setq levels (cdr levels))))
+                (level (car levels)))
+           (if (evenp level)
+               ;; I1: even (left-to-right) embedding direction
+               (cond ((eq type 'cl-unicode-names::r)
+                      (setf (car levels) (1+ level)))
+                     ((or (eq type 'cl-unicode-names::an)
+                          (eq type 'cl-unicode-names::en))
+                      (setf (car levels) (+ 2 level))))
+               ;; I2: odd (right-to-left) embedding direction
+               (when (or (eq type 'cl-unicode-names::l)
+                         (eq type 'cl-unicode-names::en)
+                         (eq type 'cl-unicode-names::an))
+                 (setf (car levels) (1+ level))))
+           (setq types (cdr types))
+           (setq levels (cdr levels))))
     result))
 
 (defun directions (string r2l-context)

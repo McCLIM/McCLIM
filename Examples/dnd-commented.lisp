@@ -1,11 +1,15 @@
-;;;;  Copyright (c) 2019 Daniel Kochmański
-;;;;
-;;;;    License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;   License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) Copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
+;;; In this demo I'm going to present a few ways how drag-and-drop behavior
+;;; could be added to the application.
+;;;
 
-;;;  In this demo I'm going to present a few ways how drag-and-drop
-;;;  behavior could be added to the application.
-
-
 (defpackage #:clim-demo.drag-and-drop-example
   (:use #:clim-lisp #:clim)
   (:export #:dnd-commented))

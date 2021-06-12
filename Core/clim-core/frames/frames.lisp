@@ -17,212 +17,215 @@
 (in-package #:clim-internals)
 
 ;; *application-frame* is in decls.lisp
-(defvar *default-frame-manager* nil)
-
-;;; Frame-Manager class
-
-;; FIXME: The spec says the port must "conform to options".  I've added a check
-;; that the ports match, but we've no protocol for testing the other
-;; options. -Hefner
-(defun find-frame-manager (&rest options &key port &allow-other-keys)
-  (declare (special *frame-manager*))
-  (if (and (boundp '*frame-manager*)
-           (or (null port) (eql port (port *frame-manager*))))
-      *frame-manager*
-      (if (and *default-frame-manager*
-               (frame-manager-p *default-frame-manager*)
-               (or (null port) (eql port (port *default-frame-manager*))))
-          *default-frame-manager*
-          (first (frame-managers (or port (apply #'find-port options)))))))
-
-(defmacro with-frame-manager ((frame-manager) &body body)
-  `(let ((*frame-manager* ,frame-manager))
-     (declare (special *frame-manager*))
-     (locally ,@body)))
-
-(defvar *pane-realizer* nil)
-
-(defmacro with-look-and-feel-realization ((frame-manager frame) &body body)
-  `(let ((*pane-realizer* ,frame-manager)
-         (*application-frame* ,frame))
-     (locally
-         ,@body)))
-
-(defun map-over-frames (function &key port frame-manager)
-  (cond (frame-manager
-         (mapc function (frame-manager-frames frame-manager)))
-        (port
-         (loop for manager in (frame-managers port)
-               do (map-over-frames function :frame-manager manager)))
-        (t (loop for p in *all-ports*
-                 do (map-over-frames function :port p)))))
-
-(defmethod note-frame-enabled ((fm frame-manager) frame)
-  (declare (ignore frame))
-  t)
-
-(defmethod note-frame-disabled ((fm frame-manager) frame)
-  (declare (ignore frame))
-  t)
-
-(defmethod note-frame-iconified ((fm frame-manager) frame)
-  (declare (ignore frame))
-  t)
-
-(defmethod note-frame-deiconified ((fm frame-manager) frame)
-  (declare (ignore frame))
-  t)
-
-(defmethod note-command-enabled (frame-manager frame command-name)
-  (declare (ignore frame-manager))
-  (menu-bar-refresh-command frame command-name t)
-  nil)
-
-(defmethod note-command-disabled (frame-manager frame command-name)
-                                        ;(declare (ignore frame-manager frame command-name))
-  (declare (ignore frame-manager))
-  (menu-bar-refresh-command frame command-name nil)
-  nil)
 
 (declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
 (defvar *default-icon-large* nil)
 (defvar *default-icon-small* nil)
 
-(defclass standard-application-frame (application-frame
-                                      presentation-history-mixin)
-  ((port :initform nil
-         :initarg :port
-         :accessor port)
-   (graft :initform nil
-          :initarg :graft
-          :accessor graft)
-   (name :initarg :name
-         :reader frame-name)
-   (pretty-name :initarg :pretty-name
-                :accessor frame-pretty-name)
-   (icon :accessor frame-icon
-         :documentation "If non-NIL, an array pattern or a sequence
-                         of array patterns that should be used by the
-                         host's window manager to represent the
-                         frame, for example when it is iconified.")
-   (command-table :initarg :command-table
-                  :initform nil
-                  :accessor frame-command-table)
-   (panes :initform nil :accessor frame-panes
-          :documentation "The tree of panes in the current layout.")
-   (current-panes :initform nil :accessor frame-current-panes)
-   (layouts :initform nil
-            :initarg :layouts
-            :reader frame-layouts)
-   (current-layout :initform nil
-                   :initarg :current-layout
-                   :accessor frame-current-layout)
-   (panes-for-layout :initform nil :accessor frame-panes-for-layout
-                     :documentation "alist of names and panes
-                                     (as returned by make-pane)")
-   (resize-frame :initarg :resize-frame
-                 :initform nil
-                 :accessor frame-resize-frame)
-   (output-pane :initform nil
-                :accessor frame-standard-output
-                :accessor frame-error-output)
-   (input-pane :initform nil
-               :accessor frame-standard-input)
-   (documentation-pane :initform nil
-                       :accessor frame-pointer-documentation-output)
+(defclass frame-geometry-mixin ()
+  ((geometry-left :initarg :left :initform nil)
+   (geometry-right :initarg :right :initform nil)
+   (geometry-top :initarg :top :initform nil)
+   (geometry-bottom :initarg :bottom :initform nil)
+   (geometry-width :initarg :width :initform nil)
+   (geometry-height :initarg :height :initform nil)))
 
-   (top-level-sheet :initform nil
-                    :reader frame-top-level-sheet)
-   (menu-bar :initarg :menu-bar
-             :initform nil)
-   (menu-bar-pane :initform nil
-                  :accessor frame-menu-bar-pane)
-   (state :initarg :state
-          :initform :disowned
-          :reader frame-state)
-   (manager :initform nil
-            :reader frame-manager
-            :accessor %frame-manager)
-   (properties :accessor %frame-properties
-               :initarg :properties
-               :initform nil)
-   (top-level :initform '(default-frame-top-level)
-              :initarg :top-level
-              :reader frame-top-level)
-   (top-level-lambda :initarg :top-level-lambda
-                     :reader frame-top-level-lambda)
-   (highlited-presentation :initform nil
-                           :initarg :highlited-presentation
-                           :accessor frame-highlited-presentation)
-   (process :accessor frame-process :initform nil)
-   (client-settings :accessor client-settings :initform nil)
-   (event-queue :initarg :frame-event-queue
-                :initform nil
-                :accessor frame-event-queue
-                :documentation "The event queue that, by default, will be
-                                shared by all panes in the frame")
-   (input-buffer :initarg :frame-input-buffer
-                 :initform (make-instance 'concurrent-event-queue :port nil)
-                 :accessor frame-input-buffer
-                 :documentation "The input buffer queue that, by default, will
-                                 be shared by all input streams in the frame")
+(defun frame-geometry* (frame)
+  "(values width height &optional top left)"
+  (check-type frame frame-geometry-mixin)
+  (let ((pane (frame-top-level-sheet frame)))
+    (with-slots (geometry-left geometry-top geometry-right
+                 geometry-bottom geometry-width geometry-height)
+        frame
+      ;; Find width and height from looking at the respective options first,
+      ;; then at left/right and top/bottom and finally at what compose-space
+      ;; says.
+      (let* ((width (or geometry-width
+                        (and geometry-left geometry-right
+                             (- geometry-right geometry-left))
+                        (space-requirement-width (compose-space pane))))
+             (height (or geometry-height
+                         (and geometry-top geometry-bottom
+                              (- geometry-bottom geometry-top))
+                         (space-requirement-height (compose-space pane))))
+             ;; See if a position is wanted and return left, top.
+             (left (or geometry-left
+                       (and geometry-right (- geometry-right geometry-width))))
+             (top (or geometry-top
+                      (and geometry-bottom (- geometry-bottom geometry-height)))))
+        (values width height left top)))))
+
+(defclass standard-application-frame (application-frame
+                                      frame-geometry-mixin
+                                      presentation-history-mixin)
+  ((name
+    :initarg :name
+    :reader frame-name)
+   (pretty-name
+    :initarg :pretty-name
+    :accessor frame-pretty-name)
+   (icon
+    :accessor frame-icon
+    :documentation "If non-NIL, an array pattern or a sequence of array patterns
+                    that should be used by the host's window manager to
+                    represent the frame, for example when it is iconified.")
+   (menu-bar
+    :initarg :menu-bar
+    :initform nil)
+   (pdoc-bar
+    :initarg :pointer-documentation
+    :initform t)
+   (command-table
+    :initarg :command-table
+    :initform nil
+    :accessor frame-command-table)
+   ;; Panes and layout constructors are stored in the frame instance to ensure
+   ;; that after redefining the frame class the existing frames are not changed.
+   ;; Previously setting panes and layout was implemented directly in the method
+   ;; generate-panes defined by the define-application-frame. -- jd 2021-06-01
+   (panes-constructor
+    :initarg :panes-constructor
+    :accessor frame-panes-constructor
+    :documentation "A function responsible for filling panes-for-layout.")
+   (layout-constructor
+    :initarg :layout-constructor
+    :accessor frame-layout-constructor
+    :documentation "A function responsible for constructing the layout.")
+   (panes-for-layout
+    :initform nil
+    :accessor frame-panes-for-layout
+    :documentation "alist of names and panes (as returned by make-pane).")
+   (panes
+    :initform nil
+    :accessor frame-panes
+    :documentation "The tree of panes in the current layout.")
+   (current-panes
+    :initform nil
+    :accessor frame-current-panes
+    :documentation "The sorted list of named panes in the current layout.")
+   (layouts
+    :initform nil
+    :initarg :layouts
+    :reader frame-layouts)
+   (current-layout
+    :initform nil
+    :initarg :current-layout
+    :accessor frame-current-layout)
+   (resize-frame
+    :initarg :resize-frame
+    :initform nil
+    :accessor frame-resize-frame)
+   (output-pane
+    :initform nil
+    :accessor frame-standard-output
+    :accessor frame-error-output)
+   (input-pane
+    :initform nil
+    :accessor frame-standard-input)
+   (documentation-pane
+    :initform nil
+    :accessor frame-pointer-documentation-output)
+   (top-level-sheet
+    :initform nil
+    :reader frame-top-level-sheet)
+   (menu-bar-pane
+    :initform nil
+    :accessor frame-menu-bar-pane)
+   (state
+    :initarg :state
+    :initform :disowned
+    :reader frame-state)
+   (manager
+    :initform nil
+    :reader frame-manager
+    :accessor %frame-manager)
+   (properties
+    :accessor %frame-properties
+    :initarg :properties
+    :initform nil)
+   (top-level-lambda
+    :initarg :top-level-lambda
+    :reader frame-top-level-lambda)
+   (highlited-presentation
+    :initform nil
+    :initarg :highlited-presentation
+    :accessor frame-highlited-presentation)
+   (process
+    :accessor frame-process
+    :initform nil)
+   (client-settings
+    :accessor client-settings
+    :initform nil)
+   (event-queue
+    :initarg :frame-event-queue
+    :initform nil
+    :accessor frame-event-queue
+    :documentation "The event queue that, by default, will be shared by all
+                    panes in the frame.")
+   (input-buffer
+    :initarg :frame-input-buffer
+    :initform (make-instance 'concurrent-event-queue :port nil)
+    :accessor frame-input-buffer
+    :documentation "The input buffer queue that, by default, will be shared by
+                    all input streams in the frame.")
    ;; This slot is true during the execution of the FRAME-READ-COMMAND. It is
    ;; used by the EXECUTE-FRAME-COMMAND to decide, whether the synchronous[1]
-   ;; command execution should be performed immedietely or enqueued in the
-   ;; event queue. This is to ensure advancement of the top level loop and
-   ;; redisplay of panes after the command execution.
+   ;; command execution should be performed immedietely or enqueued in the event
+   ;; queue. This is to ensure advancement of the top level loop and redisplay
+   ;; of panes after the command execution.
    ;;
    ;; The frame-command-queue is used to schedule a command for the next
-   ;; iteration of the frame top level when the input context inside the call
-   ;; to FRAME-READ-COMMAND is different than the command (that may happen i.e
-   ;; when the frame has a temporarily amended command table or is waiting for
-   ;; an argument of the command that is currently parsed).
+   ;; iteration of the frame top level when the input context inside the call to
+   ;; FRAME-READ-COMMAND is different than the command (that may happen i.e when
+   ;; the frame has a temporarily amended command table or is waiting for an
+   ;; argument of the command that is currently parsed).
    ;;
-   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in
-   ;; the frame's process.
+   ;; [1] A synchronous execution is a call of the EXECUTE-FRAME-COMMAND in the
+   ;; frame's process.
    ;;
    ;; -- jd 2020-12-10
-   (reading-command-p :initform nil
-                      :accessor frame-reading-command-p)
-   (command-queue :initform (make-instance 'concurrent-event-queue :port nil)
-                  :reader frame-command-queue)
-   (documentation-state :accessor frame-documentation-state
-                        :initform nil
-                        :documentation "Used to keep of track of what
-  needs to be rendered in the pointer documentation frame.")
-   (calling-frame :reader frame-calling-frame
-                  :initarg :calling-frame
-                  :initform nil
-                  :documentation "The frame that is the parent of this
-frame, if any")
-   (disabled-commands :accessor disabled-commands
-                      :accessor frame-disabled-commands
-                      :initarg :disabled-commands
-                      :initform nil
-                      :documentation "A list of command names that have been
-                                      disabled in this frame")
-   (documentation-record :accessor documentation-record
-                         :initform nil
-                         :documentation "updating output record for pointer
-documentation produced by presentations.")
-   (geometry-left :accessor geometry-left
-                  :initarg :left
-                  :initform nil)
-   (geometry-right :accessor geometry-right
-                   :initarg :right
-                   :initform nil)
-   (geometry-top :accessor geometry-top
-                 :initarg :top
-                 :initform nil)
-   (geometry-bottom :accessor geometry-bottom
-                    :initarg :bottom
-                    :initform nil)
-   (geometry-width :accessor geometry-width
-                   :initarg :width
-                   :initform nil)
-   (geometry-height :accessor geometry-height
-                    :initarg :height
-                    :initform nil)))
+   (reading-command-p
+    :initform nil
+    :accessor frame-reading-command-p)
+   (command-queue
+    :initform (make-instance 'concurrent-event-queue :port nil)
+    :reader frame-command-queue)
+   (documentation-state
+    :accessor frame-documentation-state
+    :initform nil
+    :documentation "Used to keep of track of what needs to be rendered in the
+                    pointer documentation frame.")
+   (calling-frame
+    :reader frame-calling-frame
+    :initarg :calling-frame
+    :initform nil
+    :documentation "The frame that is the parent of this frame, if any.")
+   (disabled-commands
+    :accessor disabled-commands
+    :accessor frame-disabled-commands
+    :initarg :disabled-commands
+    :initform nil
+    :documentation "A list of command names that have been disabled in this frame.")
+   (documentation-record
+    :accessor documentation-record
+    :initform nil
+    :documentation "Updating output record for pointer documentation produced by
+                    presentations.")))
+
+(defmethod port ((frame standard-application-frame))
+  (if-let ((manager (frame-manager frame)))
+    (port manager)
+    nil))
+
+(defmethod (setf frame-manager)
+    (new-manager (frame standard-application-frame))
+  (let ((old-manager (frame-manager frame)))
+    (unless (eq new-manager old-manager)
+      (when old-manager
+        (disown-frame old-manager frame))
+      (when new-manager
+        (adopt-frame new-manager frame))
+      (setf (%frame-manager frame) new-manager))))
 
 (defmethod frame-parent ((frame standard-application-frame))
   (or (frame-calling-frame frame)
@@ -232,39 +235,24 @@ documentation produced by presentations.")
   (or (frame-standard-input frame)
       (frame-standard-output frame)))
 
-(defgeneric frame-geometry* (frame))
-
-(defmethod frame-geometry* ((frame standard-application-frame))
-  "-> width height &optional top left"
-  (let ((pane (frame-top-level-sheet frame)))
-    ;(destructuring-bind (&key left top right bottom width height) (frame-geometry frame)
-    (with-slots (geometry-left geometry-top geometry-right
-                               geometry-bottom geometry-width
-                               geometry-height) frame
-      ;; Find width and height from looking at the respective options
-      ;; first, then at left/right and top/bottom and finally at what
-      ;; compose-space says.
-      (let* ((width (or geometry-width
-                        (and geometry-left geometry-right
-                             (- geometry-right geometry-left))
-                        (space-requirement-width (compose-space pane))))
-             (height (or geometry-height
-                         (and geometry-top geometry-bottom (- geometry-bottom geometry-top))
-                         (space-requirement-height (compose-space pane))))
-             ;; See if a position is wanted and return left, top.
-             (left (or geometry-left
-                       (and geometry-right (- geometry-right geometry-width))))
-             (top (or geometry-top
-                      (and geometry-bottom (- geometry-bottom geometry-height)))))
-      (values width height left top)))))
-
 ;;; This method causes related frames share the same queue by default (on both
 ;;; SMP and non-SMP systems). Thanks to that we have a single loop processing
 ;;; events. Alternative approach is executed with window-stream frames which
 ;;; have a standalone-event-loop (see panes.lisp). -- jd 2018-12-27
-(defmethod initialize-instance :after ((obj standard-application-frame)
-                                       &key (icon nil icon-supplied-p)
-                                       &allow-other-keys)
+(defmethod initialize-instance :after ((obj standard-application-frame) &key)
+  (unless (frame-event-queue obj)
+    (when-let* ((calling-frame (frame-calling-frame obj))
+                (calling-queue (frame-event-queue calling-frame)))
+      (setf (frame-event-queue obj) calling-queue)
+      (return-from initialize-instance))
+    (setf (frame-event-queue obj)
+          (if *multiprocessing-p*
+              (make-instance 'concurrent-event-queue)
+              (make-instance 'simple-event-queue)))))
+
+(defmethod shared-initialize :after
+    ((obj standard-application-frame) slot-names
+     &key (icon nil icon-supplied-p) &allow-other-keys)
   (labels ((coerce-to-icon (thing)
              (typecase thing
                ((or string pathname)
@@ -279,41 +267,31 @@ documentation produced by presentations.")
                 ((null icon)
                  nil)
                 (t
-                 (coerce-to-icon icon)))))
-  (unless (frame-event-queue obj)
-    (when-let* ((calling-frame (frame-calling-frame obj))
-                (calling-queue (frame-event-queue calling-frame)))
-      (setf (frame-event-queue obj) calling-queue)
-      (return-from initialize-instance))
-    (setf (frame-event-queue obj)
-          (if *multiprocessing-p*
-              (make-instance 'concurrent-event-queue)
-              (make-instance 'simple-event-queue)))))
+                 (coerce-to-icon icon))))))
 
-(defmethod (setf frame-manager) (fm (frame application-frame))
-  (let ((old-manager (frame-manager frame)))
-    (setf (%frame-manager frame) nil)
-    (when old-manager
-      (disown-frame old-manager frame)
-      (setf (frame-panes frame) nil)
-      (setf (slot-value frame 'layouts) nil))
-    (setf (%frame-manager frame) fm)))
+(defgeneric reinitialize-panes-and-layouts (frame)
+  (:method (frame) nil))
+
+(defmethod reinitialize-instance :after
+    ((frame standard-application-frame)
+     &key (icon nil ip) (pretty-name nil pp) (command-table nil cp))
+  (reinitialize-panes-and-layouts frame)
+  (let ((fm (frame-manager frame)))
+    (and ip (note-frame-icon-changed fm frame icon))
+    (and pp (note-frame-pretty-name-changed fm frame pretty-name))
+    (and cp (note-frame-command-table-changed fm frame command-table))))
+
+(defmethod reinitialize-instance :around
+    ((frame standard-application-frame) &key)
+  (with-synchronization (frame-top-level-sheet frame)
+      (let ((process (frame-process frame)))
+        (or (null process) (eq process (current-process))))
+    (call-next-method)))
 
 (defmethod (setf frame-pretty-name) :after (new-value frame)
-  ;; If there is a top-level sheet, set its pretty name. The port can
-  ;; reflect this change in the window title.
-  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-pretty-name top-level-sheet) new-value))
-  ;; Let client code know.
-  (clime:note-frame-pretty-name-changed (frame-manager frame) frame new-value))
+  (note-frame-pretty-name-changed (frame-manager frame) frame new-value))
 
 (defmethod (setf frame-icon) :after (new-value frame)
-  ;; If there is a top-level sheet, set its icon. The port can reflect
-  ;; this change by telling the window manager which might display the
-  ;; new icon somewhere.
-  (when-let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-icon top-level-sheet) new-value))
-  ;; Let client code know.
   (note-frame-icon-changed (frame-manager frame) frame new-value))
 
 (defmethod frame-all-layouts ((frame application-frame))
@@ -337,14 +315,8 @@ documentation produced by presentations.")
           (layout-frame frame)))
       (signal 'frame-layout-changed :frame frame))))
 
-(defmethod (setf frame-command-table) :after (new-command-table frame)
-  ;; Update the menu-bar even if its command-table doesn't change to ensure
-  ;; that disabled commands are not active (and vice versa). -- jd 2020-12-12
-  (when-let* ((menu-bar (frame-menu-bar-pane frame))
-              (bar-command-table (slot-value frame 'menu-bar)))
-    (if (eq bar-command-table t)
-        (update-menu-bar (frame-menu-bar-pane frame) frame new-command-table)
-        (update-menu-bar (frame-menu-bar-pane frame) frame bar-command-table))))
+(defmethod (setf frame-command-table) :after (new-table frame)
+  (note-frame-command-table-changed (frame-manager frame) frame new-table))
 
 (defun update-frame-pane-lists (frame)
   (let ((all-panes     (frame-panes frame))
@@ -365,63 +337,19 @@ documentation produced by presentations.")
             (frame-standard-input frame) (or interactor (frame-standard-output frame))
             (frame-pointer-documentation-output frame) pointer-documentation))))
 
-(defmethod generate-panes :before (fm  (frame application-frame))
-  (declare (ignore fm))
-  (when (and (frame-panes frame)
-             (eq (sheet-parent (frame-panes frame))
-                 (frame-top-level-sheet frame)))
-    (sheet-disown-child (frame-top-level-sheet frame) (frame-panes frame)))
-  (loop for (nil . pane) in (frame-panes-for-layout frame)
-        for parent = (sheet-parent pane)
-        if  parent
-        do (sheet-disown-child parent pane)))
-
-(defmethod generate-panes (fm (frame application-frame))
-  (with-look-and-feel-realization (fm frame)
-    (unless (frame-panes-for-layout frame)
-      (setf (frame-panes-for-layout frame)
-            `((single-pane . ,(make-clim-interactor-pane :name 'single-pane)))))
-    (let ((single-pane
-            (alexandria:assoc-value (frame-panes-for-layout frame)
-                                    'single-pane :test #'eq)))
-      (setf (frame-panes frame) single-pane)))
-  (update-frame-pane-lists frame))
-
-(defmethod generate-panes :after (fm (frame application-frame))
-  (declare (ignore fm))
-  (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (sheet-adopt-child top-level-sheet (frame-panes frame))
-    (unless (sheet-parent top-level-sheet)
-      (sheet-adopt-child (graft frame) top-level-sheet))
-    ;; Find the size of the new frame
-    (multiple-value-bind (w h) (frame-geometry* frame)
-      ;; automatically generates a window-configuation-event
-      ;; which then calls allocate-space
-      ;;
-      ;; Not any longer, we turn off CONFIGURE-NOTIFY events until the
-      ;; window is mapped and do the space allocation now, so that all
-      ;; sheets will have their correct geometry at once. --GB
-      (change-space-requirements top-level-sheet :width w :height h
-                                                 :resize-frame t)
-      (setf (sheet-region top-level-sheet) (make-bounding-rectangle 0 0 w h))
-      (allocate-space top-level-sheet w h))))
-
 (defmethod layout-frame ((frame application-frame) &optional width height)
-  (when (and (or width height)
-             (not (and width height)))
+  (when (alexandria:xor width height)
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (with-inhibited-repaint-sheet ()
-    (let ((pane (frame-panes frame)))
-      (when (and (null width) (null height))
-        (let (;;I guess this might be wrong. --GB 2004-06-01
-              (space (compose-space pane)))
-          (setq width (space-requirement-width space))
-          (setq height (space-requirement-height space))))
-      (let ((tpl-sheet (frame-top-level-sheet frame)))
-        (unless (and (= width (bounding-rectangle-width tpl-sheet))
-                     (= height (bounding-rectangle-height tpl-sheet)))
-          (resize-sheet tpl-sheet width height)))
-      (allocate-space pane width height))))
+  (let ((tpl-sheet (frame-top-level-sheet frame)))
+    (when (and (null width) (null height))
+      (let (;;I guess this might be wrong. --GB 2004-06-01
+            (space (compose-space tpl-sheet)))
+        (setq width (space-requirement-width space))
+        (setq height (space-requirement-height space))))
+    (unless (and (= width (bounding-rectangle-width tpl-sheet))
+                 (= height (bounding-rectangle-height tpl-sheet)))
+      (resize-sheet tpl-sheet width height))
+    (allocate-space tpl-sheet width height)))
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
@@ -445,7 +373,7 @@ documentation produced by presentations.")
   nil)
 
 
-#+nil
+#+ (or)
 (defmethod redisplay-frame-panes ((frame application-frame) &key force-p)
   (map-over-sheets
    (lambda (sheet)
@@ -486,6 +414,7 @@ documentation produced by presentations.")
   nil)
 
 (defmacro with-possible-double-buffering ((frame pane) &body body)
+  (declare (ignore frame pane))
   `(progn ,@body))
 
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
@@ -582,8 +511,7 @@ documentation produced by presentations.")
            'command-line-read-remaining-arguments-for-partial-command)
           (prompt "Command: "))
   ;; Give each pane a fresh start first time through.
-  (let ((needs-redisplay t)
-        (first-time t))
+  (let ((needs-redisplay t))
     (loop
       ;; The variables are rebound each time through the loop because the
       ;; values of frame-standard-input et al. might be changed by a command.
@@ -608,9 +536,8 @@ documentation produced by presentations.")
                        (setq needs-redisplay t)
                        (execute-frame-command frame command))))
               (when needs-redisplay
-                (redisplay-frame-panes frame :force-p first-time)
-                (setq first-time nil
-                      needs-redisplay nil))
+                (redisplay-frame-panes frame)
+                (setq needs-redisplay nil))
               (when interactorp
                 (setf (cursor-visibility (stream-text-cursor frame-query-io)) nil)
                 (when prompt
@@ -674,9 +601,10 @@ documentation produced by presentations.")
     ;; next iteration. -- jd 2020-12-09
     (event-queue-append (frame-command-queue frame) command)))
 
-(defmethod execute-frame-command ((frame application-frame) command)
+(defmethod execute-frame-command ((frame standard-application-frame) command)
   (check-type command cons)
-  (if (and (eq (frame-process frame) (current-process))
+  (if (and (or (null (frame-process frame))
+               (eq (frame-process frame) (current-process)))
            (not (frame-reading-command-p frame)))
       (let ((name (command-name command))
             (args (command-arguments command)))
@@ -691,6 +619,10 @@ documentation produced by presentations.")
                                                  :sheet sheet
                                                  :frame frame
                                                  :command command)))))
+
+(defmethod execute-frame-command ((frame application-frame) command)
+  (check-type command cons)
+  (apply (car command) (cdr command)))
 
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
@@ -707,16 +639,11 @@ documentation produced by presentations.")
     (if enabled
         (progn
           (setf disabled-commands (delete command-name disabled-commands))
-          (note-command-enabled (frame-manager frame)
-                                frame
-                                command-name)
-          enabled)
+          (note-command-enabled (frame-manager frame) frame command-name))
         (progn
           (pushnew command-name disabled-commands)
-          (note-command-disabled (frame-manager frame)
-                                 frame
-                                 command-name)
-          nil))))
+          (note-command-disabled (frame-manager frame) frame command-name)))
+    enabled))
 
 (defmethod display-command-menu (frame (stream fundamental-output-stream)
                                  &rest args &key
@@ -729,72 +656,21 @@ documentation produced by presentations.")
   (with-keywords-removed (args (:command-table))
     (apply #'display-command-table-menu command-table stream args)))
 
-(defmethod make-pane-1 :around (fm (frame standard-application-frame) type
-                                &rest args
-                                &key (event-queue nil evq-p) &allow-other-keys)
-  ;; Default event-queue to the frame event queue.
-  (declare (ignore event-queue))
-  (if (null evq-p)
-      (let ((evq (frame-event-queue frame))
-            (*input-buffer* (frame-input-buffer frame)))
-        (apply #'call-next-method fm frame type :event-queue evq args))
-      (call-next-method)))
-
-(defmethod find-pane-for-frame ((fm frame-manager) (frame application-frame))
-  (make-pane-1 fm frame 'top-level-sheet-pane
-               :name (frame-name frame)
-               :pretty-name (frame-pretty-name frame)
-               :icon (frame-icon frame)
-               ;; sheet is enabled from enable-frame
-               :enabled-p nil))
-
-(defmethod adopt-frame ((fm frame-manager) (frame application-frame))
-  (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
-  (setf (frame-manager frame) fm)
-  (setf (port frame) (port fm))
-  (setf (graft frame) (find-graft :port (port frame)))
-  (let ((*application-frame* frame)
-        (event-queue (frame-event-queue frame)))
-    (setf (slot-value frame 'top-level-sheet)
-          (find-pane-for-frame fm frame))
-    (generate-panes fm frame)
-    (setf (slot-value frame 'state) :disabled)
-    (when (typep event-queue 'event-queue)
-      (setf (event-queue-port event-queue) (port fm)))
-    frame))
-
-(defmethod disown-frame ((fm frame-manager) (frame application-frame))
-  (when-let* ((event-queue (frame-event-queue frame))
-              (calling-frame (frame-calling-frame frame))
-              (calling-queue (frame-event-queue calling-frame))
-              (another-queue-p (not (eql calling-queue event-queue))))
-    (setf (event-queue-port event-queue) nil))
-  (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
-  (sheet-disown-child (graft frame) (frame-top-level-sheet frame))
-  (setf (%frame-manager frame) nil)
-  (setf (slot-value frame 'state) :disowned)
-  frame)
-
 (defmethod enable-frame ((frame application-frame))
   (ecase (slot-value frame 'state)
     (:disabled
-     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
      (note-frame-enabled (frame-manager frame) frame))
     (:shrunk
-     (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
      (note-frame-deiconified (frame-manager frame) frame))
     (:enabled))
   (setf (slot-value frame 'state) :enabled))
 
 (defmethod disable-frame ((frame application-frame))
-  (let ((top-level-sheet (frame-top-level-sheet frame)))
-    (setf (sheet-enabled-p top-level-sheet) nil))
   (setf (slot-value frame 'state) :disabled)
   (note-frame-disabled (frame-manager frame) frame))
 
 (defmethod shrink-frame ((frame application-frame))
   (unless (eq (slot-value frame 'state) :disabled)
-    (shrink-sheet (frame-top-level-sheet frame))
     (setf (slot-value frame 'state) :shrunk)
     (note-frame-iconified (frame-manager frame) frame))
   (frame-state frame))
@@ -886,82 +762,6 @@ frames and will not have focus.
             (t (run-frame-top-level frame))))
     frame))
 
-;;; Menu frame class
-
-(defclass menu-frame ()
-  ((left :initform 0 :initarg :left)
-   (top :initform 0 :initarg :top)
-   (min-width :initform nil :initarg :min-width)
-   (top-level-sheet :initform nil :reader frame-top-level-sheet)
-   (panes :reader frame-panes :initarg :panes)
-   (graft :initform nil :accessor graft)
-   (state :initarg :state
-          :initform :disowned
-          :reader frame-state)
-   (manager :initform nil :accessor frame-manager)))
-
-(defclass menu-unmanaged-top-level-sheet-pane (unmanaged-top-level-sheet-pane)
-  ())
-
-(defmethod adopt-frame ((fm frame-manager) (frame menu-frame))
-  (setf (slot-value fm 'frames) (cons frame (slot-value fm 'frames)))
-  (setf (frame-manager frame) fm)
-  (let* ((t-l-s (make-pane-1 fm *application-frame*
-                             'menu-unmanaged-top-level-sheet-pane
-                             :name 'top-level-sheet
-                             ;; enabling should be left to enable-frame
-                             :enabled-p nil)))
-    (setf (slot-value frame 'top-level-sheet) t-l-s)
-    (sheet-adopt-child t-l-s (frame-panes frame))
-    (let ((graft (find-graft :port (port fm))))
-      (sheet-adopt-child graft t-l-s)
-      (setf (graft frame) graft))
-    (let ((pre-space (compose-space t-l-s))
-          (frame-min-width (slot-value frame 'min-width)))
-      (multiple-value-bind (width min-width max-width height min-height max-height)
-          (space-requirement-components pre-space)
-        (flet ((foomax (x y) (max (or x 1) (or y 1))))
-          (let ((space (make-space-requirement :min-width  (foomax frame-min-width min-width)
-                                               :width      (foomax frame-min-width width)
-                                               :max-width  (foomax frame-min-width max-width)
-                                               :min-height min-height
-                                               :height     height
-                                               :max-height max-height)))
-            (allocate-space (frame-panes frame)
-                            (space-requirement-width space)
-                            (space-requirement-height space))
-            (setf (sheet-region t-l-s)
-                  (make-bounding-rectangle 0 0
-                                           (space-requirement-width space)
-                                           (space-requirement-height space))))
-          (setf (sheet-transformation t-l-s)
-                (make-translation-transformation (slot-value frame 'left)
-                                                 (slot-value frame 'top))))))))
-
-(defmethod disown-frame ((fm frame-manager) (frame menu-frame))
-  (setf (slot-value fm 'frames) (remove frame (slot-value fm 'frames)))
-  (let ((tps (frame-top-level-sheet frame)))
-    (sheet-disown-child tps (frame-panes frame))
-    (sheet-disown-child (graft frame) tps))
-  (setf (frame-manager frame) nil))
-
-(defmethod enable-frame ((frame menu-frame))
-  (setf (sheet-enabled-p (frame-top-level-sheet frame)) t)
-  (setf (slot-value frame 'state) :enabled)
-  (note-frame-enabled (frame-manager frame) frame))
-
-(defmethod disable-frame ((frame menu-frame))
-  (setf (sheet-enabled-p (frame-top-level-sheet frame)) nil)
-  (setf (slot-value frame 'state) :disabled)
-  (note-frame-disabled (frame-manager frame) frame))
-
-(defmethod shrink-frame ((frame menu-frame))
-  (declare (ignore frame))
-  (warn "MENU-FRAME can't be shrunk."))
-
-(defun make-menu-frame (pane &key (left 0) (top 0) (min-width 1))
-  (make-instance 'menu-frame :panes pane :left left :top top :min-width min-width))
-
 ;;; Frames and presentations
 (defmethod frame-maintain-presentation-histories
     ((frame standard-application-frame))
@@ -996,287 +796,6 @@ frames and will not have focus.
     ((frame standard-application-frame) stream button-press-event)
   (declare (ignore stream button-press-event))
   nil)
-
-(defgeneric frame-update-pointer-documentation
-    (frame input-context stream event))
-
-(defconstant +button-documentation+ '((#.+pointer-left-button+ "L")
-                                      (#.+pointer-middle-button+ "M")
-                                      (#.+pointer-right-button+ "R")
-                                      (#.+pointer-wheel-up+ "WheelUp")
-                                      (#.+pointer-wheel-down+ "WheelDown")
-                                      (#.+pointer-wheel-left+ "WheelLeft")
-                                      (#.+pointer-wheel-right+ "WheelRight")))
-
-(defconstant +modifier-documentation+
-  '((#.+shift-key+ "sh" "Shift")
-    (#.+control-key+ "c" "Control")
-    (#.+meta-key+ "m" "Meta")
-    (#.+super-key+ "s" "Super")
-    (#.+hyper-key+ "h" "Hyper")))
-
-;;; Give a coherent order to sets of modifier combinations.  Multi-key combos
-;;; come after single keys.
-
-(defun cmp-modifiers (a b)
-  (let ((cnt-a (logcount a))
-        (cnt-b (logcount b)))
-    (cond ((eql cnt-a cnt-b)
-           (< a b))
-          (t (< cnt-a cnt-b)))))
-
-(defun print-modifiers (stream modifiers style)
-  (if (zerop modifiers)
-      (when (eq style :long)
-        (write-string "<nothing>" stream))
-      (loop with trailing = nil
-            for (bit short long) in +modifier-documentation+
-            when (logtest bit modifiers)
-            do (progn
-                 (format stream "~:[~;-~]~A" trailing (if (eq style :short)
-                                                          short
-                                                          long))
-                 (setq trailing t)))))
-
-;;; XXX Warning: Changing rapidly!
-;;;
-;;; We don't actually want to print out the translator documentation and redraw
-;;; the pointer documentation window on every motion event.  So, we compute a
-;;; state object (basically modifier state and a list of the applicable
-;;; presentation, translator and input context on each mouse button),
-;;; compare it to the previous state object, and only write out documentation
-;;; if they are different.  I suppose it's possible that this state object
-;;; doesn't capture all possible documentation changes -- the doc generator is
-;;; a function, after all -- but that's just tough.
-;;;
-;;; It would be nice to evolve this into a protocol so that elements other than
-;;; presentations -- menu choices, for example -- could influence pointer
-;;; documentation window.
-
-(defgeneric frame-compute-pointer-documentation-state
-    (frame input-context stream event)
-  (:documentation
-   "Compute a state object that will be used to generate pointer documentation."))
-
-(defmethod frame-compute-pointer-documentation-state
-    ((frame standard-application-frame) input-context stream event)
-  (let* ((current-modifier (event-modifier-state event))
-         (x (device-event-x event))
-         (y (device-event-y event))
-         (new-translators
-          (loop for (button) in +button-documentation+
-              for context-list = (multiple-value-list
-                                  (find-innermost-presentation-context
-                                   input-context
-                                   stream
-                                   x y
-                                   :modifier-state current-modifier
-                                   :button button))
-              when (car context-list)
-              collect (cons button context-list))))
-    (list current-modifier new-translators)))
-
-(defgeneric frame-compare-pointer-documentation-state
-    (frame input-context stream old-state new-state))
-
-(defmethod frame-compare-pointer-documentation-state
-    ((frame standard-application-frame) input-context stream
-     old-state new-state)
-  (declare (ignore input-context stream))
-  (equal old-state new-state))
-
-(defun record-on-display (stream record)
-  "Return true if `record' is part of the output history of
-`stream', false otherwise."
-  (labels ((worker (record)
-             (or (eq record (stream-output-history stream))
-                 (and (not (null (output-record-parent record)))
-                      (worker (output-record-parent record))))))
-    (worker record)))
-
-(defgeneric frame-print-pointer-documentation
-    (frame input-context stream state event))
-
-(defvar *background-message-minimum-lifetime* 1
-  "The amount of seconds a background message will be kept
-alive.")
-
-(defmethod frame-print-pointer-documentation
-    ((frame standard-application-frame) input-context stream state event)
-  (unless state
-    (return-from frame-print-pointer-documentation nil))
-  (destructuring-bind (current-modifier new-translators)
-      state
-    (let ((x (device-event-x event))
-          (y (device-event-y event))
-          (pstream *pointer-documentation-output*))
-      (if (null new-translators)
-          (when (and (background-message pstream)
-                     (not (record-on-display pstream (background-message pstream))))
-            (cond ((> (get-universal-time)
-                      (+ (background-message-time pstream)
-                         *background-message-minimum-lifetime*))
-                   (setf (background-message pstream) nil))
-                  (t
-                   (setf (output-record-parent (background-message pstream)) nil)
-                   (stream-add-output-record pstream (background-message pstream))
-                   (replay (background-message pstream) pstream))))
-          (loop for (button presentation translator context)
-                in new-translators
-                for name = (cadr (assoc button +button-documentation+))
-                for first-one = t then nil
-                do (progn
-                     (unless first-one
-                       (write-string "; " pstream))
-                     (unless (zerop current-modifier)
-                       (print-modifiers pstream current-modifier :short)
-                       (write-string "-" pstream))
-                     (format pstream "~A: " name)
-                     (document-presentation-translator translator
-                                                       presentation
-                                                       (input-context-type context)
-                                                       *application-frame*
-                                                       event
-                                                       stream
-                                                       x y
-                                                       :stream pstream
-                                                       :documentation-type
-                                                       :pointer))
-                finally (when new-translators
-                          (write-char #\. pstream))))
-      ;; Wasteful to do this after doing
-      ;; find-innermost-presentation-context above... look at doing this
-      ;; first and then doing the innermost test.
-      (let ((all-translators (find-applicable-translators
-                              (stream-output-history stream)
-                              input-context
-                              *application-frame*
-                              stream
-                              x y
-                              :for-menu :for-documentation))
-            (other-modifiers nil))
-        (loop for (translator) in all-translators
-              for gesture = (gesture translator)
-              unless (eq gesture t)
-              do (loop for (name type modifier) in gesture
-                       unless (eql modifier current-modifier)
-                       do (pushnew modifier other-modifiers)))
-        (when other-modifiers
-          (setf other-modifiers (sort other-modifiers #'cmp-modifiers))
-          (terpri pstream)
-          (write-string "To see other commands, press "	pstream)
-          (loop for modifier-tail on other-modifiers
-                for (modifier) = modifier-tail
-                for count from 0
-                do (progn
-                     (if (null (cdr modifier-tail))
-                         (progn
-                           (when (> count 1)
-                             (write-char #\, pstream))
-                           (when (> count 0)
-                             (write-string " or " pstream)))
-                         (when (> count 0)
-                           (write-string ", " pstream)))
-                     (print-modifiers pstream modifier :long)))
-          (write-char #\. pstream))))))
-
-(defmethod frame-update-pointer-documentation
-    ((frame standard-application-frame) input-context stream event)
-  (when *pointer-documentation-output*
-    (with-accessors ((frame-documentation-state frame-documentation-state)
-                     (documentation-record documentation-record))
-        frame
-      (setf frame-documentation-state
-            (frame-compute-pointer-documentation-state frame
-                                                       input-context
-                                                       stream
-                                                       event))
-      ;; These ugly special bindings work around the fact that the outer
-      ;; updating-output form closes over its body and allow the inner
-      ;; form to see the correct, current values of those variables.
-      (let ((%input-context% input-context)
-            (%stream% stream)
-            (%doc-state% frame-documentation-state)
-            (%event% event))
-        (declare (special %input-context% %stream% %doc-state% %event%))
-        (if (and documentation-record
-                 (output-record-parent documentation-record))
-            (redisplay documentation-record *pointer-documentation-output*)
-            (progn
-              (setf documentation-record
-                    (updating-output (*pointer-documentation-output*)
-                      (updating-output (*pointer-documentation-output*
-                                        :cache-value %doc-state%
-                                        :cache-test #'equal)
-                        (frame-print-pointer-documentation frame
-                                                           %input-context%
-                                                           %stream%
-                                                           %doc-state%
-                                                           %event%))))))))))
-
-(defgeneric invoke-with-output-to-pointer-documentation (frame continuation)
-  (:documentation "Invoke `continuation' with a single argument -
-a stream that the continuation can write to, the output of which
-will be used as the background message of the pointer
-documentation pane of `frame'. If the pointer-documentation of
-`frame' is not a `pointer-documentation-pane', `continuation'
-will not be called."))
-
-(defmethod invoke-with-output-to-pointer-documentation
-    ((frame standard-application-frame) continuation)
-  (with-accessors ((pointer-documentation frame-pointer-documentation-output)) frame
-    (when (typep pointer-documentation 'pointer-documentation-pane)
-      (setf (background-message pointer-documentation)
-            (with-output-to-output-record (pointer-documentation)
-              (funcall continuation pointer-documentation))
-            (background-message-time pointer-documentation) (get-universal-time)))))
-
-(defmacro with-output-to-pointer-documentation ((stream frame) &body body)
-  "Bind `stream' to the pointer-documentation pane of `frame' and
-capture the output of `body' on `stream' as the background
-message of the pointer documentation pane. If `frame' does not
-have a `pointer-documentation-pane' as pointer documentation,
-`body' will not be evaluated."
-  `(invoke-with-output-to-pointer-documentation
-    ,frame #'(lambda (,stream)
-               ,@body)))
-
-;;; A hook for applications to draw random strings in the
-;;; *pointer-documentation-output* without screwing up the real pointer
-;;; documentation too badly.
-
-(defun frame-display-pointer-documentation-string (frame string)
-  (with-output-to-pointer-documentation (stream frame)
-      (write-string string stream))
-  (let ((*pointer-documentation-output* (frame-pointer-documentation-output frame)))
-    ;; To see the string it is necessary to trigger the redisplay of
-    ;; pointer-documentation-pane with FRAME-UPDATE-POINTER-DOCUMENTATION.
-    ;; As INPUT-CONTEXT we pass NIL. FRAME-COMPUTE-POINTER-DOCUMENTATION-STATE and
-    ;; FRAME-PRINT-POINTER-DOCUMENTATION specialize on that.
-    ;; We pass the STRING as EVENT argument in this way
-    ;; FRAME-COMPUTE-POINTER-DOCUMENTATION-STATE calculate a new state
-    ;; value cached for icremental-redisplay machinery.  -- admich 2019-11-15
-    (frame-update-pointer-documentation frame nil nil string)))
-
-(defmethod frame-compute-pointer-documentation-state
-    ((frame standard-application-frame) (input-context null) stream event)
-  (list :string event))
-
-(defmethod frame-print-pointer-documentation
-    ((frame standard-application-frame) (input-context null) stream state event)
-  (unless state
-    (return-from frame-print-pointer-documentation nil))
-  (let ((pstream *pointer-documentation-output*))
-    (when-let ((message (background-message pstream)))
-      (cond ((record-on-display pstream message))
-            ((> (get-universal-time)
-                (+ (background-message-time pstream)
-                   *background-message-minimum-lifetime*))
-             (setf (background-message pstream) nil))
-            (t
-             (setf (output-record-parent message) nil)
-             (stream-add-output-record pstream message)
-             (replay message pstream))))))
 
 (defmethod frame-input-context-track-pointer
     ((frame standard-application-frame)

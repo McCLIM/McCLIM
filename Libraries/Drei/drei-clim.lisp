@@ -1,37 +1,22 @@
-;;; -*- Mode: Lisp; Package: DREI -*-
-
-;;;  (c) copyright 2005 by
-;;;           Robert Strandh (strandh@labri.fr)
-;;;  (c) copyright 2005 by
-;;;           Matthieu Villeneuve (matthieu.villeneuve@free.fr)
-;;;  (c) copyright 2005 by
-;;;           Aleksandar Bakic (a_bakic@yahoo.com)
-;;;  (c) copyright 2006 by
-;;;           Troels Henriksen (athas@sigkill.dk)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) copyright 2005 Robert Strandh <strandh@labri.fr>
+;;;  (c) copyright 2005 Matthieu Villeneuve <matthieu.villeneuve@free.fr>
+;;;  (c) copyright 2005 Aleksandar Bakic <a_bakic@yahoo.com>
+;;;  (c) copyright 2006 Troels Henriksen <athas@sigkill.dk>
+;;;  (c) copyright 2009 Andy Hefner <ahefner@common-lisp.net>
+;;   (c) copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
-
+;;; ---------------------------------------------------------------------------
+;;;
 ;;; Implementation of most of the CLIM-facing parts of Drei, including
 ;;; the pane and gadget itself as well as the command tables. The
 ;;; solely input-editor oriented stuff is in input-editor.lisp.
 
-(in-package :drei)
+(in-package #:drei)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; The Drei gadget and pane.
 ;;;
 ;;; An application can use Drei in two different ways - by using
@@ -97,13 +82,8 @@ when it is inactive."))
 Drei buffer. The most important role for instances of subclasses
 of this class is to visually represent the position of point."))
 
-(defgeneric active (cursor)
-  (:documentation "Whether the cursor is active or
-not. An active cursor is drawn using the active ink, and an
-inactive is drawn using the inactive ink. Typically, a cursor
-will be active when the associated Drei view has focus.")
-  (:method ((cursor drei-cursor))
-    (active (view cursor))))
+(defmethod active ((thing drei-cursor))
+  (active (view thing)))
 
 (defgeneric ink (cursor)
   (:documentation "Return the ink object that should be used for
@@ -360,8 +340,9 @@ modifier key."))
     ,(frame-command-table *application-frame*)))
 
 (defclass drei-area (drei displayed-output-record region
-                          command-processor
-                          instant-macro-execution-mixin)
+                     climi::gs-text-style-mixin
+                     command-processor
+                     instant-macro-execution-mixin)
   ((%background-ink :initarg :background-ink
                     :reader background-ink
                     :initform +background-ink+)
@@ -390,7 +371,7 @@ record of the Drei area instance."))
 record."))
 
 (defmethod initialize-instance :after ((area drei-area)
-				       &key x-position y-position)
+                                       &key x-position y-position)
   (check-type x-position number)
   (check-type y-position number)
   (setf (area-position area) (list x-position y-position)
@@ -563,8 +544,6 @@ record."))
     ;; the pane.
     (redisplay-frame-pane (pane-frame *minibuffer*) *minibuffer* :force-p t)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; Programmer interface stuff
 ;;;
 ;;; We want it to be dead-easy to integrate Drei in CLIM applications.
@@ -574,18 +553,18 @@ record."))
 ;;; break. Let's hope nothing of that sort happens (this works in
 ;;; McCLIM. The method, not the hoping.)
 (defmethod make-pane-1 :around (fm (frame application-frame)
-                                   (type (eql :drei))
-                                   &rest args &key
-                                   (syntax nil) (initial-contents "")
-                                   (minibuffer t) (border-width 1)
-                                   (scroll-bars :horizontal)
-                                   (drei-class 'drei-gadget-pane)
-                                   (view 'textual-drei-syntax-view))
+                                (type (eql :drei))
+                                &rest args
+                                &key (syntax nil) (initial-contents "")
+                                     (minibuffer t) (border-width 1)
+                                     (scroll-bars :horizontal)
+                                     (drei-class 'drei-gadget-pane)
+                                     (view 'textual-drei-syntax-view))
   (check-type initial-contents array)
   (check-type border-width integer)
   (check-type scroll-bars (member t :both :vertical :horizontal nil))
   (with-keywords-removed (args (:minibuffer :scroll-bars :border-width
-                                                         :syntax :drei-class :view))
+                                            :syntax :drei-class :view))
     (let* ((borderp (and border-width (plusp border-width)))
            (minibuffer-pane (cond ((eq minibuffer t)
                                    (make-pane 'drei-minibuffer-pane))
@@ -596,28 +575,28 @@ record."))
                                   (t (error "Provided minibuffer
 is not T, NIL or a `minibuffer-pane'."))))
            (drei-pane (apply #'make-pane-1 fm frame drei-class
-                       :minibuffer minibuffer-pane
-                       :view (make-instance view)
-                       args))
+                             :minibuffer minibuffer-pane
+                             :view (make-instance view)
+                             args))
            (pane drei-pane)
            (view (view drei-pane)))
       (letf (((read-only-p (buffer view)) nil))
         (insert-buffer-sequence (buffer view) 0 initial-contents))
       (if syntax
           (setf (syntax view)
-                (if (syntaxp syntax)
-                    syntax
-                    (make-instance (or (syntax-from-name (string syntax))
-                                       (error "Syntax ~A not found" (string syntax)))
-                                   :buffer (buffer view)))))
+                (make-instance (or (when (syntaxp syntax)
+                                     syntax)
+                                   (syntax-from-name (string syntax))
+                                   (error "Syntax ~A not found" (string syntax)))
+                               :buffer (buffer view))))
       (when scroll-bars
         (setf pane (scrolling (:scroll-bar scroll-bars)
                      pane)))
       (when minibuffer
         (setf pane (make-pane 'drei-constellation
-                    :drei drei-pane
-                    :minibuffer minibuffer-pane
-                    :contents (list pane minibuffer-pane))))
+                              :drei drei-pane
+                              :minibuffer minibuffer-pane
+                              :contents (list pane minibuffer-pane))))
       (when borderp
         (setf pane (climi::bordering
                        (:border-width border-width)

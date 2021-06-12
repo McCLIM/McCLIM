@@ -1,24 +1,13 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-;;;  (c) copyright 2000,2014 by
-;;;      Robert Strandh (robert.strandh@gmail.com)
-;;;  (c) copyright 1998,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 1998,2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
 ;;;; Some Notes
 
@@ -119,92 +108,89 @@
 ;;;
 ;;;      DEFAULT ink used if symbol is not bound.
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-(defgeneric color-rgb (color))
-(defgeneric color-rgba (color))
-(defgeneric design-ink (design x y))
+  (defgeneric color-rgb (color))
+  (defgeneric color-rgba (color))
+  (defgeneric design-ink (design x y))
 
-(defmethod print-object ((color color) stream)
-  (print-unreadable-object (color stream :identity nil :type t)
-    (multiple-value-call #'format stream "~,4F ~,4F ~,4F" (color-rgb color))))
+  (defmethod print-object ((color color) stream)
+    (print-unreadable-object (color stream :identity nil :type t)
+      (multiple-value-call #'format stream "~,4F ~,4F ~,4F" (color-rgb color))))
 
-;;; standard-color
+  (defclass standard-color (color)
+    ((red   :initarg :red
+            :initform 0
+            :type (real 0 1))
+     (green :initarg :green
+            :initform 0
+            :type (real 0 1))
+     (blue  :initarg :blue
+            :initform 0
+            :type (real 0 1))))
 
-(defclass standard-color (color)
-  ((red   :initarg :red
-          :initform 0
-          :type (real 0 1))
-   (green :initarg :green
-          :initform 0
-          :type (real 0 1))
-   (blue  :initarg :blue
-          :initform 0
-          :type (real 0 1))))
+  (defmethod opacity-value ((ink standard-color))
+    1.0)
 
-(defmethod opacity-value ((ink standard-color))
-  1.0)
+  (defmethod color-rgb ((color standard-color))
+    (with-slots (red green blue) color
+      (values red green blue)))
 
-(defmethod color-rgb ((color standard-color))
-  (with-slots (red green blue) color
-    (values red green blue)))
+  (defmethod color-rgba ((color standard-color))
+    (with-slots (red green blue) color
+      (values red green blue 1.0)))
 
-(defmethod color-rgba ((color standard-color))
-  (with-slots (red green blue) color
-    (values red green blue 1.0)))
+  (defmethod design-ink ((color standard-color) x y)
+    (declare (ignore x y))
+    color)
 
-(defmethod design-ink ((color standard-color) x y)
-  (declare (ignore x y))
-  color)
+  (defclass named-color (standard-color)
+    ((name :initarg :name
+           :initform "Unnamed color") ))
 
-(defclass named-color (standard-color)
-  ((name :initarg :name
-	 :initform "Unnamed color") ))
+  (defmethod print-object ((color named-color) stream)
+    (with-slots (name) color
+      (print-unreadable-object (color stream :type t :identity nil)
+        (format stream "~S" name))))
 
-(defmethod print-object ((color named-color) stream)
-  (with-slots (name) color
-    (print-unreadable-object (color stream :type t :identity nil)
-      (format stream "~S" name))))
+  (defmethod make-load-form ((color named-color) &optional env)
+    (declare (ignore env))
+    (with-slots (name red green blue) color
+      `(make-named-color ',name ,red ,green ,blue)))
 
-(defmethod make-load-form ((color named-color) &optional env)
-  (declare (ignore env))
-  (with-slots (name red green blue) color
-    `(make-named-color ',name ,red ,green ,blue)))
+  (eval-when (:compile-toplevel :load-toplevel :execute)
+    (defvar *color-hash-table*
+      (trivial-garbage:make-weak-hash-table
+       :weakness :value
+       :weakness-matters nil)))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defvar *color-hash-table*
-    (trivial-garbage:make-weak-hash-table
-     :weakness :value
-     :weakness-matters nil)))
+  (defun compute-color-key (red green blue)
+    (+ (ash (round (* 255 red)) 16)
+       (ash (round (* 255 green)) 8)
+       (round (* 255 blue))))
 
-(defun compute-color-key (red green blue)
-  (+ (ash (round (* 255 red)) 16)
-     (ash (round (* 255 green)) 8)
-     (round (* 255 blue))))
+  (defun make-rgb-color (red green blue)
+    (let ((key (compute-color-key red green blue)))
+      (declare (type fixnum key))
+      (or (gethash key *color-hash-table*)
+          (setf (gethash key *color-hash-table*)
+                (make-instance 'named-color :red red :green green :blue blue)))))
 
-(defun make-rgb-color (red green blue)
-  (let ((key (compute-color-key red green blue)))
-    (declare (type fixnum key))
-    (or (gethash key *color-hash-table*)
-	(setf (gethash key *color-hash-table*)
-	      (make-instance 'named-color :red red :green green :blue blue)))))
+  (defun make-gray-color (intensity)
+    (make-rgb-color intensity intensity intensity))
 
-(defun make-gray-color (intensity)
-  (make-rgb-color intensity intensity intensity))
-
-(defun make-named-color (name red green blue)
-  (let* ((key (compute-color-key red green blue))
-	 (entry (gethash key *color-hash-table*)))
-    (declare (type fixnum key))
-    (cond (entry
-	   (when (string-equal (slot-value entry 'name) "Unnamed color")
-	     (setf (slot-value entry 'name) name))
-	   entry)
-	  (t (setf (gethash key *color-hash-table*)
-		   (make-instance 'named-color :name name :red red :green green :blue blue))))))
-) ; eval-when
+  (defun make-named-color (name red green blue)
+    (let* ((key (compute-color-key red green blue))
+           (entry (gethash key *color-hash-table*)))
+      (declare (type fixnum key))
+      (cond (entry
+             (when (string-equal (slot-value entry 'name) "Unnamed color")
+               (setf (slot-value entry 'name) name))
+             entry)
+            (t (setf (gethash key *color-hash-table*)
+                     (make-instance 'named-color :name name :red red :green green :blue blue)))))))
 
 ;;;
 ;;; Below is a literal translation from Dylan's DUIM source code,
@@ -947,10 +933,10 @@ identity-transformation) then source design is returned."
   (multiple-value-bind (r1 g1 b1)
       (color-rgb design1)
     (multiple-value-bind (r2 g2 b2)
-	(color-rgb design2)
+        (color-rgb design2)
       (and (= r1 r2)
-	   (= g1 g2)
-	   (= b1 b2)))))
+           (= g1 g2)
+           (= b1 b2)))))
 
 ;;; Color utilities
 

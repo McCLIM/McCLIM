@@ -39,7 +39,7 @@
    #:gray->alpha))
 
 (defpackage #:mcclim-render-internals
-  (:use #:clim #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
+  (:use #:clim #:clime #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
   (:import-from #:alexandria
                 #:minf
                 #:maxf
@@ -65,8 +65,7 @@
                 #:*families/faces*
                 #:truetype-face)
   (:import-from #:clim-backend
-                #:port-set-mirror-region
-                #:port-set-mirror-transformation
+                #:port-set-mirror-geometry
                 #:medium-native-transformation
                 #:medium-device-transformation
                 #:medium-native-region

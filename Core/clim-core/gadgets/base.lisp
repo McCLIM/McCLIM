@@ -251,6 +251,11 @@
   (:default-initargs :value nil
                      :value-changed-callback nil))
 
+(defmethod reinitialize-instance :after
+    ((gadget value-gadget) &key (value nil value-p))
+  (when value-p
+    (setf (gadget-value gadget :invoke-callback t) value)))
+
 (defmethod (setf gadget-value) (value (gadget value-gadget) &key invoke-callback)
   (declare (ignore invoke-callback))
   (setf (slot-value gadget 'value) value))
@@ -262,8 +267,7 @@
 
 (defmethod (setf gadget-value) :around (value (gadget value-gadget)
                                         &key invoke-callback)
-  (multiple-value-prog1
-      (call-next-method)
+  (multiple-value-prog1 (call-next-method)
     (when invoke-callback
       (value-changed-callback gadget
                               (gadget-client gadget)

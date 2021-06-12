@@ -1,6 +1,11 @@
-;;;;  Copyright (c) 2020 Daniel Kochmański
-;;;;
-;;;;    License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;   License: BSD-2-Clause.
+;;; ---------------------------------------------------------------------------
+;;;
+;;;  (c) Copyright 2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;
+;;; ---------------------------------------------------------------------------
+;;;
 
 (defpackage #:clim-demo.presentation-translators-test
   (:use #:clim #:clim-lisp)

@@ -1,28 +1,18 @@
-;;; -*- Mode: Lisp; Package: CLIM-INTERNALS -*-
-
-;;;  (c) copyright 1998,1999,2000 by Michael McDonald (mikemac@mikemac.com)
-
-;;; This library is free software; you can redistribute it and/or
-;;; modify it under the terms of the GNU Library General Public
-;;; License as published by the Free Software Foundation; either
-;;; version 2 of the License, or (at your option) any later version.
+;;; ---------------------------------------------------------------------------
+;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
+;;; ---------------------------------------------------------------------------
 ;;;
-;;; This library is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-;;; Library General Public License for more details.
+;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
 ;;;
-;;; You should have received a copy of the GNU Library General Public
-;;; License along with this library; if not, write to the
-;;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;;; Boston, MA  02111-1307  USA.
+;;; ---------------------------------------------------------------------------
+;;;
 
 ;;; To regenerate this file use a function defined in the file
-;;; Tools/generate-named-colors.lisp. Notice, that colors +white+ and
-;;; +black+ are defined in design.lisp, so they should be removed from
-;;; the generated file. -- jd 2019-10-25
+;;; Tools/generate-named-colors.lisp. Notice, that colors +white+ and +black+
+;;; are defined in design.lisp, so they should be removed from the generated
+;;; file. -- jd 2019-10-25
 
-(in-package :clim-internals)
+(in-package #:clim-internals)
 
 ; $XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp $
 (defconstant +snow+ (make-named-color "snow" 1.0000 0.9804 0.9804))

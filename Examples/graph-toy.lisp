@@ -8,8 +8,8 @@
 ;;;
 ;;; Graph Toy Demo
 ;;;
-;;; Shows how to redisplay an application pane in response to
-;;; asynchronous events.
+;;; Shows how to redisplay an application pane in response to asynchronous
+;;; events.
 
 (in-package #:clim-demo)
 
