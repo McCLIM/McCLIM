@@ -285,8 +285,8 @@ the following code in a file:
 @end lisp
 
 As we can see in this example, we have put our application in a separate
-package, here a package named @t{APP}.  While not required, putting the
-application in its own package is good practice.
+package, here a package named @t{MY-FIRST-APP}. While not required,
+putting the application in its own package is good practice.
 
 The package for the application uses two packages: @package{CLIM} and
 @package{CLIM-LISP}.  The @package{CLIM} package is the one that
