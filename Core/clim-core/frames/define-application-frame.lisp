@@ -24,9 +24,8 @@
 (defun try-reinitialize-pane (pane type &rest initargs)
   (when-let* ((pane-class (find-concrete-pane-class *pane-realizer* type))
               (inner-pane (find-pane-of-type pane pane-class)))
-    (unless (eq inner-pane pane)
-      (when-let ((parent (sheet-parent inner-pane)))
-        (sheet-disown-child parent inner-pane)))
+    (when-let ((parent (sheet-parent inner-pane)))
+      (sheet-disown-child parent inner-pane))
     (if (member type '(:application :interactor :pointer-documentation :command-menu))
         (multiple-value-bind (stream-options wrapper-options wrapper-space)
             (separate-stream-pane-initargs
