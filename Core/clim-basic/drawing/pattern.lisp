@@ -123,7 +123,10 @@ pattern, stencil, image etc)."))
                  (ash (transform red)     16)
                  (ash (transform green)    8)
                  (ash (transform blue)     0))))
-      (indirect-ink (%rgba-value (indirect-ink-ink element))))))
+      (indirect-ink
+       (%rgba-value (indirect-ink-ink element)))
+      (everywhere-region
+       (%rgba-value *foreground-ink*)))))
 
 (defgeneric %pattern-rgba-value (pattern x y)
   (:documentation "Returns a collapsed RGBA value for position [X, Y].")
