@@ -85,7 +85,7 @@
 
 (define-application-frame pixmaps ()
   ()
-  (:panes (app1 :application :display-time nil :display-function 'draw-grid
+  (:panes (app1 :application :display-time t :display-function 'draw-grid
                              :scroll-bars nil :borders nil
                              :min-width 100 :max-width 100
                              :min-height 100 :max-height 100)
@@ -97,12 +97,14 @@
           (pix2 pixmap-sheet :min-width 100 :max-width 100
                              :min-height 100 :max-height 100)
           (half-dead :clim-stream-pane
-                     :display-function (lambda (frame pane)
-                                         (declare (ignore frame))
-                                         (draw-rectangle* pane 0 0 100 50 :ink clim:+gray30+))
+                     :display-function
+                     (lambda (frame pane)
+                       (declare (ignore frame))
+                       (draw-rectangle* pane 0 0 100 50 :ink +gray30+))
                      :min-width 100 :max-width 100
                      :min-height 100 :max-height 100)
           (dead :clim-stream-pane
+                :background +gray32+
                 :min-width 100 :max-width 100
                 :min-height 100 :max-height 100)
           (desc :application :end-of-line-action :wrap*

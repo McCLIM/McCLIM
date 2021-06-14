@@ -65,6 +65,7 @@
    ;; size required by the stream
    (stream-width :initform 100 :accessor stream-width)
    (stream-height :initform 100 :accessor stream-height))
+  (:default-initargs :display-time t)
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
@@ -259,8 +260,7 @@
 
 (defclass interactor-pane (clim-stream-pane)
   ()
-  (:default-initargs :display-time nil
-                     :end-of-line-action :scroll
+  (:default-initargs :end-of-line-action :scroll
                      :incremental-redisplay t))
 
 ;;; KLUDGE: this is a hack to get keyboard focus (click-to-focus)
