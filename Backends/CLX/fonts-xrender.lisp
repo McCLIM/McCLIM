@@ -35,9 +35,7 @@
 
 (defun make-glyph-set (display)
   (xlib:render-create-glyph-set
-   (first (xlib:find-matching-picture-formats
-           display
-           :alpha 8 :red 0 :green 0 :blue 0))))
+   (xlib:find-standard-picture-format display :a8)))
 
 (defun ensure-glyph-set (port)
   (or (glyph-set port)
