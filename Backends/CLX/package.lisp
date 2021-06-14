@@ -13,6 +13,10 @@
 
 (defpackage #:clim-clx
   (:use #:clim #:clim-lisp #:clim-backend)
+  (:import-from #:alexandria
+                #:ensure-gethash
+                #:with-gensyms
+                #:once-only)
   (:import-from #:climi
                 #:+alt-key+
                 ;;
