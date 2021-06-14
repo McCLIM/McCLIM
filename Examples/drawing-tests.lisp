@@ -175,7 +175,7 @@
                    :name 'backend-output
                    :min-width *width*
                    :min-height *height*
-                   :display-time nil
+                   :display-time t
                    :display-function #'display-backend-output
                    :end-of-line-action :wrap
                    :end-of-page-action :wrap))))
@@ -186,7 +186,7 @@
                    :name 'render-output
                    :min-width *width*
                    :min-height *height*
-                   :display-time nil
+                   :display-time t
                    :display-function #'display-render-output
                    :end-of-line-action :wrap
                    :end-of-page-action :wrap))))

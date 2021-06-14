@@ -16,7 +16,7 @@
   (:pointer-documentation t)
   (:panes
    (interactor :interactor)
-   (scratchpad :application :display-time nil :height 600 :scroll-bars nil))
+   (scratchpad :application :display-time t :height 600 :scroll-bars nil))
   (:layouts
    (default
     (vertically ()

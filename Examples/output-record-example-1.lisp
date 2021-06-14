@@ -128,7 +128,7 @@
   ()
   (:default-initargs
    :output-record (make-instance 'list-output-history)
-   :display-time nil))
+   :display-time t))
 
 ;;; The application frame of this application has two panes: an
 ;;; instance of our own pane class and an interactor for entering

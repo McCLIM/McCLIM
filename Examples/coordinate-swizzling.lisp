@@ -11,7 +11,7 @@
   (:menu-bar nil)
   (:panes (app :application
                :scroll-bars nil
-               :display-time nil)
+               :display-time t)
           (int :interactor
                :scroll-bars nil))
   (:layouts

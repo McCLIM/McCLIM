@@ -19,7 +19,7 @@
   (:menu-bar menubar-command-table)
   (:panes
    (screen :application
-           :display-time nil
+           :display-time t
            :text-style (make-text-style :sans-serif :roman :normal)))
   (:layouts
    (defaults (vertically () screen))))
