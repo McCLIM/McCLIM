@@ -560,24 +560,16 @@ translated, so they begin at different position than [0,0])."))
                                    0 (* 2 pi) t))))))))))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
-  (multiple-value-bind (x1 y1 x2 y2)
-      (clipped-line (medium-native-transformation medium) x1 y1 x2 y2)
-    (when x1
-      (with-clx-graphics () medium
-        (xlib:draw-line mirror gc x1 y1 x2 y2)))))
+  (with-clipped-line ((medium-native-transformation medium) x1 y1 x2 y2)
+    (with-clx-graphics () medium
+      (xlib:draw-line mirror gc x1 y1 x2 y2))))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
-  (let ((tr (medium-native-transformation medium)))
-    (multiple-value-bind (coords unionp)
-        (clipped-poly tr coord-seq closed)
-      (when coords
-        (with-clx-graphics () medium
-          (flet ((draw-it (coords)
-                   (xlib:draw-lines mirror gc coords :fill-p filled)))
-            (if unionp
-                (mapcar #'draw-it coords)
-                (draw-it coords))))))))
+  (with-clx-graphics () medium
+    (with-clipped-poly ((medium-native-transformation medium)
+                        coord-seq closed filled)
+      (xlib:draw-lines mirror gc coord-seq :fill-p filled))))
 
 (defmethod medium-draw-rectangle* :around
     ((medium clx-medium) left top right bottom filled
@@ -588,33 +580,29 @@ translated, so they begin at different position than [0,0])."))
         (call-next-method))
       (call-next-method)))
 
-(defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
+(defmethod medium-draw-rectangle* ((medium clx-medium) x1 y1 x2 y2 filled)
   (let ((tr (medium-native-transformation medium)))
     (if (rectilinear-transformation-p tr)
-        (multiple-value-bind (left top width height)
-            (clipped-rect tr left top right bottom)
-          (when (and width height)
-            (with-clx-graphics () medium
-              (xlib:draw-rectangle mirror gc left top width height filled))))
-        (let* ((vector (vector left top right top right bottom left bottom
-                               left top))
-               (coords (clipped-poly tr vector nil)))
+        (with-clipped-rect (tr x1 y1 x2 y2)
           (with-clx-graphics () medium
-            (xlib:draw-lines mirror gc coords :fill-p filled))))))
+            (xlib:draw-rectangle mirror gc x1 y1 (- x2 x1) (- y2 y1) filled)))
+        (let ((coords (vector x1 y1 x2 y1 x2 y2 x1 y2 x1 y1)))
+          (with-clipped-poly (tr coords nil filled)
+            (with-clx-graphics () medium
+              (xlib:draw-lines mirror gc coords :fill-p filled)))))))
 
 (defmethod medium-draw-rectangles* ((medium clx-medium) position-seq filled)
   (let ((length (length position-seq)))
     (assert (zerop (mod length 4)))
     (let ((points (make-array length))
-          (index  0))
-      (do-sequence ((left top right bottom) position-seq)
-        (multiple-value-bind (min-x min-y width height)
-            (clipped-rect (medium-native-transformation medium)
-                          left top right bottom)
-          (setf (aref points (+ index 0)) min-x)
-          (setf (aref points (+ index 1)) min-y)
-          (setf (aref points (+ index 2)) width)
-          (setf (aref points (+ index 3)) height))
+          (index  0)
+          (tr (medium-native-transformation medium)))
+      (do-sequence ((x1 y1 x2 y2) position-seq)
+        (with-clipped-rect (tr x1 y1 x2 y2)
+          (setf (aref points (+ index 0)) x1)
+          (setf (aref points (+ index 1)) y1)
+          (setf (aref points (+ index 2)) (- x2 x1))
+          (setf (aref points (+ index 3)) (- y2 y1)))
         (incf index 4))
       (with-clx-graphics () medium
         (xlib:draw-rectangles mirror gc points filled)))))
