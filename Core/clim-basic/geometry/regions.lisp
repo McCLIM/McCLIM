@@ -115,15 +115,20 @@
   (declare (ignore region x y))
   nil)
 
+;;; This class is mixed to avoid repetetive computing of bounding boxes in some
+;;; classes.
+(defclass cached-bbox-mixin ()
+  ((bbox :initform nil :accessor bbox)))
+
 ;;; 2.5.1.2 Composition of CLIM Regions
 
-(defclass standard-region-union (region-set)
+(defclass standard-region-union (cached-bbox-mixin region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
 
-(defclass standard-region-intersection (region-set)
+(defclass standard-region-intersection (cached-bbox-mixin region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
 
-(defclass standard-region-difference (region-set)
+(defclass standard-region-difference (cached-bbox-mixin region-set)
   ((a :initarg :a :reader standard-region-difference-a)
    (b :initarg :b :reader standard-region-difference-b)))
 
@@ -161,16 +166,13 @@
 
 ;;; 2.5.3 Polygons and Polylines in CLIM
 
-(defclass cached-polygon-bbox-mixin ()
-  ((bbox :reader bounding-rectangle)))
-
 ;;; Protocol:
 
-(defclass standard-polyline (cached-polygon-bbox-mixin polyline)
+(defclass standard-polyline (cached-bbox-mixin polyline)
   ((points :initarg :points :reader polygon-points)
    (closed :initarg :closed)))
 
-(defclass standard-polygon (cached-polygon-bbox-mixin polygon)
+(defclass standard-polygon (cached-bbox-mixin polygon)
   ((points :initarg :points :reader polygon-points)))
 
 (defmethod slots-for-pprint-object append ((object standard-polyline))
@@ -463,7 +465,7 @@
                                      (+ cx rdx1) (+ cy rdy1)
                                      (+ cx rdx2) (+ cy rdy2))))))
 
-(defclass elliptical-thing ()
+(defclass elliptical-thing (cached-bbox-mixin)
   ((start-angle :initarg :start-angle)
    (end-angle   :initarg :end-angle)
    ;; A transformation from the unit circle to get the elliptical
@@ -574,7 +576,7 @@
 
 ;;; Rectangle Sets
 
-(defclass standard-rectangle-set (region-set)
+(defclass standard-rectangle-set (cached-bbox-mixin region-set)
   ((bands
     ;; Represents the set of rectangles. This is list like:
     ;;
@@ -595,12 +597,7 @@
     ;; y-range [y_i, y_(i+1)].
     ;;
     :initarg :bands
-    :reader  standard-rectangle-set-bands)
-   ;;
-   (bounding-rectangle
-    ;; Caches the regions bounding-rectangle. Is either NIL or the
-    ;; bounding-rectangle, represented by a list (x1 y1 x2 y2).
-    :initform nil)))
+    :reader  standard-rectangle-set-bands)))
 
 (defmethod map-over-region-set-regions
     (fun (region standard-rectangle-set) &key normalize)
