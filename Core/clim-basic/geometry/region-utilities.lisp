@@ -25,6 +25,37 @@
 ;;; (disregarding the coordinate system), so we need to invert the y
 ;;; coordinate in a call to atan.
 
+(defun coord-seq->point-seq (sequence)
+  (collect (collect-point)
+    (do-sequence ((x y) sequence (collect-point))
+      (collect-point (make-point x y)))))
+
+(defun expand-point-seq (point-seq)
+  (collect (coords-seq)
+    (do-sequence (point point-seq (coords-seq))
+      (multiple-value-bind (x y) (point-position point)
+        (coords-seq x y)))))
+
+(defun remove-duplicated-points (point-sequence &optional closed)
+  "Given points A B C ... Z removes consecutive points which are duplicated. If
+a flag CLOSED is T then beginning and end of the list are consecutive too."
+  (when (alexandria:emptyp point-sequence)
+    (return-from remove-duplicated-points point-sequence))
+  (collect (collect-point)
+    (let* ((first-point (elt point-sequence 0))
+           (last-point first-point))
+      (collect-point first-point)
+      (mapc (lambda (current-point)
+              (unless (region-equal current-point last-point)
+                (setf last-point current-point)
+                (collect-point last-point)))
+            point-sequence)
+      (if (and closed
+               (region-equal first-point last-point)
+               (null (alexandria:length= 1 (collect-point))))
+          (butlast (collect-point))
+          (collect-point)))))
+
 (declaim (inline arc-contains-angle-p))
 (defun arc-contains-angle-p (start-angle end-angle delta)
   (if (< start-angle end-angle)
@@ -1230,3 +1261,51 @@ and RADIUS2-DY"
                 (+ p1x e1x) (+ p1y e1y)
                 (- p2x e2x) (- p2y e2y)
                 p2x p2y)))))
+
+;;; Bezier -> Polygon
+;;; Converting a path to a polyline or an area to a polygon
+
+;;; Return a point that is part way between two other points.
+(defun part-way (p0 p1 alpha)
+  (multiple-value-bind (x0 y0) (point-position p0)
+    (multiple-value-bind (x1 y1) (point-position p1)
+      (make-point (+ (* (- 1 alpha) x0) (* alpha x1))
+                  (+ (* (- 1 alpha) y0) (* alpha y1))))))
+
+;;; Return the Euclidean distance between two points.
+(defun distance (p0 p1)
+  (multiple-value-bind (x0 y0) (point-position p0)
+    (multiple-value-bind (x1 y1) (point-position p1)
+      (let* ((dx (- x1 x0))
+             (dx2 (* dx dx))
+             (dy (- y1 y0))
+             (dy2 (* dy dy)))
+        (sqrt (+ dx2 dy2))))))
+
+;;; convert a cubic bezier segment to a list of line segments.
+(defun %polygonalize (p0 p1 p2 p3 &key (precision 0.01))
+  (if (< (- (+ (distance p0 p1)
+               (distance p1 p2)
+               (distance p2 p3))
+            (distance p0 p3))
+         precision)
+      (list p3)
+      (let* ((p01 (part-way p0 p1 0.5))
+             (p12 (part-way p1 p2 0.5))
+             (p23 (part-way p2 p3 0.5))
+             (p012 (part-way p01 p12 0.5))
+             (p123 (part-way p12 p23 0.5))
+             (p0123 (part-way p012 p123 0.5)))
+        (nconc (%polygonalize p0 p01 p012 p0123 :precision precision)
+               (%polygonalize p0123 p123 p23 p3 :precision precision)))))
+
+(defun polygonalize (points)
+  (loop with start = (first points)
+        for (p0 p1 p2 p3) on points by #'cdr
+        while p3
+        appending (%polygonalize p0 p1 p2 p3) into result
+        finally (return (list* start result))))
+
+(defun polygonalize* (coords)
+  (expand-point-seq
+   (polygonalize (coord-seq->point-seq coords))))

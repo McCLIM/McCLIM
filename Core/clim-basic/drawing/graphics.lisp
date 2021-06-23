@@ -329,13 +329,6 @@
   (with-medium-options (sheet args)
     (medium-draw-point* medium x y)))
 
-(defun expand-point-seq (point-seq)
-  (let ((coord-seq nil))
-    (do-sequence (point point-seq)
-      (multiple-value-bind (x y) (point-position point)
-        (setq coord-seq (list* y x coord-seq))))
-    (nreverse coord-seq)))
-
 (defun draw-points (sheet point-seq
                     &rest args
                     &key ink clipping-region transformation
