@@ -1911,7 +1911,6 @@
    #:line-style-effective-dashes
    ;; medium
    #:medium-miter-limit
-   #:medium-draw-circle*
    ;; panes
    #:raised-pane #:raising
    #:lowered-pane #:lowering
@@ -2016,7 +2015,6 @@
    ;; CLIM-INTERNALS
    #:find-port-type
    #:make-graft
-   #:medium-draw-circle*
    #:port-disable-sheet
    #:port-enable-sheet
    #:port-shrink-sheet
@@ -2116,7 +2114,6 @@
    #:medium-native-region
    ;; CLIM-EXTENSIONS
    #:medium-miter-limit
-   #:medium-draw-circle*
    ;; selection
    #:release-selection
    #:publish-selection

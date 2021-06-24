@@ -716,26 +716,6 @@ translated, so they begin at different position than [0,0])."))
                                      rdx1 rdy1 rdx2 rdy2
                                      start-angle end-angle filled)))))))
 
-(defmethod medium-draw-circle* ((medium clx-medium)
-                                center-x center-y radius start-angle end-angle
-                                filled)
-  (with-transformed-position
-      ((medium-native-transformation medium) center-x center-y)
-    (let* ((arc-angle (- end-angle start-angle))
-           (arc-angle (if (< arc-angle 0)
-                          (+ (* pi 2) arc-angle)
-                          arc-angle))
-           (min-x (round-coordinate (- center-x radius)))
-           (min-y (round-coordinate (- center-y radius)))
-           (max-x (round-coordinate (+ center-x radius)))
-           (max-y (round-coordinate (+ center-y radius))))
-      (with-clx-graphics () medium
-        (xlib:draw-arc mirror gc
-                       min-x min-y
-                       (- max-x min-x) (- min-y max-y)
-                       start-angle arc-angle
-                       filled)))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
