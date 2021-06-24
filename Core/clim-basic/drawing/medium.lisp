@@ -364,6 +364,13 @@
   `(multiple-value-bind (,dx ,dy) (transform-distance ,transformation ,dx ,dy)
      ,@body))
 
+(defmacro with-transformed-angles
+    ((transformation clockwisep &rest angles) &body body)
+  (let ((op (if clockwisep 'transform-angle 'untransform-angle)))
+    `(let ,(loop for angle in angles
+                 collect `(,angle (,op ,transformation ,angle)))
+       ,@body)))
+
 (defmacro with-transformed-positions ((transformation coord-seq) &body body)
   `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
      ,@body))
