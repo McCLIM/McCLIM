@@ -471,26 +471,6 @@
                           radius-2-dx radius-2-dy
                           start-angle end-angle filled)))))
 
-(defmethod medium-draw-circle* :around (medium center-x center-y
-                                        radius start-angle end-angle filled)
-  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
-    (setf start-angle 0 end-angle (* 2 pi)))
-  (call-next-method))
-
-(defmethod medium-draw-circle* :around ((medium transform-coordinates-mixin) center-x center-y
-                                        radius start-angle end-angle filled)
-  (let* ((ellipse (make-elliptical-arc* center-x center-y
-                                        radius 0
-                                        0 radius
-                                        :start-angle start-angle
-                                        :end-angle end-angle))
-         (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse))
-         (start-angle (ellipse-start-angle transformed-ellipse))
-         (end-angle (ellipse-end-angle transformed-ellipse)))
-    (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
-      (call-next-method medium center-x center-y radius start-angle end-angle filled))))
-
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height
                                      to-drawable to-x to-y)
