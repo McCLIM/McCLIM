@@ -29,6 +29,8 @@
                 #:do-sequence
                 #:with-transformed-position
                 #:with-transformed-positions
+                #:with-transformed-distance
+                #:with-transformed-angles
                 #:with-medium-options
                 #:line-style-effective-thickness
                 #:line-style-effective-dashes

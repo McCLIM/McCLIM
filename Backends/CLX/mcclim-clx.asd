@@ -25,7 +25,8 @@
    (:module "output" :pathname "" :components
             ((:file "bidi" :depends-on ())
              (:file "fonts" :depends-on ("bidi"))
-             (:file "medium" :depends-on ("fonts"))
+             (:file "drawing")
+             (:file "medium" :depends-on ("fonts" "drawing"))
              (:file "fonts-xrender")
              (:file "medium-xrender" :depends-on ("medium" "fonts-xrender"))
              (:file "pixmap" :depends-on ("medium"))))
