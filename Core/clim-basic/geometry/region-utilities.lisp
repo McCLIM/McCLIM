@@ -80,6 +80,13 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
   "Returns the number X squared."
   (* x x))
 
+(declaim (inline point-lessp*))
+(defun point-lessp* (x1 y1 x2 y2)
+  "Returns T if P1 is before P2 (Y axis, X axis resolves ties)."
+  (or (> y2 y1)
+      (and (= y2 y1)
+           (> x2 x1))))
+
 (defun normalize-angle (angle)
   "Takes an angle ANGLE and returns the corresponding non-negative angle
 less than or equal to 2pi. Note that 4pi would be normalized to 0, not
@@ -340,34 +347,37 @@ y2."
           (setq sy sy2))))))
 
 (defun polygon->pg-edges (pg extra)
-  (let ((pts (polygon-points pg))
-        (res nil))
-    (let ((prev pts)
-          (cur (cdr pts))
-          (next (cddr pts)))
-      (loop
-        (nest
-         (multiple-value-bind (cur-x cur-y)   (point-position (car cur)))
-         (multiple-value-bind (next-x next-y) (point-position (car next)))
-         (multiple-value-bind (prev-x prev-y) (point-position (car prev))
-           (when (or (> next-y cur-y)
-                     (and (= next-y cur-y)
-                          (> next-x cur-x)))
-             (push (make-pg-edge (car cur) (car next) extra) res))
-           (when (or (> prev-y cur-y)
-                     (and (= prev-y cur-y)
-                          (> prev-x cur-x)))
-             (push (make-pg-edge (car cur) (car prev) extra) res))
-           (when (not (or (> next-y cur-y)
-                          (and (= next-y cur-y)
-                               (> next-x cur-x))))
-             (push (make-pg-edge (car cur) (car cur) extra) res))))
-        (psetq prev cur
-               cur next
-               next (or (cdr next) pts))
-        (when (eq prev pts)
-          (return))))
-    res))
+  (when (typep pg 'nowhere-region)
+    (return-from polygon->pg-edges nil))
+  (collect (results)
+    (flet ((fn (px py cx cy nx ny)
+             (let ((before-next-p (point-lessp* cx cy nx ny))
+                   (before-prev-p (point-lessp* cx cy px py)))
+               (when before-next-p
+                 (results (make-pg-edge* cx cy nx ny extra)))
+               (when before-prev-p
+                 (results (make-pg-edge* cx cy px py extra)))
+               ;; When the current point is after both its adjacent points
+               ;; we add a dummy edge of the length 0. Otherwise we would
+               ;; miss a scanline anchored to this vertice because scanlines
+               ;; are stepped based on each edge "lower" coordinate and this
+               ;; point Y is always on the second position on its segments.
+               (when (not (or before-next-p before-prev-p))
+                 (results (make-pg-edge* cx cy cx cy extra))))))
+      (loop with pts = (polygon-points pg)
+            with prev = pts
+            with cur = (cdr pts)
+            with next = (cddr pts)
+            do (multiple-value-bind (cur-x cur-y) (point-position (car cur))
+                 (multiple-value-bind (next-x next-y) (point-position (car next))
+                   (multiple-value-bind (prev-x prev-y) (point-position (car prev))
+                     (fn prev-x prev-y cur-x cur-y next-x next-y))))
+               (psetq prev cur
+                      cur next
+                      next (or (cdr next) pts))
+               (when (eq prev pts)
+                 (return))))
+    (results)))
 
 (defun restrict-line-on-y-interval* (x1 y1 x2 y2 ry0 ry1)
   (let ((dx (- x2 x1))
