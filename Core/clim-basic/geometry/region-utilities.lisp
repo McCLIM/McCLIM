@@ -326,25 +326,30 @@ y2."
            (car sps))
           ((make-instance 'standard-region-union :regions sps)))))
 
+;;; This function sweeps the line over the union of two polygon edges. Each edge
+;;; has a slot pg-edge-extra which makes it possible to tell which polygon it
+;;; belongs to. The function is called with three arguments: scanline boundaries
+;;; and the set of active edges (that overlap with the scan region).
 (defun over-sweep-bands (pg1 pg2 fun)
-  (let ((es (nconc (polygon->pg-edges pg1 :a) (polygon->pg-edges pg2 :b))))
-    (setq es (sort es #'< :key #'pg-edge-y1))
-    (let ((ep es)
-          (sy (pg-edge-y1 (car es)))
-          (S nil))
-      (do () ((null ep))
-        (setq S (delete-if (lambda (e)
-                             (<= (pg-edge-y2 e) sy))
-                           S))
-
-        (do () ((or (null ep) (/= sy (pg-edge-y1 (car ep)))))
-          (push (pop ep) S))
-
-        (let ((sy2 (or (and ep (pg-edge-y1 (car ep)))
-                       (reduce #'max (mapcar #'pg-edge-y2 S)))))
-
-          (funcall fun sy sy2 S)
-          (setq sy sy2))))))
+  (assert (not (null pg1)))
+  (do* ((edges (sort (nconc (polygon->pg-edges pg1 :a)
+                            (polygon->pg-edges pg2 :b))
+                     #'< :key #'pg-edge-y1))
+        (scan-y1 (pg-edge-y1 (car edges)) scan-y2)
+        (scan-y2 nil)
+        ;; After each iteration remove edges that end before the new scanline.
+        (active-edges '() (delete-if (lambda (e)
+                                       (<= (pg-edge-y2 e) scan-y1))
+                                     active-edges)))
+       ((null edges))
+    ;; Add new edges to the active set.
+    (loop until (or (null edges) (/= scan-y1 (pg-edge-y1 (car edges))))
+          do (push (pop edges) active-edges))
+    ;; Find the end of this scan region (and beginning of the next one).
+    (setf scan-y2 (or (and edges (pg-edge-y1 (car edges)))
+                      (loop for edge in active-edges
+                            maximizing (pg-edge-y2 edge))))
+    (funcall fun scan-y1 scan-y2 active-edges)))
 
 (defun polygon->pg-edges (pg extra)
   (when (typep pg 'nowhere-region)
