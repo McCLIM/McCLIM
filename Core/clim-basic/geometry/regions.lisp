@@ -115,6 +115,18 @@
   (declare (ignore region x y))
   nil)
 
+(defmethod map-over-polygon-coordinates (fn (region nowhere-region))
+  (declare (ignore fn region))
+  nil)
+
+(defmethod map-over-polygon-segments (fn (region nowhere-region))
+  (declare (ignore fn region))
+  nil)
+
+(defmethod polygon-points ((region nowhere-region))
+  (declare (ignore region))
+  nil)
+
 ;;; This class is mixed to avoid repetetive computing of bounding boxes in some
 ;;; classes.
 (defclass cached-bbox-mixin ()
