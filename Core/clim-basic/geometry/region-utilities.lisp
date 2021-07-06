@@ -246,95 +246,117 @@ y2."
 (defstruct (pg-edge (:constructor make-pg-edge* (x1 y1 x2 y2 extra)))
   x1 y1 x2 y2 extra)
 
-(defstruct pg-splitter
-  links                                 ; "links" means "left"
-                                        ; list of points
-  rechts)                               ; "rechts" means "right"
-                                        ; from the top down
+;;; This structure stores the monotonical chains for a monotone subpolygon.
+(defstruct pg-splitter ;; list of points from top to down.
+  left right)
 
 (defun make-pg-edge (p1 p2 extra)
   (multiple-value-bind (x1 y1) (point-position p1)
     (multiple-value-bind (x2 y2) (point-position p2)
       (make-pg-edge* x1 y1 x2 y2 extra))))
 
-(defun polygon-op (pg1 pg2 &optional logop)
-  (let ((sps nil))
-    (over-sweep-bands pg1 pg2
-                      (lambda (sy0 sy1 S &aux (ys nil))
-                        (setq ys (list sy0 sy1))
-                        (dolist (k1 S)
-                          (dolist (k2 S)
-                            (multiple-value-bind (px py)
-                                (line-intersection**
-                                 (pg-edge-x1 k1) (pg-edge-y1 k1)
-                                 (pg-edge-x2 k1) (pg-edge-y2 k1)
-                                 (pg-edge-x1 k2) (pg-edge-y1 k2)
-                                 (pg-edge-x2 k2) (pg-edge-y2 k2))
-                              (when (and px (< sy0 py sy1))
-                                (pushnew py ys :test #'coordinate=)))))
-                        (setq ys (sort ys #'<))
-                        (do ((q ys (cdr q)))
-                            ((null (cdr q)))
-                          (let ((by0 (car q)) (by1 (cadr q))
-                                (R nil))
-                            (dolist (k S)
-                              (when (> (pg-edge-y2 k) (pg-edge-y1 k))
-                                (multiple-value-bind (x1 y1 x2 y2)
-                                    (restrict-line-on-y-interval*
-                                     (pg-edge-x1 k) (pg-edge-y1 k)
-                                     (pg-edge-x2 k) (pg-edge-y2 k)
-                                     by0 by1)
-                                  (declare (ignore y1 y2))
-                                  (push (list x1 x2 (pg-edge-extra k)) R))))
-                            (setq R (sort R #'<
-                                          :key (lambda (x) (+ (first x) (second x)))))
-                            (labels
-                                ((add (lo lu ro ru)
-                                   (dolist (s sps
-                                             ;; otherwise
-                                             (push (make-pg-splitter
-                                                    :links  (list lu lo)
-                                                    :rechts (list ru ro))
-                                                   sps))
-                                     (when (and (region-equal
-                                                 lo (car (pg-splitter-links s)))
-                                                (region-equal
-                                                 ro (car (pg-splitter-rechts s))))
-                                       (push lu (pg-splitter-links s))
-                                       (push ru (pg-splitter-rechts s))
-                                       (return)))))
-                              (let ((eintritt nil)
-                                    (ina 0)
-                                    (inb 0))
-                                (dolist (k R)
-                                  (ecase (third k)
-                                    (:a (setq ina (- 1 ina)))
-                                    (:b (setq inb (- 1 inb))))
-                                  (cond ((/= 0 (funcall logop ina inb))
-                                         (when (null eintritt)
-                                           (setq eintritt k)))
-                                        (t
-                                         (when eintritt
-                                           (add (make-point (first eintritt) by0)
-                                                (make-point (second eintritt) by1)
-                                                (make-point (first k) by0)
-                                                (make-point (second k) by1))
-                                           (setq eintritt nil)))))))))))
-    (setq sps (delete +nowhere+ (mapcar #'pg-splitter->polygon sps)))
+(defun polygon-op-inner (pg1 pg2 logop &aux (sps '()))
+  (labels ((add-interval (lx1 lx2 rx1 rx2)
+             ;; This function is responsible for either extending existing
+             ;; monotone chains or creating a new splitter.
+             (dolist (s sps
+                        ;; otherwise make a new chain.
+                        (push (make-pg-splitter
+                               :left  (list lx2 lx1)
+                               :right (list rx2 rx1))
+                              sps))
+               (when (and (region-equal lx1 (car (pg-splitter-left s)))
+                          (region-equal rx1 (car (pg-splitter-right s))))
+                 (push lx2 (pg-splitter-left s))
+                 (push rx2 (pg-splitter-right s))
+                 (return))))
+           (sort-pg-edges (scan-y1 scan-y2 active-edges)
+             ;; This function returns a sequence of elements (x1 x2 extra)
+             ;; sorted by x1.  Extra is a polygon marker used by polygon-op.
+             (loop with active-edges* = '()
+                   for edge in active-edges
+                   ;; INV y1 = y2 means: dummy edge added in polygon->pg-edges
+                   ;; to preserve the scanline. There is no need to map it.
+                   do (unless (= (pg-edge-y2 edge) (pg-edge-y1 edge))
+                        (multiple-value-bind (x1 y1 x2 y2)
+                            (restrict-line-on-y-interval*
+                             (pg-edge-x1 edge) (pg-edge-y1 edge)
+                             (pg-edge-x2 edge) (pg-edge-y2 edge)
+                             scan-y1 scan-y2)
+                          (declare (ignore y1 y2))
+                          (push (list x1 x2 (pg-edge-extra edge)) active-edges*)))
+                   finally
+                      ;; Active edges are sorted topologically by
+                      ;; (x1+x2). Edges are not intersecting in the range y1
+                      ;; and y2 but they may have a common starting point;
+                      ;; moreover x2 may be smaller than x1.
+                      (return
+                        (sort active-edges* #'<
+                              :key (lambda (x) (+ (car x) (cadr x)))))))
+           (sweep-line (scan-y1 scan-y2 active-edges)
+             ;; For each scanline each polygon has an even number of edges.
+             ;; The loop below alternates the "inclusion" of each polygon.
+             ;; The sorting of edges ensures the interval order.
+             (loop with active-edges = (sort-pg-edges scan-y1 scan-y2 active-edges)
+                   with entry-x1 = nil
+                   with entry-x2 = nil
+                   with ina = 0
+                   with inb = 0
+                   for (x1 x2 extra) in active-edges
+                   do (ecase extra
+                        (:a (setq ina (- 1 ina)))
+                        (:b (setq inb (- 1 inb))))
+                      (if (/= 0 (funcall logop ina inb))
+                          (when (null entry-x1)
+                            (setf entry-x1 x1
+                                  entry-x2 x2))
+                          (when entry-x1
+                            (add-interval (make-point entry-x1 scan-y1)
+                                          (make-point entry-x2 scan-y2)
+                                          (make-point x1 scan-y1)
+                                          (make-point x2 scan-y2))
+                            (setq entry-x1 nil)))))
+           (sweep-intersections (scan-y1 scan-y2 active-edges)
+             ;; Compute intersections between active edges and adds their Y
+             ;; coordinates as new scanlines. The set of active edges doesn't
+             ;; change but the function may safely assume that edges don't
+             ;; intersect between in the range.
+             (loop with scanlines = (list scan-y1 scan-y2)
+                   for active-1 on active-edges
+                   do (loop for active-2 on (rest active-1)
+                            for k1 = (car active-1)
+                            for k2 = (car active-2)
+                            do (multiple-value-bind (px py)
+                                   (line-intersection**
+                                    (pg-edge-x1 k1) (pg-edge-y1 k1)
+                                    (pg-edge-x2 k1) (pg-edge-y2 k1)
+                                    (pg-edge-x1 k2) (pg-edge-y1 k2)
+                                    (pg-edge-x2 k2) (pg-edge-y2 k2))
+                                 (when (and px (< scan-y1 py scan-y2))
+                                   (push py scanlines))))
+                   finally
+                      (loop for (cy1 cy2) on (sort scanlines #'<)
+                            while cy2
+                            unless (coordinate= cy1 cy2)
+                              do (sweep-line cy1 cy2 active-edges)))))
+    (over-sweep-bands (nconc (polygon->pg-edges pg1 :a)
+                             (polygon->pg-edges pg2 :b))
+                      #'sweep-intersections))
+  sps)
+
+(defun polygon-op (pg1 pg2 logop)
+  (let* ((sps (mapcar #'pg-splitter->polygon (polygon-op-inner pg1 pg2 logop)))
+         (sps (delete +nowhere+ sps)))
     (cond ((null sps) +nowhere+)
           ((null (cdr sps))
            (car sps))
           ((make-instance 'standard-region-union :regions sps)))))
 
-;;; This function sweeps the line over the union of two polygon edges. Each edge
-;;; has a slot pg-edge-extra which makes it possible to tell which polygon it
-;;; belongs to. The function is called with three arguments: scanline boundaries
-;;; and the set of active edges (that overlap with the scan region).
-(defun over-sweep-bands (pg1 pg2 fun)
-  (assert (not (null pg1)))
-  (do* ((edges (sort (nconc (polygon->pg-edges pg1 :a)
-                            (polygon->pg-edges pg2 :b))
-                     #'< :key #'pg-edge-y1))
+;;; This function sweeps the line over the polygon edges. The callback is called
+;;; with three arguments: scanline bounds and a sequence of sorted edges in a
+;;; form (x1 x2 polygon-marker).
+(defun over-sweep-bands (edges fun)
+  (do* ((edges (sort edges #'< :key #'pg-edge-y1))
         (scan-y1 (pg-edge-y1 (car edges)) scan-y2)
         (scan-y2 nil)
         ;; After each iteration remove edges that end before the new scanline.
@@ -391,7 +413,9 @@ y2."
             (+ (* (- ry1 y1) (/ dx dy)) x1) ry1)))
 
 (defun pg-splitter->polygon (s)
-  (make-polygon (clean-up-point-sequence (nconc (pg-splitter-links s) (reverse (pg-splitter-rechts s))))))
+  (make-polygon (clean-up-point-sequence
+                 (nconc (pg-splitter-left s)
+                        (reverse (pg-splitter-right s))))))
 
 (defun clean-up-point-sequence (pts)
   (cond ((null (cdr pts)) pts)
