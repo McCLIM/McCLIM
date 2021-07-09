@@ -217,6 +217,10 @@
     (port manager)
     nil))
 
+(defmethod graft ((frame application-frame))
+  (when-let ((tls (frame-top-level-sheet frame)))
+    (graft tls)))
+
 (defmethod (setf frame-manager)
     (new-manager (frame standard-application-frame))
   (let ((old-manager (frame-manager frame)))
