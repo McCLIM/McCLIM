@@ -226,8 +226,10 @@
                                 :contents (remove nil (list menu root pdoc))
                                 :port (port frame))
                  root))))
-    (let ((tpl-sheet (frame-top-level-sheet frame)))
-      (sheet-adopt-child tpl-sheet (maybe-add-auxiliary-panes frame))
+    (let ((tpl-sheet (frame-top-level-sheet frame))
+          (new-root (maybe-add-auxiliary-panes frame)))
+      (setf (frame-panes frame) new-root)
+      (sheet-adopt-child tpl-sheet new-root)
       (unless (sheet-parent tpl-sheet)
         (sheet-adopt-child (find-graft :port (port fm)) tpl-sheet))
       ;; Find the size of the new frame.
