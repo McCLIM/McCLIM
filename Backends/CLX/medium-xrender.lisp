@@ -242,6 +242,19 @@
                                (clamp (- x2 x1) 0 #xffff)
                                (clamp (- y2 y1) 0 #xffff))))))
 
+;;; FIXME make triangulate-polygon accept the coord-seq so we don't have to cons
+;;; a new polygon for drawing operations.
+(defun medium-fill-polygon (medium coord-seq)
+  (with-render-context (source target) medium
+    (let ((tr (medium-native-transformation medium))
+          (coord-seq (climi::expand-point-seq
+                      (climi::triangulate-polygon
+                       (make-polygon* coord-seq))))
+          (format (xlib:find-standard-picture-format
+                   (clx-port-display (port medium)) :a8)))
+      (with-round-coordinates (tr coord-seq)
+        (xlib:render-triangles target :over source 0 0 format coord-seq)))))
+
 
 (defmethod medium-buffering-output-p ((medium clx-render-medium))
   (call-next-method))
@@ -282,7 +295,9 @@
   (call-next-method))
 
 (defmethod medium-draw-polygon* ((medium clx-render-medium) coord-seq closed filled)
-  (call-next-method medium coord-seq closed filled))
+  (if filled
+      (medium-fill-polygon medium coord-seq)
+      (call-next-method medium coord-seq closed filled)))
 
 (defmethod medium-draw-rectangle* ((medium clx-render-medium)
                                    left top right bottom filled)
