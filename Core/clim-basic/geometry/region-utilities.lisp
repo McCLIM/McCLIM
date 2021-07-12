@@ -270,7 +270,46 @@ y2."
                  (push lx2 (pg-splitter-left s))
                  (push rx2 (pg-splitter-right s))
                  (return))))
-           (sort-pg-edges (scan-y1 scan-y2 active-edges)
+           (sweep-line (scan-y1 scan-y2 active-edges)
+             ;; For each scanline each polygon has an even number of edges.
+             ;; The loop below alternates the "inclusion" of each polygon.
+             ;; The sorting of edges ensures the interval order.
+             (loop with entry-x1 = nil
+                   with entry-x2 = nil
+                   with ina = 0
+                   with inb = 0
+                   for (x1 x2 extra) in active-edges
+                   do (ecase extra
+                        (:a (setq ina (- 1 ina)))
+                        (:b (setq inb (- 1 inb))))
+                      (if (/= 0 (funcall logop ina inb))
+                          (when (null entry-x1)
+                            (setf entry-x1 x1
+                                  entry-x2 x2))
+                          (when entry-x1
+                            (add-interval (make-point entry-x1 scan-y1)
+                                          (make-point entry-x2 scan-y2)
+                                          (make-point x1 scan-y1)
+                                          (make-point x2 scan-y2))
+                            (setq entry-x1 nil))))))
+    (over-sweep-bands (nconc (polygon->pg-edges pg1 :a)
+                             (polygon->pg-edges pg2 :b))
+                      #'sweep-line))
+  sps)
+
+(defun polygon-op (pg1 pg2 logop)
+  (let* ((sps (mapcar #'pg-splitter->polygon (polygon-op-inner pg1 pg2 logop)))
+         (sps (delete +nowhere+ sps)))
+    (cond ((null sps) +nowhere+)
+          ((null (cdr sps))
+           (car sps))
+          ((make-instance 'standard-region-union :regions sps)))))
+
+;;; This function sweeps the line over the polygon edges. The callback is called
+;;; with three arguments: scanline bounds and a sequence of sorted edges in a
+;;; form (x1 x2 polygon-marker).
+(defun over-sweep-bands (edges fun)
+  (labels ((sort-pg-edges (scan-y1 scan-y2 active-edges)
              ;; This function returns a sequence of elements (x1 x2 extra)
              ;; sorted by x1.  Extra is a polygon marker used by polygon-op.
              (loop with active-edges* = '()
@@ -293,29 +332,6 @@ y2."
                       (return
                         (sort active-edges* #'<
                               :key (lambda (x) (+ (car x) (cadr x)))))))
-           (sweep-line (scan-y1 scan-y2 active-edges)
-             ;; For each scanline each polygon has an even number of edges.
-             ;; The loop below alternates the "inclusion" of each polygon.
-             ;; The sorting of edges ensures the interval order.
-             (loop with active-edges = (sort-pg-edges scan-y1 scan-y2 active-edges)
-                   with entry-x1 = nil
-                   with entry-x2 = nil
-                   with ina = 0
-                   with inb = 0
-                   for (x1 x2 extra) in active-edges
-                   do (ecase extra
-                        (:a (setq ina (- 1 ina)))
-                        (:b (setq inb (- 1 inb))))
-                      (if (/= 0 (funcall logop ina inb))
-                          (when (null entry-x1)
-                            (setf entry-x1 x1
-                                  entry-x2 x2))
-                          (when entry-x1
-                            (add-interval (make-point entry-x1 scan-y1)
-                                          (make-point entry-x2 scan-y2)
-                                          (make-point x1 scan-y1)
-                                          (make-point x2 scan-y2))
-                            (setq entry-x1 nil)))))
            (sweep-intersections (scan-y1 scan-y2 active-edges)
              ;; Compute intersections between active edges and adds their Y
              ;; coordinates as new scanlines. The set of active edges doesn't
@@ -338,40 +354,24 @@ y2."
                       (loop for (cy1 cy2) on (sort scanlines #'<)
                             while cy2
                             unless (coordinate= cy1 cy2)
-                              do (sweep-line cy1 cy2 active-edges)))))
-    (over-sweep-bands (nconc (polygon->pg-edges pg1 :a)
-                             (polygon->pg-edges pg2 :b))
-                      #'sweep-intersections))
-  sps)
-
-(defun polygon-op (pg1 pg2 logop)
-  (let* ((sps (mapcar #'pg-splitter->polygon (polygon-op-inner pg1 pg2 logop)))
-         (sps (delete +nowhere+ sps)))
-    (cond ((null sps) +nowhere+)
-          ((null (cdr sps))
-           (car sps))
-          ((make-instance 'standard-region-union :regions sps)))))
-
-;;; This function sweeps the line over the polygon edges. The callback is called
-;;; with three arguments: scanline bounds and a sequence of sorted edges in a
-;;; form (x1 x2 polygon-marker).
-(defun over-sweep-bands (edges fun)
-  (do* ((edges (sort edges #'< :key #'pg-edge-y1))
-        (scan-y1 (pg-edge-y1 (car edges)) scan-y2)
-        (scan-y2 nil)
-        ;; After each iteration remove edges that end before the new scanline.
-        (active-edges '() (delete-if (lambda (e)
-                                       (<= (pg-edge-y2 e) scan-y1))
-                                     active-edges)))
-       ((null edges))
-    ;; Add new edges to the active set.
-    (loop until (or (null edges) (/= scan-y1 (pg-edge-y1 (car edges))))
-          do (push (pop edges) active-edges))
-    ;; Find the end of this scan region (and beginning of the next one).
-    (setf scan-y2 (or (and edges (pg-edge-y1 (car edges)))
-                      (loop for edge in active-edges
-                            maximizing (pg-edge-y2 edge))))
-    (funcall fun scan-y1 scan-y2 active-edges)))
+                              do (let ((edges (sort-pg-edges cy1 cy2 active-edges)))
+                                   (funcall fun cy1 cy2 edges))))))
+    (do* ((edges (sort edges #'< :key #'pg-edge-y1))
+          (scan-y1 (pg-edge-y1 (car edges)) scan-y2)
+          (scan-y2 nil)
+          ;; After each iteration remove edges that end before the new scanline.
+          (active-edges '() (delete-if (lambda (e)
+                                         (<= (pg-edge-y2 e) scan-y1))
+                                       active-edges)))
+         ((null edges))
+      ;; Add new edges to the active set.
+      (loop until (or (null edges) (/= scan-y1 (pg-edge-y1 (car edges))))
+            do (push (pop edges) active-edges))
+      ;; Find the end of this scan region (and beginning of the next one).
+      (setf scan-y2 (or (and edges (pg-edge-y1 (car edges)))
+                        (loop for edge in active-edges
+                              maximizing (pg-edge-y2 edge))))
+      (sweep-intersections scan-y1 scan-y2 active-edges))))
 
 (defun polygon->pg-edges (pg extra)
   (when (typep pg 'nowhere-region)
