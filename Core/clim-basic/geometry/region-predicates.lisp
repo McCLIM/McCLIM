@@ -74,31 +74,21 @@
       (position-contains-p (polar->screen region)))))
 
 (defmethod region-contains-position-p ((region polygon) x y)
-  (and (region-contains-position-p (bounding-rectangle region) x y)
-       ;; The following algorithm is a Winding Number (wn) method implementation
-       ;; based on a description by Dan Sunday "Inclusion of a Point in a
-       ;; Polygon" (http://geomalgorithms.com/a03-_inclusion.html).
-       (flet ((is-left (x0 y0 x1 y1 x2 y2)
-                (- (* (- x1 x0) (- y2 y0))
-                   (* (- x2 x0) (- y1 y0)))))
-         (let ((x (coordinate x))
-               (y (coordinate y))
-               (wn 0))
+  (let ((insidep nil))
+    (and (region-contains-position-p (bounding-rectangle region) x y)
+         (progn
            (map-over-polygon-segments
             (lambda (x1 y1 x2 y2)
-              ;; Algorithm is not predictable for polygon edges - we
-              ;; need to test for them explicitly. -- jd 2019-09-27
               (when (segment-contains-point-p x1 y1 x2 y2 x y)
                 (return-from region-contains-position-p t))
-              (if (<= y1 y)
-                  (when (and (> y2 y)
-                             (> (is-left x1 y1 x2 y2 x y) 0))
-                    (incf wn))
-                  (when (and (<= y2 y)
-                             (< (is-left x1 y1 x2 y2 x y) 0))
-                    (decf wn))))
+              (unless (< y1 y2)
+                (rotatef y1 y2)
+                (rotatef x1 x2))
+              (when (and (not (eq (> y1 y) (> y2 y)))
+                         (minusp (line-equation x1 y1 x2 y2 x y)))
+                (setf insidep (not insidep))))
             region)
-           (not (zerop wn))))))
+           insidep))))
 
 (defmethod region-contains-position-p ((region rectangle) x y)
   (multiple-value-bind (x1 y1 x2 y2)
