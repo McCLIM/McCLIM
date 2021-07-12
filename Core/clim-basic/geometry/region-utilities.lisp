@@ -87,6 +87,10 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
       (and (= y2 y1)
            (> x2 x1))))
 
+(declaim (inline point-lessp))
+(defun point-lessp (p1 p2)
+  (point-lessp* (point-x p1) (point-y p1) (point-x p2) (point-y p2)))
+
 (defun normalize-angle (angle)
   "Takes an angle ANGLE and returns the corresponding non-negative angle
 less than or equal to 2pi. Note that 4pi would be normalized to 0, not
@@ -304,6 +308,50 @@ y2."
           ((null (cdr sps))
            (car sps))
           ((make-instance 'standard-region-union :regions sps)))))
+
+(defun triangulate-polygon (polygon)
+  (collect (triangles)
+    (labels ((sort-points (left right)
+               (sort
+                (append (mapcar (lambda (p) (list p :l))
+                                (clean-up-point-sequence left))
+                        (mapcar (lambda (p) (list p :r))
+                                (clean-up-point-sequence right)))
+                #'point-lessp :key #'car))
+             (valid-triangle-p (chain n n-1 n-2)
+               (multiple-value-bind (x y) (point-position n)
+                 (multiple-value-bind (x-1 y-1) (point-position n-1)
+                   (multiple-value-bind (x-2 y-2) (point-position n-2)
+                     (let ((d (line-equation x-2 y-2 x y x-1 y-1)))
+                       (ecase chain
+                         (:r (<= d 0))
+                         (:l (>= d 0))))))))
+             (triangulate (points)
+               (loop with v0 = (pop points)
+                     with v1 = (pop points)
+                     with stack = (list v1 v0)
+                     while points
+                     for (point chain) = (pop points)
+                     for (top top-chain) = (car stack)
+                     do (if (eq chain top-chain)
+                            (loop for ((n-1 c-1) (n-2 c-2)) on stack
+                                  while n-2
+                                  while (valid-triangle-p chain point n-1 n-2)
+                                  unless (colinear-p point n-1 n-2)
+                                    do (triangles point n-1 n-2)
+                                  do (pop stack)
+                                  finally (push (list point chain) stack))
+                            (loop for ((n-1 c-1) (n-2 c-2)) on stack
+                                  while n-2
+                                  unless (colinear-p point n-1 n-2)
+                                    do (triangles point n-1 n-2)
+                                  finally (setf stack (list (list point chain)
+                                                            (list top top-chain))))))))
+      (loop for chain in (polygon-op-inner polygon +nowhere+ #'logior)
+            for points = (sort-points (pg-splitter-left chain)
+                                      (pg-splitter-right chain))
+            do (triangulate points)
+            finally (return (triangles))))))
 
 ;;; This function sweeps the line over the polygon edges. The callback is called
 ;;; with three arguments: scanline bounds and a sequence of sorted edges in a
