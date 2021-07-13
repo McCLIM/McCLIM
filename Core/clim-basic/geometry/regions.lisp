@@ -204,6 +204,17 @@
 (defun make-polygon* (coord-seq)
   (make-polygon (coord-seq->point-seq coord-seq)))
 
+(defun make-regular-polygon (cx cy r n)
+  (collect (coords)
+    (loop repeat n
+          with x0 = cx
+          with y0 = (- cy r)
+          for angle from 0 by (/ (* 2 pi) n)
+          for tr = (make-rotation-transformation* angle cx cy)
+          do (multiple-value-bind (x1 y1) (transform-position tr x0 y0)
+               (coords (make-point x1 y1))))
+    (make-polygon (coords))))
+
 (defmethod map-over-polygon-coordinates (fun (region standard-polygon))
   (with-slots (points) region
     (mapc (lambda (p) (funcall fun (point-x p) (point-y p))) points)))
