@@ -466,14 +466,16 @@ y2."
                         (reverse (pg-splitter-right s))))))
 
 (defun clean-up-point-sequence (pts)
-  (cond ((null (cdr pts)) pts)
-        ((region-equal (car pts) (cadr pts))
-         (clean-up-point-sequence (cdr pts)))
-        ((null (cddr pts)) pts)
-        ((colinear-p (car pts) (cadr pts) (caddr pts))
-         (clean-up-point-sequence (list* (car pts) (caddr pts) (cdddr pts))))
-        (t
-         (cons (car pts) (clean-up-point-sequence (cdr pts))))))
+  (do ((points pts)) ((null (rest points)) pts)
+    (destructuring-bind (p1 p2 &rest tail) points
+      (cond ((region-equal p1 p2)
+             (rplacd points tail))
+            ((null tail)
+             (setf points nil))
+            ((colinear-p p1 p2 (first tail))
+             (rplacd points tail))
+            (t
+             (pop points))))))
 
 ;;; Intersection Line/Polygon
 
