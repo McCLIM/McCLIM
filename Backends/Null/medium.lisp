@@ -88,13 +88,6 @@
                    start-angle end-angle filled))
   nil)
 
-(defmethod medium-draw-circle* ((medium null-medium)
-                                center-x center-y radius start-angle end-angle
-                                filled)
-  (declare (ignore center-x center-y radius
-                   start-angle end-angle filled))
-  nil)
-
 (defmethod text-style-ascent (text-style (medium null-medium))
   (declare (ignore text-style))
   1)

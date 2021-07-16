@@ -1341,7 +1341,7 @@ were added."
                                         (maxf max-y (+ y border)))
                                        ((progn
                                           (setf cos-a (+ (* ex1 ex2) (* ey1 ey2))
-                                                sin-a/2 (sqrt (* 0.5 (- 1.0f0 cos-a))))
+                                                sin-a/2 (sqrt (* 0.5 (max 0 (- 1.0f0 cos-a)))))
                                           (< sin-a/2 sin-limit)) ; almost straight, any direction
                                         (let ((nx (* border (max (abs ey1) (abs ey2))))
                                               (ny (* border (max (abs ex1) (abs ex2)))))

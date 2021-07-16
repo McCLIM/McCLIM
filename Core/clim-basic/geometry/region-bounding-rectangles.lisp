@@ -20,19 +20,12 @@
 (defmethod bounding-rectangle* ((x nowhere-region))
   (values 0 0 0 0))
 
-;;; Lazy evaluation of a bounding rectangle.
-(defmethod slot-unbound (class (region cached-polygon-bbox-mixin) (slot-name (eql 'bbox)))
-  (setf (slot-value region 'bbox)
-        (loop for point in (polygon-points region)
-              for (x y) = (multiple-value-list (point-position point))
-              minimizing x into x1 maximizing x into x2
-              minimizing y into y1 maximizing y into y2
-              finally (return (make-instance 'standard-bounding-rectangle
-                                              :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
-
-(defmethod bounding-rectangle* ((region cached-polygon-bbox-mixin))
-  (with-standard-rectangle* (x1 y1 x2 y2) (bounding-rectangle region)
-    (values x1 y1 x2 y2)))
+(defmethod bounding-rectangle* ((region cached-bbox-mixin))
+  (if-let ((bbox (bbox region)))
+    (bounding-rectangle* bbox)
+    (multiple-value-bind (x1 y1 x2 y2) (call-next-method)
+      (setf (bbox region) (make-bounding-rectangle x1 y1 x2 y2))
+      (values x1 y1 x2 y2))))
 
 (defun ellipse-bounding-rectangle (el)
   ;; Return bounding rectangle of ellipse centered at (0, 0) with
@@ -76,19 +69,30 @@
   (with-standard-rectangle* (x1 y1 x2 y2) region
     (values x1 y1 x2 y2)))
 
+(defun polygon-bounding-rectangle (region)
+  (loop for point in (polygon-points region)
+        for (x y) = (multiple-value-list (point-position point))
+        minimizing x into x1 maximizing x into x2
+        minimizing y into y1 maximizing y into y2
+        finally (return (values x1 y1 x2 y2))))
+
+(defmethod bounding-rectangle* ((region standard-polyline))
+  (polygon-bounding-rectangle region))
+
+(defmethod bounding-rectangle* ((region standard-polygon))
+  (polygon-bounding-rectangle region))
+
 ;;; STANDARD-RECTANGLE-SET: has a slot BOUNDING-RECTANGLE for caching
 (defmethod bounding-rectangle* ((region standard-rectangle-set))
-  (with-slots (bands bounding-rectangle) region
-    (values-list (or bounding-rectangle
-                     (setf bounding-rectangle
-                       (let (bx1 by1 bx2 by2)
-                         (map-over-bands-rectangles (lambda (x1 y1 x2 y2)
-                                                      (setf bx1 (min (or bx1 x1) x1)
-                                                            bx2 (max (or bx2 x2) x2)
-                                                            by1 (min (or by1 y1) y1)
-                                                            by2 (max (or by2 y2) y2)))
-                                                    bands)
-                         (list bx1 by1 bx2 by2)))))))
+  (with-slots (bands) region
+    (let (bx1 by1 bx2 by2)
+      (map-over-bands-rectangles (lambda (x1 y1 x2 y2)
+                                   (setf bx1 (min (or bx1 x1) x1)
+                                         bx2 (max (or bx2 x2) x2)
+                                         by1 (min (or by1 y1) y1)
+                                         by2 (max (or by2 y2) y2)))
+                                 bands)
+      (values bx1 by1 bx2 by2))))
 
 (defmethod bounding-rectangle* ((region standard-point))
   (with-slots (x y) region
@@ -96,13 +100,14 @@
 
 (defmethod bounding-rectangle* ((region standard-region-union))
   (let (bx1 by1 bx2 by2)
-    (map-over-region-set-regions (lambda (r)
-                                   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
-                                     (setf bx1 (min (or bx1 x1) x1)
-                                           bx2 (max (or bx2 x2) x2)
-                                           by1 (min (or by1 y1) y1)
-                                           by2 (max (or by2 y2) y2))))
-                                 region)
+    (map-over-region-set-regions
+     (lambda (r)
+       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
+         (setf bx1 (min (or bx1 x1) x1)
+               bx2 (max (or bx2 x2) x2)
+               by1 (min (or by1 y1) y1)
+               by2 (max (or by2 y2) y2))))
+     region)
     (values bx1 by1 bx2 by2)))
 
 (defmethod bounding-rectangle* ((region standard-region-difference))
