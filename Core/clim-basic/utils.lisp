@@ -736,31 +736,6 @@ index being halfway between INDEX-1 and INDEX-2."
                   macros))))
     `(macrolet ,macros (let* ,(nreverse binds) ,@body))))
 
-(defun coord-seq->point-seq (sequence)
-  (collect (collect-point)
-    (do-sequence ((x y) sequence (collect-point))
-      (collect-point (make-point x y)))))
-
-(defun remove-duplicated-points (point-sequence &optional closed)
-  "Given points A B C ... Z removes consecutive points which are duplicated. If
-a flag CLOSED is T then beginning and end of the list are consecutive too."
-  (when (alexandria:emptyp point-sequence)
-    (return-from remove-duplicated-points point-sequence))
-  (collect (collect-point)
-    (let* ((first-point (elt point-sequence 0))
-           (last-point first-point))
-      (collect-point first-point)
-      (mapc (lambda (current-point)
-              (unless (region-equal current-point last-point)
-                (setf last-point current-point)
-                (collect-point last-point)))
-            point-sequence)
-      (if (and closed
-               (region-equal first-point last-point)
-               (null (alexandria:length= 1 (collect-point))))
-          (butlast (collect-point))
-          (collect-point)))))
-
 ;;;
 ;;; pretty printing
 ;;;

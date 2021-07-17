@@ -14,6 +14,21 @@
     (xlib:drawable object)
     (null nil)))
 
+(defun clx-drawable-format (drawable)
+  (let ((root (xlib:drawable-root drawable)))
+    (xlib:find-window-picture-format root)))
+
+(defun clx-drawable-picture (drawable)
+  (or (getf (xlib:drawable-plist drawable) :picture)
+      (setf (getf (xlib:drawable-plist drawable) :picture)
+            (xlib:render-create-picture
+             drawable :format (clx-drawable-format drawable)))))
+
+(defun clx-drawable-gcontext (drawable)
+  (or (getf (xlib:drawable-plist drawable) :gcontext)
+      (setf (getf (xlib:drawable-plist drawable) :gcontext)
+            (xlib:create-gcontext :drawable drawable))))
+
 ;;; Return a string in which every non-STANDARD-CHAR in STRING has
 ;;; been replaced with #\_. The result is guaranteed to be an ASCII
 ;;; string.
@@ -97,6 +112,10 @@
 (defmethod destroy-mirror ((port clx-basic-port) (sheet mirrored-sheet-mixin))
   (when-let ((mirror (sheet-direct-mirror sheet)))
     (let ((window (window mirror)))
+      (when-let ((picture (getf (xlib:drawable-plist window) :picture)))
+        (xlib:render-free-picture picture))
+      (when-let ((gcontext (getf (xlib:drawable-plist window) :gcontext)))
+        (xlib:free-gcontext gcontext))
       (remf (xlib:window-plist window) 'sheet)
       (xlib:destroy-window window)
       (xlib:display-force-output (clx-port-display port)))))

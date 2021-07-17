@@ -13,6 +13,10 @@
 
 (defpackage #:clim-clx
   (:use #:clim #:clim-lisp #:clim-backend)
+  (:import-from #:alexandria
+                #:ensure-gethash
+                #:with-gensyms
+                #:once-only)
   (:import-from #:climi
                 #:+alt-key+
                 ;;
@@ -29,6 +33,8 @@
                 #:do-sequence
                 #:with-transformed-position
                 #:with-transformed-positions
+                #:with-transformed-distance
+                #:with-transformed-angles
                 #:with-medium-options
                 #:line-style-effective-thickness
                 #:line-style-effective-dashes

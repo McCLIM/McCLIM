@@ -43,7 +43,7 @@
   (let* ((tr (medium-native-transformation medium))
          (region (transform-region tr design)))
     (alexandria:when-let ((coord-vec (bezier-region-to-coord-vec region)))
-      (with-clx-graphics (mirror line-style ink gc) medium
+      (with-clx-graphics (mirror tr line-style ink gc) medium
         (xlib:draw-lines mirror gc coord-vec :fill-p filled)))))
 
 (defmethod medium-draw-bezier-design* ((medium clx-medium) (design bezier-curve))
@@ -66,7 +66,7 @@
       (let ((tr (make-instance 'standard-translation :dx (- imin-x)  :dy (- imin-y))))
         (let ((width (- imax-x imin-x))
               (height (- imax-y imin-y)))
-          (with-clx-graphics (drawable line-style ink gc)
+          (with-clx-graphics (drawable transformation line-style ink gc)
               medium
             ;; 1. create mask pixmap and GC
             (let* ((mask-pixmap (xlib:create-pixmap :drawable drawable

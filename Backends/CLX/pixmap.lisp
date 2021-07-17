@@ -13,9 +13,10 @@
 
 (defmethod deallocate-pixmap ((pixmap clx-mirror))
   (let ((pixmap (clx-drawable pixmap)))
-    (when-let ((picture (find-if (alexandria:of-type 'xlib::picture)
-                                 (xlib:pixmap-plist pixmap))))
+    (when-let ((picture (getf (xlib:drawable-plist pixmap) :picture)))
       (xlib:render-free-picture picture))
+    (when-let ((gcontext (getf (xlib:drawable-plist pixmap) :gcontext)))
+        (xlib:free-gcontext gcontext))
     (xlib:free-pixmap pixmap)))
 
 (defmethod pixmap-width ((pixmap clx-mirror))
