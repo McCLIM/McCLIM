@@ -191,7 +191,7 @@
   (when-let ((panes (frame-panes frame)))
     (let ((top-level-sheet (frame-top-level-sheet frame)))
       (when (sheet-ancestor-p panes top-level-sheet)
-        (sheet-disown-child top-level-sheet (sheet-child top-level-sheet)))))
+        (sheet-disown-child top-level-sheet panes))))
   (loop for (nil . pane) in (frame-panes-for-layout frame)
         for parent = (sheet-parent pane)
         when parent
@@ -215,12 +215,10 @@
                             (make-menu-bar menu frame 'hmenu-pane))))
                (setf menu (frame-menu-bar-pane frame)))
              (when pdoc
-               (if (frame-pointer-documentation-output frame)
-                   (setf pdoc nil)
-                   (multiple-value-bind (pane stream)
-                       (make-clim-pointer-documentation-pane)
-                     (setf pdoc pane
-                           (frame-pointer-documentation-output frame) stream))))
+               (multiple-value-bind (pane stream)
+                   (make-clim-pointer-documentation-pane)
+                 (setf pdoc pane
+                       (frame-pointer-documentation-output frame) stream)))
              (if (or menu pdoc)
                  (make-instance 'vrack-pane
                                 :contents (remove nil (list menu root pdoc))
