@@ -127,477 +127,154 @@
   (declare (ignore region))
   nil)
 
+;;; FIXME is this right? nowhere-region is unbound. -- jd 2019-09-30
+(defmethod bounding-rectangle* ((x nowhere-region))
+  (values 0 0 0 0))
+
+(defmethod transform-region (tr (region everywhere-region))
+  (declare (ignore tr))
+  +everywhere+)
+
+(defmethod transform-region (tr (region nowhere-region))
+  (declare (ignore tr))
+  +nowhere+)
+
 ;;; This class is mixed to avoid repetetive computing of bounding boxes in some
 ;;; classes.
 (defclass cached-bbox-mixin ()
   ((bbox :initform nil :accessor bbox)))
 
-;;; 2.5.1.2 Composition of CLIM Regions
+(defmethod bounding-rectangle* ((region cached-bbox-mixin))
+  (if-let ((bbox (bbox region)))
+    (bounding-rectangle* bbox)
+    (multiple-value-bind (x1 y1 x2 y2) (call-next-method)
+      (setf (bbox region) (make-bounding-rectangle x1 y1 x2 y2))
+      (values x1 y1 x2 y2))))
+
+;;; Region sets
+
+(defmethod region-set-regions ((region region) &key normalize)
+  (declare (ignorable normalize))
+  (list region))
+
+(defmethod map-over-region-set-regions
+    (fun (region region-set) &key normalize)
+  (mapc fun (region-set-regions region :normalize normalize)))
+
+(defmethod map-over-region-set-regions (fun (region region) &key normalize)
+  (declare (ignorable normalize))
+  (funcall fun region))
+
+
 
 (defclass standard-region-union (cached-bbox-mixin region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
 
+(defmethod region-set-regions ((region standard-region-union) &key normalize)
+  (declare (ignorable normalize))
+  (standard-region-set-regions region))
+
+(defmethod map-over-region-set-regions
+    (fun (region standard-region-union) &key normalize)
+  (declare (ignorable normalize))
+  (mapc fun (standard-region-set-regions region)))
+
+(defmethod region-contains-position-p ((region standard-region-union) x y)
+  (some (lambda (r) (region-contains-position-p r x y))
+        (standard-region-set-regions region)))
+
+(defmethod bounding-rectangle* ((region standard-region-union))
+  (let (bx1 by1 bx2 by2)
+    (map-over-region-set-regions
+     (lambda (r)
+       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
+         (setf bx1 (min (or bx1 x1) x1)
+               bx2 (max (or bx2 x2) x2)
+               by1 (min (or by1 y1) y1)
+               by2 (max (or by2 y2) y2))))
+     region)
+    (values bx1 by1 bx2 by2)))
+
+(defmethod transform-region (tr (region standard-region-union))
+  (with-slots (regions) region
+    (make-instance 'standard-region-union
+                   :regions (mapcar (lambda (r) (transform-region tr r)) regions))))
+
+
+
 (defclass standard-region-intersection (cached-bbox-mixin region-set)
   ((regions :initarg :regions :reader standard-region-set-regions)))
+
+(defmethod region-set-regions ((region standard-region-intersection) &key normalize)
+  (declare (ignorable normalize))
+  (standard-region-set-regions region))
+
+(defmethod map-over-region-set-regions
+    (fun (region standard-region-intersection) &key normalize)
+  (declare (ignorable normalize))
+  (mapc fun (standard-region-set-regions region)))
+
+(defmethod region-contains-position-p ((region standard-region-intersection) x y)
+  (every (lambda (r) (region-contains-position-p r x y))
+         (standard-region-set-regions region)))
+
+(defmethod bounding-rectangle* ((region standard-region-intersection))
+  ;; kill+yank alert
+  (let (bx1 by1 bx2 by2)
+    (map-over-region-set-regions
+     (lambda (r)
+       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
+         (setf bx1 (min (or bx1 x1) x1)
+               bx2 (max (or bx2 x2) x2)
+               by1 (min (or by1 y1) y1)
+               by2 (max (or by2 y2) y2))))
+     region)
+    (values bx1 by1 bx2 by2)))
+
+(defmethod transform-region (tr (region standard-region-intersection))
+  (with-slots (regions) region
+    (make-instance 'standard-region-intersection
+                   :regions (mapcar (lambda (r) (transform-region tr r)) regions))))
+
+
 
 (defclass standard-region-difference (cached-bbox-mixin region-set)
   ((a :initarg :a :reader standard-region-difference-a)
    (b :initarg :b :reader standard-region-difference-b)))
 
-;;; 2.5.2 CLIM Point Objects
-
-(defclass standard-point (point)
-  ((x :type coordinate :initarg :x)
-   (y :type coordinate :initarg :y)))
-
-(defun make-point (x y)
-  (make-instance 'standard-point
-    :x (coordinate x)
-    :y (coordinate y)))
-
-(defmethod slots-for-pprint-object append ((object standard-point))
-  '(x y))
-
-(defmethod print-object ((region standard-point) sink)
-  (maybe-print-readably (region sink)
-    (print-unreadable-object (region sink :identity nil :type t)
-      (with-slots (x y) region
-        (format sink "~S ~S" x y)))))
-
-;;; Point protocol: point-position
-
-(defmethod point-position ((region standard-point))
-  (with-slots (x y) region
-    (values x y)))
-
-(defmethod point-x ((region point))
-  (nth-value 0 (point-position region)))
-
-(defmethod point-y ((region point))
-  (nth-value 1 (point-position region)))
-
-;;; 2.5.3 Polygons and Polylines in CLIM
-
-;;; Protocol:
-
-(defclass standard-polyline (cached-bbox-mixin polyline)
-  ((points :initarg :points :reader polygon-points)
-   (closed :initarg :closed)))
-
-(defclass standard-polygon (cached-bbox-mixin polygon)
-  ((points :initarg :points :reader polygon-points)))
-
-(defmethod slots-for-pprint-object append ((object standard-polyline))
-  '(points closed))
-
-(defmethod print-object ((region standard-polyline) sink)
-  (maybe-print-readably (region sink)
-    (print-unreadable-object (region sink :identity t :type t))))
-
-;;; 2.5.3.1 Constructors for CLIM Polygons and Polylines
-
-(defun make-polyline (point-seq &key closed)
-  (assert (every #'pointp point-seq))
-  (setq point-seq (remove-duplicated-points point-seq closed))
-  (if (< (length point-seq) 2)
-      +nowhere+
-      (make-instance 'standard-polyline :points point-seq :closed closed)))
-
-(defun make-polyline* (coord-seq &key closed)
-  (make-polyline (coord-seq->point-seq coord-seq) :closed closed))
-
-(defun make-polygon (point-seq)
-  (assert (every #'pointp point-seq))
-  (setq point-seq (remove-duplicated-points point-seq t))
-  (if (< (length point-seq) 3)
-      +nowhere+
-      (make-instance 'standard-polygon :points point-seq)))
-
-(defun make-polygon* (coord-seq)
-  (make-polygon (coord-seq->point-seq coord-seq)))
-
-(defun make-regular-polygon (cx cy r n)
-  (collect (coords)
-    (loop repeat n
-          with x0 = cx
-          with y0 = (- cy r)
-          for angle from 0 by (/ (* 2 pi) n)
-          for tr = (make-rotation-transformation* angle cx cy)
-          do (multiple-value-bind (x1 y1) (transform-position tr x0 y0)
-               (coords (make-point x1 y1))))
-    (make-polygon (coords))))
-
-(defmethod map-over-polygon-coordinates (fun (region standard-polygon))
-  (with-slots (points) region
-    (mapc (lambda (p) (funcall fun (point-x p) (point-y p))) points)))
-
-(defmethod map-over-polygon-segments (fun (region standard-polygon))
-  (with-slots (points) region
-    (do ((q points (cdr q)))
-        ((null (cdr q))
-         (funcall fun
-                  (point-x (car q)) (point-y (car q))
-                  (point-x (car points)) (point-y (car points))))
-      (funcall fun
-               (point-x (car q)) (point-y (car q))
-               (point-x (cadr q)) (point-y (cadr q))))))
-
-(defmethod map-over-polygon-coordinates (fun (region standard-polyline))
-  (with-slots (points) region
-    (mapc (lambda (p) (funcall fun (point-x p) (point-y p))) points)))
-
-(defmethod map-over-polygon-segments (fun (region standard-polyline))
-  (with-slots (points closed) region
-    (do ((q points (cdr q)))
-        ((null (cdr q))
-         (when closed
-           (funcall fun
-                    (point-x (car q)) (point-y (car q))
-                    (point-x (car points)) (point-y (car points)))))
-      (funcall fun (point-x (car q)) (point-y (car q))
-               (point-x (cadr q)) (point-y (cadr q))))))
-
-(defmethod polyline-closed ((region standard-polyline))
-  (with-slots (closed) region
-    closed))
-
-
-;;; 2.5.4 Lines in CLIM
-
-;;; Line protocol: line-start-point* line-end-point*
-
-(defclass standard-line (line)
-  ((x1 :type coordinate :initarg :x1)
-   (y1 :type coordinate :initarg :y1)
-   (x2 :type coordinate :initarg :x2)
-   (y2 :type coordinate :initarg :y2)))
-
-(defun make-line (start-point end-point)
-  (make-line* (point-x start-point) (point-y start-point)
-              (point-x end-point) (point-y end-point)))
-
-(defun make-line* (start-x start-y end-x end-y)
-  (setf start-x (coordinate start-x)
-        start-y (coordinate start-y)
-        end-x (coordinate end-x)
-        end-y (coordinate end-y))
-  (if (and (coordinate= start-x end-x)
-           (coordinate= start-y end-y))
-      +nowhere+
-    (make-instance 'standard-line :x1 start-x :y1 start-y :x2 end-x :y2 end-y)))
-
-(defmethod line-start-point* ((line standard-line))
-  (with-slots (x1 y1 x2 y2) line
-    (values x1 y1)))
-
-(defmethod line-end-point* ((line standard-line))
-  (with-slots (x1 y1 x2 y2) line
-    (values x2 y2)))
-
-(defmethod line-start-point ((line line))
-  (multiple-value-bind (x y) (line-start-point* line)
-    (make-point x y)))
-
-(defmethod line-end-point ((line line))
-  (multiple-value-bind (x y) (line-end-point* line)
-    (make-point x y)))
-
-;;; Polyline protocol for standard-line's
-
-(defmethod polygon-points ((line standard-line))
-  (with-slots (x1 y1 x2 y2) line
-    (list (make-point x1 y1) (make-point x2 y2))))
-
-(defmethod map-over-polygon-coordinates (fun (line standard-line))
-  (with-slots (x1 y1 x2 y2) line
-    (funcall fun x1 y1)
-    (funcall fun x2 y2)))
-
-(defmethod map-over-polygon-segments (fun (line standard-line))
-  (with-slots (x1 y1 x2 y2) line
-    (funcall fun x1 y1 x2 y2)))
-
-(defmethod polyline-closed ((line standard-line))
-  nil)
-
-(defmethod slots-for-pprint-object append ((object standard-line))
-  '(x1 y1 x2 y2))
-
-(defmethod print-object ((region standard-line) sink)
-  (maybe-print-readably (region sink)
-    (print-unreadable-object (region sink :identity nil :type t)
-         (with-slots (x1 y1 x2 y2) region
-           (format sink "~D ~D ~D ~D" x1 y1 x2 y2)))))
-
-;;; 2.5.5 Rectangles in CLIM
-
-;;; Protocol: rectangle-edges*
-
-(defclass standard-rectangle (rectangle)
-  ((coordinates :initform (make-array 4 :element-type 'coordinate))))
-
-(defmethod initialize-instance :after ((obj standard-rectangle)
-                                       &key (x1 0.0d0) (y1 0.0d0)
-                                       (x2 0.0d0) (y2 0.0d0))
-  (let ((coords (slot-value obj 'coordinates)))
-    (declare (type standard-rectangle-coordinate-vector coords))
-    (setf (aref coords 0) x1)
-    (setf (aref coords 1) y1)
-    (setf (aref coords 2) x2)
-    (setf (aref coords 3) y2)))
-
-;;; - VARIABLES before first keyword are positional and correspond to
-;;;   X1, Y1, X2, Y2.
-;;;   - Fewer than all four can be provided.
-;;;   - Any of the positional variables can be `nil' indicating that
-;;;     the binding should not be established.
-;;; - The first keyword initiates the keyword part of the variable
-;;;   list (can start after between zero and four positional
-;;;   variables).
-(defmacro with-standard-rectangle* ((&rest variables) rectangle &body body)
-  (let* ((index      (position-if #'keywordp variables))
-         (positional (subseq variables 0 index))
-         (keyword    (when index
-                       (subseq variables index))))
-    (destructuring-bind (&key (x1 (nth 0 positional))
-                              (y1 (nth 1 positional))
-                              (x2 (nth 2 positional))
-                              (y2 (nth 3 positional))
-                              width height center-x center-y)
-        keyword
-      (declare (ignore width height center-x center-y))
-      (with-gensyms (coords)
-        `(let ((,coords (slot-value ,rectangle 'coordinates)))
-           (declare (type standard-rectangle-coordinate-vector ,coords))
-           ,(generate-rectangle-bindings
-             (list* :x1 x1 :y1 y1 :x2 x2 :y2 y2 keyword)
-             `((aref ,coords 0) (aref ,coords 1) (aref ,coords 2) (aref ,coords 3))
-             body))))))
-
-(defun make-rectangle (point1 point2)
-  (make-rectangle* (point-x point1) (point-y point1)
-                   (point-x point2) (point-y point2)))
-
-(defun make-rectangle* (x1 y1 x2 y2)
-  (let ((x1 (coordinate x1))
-        (y1 (coordinate y1))
-        (x2 (coordinate x2))
-        (y2 (coordinate y2)))
-    (multiple-value-bind (x1 x2)
-        (cond ((= x1 x2) (return-from make-rectangle* +nowhere+))
-              ((< x1 x2) (values x1 x2))
-              (t         (values x2 x1)))
-      (multiple-value-bind (y1 y2)
-          (cond ((= y1 y2) (return-from make-rectangle* +nowhere+))
-                ((< y1 y2) (values y1 y2))
-                (t         (values y2 y1)))
-        ;; XXX: This seems to not be right. -- jd 2019-09-30
-        (make-instance 'standard-bounding-rectangle :x1 x1 :y1 y1 :x2 x2 :y2 y2)))))
-
-(defmethod rectangle-edges* ((rect standard-rectangle))
-  (with-standard-rectangle* (x1 y1 x2 y2) rect
-    (values x1 y1 x2 y2)))
-
-;;; standard-rectangles are immutable and all that, but we still need
-;;; to set their positions and dimensions (in output recording)
-(defgeneric* (setf rectangle-edges*) (x1 y1 x2 y2 rectangle))
-
-(defmethod* (setf rectangle-edges*)
-  (x1 y1 x2 y2 (rectangle standard-rectangle))
-  (let ((coords (slot-value rectangle 'coordinates)))
-    (declare (type standard-rectangle-coordinate-vector coords))
-    (setf (aref coords 0) x1)
-    (setf (aref coords 1) y1)
-    (setf (aref coords 2) x2)
-    (setf (aref coords 3) y2))
-  (values x1 y1 x2 y2))
-
-(macrolet
-    ((def (name &rest parts)
-       (destructuring-bind (first-part &optional second-part) parts
-         (let ((result-form (if (not second-part)
-                                (second first-part)
-                                `(,(if (eq (first first-part) :width)
-                                       'values
-                                       'make-point)
-                                  ,(second first-part)
-                                  ,(second second-part)))))
-           `(progn
-              (defmethod ,name ((rect standard-rectangle))
-                (with-standard-rectangle* (,@(apply #'append parts)) rect
-                  ,result-form))
-
-              (defmethod ,name ((rect rectangle))
-                (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
-                  (declare (type coordinate x1 y1 x2 y2)
-                           (ignorable x1 y1 x2 y2))
-                  ,(generate-rectangle-bindings
-                    (apply #'append parts)
-                    '(x1 y1 x2 y2)
-                    `(,result-form)))))))))
-  (def rectangle-min-point (:x1 x1) (:y1 y1))
-  (def rectangle-max-point (:x2 x2) (:y2 y2))
-  (def rectangle-min-x     (:x1 x1))
-  (def rectangle-min-y     (:y1 y1))
-  (def rectangle-max-x     (:x2 x2))
-  (def rectangle-max-y     (:y2 y2))
-  (def rectangle-width     (:width  width))
-  (def rectangle-height    (:height height))
-  (def rectangle-size      (:width  width) (:height height)))
-
-;;; Polyline/polygon protocol for STANDARD-RECTANGLEs
-
-(defmethod polygon-points ((rect standard-rectangle))
-  (with-standard-rectangle* (x1 y1 x2 y2) rect
-    (list (make-point x1 y1)
-          (make-point x1 y2)
-          (make-point x2 y2)
-          (make-point x2 y1))))
-
-(defmethod map-over-polygon-coordinates (fun (rect standard-rectangle))
-  (with-standard-rectangle* (x1 y1 x2 y2) rect
-    (funcall fun x1 y1)
-    (funcall fun x1 y2)
-    (funcall fun x2 y2)
-    (funcall fun x2 y1)))
-
-(defmethod map-over-polygon-segments (fun (rect standard-rectangle))
-  (with-standard-rectangle* (x1 y1 x2 y2) rect
-    (funcall fun x1 y1 x1 y2)
-    (funcall fun x1 y2 x2 y2)
-    (funcall fun x2 y2 x2 y1)
-    (funcall fun x2 y1 x1 y1)))
-
-;;; 2.5.6 Ellipses and Elliptical Arcs in CLIM
-
-;;; Internal protocol
-(defgeneric polar->screen (ellipse)
-  ;; Specialized on t, we expect that ellipse protocol is implemented.
-  (:method (ellipse)
-    (nest
-     (multiple-value-bind (rdx1 rdy1 rdx2 rdy2) (ellipse-radii ellipse))
-     (multiple-value-bind (cx cy) (ellipse-center-point* ellipse))
-     (let ((cx (coordinate cx))
-           (cy (coordinate cy))
-           (rdx1 (coordinate rdx1))
-           (rdy1 (coordinate rdy1))
-           (rdx2 (coordinate rdx2))
-           (rdy2 (coordinate rdy2)))
-       (make-3-point-transformation* 0 0 1 0 0 1
-                                     cx cy
-                                     (+ cx rdx1) (+ cy rdy1)
-                                     (+ cx rdx2) (+ cy rdy2))))))
-
-(defclass elliptical-thing (cached-bbox-mixin)
-  ((start-angle :initarg :start-angle)
-   (end-angle   :initarg :end-angle)
-   ;; A transformation from the unit circle to get the elliptical
-   ;; object.
-   (tr          :initarg :tr :reader polar->screen)))
-
-(defmethod slots-for-pprint-object append ((object elliptical-thing))
-  '(start-angle end-angle tr))
-
-(defmethod print-object ((ell elliptical-thing) stream)
-  (maybe-print-readably (ell stream)
-    (print-unreadable-object (ell stream :type t :identity t)
-       (with-slots (start-angle end-angle tr) ell
-         (format stream "[~A ~A] ~A"
-                 (and start-angle (* (/ 180 pi) start-angle))
-                 (and end-angle (* (/ 180 pi) end-angle))
-                 tr)))))
-
-(defclass standard-ellipse (elliptical-thing ellipse) ())
-(defclass standard-elliptical-arc (elliptical-thing elliptical-arc) ())
-
-;;; 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM
-
-(defun make-ellipse (center-point
-                     radius-1-dx radius-1-dy
-                     radius-2-dx radius-2-dy
-                     &key start-angle end-angle)
-  (make-ellipse* (point-x center-point) (point-y center-point)
-                 radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                 :start-angle start-angle
-                 :end-angle end-angle))
-
-(defun make-ellipse* (center-x center-y
-                      radius-1-dx radius-1-dy
-                      radius-2-dx radius-2-dy
-                      &key start-angle end-angle)
-  (make-elliptical-thing 'standard-ellipse
-                        center-x center-y
-                        radius-1-dx radius-1-dy
-                        radius-2-dx radius-2-dy
-                        start-angle end-angle))
-
-(defun make-elliptical-arc (center-point
-                            radius-1-dx radius-1-dy
-                            radius-2-dx radius-2-dy
-                            &key start-angle end-angle)
-  (make-elliptical-arc* (point-x center-point) (point-y center-point)
-                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                        :start-angle start-angle
-                        :end-angle end-angle))
-
-(defun make-elliptical-arc* (center-x center-y
-                             radius-1-dx radius-1-dy
-                             radius-2-dx radius-2-dy
-                             &key start-angle end-angle)
-  (make-elliptical-thing 'standard-elliptical-arc
-                        center-x center-y
-                        radius-1-dx radius-1-dy
-                        radius-2-dx radius-2-dy
-                        start-angle end-angle))
-
-(defun make-elliptical-thing (class
-                             center-x center-y
-                             radius-1-dx radius-1-dy
-                             radius-2-dx radius-2-dy
-                             start-angle end-angle)
-  (setf center-x (coordinate center-x)
-        center-y (coordinate center-y)
-        radius-1-dx (coordinate radius-1-dx)
-        radius-1-dy (coordinate radius-1-dy)
-        radius-2-dx (coordinate radius-2-dx)
-        radius-2-dy (coordinate radius-2-dy)
-        start-angle (and start-angle (coordinate start-angle))
-        end-angle (and end-angle (coordinate end-angle)))
-  (let ((tr (make-3-point-transformation*
-             0 0 1 0 0 1
-             center-x center-y
-             (+ center-x radius-1-dx) (+ center-y radius-1-dy)
-             (+ center-x radius-2-dx) (+ center-y radius-2-dy))))
-    (cond ((and (null start-angle) (null end-angle)))
-          ((null start-angle) (setf start-angle 0))
-          ((null end-angle) (setf end-angle (* 2 pi))))
-    (make-instance class :tr tr :start-angle start-angle :end-angle end-angle)))
-
-;;; 2.5.6.2 Accessors for CLIM Elliptical Objects
-
-(defmethod ellipse-center-point* ((region elliptical-thing))
-  (with-slots (tr) region
-    (transform-position tr 0 0)))
-
-(defmethod ellipse-center-point ((region elliptical-thing))
-  (with-slots (tr) region
-    (transform-region tr (make-point 0 0))))
-
-(defmethod ellipse-radii ((region elliptical-thing))
-  (with-slots (tr) region
-    (multiple-value-bind (dx1 dy1) (transform-distance tr 1 0)
-      (multiple-value-bind (dx2 dy2) (transform-distance tr 0 1)
-        (values dx1 dy1 dx2 dy2)))))
-
-(defmethod ellipse-start-angle ((region elliptical-thing))
-  (with-slots (start-angle) region
-    start-angle))
-
-(defmethod ellipse-end-angle ((region elliptical-thing))
-  (with-slots (end-angle) region
-    end-angle))
-
-;;; Rectangle Sets
+(defmethod region-set-regions ((region standard-region-difference) &key normalize)
+  (declare (ignorable normalize))
+  (list (standard-region-difference-a region)
+        (standard-region-difference-b region)))
+
+(defmethod map-over-region-set-regions
+    (fun (region standard-region-difference) &key normalize)
+  (declare (ignorable normalize))
+  (funcall fun (standard-region-difference-a region))
+  (funcall fun (standard-region-difference-b region)))
+
+(defmethod region-contains-position-p ((region standard-region-difference) x y)
+  (let ((region-a (standard-region-difference-a region))
+        (region-b (standard-region-difference-b region)))
+    (and (region-contains-position-p region-a x y)
+         (not (region-contains-position-p region-b x y)))))
+
+(defmethod bounding-rectangle* ((region standard-region-difference))
+  (with-slots (a b) region
+    (cond ((eq a +everywhere+)
+           (bounding-rectangle* b))
+          (t
+           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
+             (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
+               (values (min x1 u1) (min y1 v1)
+                       (max x2 u2) (min y2 v2))))))))
+
+(defmethod transform-region (tr (region standard-region-difference))
+  (with-slots (a b) region
+    (make-instance 'standard-region-difference :a (transform-region tr a)
+                                               :b (transform-region tr b))))
+
+
 
 (defclass standard-rectangle-set (cached-bbox-mixin region-set)
   ((bands
@@ -622,6 +299,25 @@
     :initarg :bands
     :reader  standard-rectangle-set-bands)))
 
+(defun make-standard-rectangle-set (bands)
+  (cond ((null bands) +nowhere+)
+        ((and (= (length bands) 2)
+              (null (cdr (second bands)))
+              (= (length (cdr (first bands))) 2))
+         (make-rectangle* (first (cdar bands)) (caar bands)
+                          (second (cdar bands)) (caadr bands)))
+        ((= (length (first bands)) 1)
+         (make-standard-rectangle-set (rest bands)))
+        (t
+         (make-instance 'standard-rectangle-set :bands bands))))
+
+(defmethod region-set-regions ((region standard-rectangle-set) &key normalize)
+  (let ((res nil))
+    (map-over-region-set-regions
+     (lambda (r) (push r res))
+     region :normalize normalize)
+    res))
+
 (defmethod map-over-region-set-regions
     (fun (region standard-rectangle-set) &key normalize)
   (with-slots (bands) region
@@ -639,108 +335,57 @@
            (error "Bad ~S argument to ~S: ~S"
                   :normalize 'map-over-region-set-regions normalize)))))
 
-(defmethod region-set-regions ((region standard-rectangle-set) &key normalize)
-  (let ((res nil))
-    (map-over-region-set-regions
-     (lambda (r) (push r res))
-     region :normalize normalize)
-    res))
+(defmethod region-contains-position-p ((region standard-rectangle-set) x y)
+  (block nil
+    (map-over-bands (lambda (y1 y2 isum)
+                      (when (<= y1 y y2)
+                        (when (isum-member x isum)
+                          (return t)))
+                      (when (< y y2)
+                        (return nil)))
+                    (standard-rectangle-set-bands region))
+    nil))
 
-(defun make-standard-rectangle-set (bands)
-  (cond ((null bands) +nowhere+)
-        ((and (= (length bands) 2)
-              (null (cdr (second bands)))
-              (= (length (cdr (first bands))) 2))
-         (make-rectangle* (first (cdar bands)) (caar bands)
-                          (second (cdar bands)) (caadr bands)))
-        ((= (length (first bands)) 1)
-         (make-standard-rectangle-set (rest bands)))
+(defmethod bounding-rectangle* ((region standard-rectangle-set))
+  (with-slots (bands) region
+    (let (bx1 by1 bx2 by2)
+      (map-over-bands-rectangles (lambda (x1 y1 x2 y2)
+                                   (setf bx1 (min (or bx1 x1) x1)
+                                         bx2 (max (or bx2 x2) x2)
+                                         by1 (min (or by1 y1) y1)
+                                         by2 (max (or by2 y2) y2)))
+                                 bands)
+      (values bx1 by1 bx2 by2))))
+
+(defmethod transform-region (tr (region standard-rectangle-set))
+  (cond ((scaling-transformation-p tr)
+         (multiple-value-bind (mxx mxy myx myy tx ty)
+             (get-transformation tr)
+           (declare (ignore mxy myx))
+           (let ((rev-x-p (< mxx 0))
+                 (rev-y-p (< myy 0)))
+             (flet ((correct (bands)
+                      (loop for ((y . nil) (nil . xs)) on (nreverse bands)
+                            collect `(,y . ,xs))))
+               (make-standard-rectangle-set
+                (loop for band in (standard-rectangle-set-bands region)
+                      for new-band = (loop for x in (cdr band)
+                                           collect (+ (* mxx x) tx) into new-xs
+                                           finally (return (cons (+ (* myy (car band)) ty)
+                                                                 (if rev-x-p
+                                                                     (nreverse new-xs)
+                                                                     new-xs))))
+                      collect new-band into new-bands
+                      finally (return (if rev-y-p
+                                          (correct new-bands)
+                                          new-bands))))))))
         (t
-         (make-instance 'standard-rectangle-set :bands bands))))
-
-;;; ============================================================================
-
-(defmethod region-set-regions ((region standard-region-union) &key normalize)
-  (declare (ignorable normalize))
-  (standard-region-set-regions region))
-
-(defmethod region-set-regions ((region standard-region-intersection) &key normalize)
-  (declare (ignorable normalize))
-  (standard-region-set-regions region))
-
-(defmethod region-set-regions ((region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (list (standard-region-difference-a region)
-        (standard-region-difference-b region)))
-
-(defmethod region-set-regions ((region region) &key normalize)
-  (declare (ignorable normalize))
-  (list region))
-
-(defmethod map-over-region-set-regions
-    (fun (region standard-region-union) &key normalize)
-  (declare (ignorable normalize))
-  (mapc fun (standard-region-set-regions region)))
-
-(defmethod map-over-region-set-regions
-    (fun (region standard-region-intersection) &key normalize)
-  (declare (ignorable normalize))
-  (mapc fun (standard-region-set-regions region)))
-
-(defmethod map-over-region-set-regions
-    (fun (region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (funcall fun (standard-region-difference-a region))
-  (funcall fun (standard-region-difference-b region)))
-
-(defmethod map-over-region-set-regions
-    (fun (region region-set) &key normalize)
-  (mapc fun (region-set-regions region :normalize normalize)))
-
-(defmethod map-over-region-set-regions (fun (region region) &key normalize)
-  (declare (ignorable normalize))
-  (funcall fun region))
-
-;;; ===========================================================================
-
-(defmethod simple-pprint-object-args (stream (object standard-rectangle))
-  (with-standard-rectangle* (x1 y1 x2 y2) object
-    (loop for (slot-name slot-value) in `((x1 ,x1)
-                                          (y1 ,y1)
-                                          (x2 ,x2)
-                                          (y2 ,y2))
-       do
-         (write-char #\Space stream)
-         (pprint-newline :fill stream)
-         (write-char #\: stream)
-         (princ slot-name stream)
-         (write-char #\Space stream)
-         (unless (atom slot-value)
-           (princ "'" stream))
-         (write slot-value :stream stream))))
-
-(defmethod print-object ((region standard-rectangle) stream)
-  (maybe-print-readably (region stream)
-    (print-unreadable-object (region stream :type t :identity nil)
-      (with-standard-rectangle* (x1 y1 x2 y2) region
-        (format stream "X ~S:~S Y ~S:~S" x1 x2 y1 y2)))))
-
-;;; Internal helpers
-
-(defmacro with-grown-rectangle* (((out-x1 out-y1 out-x2 out-y2)
-                                  (in-x1 in-y1 in-x2 in-y2)
-                                  &key
-                                  radius
-                                  (radius-x radius)
-                                  (radius-y radius)
-                                  (radius-left  radius-x)
-                                  (radius-right radius-x)
-                                  (radius-top    radius-y)
-                                  (radius-bottom radius-y))
-                                  &body body)
-  `(multiple-value-bind (,out-x1 ,out-y1 ,out-x2 ,out-y2)
-    (values (- ,in-x1 ,radius-left)
-     (- ,in-y1 ,radius-top)
-     (+ ,in-x2 ,radius-right)
-     (+ ,in-y2 ,radius-bottom))
-    ,@body))
+         ;; We have insufficient knowledge about the transformation,
+         ;; so we have to take the union of all transformed rectangles.
+         ;; Maybe there is a faster way to do this.
+         (let ((res +nowhere+))
+           (map-over-region-set-regions
+            (lambda (rect)
+              (setf res (region-union res (transform-region tr rect))))
+            region)
+           res))))
