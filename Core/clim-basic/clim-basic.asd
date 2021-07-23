@@ -43,7 +43,7 @@
                  (:file "grafts"  :depends-on ("sheets" "ports"))
                  (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))))
    (:module "drawing"
-    :depends-on ("utils" "decls" "protocol-classes" "geometry")
+    :depends-on ("utils" "decls" "protocol-classes" "geometry" "windowing")
     :components ((:file "design")
                  (:file "text-style")
                  (:file "colors"   :depends-on ("design"))
