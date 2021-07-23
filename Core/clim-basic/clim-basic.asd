@@ -27,6 +27,7 @@
                  (:file "3.2.3-lines")
                  (:file "3.2.4-rectangles")
                  (:file "3.2.5-ellipses-and-elliptical-arcs")
+                 (:file "3.2.6-bezigons-and-bezier-curves")
                  (:file "region-utilities")
                  (:file "region-predicates")
                  (:file "region-composition")
