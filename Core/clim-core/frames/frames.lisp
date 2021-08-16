@@ -661,13 +661,15 @@
     (apply #'display-command-table-menu command-table stream args)))
 
 (defmethod enable-frame ((frame application-frame))
-  (ecase (slot-value frame 'state)
-    (:disabled
-     (note-frame-enabled (frame-manager frame) frame))
-    (:shrunk
-     (note-frame-deiconified (frame-manager frame) frame))
-    (:enabled))
-  (setf (slot-value frame 'state) :enabled))
+  (let ((old-value (slot-value frame 'state)))
+    (setf (slot-value frame 'state) :enabled)
+    (ecase old-value
+      (:disabled
+       (note-frame-enabled (frame-manager frame) frame))
+      (:shrunk
+       (note-frame-deiconified (frame-manager frame) frame))
+      (:enabled))
+    (frame-state frame)))
 
 (defmethod disable-frame ((frame application-frame))
   (setf (slot-value frame 'state) :disabled)
