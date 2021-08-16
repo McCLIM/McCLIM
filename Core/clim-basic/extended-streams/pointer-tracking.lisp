@@ -200,6 +200,7 @@
                                 (track-pointer-event
                                  (synthesize-pointer-motion-event pointer)))
                               (setf modifier-state new-state))
+                       when (typep sheet 'sheet-with-medium-mixin)
                        do (medium-finish-output sheet)))))
       (if (keyboard-handler state)
           (with-input-focus (tracked-sheet)
