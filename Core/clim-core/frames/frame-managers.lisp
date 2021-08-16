@@ -114,10 +114,7 @@
 (defclass standard-frame-manager (headless-frame-manager)
   ((port
     :initarg :port
-    :reader port)
-   (frames
-    :initform nil
-    :reader frame-manager-frames)))
+    :reader port)))
 
 (defmethod adopt-frame
     ((fm standard-frame-manager) (frame standard-application-frame))
