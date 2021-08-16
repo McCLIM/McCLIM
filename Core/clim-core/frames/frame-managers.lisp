@@ -87,6 +87,7 @@
 
 (defmethod disown-frame :before
     ((fm headless-frame-manager) (frame application-frame))
+  (disable-frame frame)
   (alexandria:removef (slot-value fm 'frames) frame))
 
 (defmethod adopt-frame
