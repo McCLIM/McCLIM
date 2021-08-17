@@ -538,10 +538,6 @@ if there is one, or STREAM"
     (apply #'invoke-with-drawing-options
            (slot-value medium 'stream) #'trampoline drawing-options)))
 
-(def-stream-method do-graphics-with-options-internal
-    ((stream standard-encapsulating-stream) (orig-medium t) function
-     &rest args &key))
-
 (def-stream-method invoke-with-room-for-graphics
     (cont (stream standard-encapsulating-stream) &rest options))
 
