@@ -1391,6 +1391,28 @@ were added."
                    (maxf max-y (+ y border)))))
              (values min-x min-y max-x max-y)))))
 
+(defun bezigon-record-bounding-rectangle (coord-seq filled border)
+  (if filled
+      (setf border 0)
+      (setf border (ceiling border)))
+  (let* ((min-x (elt coord-seq 0))
+         (min-y (elt coord-seq 1))
+         (max-x min-x)
+         (max-y min-y))
+    (map-over-bezigon-segments*
+     (lambda (x0 y0 x1 y1 x2 y2 x3 y3)
+       (multiple-value-bind (x1 x2) (cubic-bezier-dimension-min-max x0 x1 x2 x3)
+         (minf min-x x1)
+         (maxf max-x x2))
+       (multiple-value-bind (y1 y2) (cubic-bezier-dimension-min-max y0 y1 y2 y3)
+         (minf min-y y1)
+         (maxf max-y y2)))
+     coord-seq 4)
+    (values (floor (- min-x border))
+            (floor (- min-y border))
+            (ceiling (+ max-x border))
+            (ceiling (+ max-y border)))))
+
 ;;; Regarding COORD-SEQ, see comment for DRAW-POINTS.
 (def-grecording draw-polygon (coord-seq-mixin gs-line-style-mixin)
     ((coord-seq (copy-sequence-into-vector coord-seq))
@@ -1409,6 +1431,20 @@ were added."
          (eql (slot-value record 'closed) closed))
        (if-supplied (filled)
          (eql (slot-value record 'filled) filled))))
+
+(def-grecording draw-bezigon (coord-seq-mixin gs-line-style-mixin)
+    ((coord-seq (copy-sequence-into-vector coord-seq))
+     filled)
+  (let* ((transform (medium-transformation medium))
+         (transformed-coord-seq (transform-positions transform coord-seq))
+         (border (unless filled
+                   (/ (fix-line-style-unit graphic medium) 2))))
+    (setf coord-seq transformed-coord-seq)
+    (bezigon-record-bounding-rectangle transformed-coord-seq filled border)))
+
+(defrecord-predicate draw-bezigon-output-record (filled)
+  (if-supplied (filled)
+    (eql (slot-value record 'filled) filled)))
 
 (def-grecording (draw-rectangle :medium-fn nil) (gs-line-style-mixin)
     (left top right bottom filled)
