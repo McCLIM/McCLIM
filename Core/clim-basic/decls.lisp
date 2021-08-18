@@ -396,6 +396,8 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric medium-draw-line* (medium x1 y1 x2 y2))
 (defgeneric medium-draw-lines* (medium coord-seq))
 (defgeneric medium-draw-polygon* (medium coord-seq closed filled))
+(defgeneric medium-draw-bezigon* (medium coord-seq filled))
+(defgeneric medium-draw-rectangles* (medium coord-seq filled))
 (defgeneric medium-draw-rectangle* (medium left top right bottom filled))
 (defgeneric medium-draw-ellipse* (medium center-x center-y
                                   radius-1-dx radius-1-dy radius-2-dx radius-2-dy

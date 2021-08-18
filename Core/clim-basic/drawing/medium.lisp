@@ -417,6 +417,16 @@
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq closed filled))))
 
+(defmethod medium-draw-bezigon* :around ((medium transform-coordinates-mixin) coord-seq filled)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-positions (tr coord-seq)
+      (call-next-method medium coord-seq filled))))
+
+(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
+  (let ((polygon-coord-seq (polygonalize* coord-seq)))
+    (with-identity-transformation (medium)
+      (medium-draw-polygon* medium polygon-coord-seq nil filled))))
+
 (defun expand-rectangle-coords (left top right bottom)
   "Expand the two corners of a rectangle into a polygon coord-seq"
   (vector left top right top right bottom left bottom))
@@ -429,8 +439,6 @@
           (call-next-method medium left top right bottom filled))
         (medium-draw-polygon* medium (expand-rectangle-coords left top right bottom)
                               t filled))) )
-
-(defgeneric medium-draw-rectangles* (medium coord-seq filled))
 
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
   (let ((tr (medium-transformation medium)))

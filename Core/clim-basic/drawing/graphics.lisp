@@ -372,6 +372,26 @@
   (with-medium-options (sheet args)
     (medium-draw-polygon* medium coord-seq closed filled)))
 
+(defun draw-bezigon (sheet point-seq
+                     &rest args
+                     &key (filled t) ink clipping-region
+                       transformation line-style line-thickness
+                       line-unit line-dashes line-joint-shape line-cap-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+                   line-unit line-dashes line-joint-shape line-cap-shape))
+  (with-medium-options (sheet args)
+    (medium-draw-bezigon* medium (expand-point-seq point-seq) filled)))
+
+(defun draw-bezigon* (sheet coord-seq
+                      &rest args
+                      &key (filled t) ink clipping-region
+                        transformation line-style line-thickness line-unit
+                        line-dashes line-joint-shape line-cap-shape)
+  (declare (ignore ink clipping-region transformation line-style line-thickness
+                   line-unit line-dashes line-joint-shape line-cap-shape))
+  (with-medium-options (sheet args)
+    (medium-draw-bezigon* medium coord-seq filled)))
+
 (defun draw-rectangle (sheet point1 point2
                         &rest args
                         &key (filled t) ink clipping-region transformation
@@ -775,6 +795,7 @@
 (def-graphic-op draw-line (x1 y1 x2 y2))
 (def-graphic-op draw-lines (coord-seq))
 (def-graphic-op draw-polygon (coord-seq closed filled))
+(def-graphic-op draw-bezigon (coord-seq filled))
 (def-graphic-op draw-rectangle (left top right bottom filled))
 (def-graphic-op draw-rectangles (position-seq filled))
 (def-graphic-op draw-ellipse (center-x center-y
@@ -809,6 +830,18 @@
 (defmethod draw-design (medium (design polygon)
                         &rest options &key &allow-other-keys)
   (apply #'draw-polygon medium (polygon-points design)
+         :filled t
+         options))
+
+(defmethod draw-design (medium (design polybezier)
+                        &rest options &key &allow-other-keys)
+  (apply #'draw-bezigon medium (bezigon-points design)
+         :filled nil
+         options))
+
+(defmethod draw-design (medium (design bezigon)
+                        &rest options &key &allow-other-keys)
+  (apply #'draw-bezigon medium (bezigon-points design)
          :filled t
          options))
 
