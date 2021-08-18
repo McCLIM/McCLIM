@@ -247,6 +247,12 @@ Note:
 symbol).  At each iteration the variables in VARS are bound to the
 initial elements of the sequence.  The iteration is then \"stepped\"
 by the number of variables in VARS."
+  `(do-sequence* (,vars ,sequence nil ,result-form) ,@body))
+
+(defmacro do-sequence* ((vars sequence step &optional result-form) &body body)
+  "Iterate over SEQUENCE.  VARS is a list of symbols (or a single symbol).  At
+each iteration the variables in VARS are bound to the initial elements of the
+sequence.  The iteration is then \"stepped\" by the specified number."
   (flet ((list-stepper (n)
            (case n
              (1 'cdr)
@@ -254,10 +260,11 @@ by the number of variables in VARS."
              (3 'cdddr)
              (4 'cddddr)
              (t `(lambda (list) (nthcdr ,n list))))))
-    (with-gensyms (body-fun i)
+    (with-gensyms (body-fun i iter-limit)
       (once-only (sequence)
         (let* ((vars        (alexandria:ensure-list vars))
                (count       (length vars))
+               (step        (or step count))
                (vector-args (loop for j from 0 below count
                                   collect `(aref ,sequence (+ ,i ,j)))))
           `(block nil
@@ -267,11 +274,15 @@ by the number of variables in VARS."
                (declare (dynamic-extent (function ,body-fun)))
                (etypecase ,sequence
                  (list
-                  (loop for ,vars on ,sequence by (function ,(list-stepper count))
+                  (loop with ,iter-limit = (- (length ,sequence) ,count)
+                        for ,i of-type alexandria:array-index from 0 by ,step
+                        for ,vars on ,sequence by (function ,(list-stepper step))
+                        until (> ,i ,iter-limit)
                         do (,body-fun ,@vars)))
                  (vector
-                  (loop for ,i of-type alexandria:array-index
-                          from 0 below (length ,sequence) by ,count
+                  (loop with ,iter-limit = (- (length ,sequence) ,count)
+                        for ,i of-type alexandria:array-index from 0 by ,step
+                        until (> ,i ,iter-limit)
                         do (,body-fun ,@vector-args)))))
              ,@(when result-form
                  `((let ,vars ; bind variables to NIL
