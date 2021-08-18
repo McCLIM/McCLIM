@@ -899,6 +899,34 @@ outside the clipping area should be grey.")
                            :filled nil
                            :line-thickness 4))))
 
+;;;
+;;; Bezigon
+;;;
+
+(define-drawing-test "Bezigon" "Basic"
+  (frame stream)
+  "First column: three bezigons, second column: three polybeziers."
+  (declare (ignore frame))
+  (labels ((doit (&rest options)
+             (apply #'climi::draw-bezigon* stream '( 50 50
+                                                    150 50
+                                                    50 150
+                                                    150 150)
+                    options))
+           (translated-doit (x y &rest options)
+             (with-translation (stream x y)
+               (apply #'doit options))))
+    (translated-doit 0 0)
+    (translated-doit 0 200 :ink +blue+)
+    (with-rotation (stream (/ pi 6) (make-point 100 500))
+      (translated-doit 0 400))
+
+    (translated-doit 200 0 :filled nil)
+    (translated-doit 200 200 :filled nil)
+    (translated-doit 200 400 :filled nil
+                             :line-dashes 10
+                             :line-thickness 3)))
+
 
 ;;;
 ;;; Rectangle
