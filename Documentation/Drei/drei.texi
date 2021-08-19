@@ -38,12 +38,8 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @cindex text-field
 
 @menu
-* Drei Concepts::               The core Drei concepts and design philosophy.
-* External API::                The classes, functions and macros that make
-                                up the core of Drei
-* Standard Drei Variants::      How to use the predefined Drei variants.
-* Protocols::                   Description of protocols used by Drei.
-* Defining Drei Commands::      Information about defining commands for Drei
+* Explanation::                 Understanding Drei
+* Reference::
 
 @c Index
 * Concept Index::
@@ -54,8 +50,22 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
 editor substrates provided by McCLIM. Drei is activated by default.
 
+@node Explanation
+@chapter Explanation
+
+@menu
+* Drei Concepts::               The core Drei concepts and design philosophy.
+* Standard Drei Variants::      How to use the predefined Drei variants.
+* Defining Drei Commands::      Information about defining commands for Drei
+
+@c Index
+* Concept Index::
+* Variable Index::
+* Function And Macro Index::
+@end menu
+
 @node Drei Concepts
-@chapter Drei Concepts
+@section Drei Concepts
 
 The reason for many of Drei's design decisions, and the complexity of
 some of the code, is due to the flexibility that Drei is meant to
@@ -110,7 +120,13 @@ variants that do not to this, such as @class{drei-pane}, need to bind
 these special variables themselves, or Drei commands are likely to
 malfunction.
 
+@node Reference
+@chapter Reference
+
 @menu
+* External API::                The classes, functions and macros that make up the core of Drei
+* Standard Drei Variants::
+* Protocols::                   Description of protocols used by Drei.
 * Access Functions::
 * Special Variables::
 @end menu
@@ -144,7 +160,7 @@ Additionally, a number of ESA special variables are used in Drei.
 @include var-esa-star-previous-command-star.texi
 
 @node External API
-@chapter External API
+@section External API
 
 @include class-drei-drei.texi
 
@@ -175,7 +191,7 @@ an attempt is made to insert a newline character.
 @include fun-drei-execute-drei-command.texi
 
 @node Standard Drei Variants
-@chapter Standard Drei Variants
+@section Standard Drei Variants
 
 Because the standard @class{drei} class doesn't implement
 immediately-usable editor behavior, three subclasses have been defined
@@ -184,7 +200,7 @@ the input-editor-oriented Drei variant, the pane-oriented Drei variant
 and the gadget-oriented Drei variant.
 
 @node Protocols
-@chapter Protocols
+@section Protocols
 @cindex Drei protocols
 @cindex text-editor protocols
 @cindex text-editor API
