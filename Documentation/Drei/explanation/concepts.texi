@@ -1,0 +1,55 @@
+@node Drei Concepts
+@section Drei Concepts
+
+The reason for many of Drei's design decisions, and the complexity of
+some of the code, is due to the flexibility that Drei is meant to
+expose. Drei has to work as, at least, an input-editor, a text editor
+gadget and a simple pane. These three different uses have widely
+different semantics for reading input and performing redisplay - from
+passively being fed gestures in the input editor, to having to do event
+handling and redisplay timing manually in the gadget
+version. Furthermore, Drei is extensible software, so we wished to make
+the differences between these three modi operandi transparent to the
+extender (as much as possible at least, unfortunately the Law of Leaky
+Abstractions prevents us from reaching perfection). These two demands
+require the core Drei protocols, especially those pertaining to
+redisplay, gesture handling and accepting input from the user, to be
+customizable by the different specialized Drei classes.
+
+We call a specific instance of the Drei editor substrate a @i{Drei
+instance}. A @i{Drei variant} is a specific subclass of @class{drei}
+that implements a specific kind of editor, such as an input-editor or a
+gadget. A given Drei instance has a single view associated with it, this
+view must be unique to the Drei instance (though this is not enforced),
+but may be changed at any time. The most typical view is one that has a
+buffer and maintains syntax information about the buffer contents. A
+buffer need not be unique to a buffer-view, and may be changed at any
+time. The view instance has two marks into the buffer, called the
+@i{top} and @i{bottom} mark. These marks delimit the visible region of
+the buffer - for some Drei variants, this is always the entire buffer,
+while others may only have a smaller visible region. Note that not all
+of the visible region necessarily is on display on the screen (parts, or
+all, of it may be hidden due to scrolling, for example), but nothing
+outside the visible region is on display, though remember that the same
+buffer may be used in several views, and that each of these views may
+have their own idea about what the visible region is. Most views also
+maintain marks for the current @i{point} and @i{mark}. This means that
+different views sharing the same buffer may have different points and
+marks. Every Drei instance also has a @i{kill ring} object which
+contains object sequences that have been killed from the buffer, and can
+be yanked back in at the user's behest. These are generally not shared.
+
+Every Drei instance is associated with an editor pane - this must be a
+CLIM stream pane that is used for redisplay (@pxref{Redisplay
+Protocol}). This is not necessarily the same object as the Drei instance
+itself, but it can be. (With a little work, the editor pane can be
+@cl{NIL}, which is useful for testing.)
+
+For each Drei instance, Drei attempts to simulate an application
+top-level loop with something called a @i{pseudo command loop}, and
+binds a number of special variables appropriately. This is to make
+command writing more convenient and similar across all Drei variants,
+but it also means that any program that uses one of the low-level Drei
+variants that do not to this, such as @class{drei-pane}, need to bind
+these special variables themselves, or Drei commands are likely to
+malfunction.

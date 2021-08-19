@@ -1,0 +1,30 @@
+@node External API
+@section External API
+
+@include class-drei-drei.texi
+
+@deftp {@class{drei} Initarg} {:editable-p}
+Whether or not the Drei instance will be editable. If @cl{NIL}, the
+buffer will be set to read-only (this also affects programmatic
+access). The default is @cl{T}.
+@end deftp
+
+@deftp {@class{drei} Initarg} {:single-line}
+If @cl{T}, the buffer created for the Drei instance will be single line,
+and a condition of type @class{buffer-single-line} will be signalled if
+an attempt is made to insert a newline character.
+@end deftp
+
+@include macro-drei-handling-drei-conditions.texi
+
+@include macro-drei-with-bound-drei-special-variables.texi
+
+@include macro-drei-performing-drei-operations.texi
+
+@include fun-drei-invoke-performing-drei-operations.texi
+
+@include macro-drei-accepting-from-user.texi
+
+@include fun-drei-invoke-accepting-from-user.texi
+
+@include fun-drei-execute-drei-command.texi

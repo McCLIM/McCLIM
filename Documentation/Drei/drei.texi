@@ -55,7 +55,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 
 @menu
 * Drei Concepts::               The core Drei concepts and design philosophy.
-* Standard Drei Variants::      How to use the predefined Drei variants.
+* Drei Variants::
 * Defining Drei Commands::      Information about defining commands for Drei
 
 @c Index
@@ -64,140 +64,21 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Function And Macro Index::
 @end menu
 
-@node Drei Concepts
-@section Drei Concepts
-
-The reason for many of Drei's design decisions, and the complexity of
-some of the code, is due to the flexibility that Drei is meant to
-expose. Drei has to work as, at least, an input-editor, a text editor
-gadget and a simple pane. These three different uses have widely
-different semantics for reading input and performing redisplay - from
-passively being fed gestures in the input editor, to having to do event
-handling and redisplay timing manually in the gadget
-version. Furthermore, Drei is extensible software, so we wished to make
-the differences between these three modi operandi transparent to the
-extender (as much as possible at least, unfortunately the Law of Leaky
-Abstractions prevents us from reaching perfection). These two demands
-require the core Drei protocols, especially those pertaining to
-redisplay, gesture handling and accepting input from the user, to be
-customizable by the different specialized Drei classes.
-
-We call a specific instance of the Drei editor substrate a @i{Drei
-instance}. A @i{Drei variant} is a specific subclass of @class{drei}
-that implements a specific kind of editor, such as an input-editor or a
-gadget. A given Drei instance has a single view associated with it, this
-view must be unique to the Drei instance (though this is not enforced),
-but may be changed at any time. The most typical view is one that has a
-buffer and maintains syntax information about the buffer contents. A
-buffer need not be unique to a buffer-view, and may be changed at any
-time. The view instance has two marks into the buffer, called the
-@i{top} and @i{bottom} mark. These marks delimit the visible region of
-the buffer - for some Drei variants, this is always the entire buffer,
-while others may only have a smaller visible region. Note that not all
-of the visible region necessarily is on display on the screen (parts, or
-all, of it may be hidden due to scrolling, for example), but nothing
-outside the visible region is on display, though remember that the same
-buffer may be used in several views, and that each of these views may
-have their own idea about what the visible region is. Most views also
-maintain marks for the current @i{point} and @i{mark}. This means that
-different views sharing the same buffer may have different points and
-marks. Every Drei instance also has a @i{kill ring} object which
-contains object sequences that have been killed from the buffer, and can
-be yanked back in at the user's behest. These are generally not shared.
-
-Every Drei instance is associated with an editor pane - this must be a
-CLIM stream pane that is used for redisplay (@pxref{Redisplay
-Protocol}). This is not necessarily the same object as the Drei instance
-itself, but it can be. (With a little work, the editor pane can be
-@cl{NIL}, which is useful for testing.)
-
-For each Drei instance, Drei attempts to simulate an application
-top-level loop with something called a @i{pseudo command loop}, and
-binds a number of special variables appropriately. This is to make
-command writing more convenient and similar across all Drei variants,
-but it also means that any program that uses one of the low-level Drei
-variants that do not to this, such as @class{drei-pane}, need to bind
-these special variables themselves, or Drei commands are likely to
-malfunction.
+@include explanation/concepts.texi
+@include explanation/variants.texi
 
 @node Reference
 @chapter Reference
 
 @menu
 * External API::                The classes, functions and macros that make up the core of Drei
-* Standard Drei Variants::
 * Protocols::                   Description of protocols used by Drei.
 * Access Functions::
 * Special Variables::
 @end menu
 
-@node Access Functions
-@section Access Functions
-
-The access functions are the primary interface to Drei state, and should
-be used to access the various parts. It is not recommended to save the
-return value of these functions, as they are by nature ephemeral, and
-may change over the course of a command.
-
-@include fun-drei-drei-instance.texi
-@include fun-drei-current-view.texi
-@include fun-esa-current-buffer.texi
-@include fun-drei-point.texi
-@include fun-drei-mark.texi
-@include fun-drei-current-syntax.texi
-
-@node Special Variables
-@section Special Variables
-
-Drei uses only a few special variables to provide access to data
-structures.
-
-@include var-drei-kill-ring-star-kill-ring-star.texi
-
-Additionally, a number of ESA special variables are used in Drei.
-
-@include var-esa-star-minibuffer-star.texi
-@include var-esa-star-previous-command-star.texi
-
-@node External API
-@section External API
-
-@include class-drei-drei.texi
-
-@deftp {@class{drei} Initarg} {:editable-p}
-Whether or not the Drei instance will be editable. If @cl{NIL}, the
-buffer will be set to read-only (this also affects programmatic
-access). The default is @cl{T}.
-@end deftp
-
-@deftp {@class{drei} Initarg} {:single-line}
-If @cl{T}, the buffer created for the Drei instance will be single line,
-and a condition of type @class{buffer-single-line} will be signalled if
-an attempt is made to insert a newline character.
-@end deftp
-
-@include macro-drei-handling-drei-conditions.texi
-
-@include macro-drei-with-bound-drei-special-variables.texi
-
-@include macro-drei-performing-drei-operations.texi
-
-@include fun-drei-invoke-performing-drei-operations.texi
-
-@include macro-drei-accepting-from-user.texi
-
-@include fun-drei-invoke-accepting-from-user.texi
-
-@include fun-drei-execute-drei-command.texi
-
-@node Standard Drei Variants
-@section Standard Drei Variants
-
-Because the standard @class{drei} class doesn't implement
-immediately-usable editor behavior, three subclasses have been defined
-to provide a concrete implementaton of the editor substrate. These are
-the input-editor-oriented Drei variant, the pane-oriented Drei variant
-and the gadget-oriented Drei variant.
+@include reference/access.texi
+@include reference/special.texi
 
 @node Protocols
 @section Protocols
@@ -221,188 +102,7 @@ protocols. This section lists some of them.
 * Kill Ring Protocol::          
 @end menu
 
-@node Buffer Protocol
-@section Buffer Protocol
-
-The Drei buffer is what holds textual and other objects to be
-edited and displayed.  Conceptually, the buffer is a potentially
-large sequence of objects, most of which are expected to be
-characters (the full Unicode character set is supported).  However,
-Drei buffers can contain any Common Lisp objects, as long as the
-redisplay engine knows how to render them.
-
-The Drei buffer implementation differs from that of a vector, because it
-allows for very efficient editing operations, such as inserting and
-removing objects at arbitrary offsets.
-
-In addition, the Drei buffer protocols defines that concept of a
-mark.
-
-@menu
-* General Buffer Protocol Parts::  
-* Operations Related To The Offset Of Marks::  
-* Inserting And Deleting Objects::  
-* Getting Objects Out Of The Buffer::  
-* Implementation Hints::        
-@end menu
-
-@node General Buffer Protocol Parts
-@subsection General Buffer Protocol Parts
-
-@include class-drei-buffer-buffer.texi
-
-@include class-drei-buffer-standard-buffer.texi
-
-@include class-drei-buffer-mark.texi
-
-@include class-drei-buffer-left-sticky-mark.texi
-
-@include class-drei-buffer-right-sticky-mark.texi
-
-@include fun-drei-buffer-offset.texi
-
-@include fun-drei-buffer-setf-offset.texi
-
-@include fun-drei-buffer-clone-mark.texi
-
-@include fun-drei-buffer-buffer.texi
-
-@include condition-drei-buffer-no-such-offset.texi
-
-@include condition-drei-buffer-offset-before-beginning.texi
-
-@include condition-drei-buffer-offset-after-end.texi
-
-@include condition-drei-buffer-invalid-motion.texi
-
-@include condition-drei-buffer-motion-before-beginning.texi
-
-@include condition-drei-buffer-motion-after-end.texi
-
-@include fun-drei-buffer-size.texi
-
-@include fun-drei-buffer-number-of-lines.texi
-
-@node Operations Related To The Offset Of Marks
-@subsection Operations Related To The Offset Of Marks
-
-@include fun-drei-buffer-forward-object.texi
-
-@include fun-drei-buffer-backward-object.texi
-
-@include fun-drei-buffer-mark=.texi
-
-@include fun-drei-buffer-mark-lt.texi
-
-@include fun-drei-buffer-mark-lt=.texi
-
-@include fun-drei-buffer-mark-gt.texi
-
-@include fun-drei-buffer-mark-gt=.texi
-
-@include fun-drei-buffer-beginning-of-buffer.texi
-
-@include fun-drei-buffer-end-of-buffer.texi
-
-@include fun-drei-buffer-beginning-of-buffer-p.texi
-
-@include fun-drei-buffer-end-of-buffer-p.texi
-
-@include fun-drei-buffer-beginning-of-line.texi
-
-@include fun-drei-buffer-end-of-line.texi
-
-@include fun-drei-buffer-beginning-of-line-p.texi
-
-@include fun-drei-buffer-end-of-line-p.texi
-
-@include fun-drei-buffer-buffer-line-number.texi
-
-@include fun-drei-buffer-buffer-column-number.texi
-
-@include fun-drei-buffer-line-number.texi
-
-@include fun-drei-buffer-column-number.texi
-
-@node Inserting And Deleting Objects
-@subsection Inserting And Deleting Objects
-
-@include fun-drei-buffer-insert-buffer-object.texi
-
-@include fun-drei-buffer-insert-buffer-sequence.texi
-
-@include fun-drei-buffer-insert-object.texi
-
-@include fun-drei-buffer-insert-sequence.texi
-
-@include fun-drei-buffer-delete-buffer-range.texi
-
-@include fun-drei-buffer-delete-range.texi
-
-@include fun-drei-buffer-delete-region.texi
-
-@node Getting Objects Out Of The Buffer
-@subsection Getting Objects Out Of The Buffer
-
-@include fun-drei-buffer-buffer-object.texi
-
-@include fun-drei-buffer-setf-buffer-object.texi
-
-@include fun-drei-buffer-buffer-sequence.texi
-
-@include fun-drei-buffer-object-before.texi
-
-@include fun-drei-buffer-object-after.texi
-
-@include fun-drei-buffer-region-to-sequence.texi
-
-@node Implementation Hints
-@subsection Implementation Hints
-
-The buffer is implemented as lines organized in a 2-3-tree.  The
-leaves of the tree contain the lines, and the internal nodes contain
-additional information of the left subtree (if it is a 2-node) or the
-left and the middle subtree (if it is a 3-node).  Two pieces of
-information are stored: The number of lines in up to and including
-the subtree and the total number of objects up to an including the
-subtree.  This organization allows us to determine, the line number
-and object position of any mark in O(log N) where N is the number of
-lines.
-
-A line is an instance of the `buffer-line' class.  A line can either
-be open or closed.  A closed line is represented as a sequence.  The
-exact type of the sequence depends on the objects contained in the
-line.  If the line contains only characters of type base-char, then
-the sequence is of type base-string.  If the line contains only
-characters, but not of type base-char, the sequence is a string.
-Otherwise it is a vector of arbitrary objects.  This way, closed
-lines containing characters with code points below 256 have a compact
-representation with 8 bits per character while still allowing for
-arbitrary objects when necessary.  An open line is represented as a
-cursorchain of objects.
-
-Marks in a closed line are represented as an integer offset into the
-sequence.  Marks in an open line are represented as flexicursors.
-
-When a line is opened, it is converted to a cursorchain.  When a line
-is closed, it is examined to determine whether it contains
-non-character objects, in which case it is converted to a vector of
-objects.  If contains only characters, but it contains characters
-with code points above what can be represented in a base-char, it is
-converted to a string.  If it contains only base-chars, it is
-converted to a base-string.
-
-A mark contains two slots: a flexicursor that determines which line it
-is on, and either an integer (if the line is closed) that determines
-the offset within the line or another flexicursor (if the line is
-open).  For each line, open or closed, a list of weak references to
-marks into that line is kept.
-
-Lines are closed according to a LRU scheme.  Whenever objects are
-inserted to or deleted from a line, it becomes the most recently used
-line.  We keep a fixed number of open lines so that when a line is
-opened and the threshold is reached, the least recently used line is
-closed.
+@include reference/buffer-protocol.texi
 
 @node Buffer Modification Protocol
 @section Buffer Modification Protocol
