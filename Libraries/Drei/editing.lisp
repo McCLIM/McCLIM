@@ -31,7 +31,7 @@
 ;;; BACKWARD-DELETE-<unit>, FORWARD-KILL-<unit>, BACKWARD-KILL-<unit>
 ;;; and TRANSPOSE-<unit>.
 ;;;
-;;; This file also holds definitions for other miscellaneus
+;;; This file also holds definitions for other miscellaneous
 ;;; editing-related functions. The definitions in this file should
 ;;; have to do with immediate editing, understood as insertion,
 ;;; deletion or movement of buffer contents. Transformation of buffer

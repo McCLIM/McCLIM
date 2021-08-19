@@ -12,7 +12,7 @@
 ;;; Drei is an editing substrate designed for use in CLIM, and used to
 ;;; implement text-editor gadgets and input-editing-streams in
 ;;; McCLIM. It is also used as the editor engine in Climacs, from
-;;; which Drei was originally extracted. At it's base, Drei has a
+;;; which Drei was originally extracted. At its base, Drei has a
 ;;; `drei' class that contains the buffer and some marks into the
 ;;; buffer - from this, we derive concrete Drei implementations that
 ;;; implement usage-dependent semantics for redisplay and input
