@@ -756,11 +756,11 @@ y2."
 ;;; ELLIPSE
 
 (defun %ellipse-angle->position (ellipse angle)
-  (with-slots (tr) ellipse
-    (let* ((base-angle (untransform-angle tr (- (* 2 pi) angle)))
-           (x0 (cos base-angle))
-           (y0 (sin base-angle)))
-      (transform-position tr x0 y0))))
+  (let* ((tr (polar->screen ellipse))
+         (base-angle (untransform-angle tr (- (* 2 pi) angle)))
+         (x0 (cos base-angle))
+         (y0 (sin base-angle)))
+    (transform-position tr x0 y0)))
 
 (defun %ellipse-position->angle (ellipse x y)
   (multiple-value-bind (xc yc) (ellipse-center-point* ellipse)
@@ -782,7 +782,7 @@ y2."
   ;;   (x^2)/a + (y^2)/b - 1 = 0 for an axis aligned ellipse, but
   ;;   I rather choose to treat all coefficients as simple factors instead
   ;;   of denominators.
-  (with-slots (tr) ell
+  (let ((tr (polar->screen ell)))
     ;; Why the inverse here?
     (multiple-value-bind (a b d e c f)
         (get-transformation (invert-transformation tr))
@@ -908,13 +908,13 @@ y2."
 ;;; `%ellipse-angle->position' because of the rotation inversion.
 (defun %ellipse-simplified-representation/radius (ellipse angle)
   (declare (optimize (speed 3)) (inline))
-  (with-slots (tr) ellipse
-    (let* ((base-angle (untransform-angle tr angle))
-           (x (cos base-angle))
-           (y (sin base-angle)))
-      (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation tr)
-        (values (+ (* mxx x) (* mxy y) tx)
-                (+ (* myx x) (* myy y) ty))))))
+  (let* ((tr (polar->screen ellipse))
+         (base-angle (untransform-angle tr angle))
+         (x (cos base-angle))
+         (y (sin base-angle)))
+    (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation tr)
+      (values (+ (* mxx x) (* mxy y) tx)
+              (+ (* myx x) (* myy y) ty)))))
 
 (defun ellipse-simplified-representation (el)
   ;; returns H (horizontal radius), V (vertical radius) and rotation
@@ -1022,15 +1022,16 @@ y2."
 
 (defun intersection-ellipse/ellipse (e1 e2)
   ;; We reduce one of the two ellipses to the unit circle.
-  (let ((a (invert-transformation (slot-value e1 'tr))))
-    (let ((r (intersection-ellipse/unit-circle (transform-region a e2))))
-      (if (atom r)
-          r
+  (let* ((e1-tr (polar->screen e1))
+         (a (invert-transformation e1-tr))
+         (r (intersection-ellipse/unit-circle (transform-region a e2))))
+    (if (atom r)
+        r
         (mapcar (lambda (p)
                   (multiple-value-bind (x y)
-                      (transform-position (slot-value e1 'tr) (car p) (cdr p))
+                      (transform-position e1-tr (car p) (cdr p))
                     (make-point x y)))
-                r)))))
+                r))))
 
 (defun intersection-ellipse/unit-circle (ell)
   (multiple-value-bind (a b c d e f) (ellipse-coefficients ell)

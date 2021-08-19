@@ -55,11 +55,13 @@
 (defmethod print-object ((ell elliptical-thing) stream)
   (maybe-print-readably (ell stream)
     (print-unreadable-object (ell stream :type t :identity t)
-       (with-slots (start-angle end-angle tr) ell
-         (format stream "[~A ~A] ~A"
-                 (and start-angle (* (/ 180 pi) start-angle))
-                 (and end-angle (* (/ 180 pi) end-angle))
-                 tr)))))
+      (let ((start-angle (ellipse-start-angle ell))
+            (end-angle (ellipse-end-angle ell))
+            (tr (polar->screen ell)))
+        (format stream "[~A ~A] ~A"
+                (and start-angle (* (/ 180 pi) start-angle))
+                (and end-angle (* (/ 180 pi) end-angle))
+                tr)))))
 
 (defun make-ellipse (center-point
                      radius-1-dx radius-1-dy
@@ -123,26 +125,24 @@
     (make-instance class :tr tr :start-angle start-angle :end-angle end-angle)))
 
 (defmethod ellipse-center-point* ((region elliptical-thing))
-  (with-slots (tr) region
+  (let ((tr (polar->screen region)))
     (transform-position tr 0 0)))
 
 (defmethod ellipse-center-point ((region elliptical-thing))
-  (with-slots (tr) region
+  (let ((tr (polar->screen region)))
     (transform-region tr (make-point 0 0))))
 
 (defmethod ellipse-radii ((region elliptical-thing))
-  (with-slots (tr) region
+  (let ((tr (polar->screen region)))
     (multiple-value-bind (dx1 dy1) (transform-distance tr 1 0)
       (multiple-value-bind (dx2 dy2) (transform-distance tr 0 1)
         (values dx1 dy1 dx2 dy2)))))
 
 (defmethod ellipse-start-angle ((region elliptical-thing))
-  (with-slots (start-angle) region
-    start-angle))
+  (slot-value region 'start-angle))
 
 (defmethod ellipse-end-angle ((region elliptical-thing))
-  (with-slots (end-angle) region
-    end-angle))
+  (slot-value region 'end-angle))
 
 (defmethod region-contains-position-p ((region elliptical-arc) x y)
   (flet ((position-contains-p (polar->screen)
@@ -205,14 +205,18 @@
       (values (- cx x) (- cy y) (+ cx x) (+ cy y)))))
 
 (defmethod bounding-rectangle* ((region elliptical-thing))
-  (with-slots (tr start-angle end-angle) region
+  (let ((tr (polar->screen region))
+        (start-angle (ellipse-start-angle region))
+        (end-angle (ellipse-end-angle region)))
     (multiple-value-bind (cx cy) (ellipse-center-point* region)
       (if (every #'zerop (multiple-value-list (ellipse-radii region)))
           (values cx cy cx cy)
           (ellipse-bounding-rectangle region)))))
 
 (defmethod transform-region (transformation (region elliptical-thing))
-  (with-slots (start-angle end-angle tr) region
+  (let ((tr (polar->screen region))
+        (start-angle (ellipse-start-angle region))
+        (end-angle (ellipse-end-angle region)))
     ;; I think this should be untransform-angle below, as the ellipse angles
     ;; go counter-clockwise in screen coordinates, whereas our transformations
     ;; rotate clockwise..  -Hefner
