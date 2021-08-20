@@ -1142,6 +1142,36 @@ y2."
             (incf n)))
         res))))
 
+(defun polygonalize-ellipse (cx cy rdx1 rdy1 rdx2 rdy2
+                             start-angle end-angle
+                             &key (filled t) (precision 0.1))
+  (multiple-value-bind (a b theta #|cdx1 cdy1 cdx2 cdy2|#)
+      (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
+    (collect (control-coords)
+      (labels ((value (eta)
+                 (ellipse-point (- eta theta) cx cy a b theta))
+               (approximate-ellipse-inner (eta1 eta2)
+                 (let ((boundary (+ eta1 (/ pi 2) (* eta2 long-float-epsilon))))
+                   (when (> eta2 boundary)
+                     (approximate-ellipse-inner eta1 boundary)
+                     (approximate-ellipse-inner boundary eta2)
+                     (return-from approximate-ellipse-inner))
+                   (multiple-value-bind (x1 y1) (value eta1)
+                     (multiple-value-bind (x2 y2) (value eta2)
+                       (if (> (distance* x1 y1 x2 y2) precision)
+                           (let ((middle (/ (+ eta1 eta2) 2)))
+                             (approximate-ellipse-inner eta1 middle)
+                             (approximate-ellipse-inner middle eta2))
+                           (control-coords x2 y2)))))))
+        (when filled
+          (control-coords cx cy))
+        ;; Ellipse angles are specified CCW.
+        (let ((eta1 (- end-angle))
+              (eta2 (- start-angle)))
+          (multiple-value-bind (x0 y0) (value eta1)
+            (control-coords x0 y0))
+          (approximate-ellipse-inner eta1 eta2))
+        (control-coords)))))
 
 ;;; Bezier utilities
 
