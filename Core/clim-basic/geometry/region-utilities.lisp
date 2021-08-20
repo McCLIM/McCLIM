@@ -903,41 +903,12 @@ y2."
                             c))))
              (values x1 y1 x2 y2))))))
 
-;;; This function is used in `ellipse-simplified-representation' to fixup
-;;; normalized radius lengths. Can't be interchanged with
-;;; `%ellipse-angle->position' because of the rotation inversion.
-(defun %ellipse-simplified-representation/radius (ellipse angle)
-  (declare (optimize (speed 3)) (inline))
-  (let* ((tr (polar->screen ellipse))
-         (base-angle (untransform-angle tr angle))
-         (x (cos base-angle))
-         (y (sin base-angle)))
-    (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation tr)
-      (values (+ (* mxx x) (* mxy y) tx)
-              (+ (* myx x) (* myy y) ty)))))
-
 (defun ellipse-simplified-representation (el)
-  ;; returns H (horizontal radius), V (vertical radius) and rotation
-  ;; angle in screen coordinates. `ellipse-normal-radii*' returns
-  ;; vectors with correct direction, but radius length is shorter than
-  ;; in reality (verified with experimentation, not analytically), so
-  ;; we compute radius from phi.  If the length were right, we'd
-  ;; compute h/v with the following: (sqrt (+ (expt (* hx (cos phi))
-  ;; 2) (expt (* hy (sin phi)) 2))) (sqrt (+ (expt (* vx (sin phi)) 2)
-  ;; (expt (* vy (cos phi)) 2)))
   (multiple-value-bind (center-x center-y) (ellipse-center-point* el)
-    (multiple-value-bind (hx hy) (ellipse-normal-radii* el)
-      (let* ((phi (atan* hx hy)))
-        ;(multiple-value-bind (hx hy vx vy) (%ellipse-angle->distance el phi))
-        (multiple-value-bind (hx hy)
-            (%ellipse-simplified-representation/radius el phi)
-          (multiple-value-bind (vx vy)
-              (%ellipse-simplified-representation/radius el (+ phi (/ pi 2)))
-           (values center-x
-                   center-y
-                   (sqrt (+ (expt (- center-x hx) 2) (expt (- center-y hy) 2)))
-                   (sqrt (+ (expt (- center-x vx) 2) (expt (- center-y vy) 2)))
-                   phi)))))))
+    (values center-x center-y
+            (ellipse-radius-x el)
+            (ellipse-radius-y el)
+            (ellipse-rotation el))))
 
 ;;; Intersection of Ellipse vs. Line
 
