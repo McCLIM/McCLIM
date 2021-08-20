@@ -30,8 +30,7 @@
         (old-clip (slot-value medium 'clipping-region))
         (old-transform (medium-transformation medium))
         (old-line-style (medium-line-style medium))
-        (old-text-style (medium-text-style medium))
-        (old-text-style* (medium-merged-text-style medium)))
+        (old-text-style (medium-text-style medium)))
     (let (;; Ink
           (ink old-ink)
           ;; Transformation and clip
@@ -46,9 +45,9 @@
           (cap       (line-style-cap-shape old-line-style))
           ;; Text style
           text-style
-          (family (text-style-family old-text-style*))
-          (face   (text-style-face old-text-style*))
-          (size   (text-style-size old-text-style*)))
+          (family (text-style-family old-text-style))
+          (face   (text-style-face old-text-style))
+          (size   (text-style-size old-text-style)))
       (unwind-protect
            (loop for (key val) on drawing-options by #'cddr
                  do (case key
@@ -82,10 +81,9 @@
                       ;; Text style
                       (:text-style
                        ;; Incomplete parts are merged with the specified.
-                       (when val
-                         (setf family (or (text-style-family val) family)
-                               face   (or (text-style-face val)   face)
-                               size   (or (text-style-size val)   size))))
+                       (setf family (or (text-style-family val) family)
+                             face   (or (text-style-face val)   face)
+                             size   (or (text-style-size val)   size)))
                       (:text-family
                        (setf family val))
                       (:text-face
@@ -111,10 +109,11 @@
                     (if (line-style-equalp line-style old-line-style)
                         (setf line-style nil)
                         (setf (medium-line-style medium) line-style))
-                    (if (text-style-equalp text-style old-text-style*)
+                    (if (text-style-equalp text-style old-text-style)
                         (setf text-style nil)
                         (setf (medium-text-style medium)
-                              (merge-text-styles text-style old-text-style*)))
+                              (merge-text-styles text-style
+                                                 (medium-merged-text-style medium))))
                  finally
                     (funcall func orig-medium))
         ;; cleanup
