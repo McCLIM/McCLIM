@@ -76,45 +76,6 @@
 
 ;;; 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM
 
-;;; A transformation from the unit circle to get the elliptical object.
-(defun %polar->screen (cx cy rdx1 rdy1 rdx2 rdy2)
-  (make-3-point-transformation* 0 0 1 0 0 1
-                                cx cy
-                                (+ cx rdx1) (+ cy rdy1)
-                                (+ cx rdx2) (+ cy rdy2)))
-
-;;; See "A rotated ellipse from three points" by Jerry R. Van Aken for math
-;;; behind the following three functions. Each of them assumes that the ellipse
-;;; is centered at [0,0].
-
-;;; Ax² + Bxy + Cy² + Dx + Ey + F = 0
-(defun ellipse-implicit-equation (rdx1 rdy1 rdx2 rdy2)
-  (values (+ (square rdy1) (square rdy2))           ; A
-          (* (- 2) (+ (* rdx1 rdy1) (* rdx2 rdy2))) ; B
-          (+ (square rdx1) (square rdx2))           ; C
-          ;; 0                                           ; D
-          ;; 0                                           ; E
-          (- (square (- (* rdx1 rdy2) (* rdx2 rdy1)))))) ; F
-
-(defun ellipse-bounding-rectangle (rdx1 rdy1 rdx2 rdy2)
-  (let ((x (sqrt (+ (square rdx1) (square rdx2))))
-        (y (sqrt (+ (square rdy1) (square rdy2)))))
-    (values (- x) (- y) x y)))
-
-;;; The order of axes is not specified.
-(defun ellipse-major-and-minor-axes (A B C F)
-  (let* ((beta (/ (- C A) B))
-         (slope- (- beta (sqrt (1+ (square beta)))))
-         (slope+ (+ beta (sqrt (1+ (square beta)))))
-         (denom- (+ A (* B slope-) (* C (square slope-))))
-         (denom+ (+ A (* B slope+) (* C (square slope+)))))
-    (when (and (> denom- 0) (> denom+ 0))
-      (let* ((x1 (sqrt (/ (- f) denom-)))
-             (y1 (* slope- x1))
-             (x2 (sqrt (/ (- f) denom+)))
-             (y2 (* slope+ x2)))
-        (values x1 y1 x2 y2)))))
-
 (defun make-elliptical-thing (class cx cy rdx1 rdy1 rdx2 rdy2 start end)
   (multiple-value-bind (a b c #|d e|# f)
       (ellipse-implicit-equation rdx1 rdy1 rdx2 rdy2)
@@ -136,7 +97,7 @@
                         :polar->screen (%polar->screen cx cy max-x 0 0 max-y))))
       (t
        (multiple-value-bind (cdx1 cdy1 cdx2 cdy2)
-           (ellipse-major-and-minor-axes a b c f)
+           (ellipse-normal-radii* a b c f)
          (if (null cdx1)                ; ultra thin ellipse (negligible)
              +nowhere+
              (let ((theta (find-angle* cdx1 cdy1 1 0))

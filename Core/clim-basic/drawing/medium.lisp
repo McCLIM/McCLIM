@@ -423,7 +423,7 @@
       (call-next-method medium coord-seq filled))))
 
 (defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
-  (let ((polygon-coord-seq (polygonalize* coord-seq)))
+  (let ((polygon-coord-seq (polygonalize-bezigon coord-seq)))
     (with-identity-transformation (medium)
       (medium-draw-polygon* medium polygon-coord-seq nil filled))))
 
