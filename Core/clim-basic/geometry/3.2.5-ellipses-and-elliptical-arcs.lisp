@@ -212,19 +212,12 @@
               (+ cy max-y)))))
 
 (defmethod transform-region (tr (region elliptical-thing))
-  (let ((center (transform-region tr (ellipse-center-point region)))
-        (eta1 (ellipse-start-angle region))
-        (eta2 (ellipse-end-angle region)))
-    (when eta1
-      (setf eta1 (untransform-angle tr eta1))
-      (setf eta2 (untransform-angle tr eta2))
-      (when (reflection-transformation-p tr)
-        (rotatef eta1 eta2)))
+  (multiple-value-bind (cx cy) (ellipse-center-point* region)
     (multiple-value-bind (rdx1 rdy1 rdx2 rdy2)
         (ellipse-radii region)
-      (multiple-value-call #'make-elliptical-thing
-        (class-of region)
-        (point-position center)
-        (transform-distance tr rdx1 rdy1)
-        (transform-distance tr rdx2 rdy2)
-        eta1 eta2))))
+      (multiple-value-bind (cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
+          (transform-ellipse tr cx cy rdx1 rdy1 rdx2 rdy2
+                             (ellipse-start-angle region)
+                             (ellipse-end-angle region))
+        (make-elliptical-thing (class-of region)
+                               cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)))))

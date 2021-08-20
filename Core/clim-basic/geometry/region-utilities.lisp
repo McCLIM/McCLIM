@@ -804,6 +804,17 @@ y2."
                                 (+ cx rdx1) (+ cy rdy1)
                                 (+ cx rdx2) (+ cy rdy2)))
 
+(defun transform-ellipse (tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
+  (when eta1
+    (setf eta1 (untransform-angle tr eta1))
+    (setf eta2 (untransform-angle tr eta2))
+    (when (reflection-transformation-p tr)
+      (rotatef eta1 eta2)))
+  (multiple-value-bind (cx cy) (transform-position tr cx cy)
+    (multiple-value-bind (rdx1 rdy1) (transform-distance tr rdx1 rdy1)
+      (multiple-value-bind (rdx2 rdy2) (transform-distance tr rdx2 rdy2)
+        (values cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)))))
+
 ;;; See "A rotated ellipse from three points" by Jerry R. Van Aken for math
 ;;; behind the following three functions. Each of them assumes that the ellipse
 ;;; is centered at [0,0].
