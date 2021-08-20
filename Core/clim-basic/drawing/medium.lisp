@@ -468,6 +468,12 @@
             (transform-ellipse tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
           (call-next-method medium cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)))))
 
+(defmethod medium-draw-ellipse* ((medium basic-medium)
+                                 cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
+  (with-identity-transformation (medium)
+    (let ((coords (polygonalize-ellipse cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 :filled filled)))
+     (medium-draw-polygon* medium coords nil filled))))
+
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height
                                      to-drawable to-x to-y)
