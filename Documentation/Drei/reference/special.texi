@@ -10,5 +10,3 @@ Additionally, a number of ESA special variables are used in Drei.
 
 @include var-esa-star-minibuffer-star.texi
 @include var-esa-star-previous-command-star.texi
-
-@include reference/external-api.texi
