@@ -1,0 +1,68 @@
+@node [Explanation] Buffer Protocol
+@section Buffer Protocol
+
+@menu
+* Implementation Hints::
+@end menu
+
+The Drei buffer is what holds textual and other objects to be
+edited and displayed.  Conceptually, the buffer is a potentially
+large sequence of objects, most of which are expected to be
+characters (the full Unicode character set is supported).  However,
+Drei buffers can contain any Common Lisp objects, as long as the
+redisplay engine knows how to render them.
+
+The Drei buffer implementation differs from that of a vector, because it
+allows for very efficient editing operations, such as inserting and
+removing objects at arbitrary offsets.
+
+In addition, the Drei buffer protocols defines that concept of a
+mark.
+
+@node Implementation Hints
+@subsection Implementation Hints
+
+The buffer is implemented as lines organized in a 2-3-tree.  The
+leaves of the tree contain the lines, and the internal nodes contain
+additional information of the left subtree (if it is a 2-node) or the
+left and the middle subtree (if it is a 3-node).  Two pieces of
+information are stored: The number of lines in up to and including
+the subtree and the total number of objects up to an including the
+subtree.  This organization allows us to determine, the line number
+and object position of any mark in O(log N) where N is the number of
+lines.
+
+A line is an instance of the `buffer-line' class.  A line can either
+be open or closed.  A closed line is represented as a sequence.  The
+exact type of the sequence depends on the objects contained in the
+line.  If the line contains only characters of type base-char, then
+the sequence is of type base-string.  If the line contains only
+characters, but not of type base-char, the sequence is a string.
+Otherwise it is a vector of arbitrary objects.  This way, closed
+lines containing characters with code points below 256 have a compact
+representation with 8 bits per character while still allowing for
+arbitrary objects when necessary.  An open line is represented as a
+cursorchain of objects.
+
+Marks in a closed line are represented as an integer offset into the
+sequence.  Marks in an open line are represented as flexicursors.
+
+When a line is opened, it is converted to a cursorchain.  When a line
+is closed, it is examined to determine whether it contains
+non-character objects, in which case it is converted to a vector of
+objects.  If contains only characters, but it contains characters
+with code points above what can be represented in a base-char, it is
+converted to a string.  If it contains only base-chars, it is
+converted to a base-string.
+
+A mark contains two slots: a flexicursor that determines which line it
+is on, and either an integer (if the line is closed) that determines
+the offset within the line or another flexicursor (if the line is
+open).  For each line, open or closed, a list of weak references to
+marks into that line is kept.
+
+Lines are closed according to a LRU scheme.  Whenever objects are
+inserted to or deleted from a line, it becomes the most recently used
+line.  We keep a fixed number of open lines so that when a line is
+opened and the threshold is reached, the least recently used line is
+closed.
