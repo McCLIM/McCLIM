@@ -68,3 +68,18 @@ functions accessing syntax information must go to some length to make
 sure that the view of the syntax is notified of any reparses
 (@pxref{Function drei-syntax:update-parse, ,
 @cl{drei-syntax:update-parse}}).
+
+@node Earley Parser
+@subsection Earley Parser
+
+Drei contains an incremental parser that uses the Earley
+algorithm.  This algorithm accepts the full set of context-free
+grammars, allowing greater freedom for the developer to define natural
+grammars without having to think about restrictions such as LL(k) or
+LALR(k).
+
+Beware, though, that the Earley algorithm can be quite inefficient if
+the grammar is sufficiently complicated, in particular if the grammar
+is ambiguous.
+
+@xref{Specifying A Grammar}

@@ -1,0 +1,18 @@
+@node View Protocol
+@subsection View Protocol
+@cindex view protocol
+@cindex views
+
+Drei extends CLIMs concept of ``views'' to be more than just a manner
+for determining the user interface for accepting values from the
+user. Instead, the view is what controls the user interface of the Drei
+instance the user is interacting with. To simplify the discussion, this
+section assumes that the view is always associated with a single
+buffer. A buffer does not have to be associated with a view, and may be
+associated with many views, though each view may only have a single
+buffer. The view controls how the buffer is displayed to the user, and
+which commands are available to the user for modifying the buffer. A
+view may use a syntax module to maintain syntactical information about
+the buffer contents, and use the resulting information to highlight
+parts of the buffer based on its syntactical value (``syntax
+highlighting'').

@@ -100,19 +100,6 @@ lexemes are indexed by a position starting from zero.
 
 @include fun-drei-syntax-next-lexeme.texi
 
-@node Earley Parser
-@subsubsection Earley Parser
-
-Drei contains an incremental parser that uses the Earley
-algorithm.  This algorithm accepts the full set of context-free
-grammars, allowing greater freedom for the developer to define natural
-grammars without having to think about restrictions such as LL(k) or
-LALR(k).
-
-Beware, though, that the Earley algorithm can be quite inefficient if
-the grammar is sufficiently complicated, in particular if the grammar
-is ambiguous.
-
 @node Specifying A Grammar
 @subsubsection Specifying A Grammar
 
@@ -182,24 +169,8 @@ The body can also be a sequence of forms, the first one of which must be
 a symbol.  These forms typically contain initargs, and will be passed as
 additional arguments to @code{(make-instance '@var{symbol})}.
 
-@node View Protocol
+@node [Ref] View Protocol
 @subsection View Protocol
-@cindex view protocol
-@cindex views
-
-Drei extends CLIMs concept of ``views'' to be more than just a manner
-for determining the user interface for accepting values from the
-user. Instead, the view is what controls the user interface of the Drei
-instance the user is interacting with. To simplify the discussion, this
-section assumes that the view is always associated with a single
-buffer. A buffer does not have to be associated with a view, and may be
-associated with many views, though each view may only have a single
-buffer. The view controls how the buffer is displayed to the user, and
-which commands are available to the user for modifying the buffer. A
-view may use a syntax module to maintain syntactical information about
-the buffer contents, and use the resulting information to highlight
-parts of the buffer based on its syntactical value (``syntax
-highlighting'').
 
 @include class-drei-drei-view.texi
 
@@ -248,22 +219,6 @@ is a number of predefined limit actions:
 @include condition-drei-motion-motion-limit-error.texi
 
 @include fun-drei-motion-error-limit-action.texi
-
-A @i{diligent motor} is a combination of two motion functions that has
-the same signature as a standard motion function (@pxref{Motion
-Protocol}). The primary motion function is called the @i{motor} and the
-secondary motion function is called the @i{fiddler}. When the diligent
-motor is called, it will start by calling its motor - if the motor
-cannot carry out its motion, the fiddler will be called, and if the
-fiddler is capable of performing its motion, the motor will be called
-again, and if this second motor call also fails, the fiddler will be
-called yet again, etc. If at any time the call to the fiddler fails, the
-limit action provided in the call to the diligent motor will be
-activated. A typical diligent motor is the one used to implement a
-@t{Backward Lisp Expression} command - it attempts to move backwards by
-a single expression, and if that fails, it tries to move up a level in
-the expression tree and tries again.
-@cindex limit-action
 
 @include fun-drei-motion-make-diligent-motor.texi
 

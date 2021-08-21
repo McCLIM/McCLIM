@@ -1,4 +1,4 @@
-@node [Ref] Unit Protocol
+@node Unit Protocol
 @subsection Unit Protocol
 @cindex Drei unit protocol
 @cindex Drei motion protocol
@@ -50,3 +50,24 @@ buffer.lisp) do not obey this protocol, in that they have no syntax
 argument. Therefore, all @cl{@var{frob}-object} functions and commands
 (@pxref{Editing Protocol}) lack this argument as well. There are no
 @cl{forward-one-object} or @cl{backward-one-object} functions.
+
+@node Diligent Motors
+@subsubsection Diligent Motors
+
+A @i{diligent motor} is a combination of two motion functions that has
+the same signature as a standard motion function (@pxref{Motion
+Protocol}). The primary motion function is called the @i{motor} and the
+secondary motion function is called the @i{fiddler}. When the diligent
+motor is called, it will start by calling its motor - if the motor
+cannot carry out its motion, the fiddler will be called, and if the
+fiddler is capable of performing its motion, the motor will be called
+again, and if this second motor call also fails, the fiddler will be
+called yet again, etc. If at any time the call to the fiddler fails, the
+limit action provided in the call to the diligent motor will be
+activated. A typical diligent motor is the one used to implement a
+@t{Backward Lisp Expression} command - it attempts to move backwards by
+a single expression, and if that fails, it tries to move up a level in
+the expression tree and tries again.
+@cindex limit-action
+
+@xref{Function drei-motion:make-diligent-motor, , @cl{drei-motion:make-diligent-motor}}
