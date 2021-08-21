@@ -91,15 +91,15 @@ Much of Drei's functionality is based on generic function
 protocols. This section lists some of them.
 
 @menu
-* Buffer Protocol::             
-* Buffer Modification Protocol::  
-* DREI-BASE Package::           
-* Syntax Protocol::             
-* View Protocol::             
-* Unit Protocol::               
-* Redisplay Protocol::          
-* Undo Protocol::               
-* Kill Ring Protocol::          
+* Buffer Protocol::
+* Buffer Modification Protocol::
+* DREI-BASE Package::
+* Syntax Protocol::
+* View Protocol::
+* Unit Protocol::
+* Redisplay Protocol::
+* Undo Protocol::
+* Kill Ring Protocol::
 @end menu
 
 @include reference/buffer-protocol.texi
@@ -145,7 +145,7 @@ section to make sure they respect the efficiency considerations that are
 expected by the @package{DREI-BASE} package.
 
 @menu
-* Efficiency Considerations::   
+* Efficiency Considerations::
 @end menu
 
 @node Efficiency Considerations
@@ -237,11 +237,11 @@ representation of the contents in order that it can be exploited by the
 redisplay module and by user commands.
 
 @menu
-* General Syntax Protocol::     
-* Incremental Parsing Framework::  
-* Lexical Analysis::            
-* Earley Parser::               
-* Specifying A Grammar::        
+* General Syntax Protocol::
+* Incremental Parsing Framework::
+* Lexical Analysis::
+* Earley Parser::
+* Specifying A Grammar::
 @end menu
 
 @node General Syntax Protocol
@@ -527,10 +527,10 @@ argument. Therefore, all @cl{@var{frob}-object} functions and commands
 @cl{forward-one-object} or @cl{backward-one-object} functions.
 
 @menu
-* Motors And Limit Actions::    
-* Motion Protocol::             
-* Editing Protocol::            
-* Generator Macros::            
+* Motors And Limit Actions::
+* Motion Protocol::
+* Editing Protocol::
+* Generator Macros::
 @end menu
 
 @node Motors And Limit Actions
@@ -651,9 +651,9 @@ arc it traversed is reversed.  The undo module does this by calling a
 generic function that client code must supply a method for.
 
 @menu
-* Protocol Specification::      
-* Implementation::              
-* How The Buffer Handles Undo::  
+* Protocol Specification::
+* Implementation::
+* How The Buffer Handles Undo::
 @end menu
 
 @node Protocol Specification
@@ -773,8 +773,8 @@ modified, for example by a push, the yank point will be reset to the
 start position.
 
 @menu
-* Kill Ring Protocol Specification::  
-* Kill Ring Implementation::    
+* Kill Ring Protocol Specification::
+* Kill Ring Implementation::
 @end menu
 
 @node Kill Ring Protocol Specification
@@ -831,10 +831,10 @@ only be active for buffers using that syntax. Commands in such tables
 are called syntax-specific commands.
 
 @menu
-* Drei Command Tables::         
-* Numeric Argument In Drei::    
-* Examples Of Defining Drei Commands::  
-* Drei's Syntax Command Table Protocol::  
+* Drei Command Tables::
+* Numeric Argument In Drei::
+* Examples Of Defining Drei Commands::
+* Drei's Syntax Command Table Protocol::
 @end menu
 
 @node Drei Command Tables
