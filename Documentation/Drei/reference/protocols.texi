@@ -1,0 +1,626 @@
+@node Protocols
+@section Protocols
+@cindex Drei protocols
+@cindex text-editor protocols
+@cindex text-editor API
+@cindex Drei API
+
+Much of Drei's functionality is based on generic function
+protocols. This section lists some of them.
+
+@menu
+* Buffer Protocol::
+* Buffer Modification Protocol::
+* Syntax Protocol::
+* View Protocol::
+* Unit Protocol::
+* Redisplay Protocol::
+* Undo Protocol::
+* Kill Ring Protocol::
+@end menu
+
+@include reference/buffer-protocol.texi
+
+@node Buffer Modification Protocol
+@section Buffer Modification Protocol
+
+The buffer modification protocol is based on the ESA observer/observable
+facility, which is in return a fairly ordinary Model-View
+implementation.
+
+@include class-drei-buffer-observable-buffer-mixin.texi
+
+Syntax-views use this information to determine what part of the buffer
+needs to be reparsed. This automatically happens whenever a request is
+made for information that might depend on outdated parsing data.
+
+@node Syntax Protocol
+@section Syntax Protocol
+
+A syntax module is an object that can be associated with a buffer. The
+syntax module usually consists of an incremental parser that analyzes
+the contents of the buffer and creates some kind of parse tree or other
+representation of the contents in order that it can be exploited by the
+redisplay module and by user commands.
+
+@menu
+* General Syntax Protocol::
+* Incremental Parsing Framework::
+* Lexical Analysis::
+* Earley Parser::
+* Specifying A Grammar::
+@end menu
+
+@node General Syntax Protocol
+@subsection General Syntax Protocol
+
+@include class-drei-syntax-syntax.texi
+
+The redisplay module exploits the syntax module for several things:
+
+@itemize @bullet
+@item highlighting of various syntactic entities of the buffer
+@item highlighting of matching parenthesis,
+@item turning syntactic entities into clickable presentations,
+@item marking lines with inconsistent indentation,
+@item etc.
+@end itemize
+
+User commands can use the syntax module for:
+
+@itemize @bullet
+@item moving point by units that are specific to a particular buffer
+syntax, such as expressions, statements, or paragraphs,
+@item transposing syntactic units,
+@item sending the text of a syntactic unit to a language processor,
+@item indenting lines according to the syntax,
+@item etc.
+@end itemize
+
+The ideal is that the view that the syntax module has of the buffer is
+updated only when needed, and then only for the parts of the buffer that
+are needed, though implementing this in practise is decidedly
+nontrivial.  Most syntax modules (such as for programming languages)
+need to compute their representations from the beginning of the buffer
+up to a particular point beyond which the structure of the buffer does
+not need to be known.
+
+There are two primary situations where updating might be needed:
+
+@itemize @bullet
+@item Before redisplay is about to show
+the contents of part of the buffer in a pane, to inform the syntax
+module that its syntax must be valid in the particular region on
+display,
+@item as a result of a command that exploits the syntactic entities of
+the buffer contents.
+@end itemize
+
+These two cases do boil down to ``whenever there is need for the syntax
+information to be correct'', however.
+
+The first case is handled by the invocation of a single generic function:
+
+@include fun-drei-syntax-update-syntax.texi
+
+It is important to realize that the syntax module is not directly
+involved in displaying buffer contents in a pane.  In fact, the syntax
+module should work even if there is no graphic user interface present,
+and it should be exploitable by several, potentially totally different,
+display units.
+
+The second case is slightly trickier, as any views of the syntax should
+be informed that it has reparsed some part of the buffer. Since
+@cl{update-syntax} is only called by views, the view can easily record
+the fact that some part of the buffer has an up-to-date parse. Thus,
+functions accessing syntax information must go to some length to make
+sure that the view of the syntax is notified of any reparses.
+
+@include fun-drei-syntax-update-parse.texi
+
+@node Incremental Parsing Framework
+@subsection Incremental Parsing Framework
+
+@include class-drei-syntax-parse-tree.texi
+
+We use the term parse tree in a wider sense than what is common in the
+parsing literature, in that a lexeme is a (trivial) parse tree.  The
+parser does not distinguish between lexemes and other parse trees, and
+a grammar rule can produce a lexeme if that should be desired.
+
+@include fun-drei-syntax-start-offset.texi
+
+@include fun-drei-syntax-end-offset.texi
+
+The length of a parse-tree is thus the difference of its end offset
+and its start offset.
+
+The start offset and the end offset may be NIL which is typically the
+case when a parse tree is derived from the empty sequence of lexemes.
+
+@node Lexical Analysis
+@subsection Lexical analysis
+
+@include class-drei-syntax-lexer.texi
+
+@include class-drei-syntax-incremental-lexer.texi
+
+In the sequence of lexemes maintained by the incremental lexer, the
+lexemes are indexed by a position starting from zero.
+
+@include fun-drei-syntax-nb-lexemes.texi
+
+@include fun-drei-syntax-lexeme.texi
+
+@include fun-drei-syntax-insert-lexeme.texi
+
+@include fun-drei-syntax-delete-invalid-lexemes.texi
+
+@include fun-drei-syntax-inter-lexeme-object-p.texi
+
+@include fun-drei-syntax-skip-inter-lexeme-objects.texi
+
+@include fun-drei-syntax-update-lex.texi
+
+@include fun-drei-syntax-next-lexeme.texi
+
+@node Earley Parser
+@subsection Earley Parser
+
+Drei contains an incremental parser that uses the Earley
+algorithm.  This algorithm accepts the full set of context-free
+grammars, allowing greater freedom for the developer to define natural
+grammars without having to think about restrictions such as LL(k) or
+LALR(k).
+
+Beware, though, that the Earley algorithm can be quite inefficient if
+the grammar is sufficiently complicated, in particular if the grammar
+is ambiguous.
+
+@node Specifying A Grammar
+@subsection Specifying A Grammar
+
+An incremental parser is created from a grammar.
+
+@include macro-drei-syntax-grammar.texi
+
+@deftp {Rule} symbol -> (&rest arguments) &optional body
+
+Each rule is a list of this form.
+@end deftp
+
+Here @var{symbol} is the target symbol of the rule, and should be the
+name of a CLOS class.
+
+@deftp {Rule argument} (var type test)
+
+The most general form of a rule argument.
+@end deftp
+
+@noindent
+
+Here @var{var} is the name of a lexical variable.  The scope of the
+variable contains the test, all the following arguments and the body
+of the rule.  The @var{type} is a Common Lisp type specification.  The
+rule applies only of the @var{type} of the object contain in var is of
+that type.  The @var{test} contains arbitrary Common Lisp code for
+additional checks as to the applicability of the rule.
+
+@deftp {Rule argument} (var type)
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+Here, @var{type} must be a symbol typically the name of a CLOS class.
+This form is an abbreviation for @code{(@var{var} @var{type} t)}.
+
+@deftp {Rule argument} (var test)
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+Here, @var{test} must not be a symbol.  This form is an abbreviation
+of @code{(@var{var} @var{var} @var{test})}, i.e., the name of the
+variable is also the name of a type, typically a CLOS class.
+
+@deftp {Rule argument} var
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+This form is an abbreviation of @code{(@var{var} @var{var} t)}.
+
+The @var{body} of a rule, if present, contains an expression that should
+have an instance (not necessarily direct) of the class named by the
+symbol (the left-hand-side) of the rule.  It is important that this
+restriction be respected, since the Earley algorithm will not work
+otherwise.
+
+If the @var{body} is absent, it is the same as if a body of the form
+@code{(make-instance '@var{symbol})} had been given.
+
+The body can also be a sequence of forms, the first one of which must be
+a symbol.  These forms typically contain initargs, and will be passed as
+additional arguments to @code{(make-instance '@var{symbol})}.
+
+@node View Protocol
+@section View Protocol
+@cindex view protocol
+@cindex views
+
+Drei extends CLIMs concept of ``views'' to be more than just a manner
+for determining the user interface for accepting values from the
+user. Instead, the view is what controls the user interface of the Drei
+instance the user is interacting with. To simplify the discussion, this
+section assumes that the view is always associated with a single
+buffer. A buffer does not have to be associated with a view, and may be
+associated with many views, though each view may only have a single
+buffer. The view controls how the buffer is displayed to the user, and
+which commands are available to the user for modifying the buffer. A
+view may use a syntax module to maintain syntactical information about
+the buffer contents, and use the resulting information to highlight
+parts of the buffer based on its syntactical value (``syntax
+highlighting'').
+
+@include class-drei-drei-view.texi
+
+@include class-drei-drei-buffer-view.texi
+
+@include method-drei-buffer-buffer-nil-drei-buffer-view.texi
+
+@include class-drei-drei-syntax-view.texi
+
+@include class-drei-point-mark-view.texi
+
+The @cl{synchronize-view} generic function is the heart of all view
+functionality.
+
+@include fun-drei-synchronize-view.texi
+
+@node Unit Protocol
+@section Unit Protocol
+@cindex Drei unit protocol
+@cindex Drei motion protocol
+@cindex Drei editing protocol
+
+Many of the actions performed by an editor is described in terms of the
+syntactically unit(s) they affect. The syntax module is responsible for
+actually dividing the buffer into syntactical units, but the @i{unit
+protocol} is the basic interface for acting on these units. A @i{unit}
+is some single syntactical construct - for example a word, a sentence,
+an expression or a definition. The unit protocol defines a number of
+generic functions for the various unit types that permit a uniform
+interface to moving a mark a given number of units, deleting a unit,
+killing a unit, transposing two units and so forth. A number of macros
+are also provided for automatically generating all these functions,
+given the definition of two simple movement functions. All generic
+functions of the unit protocol dispatch on a syntax, so that every
+syntax can implement its own idea of what exactly, for example, an
+``expression'' is. Defaults are provided for some units - if nothing
+else has been specified by the syntax, a word is considered any sequence
+of alphanumeric characters delimited by non-alphanumeric characters.
+@cindex unit
+
+The type of unit that a protocol function affects is represented
+directly in the name of the function - this means that a new set of
+functions must be generated for every new unit you want the protocol to
+support. In most cases, the code for these functions is very repetitive
+and similar across the unit types, which is why the motion protocol
+offers a set of macros that can generate function definitions for
+you. These generator macros define their generated functions in terms of
+basic motion functions.
+
+A basic motion function is a function named @cl{FORWARD-ONE-@var{unit}}
+or @cl{backward-one-@var{unit}} of the signature @cl{(@var{mark}
+@var{syntax})} that returns true if any motion happened or false if a
+limit was reached.
+@cindex basic motion function
+
+There isn't really a single all-encompassing unit protocol, instead, it
+is divided into two major parts - a motion protocol defining functions
+for moving point in terms of units, and an editing protocol for changing
+the buffer in terms of units. Both use a similar interface and a general
+mechanism for specifying the action to take if the intended operation
+cannot be carried out.
+
+Note that @cl{forward-object} and @cl{backward-object}, by virtue of
+their low-level status and placement in the buffer protocol (see
+buffer.lisp) do not obey this protocol, in that they have no syntax
+argument. Therefore, all @cl{@var{frob}-object} functions and commands
+(@pxref{Editing Protocol}) lack this argument as well. There are no
+@cl{forward-one-object} or @cl{backward-one-object} functions.
+
+@menu
+* Motors And Limit Actions::
+* Motion Protocol::
+* Editing Protocol::
+* Generator Macros::
+@end menu
+
+@node Motors And Limit Actions
+@subsection Motors And Limit Actions
+
+A limit action is a function usually named
+@cl{@var{mumble}-limit-action} of the signature @cl{(@var{mark}
+@var{original-offset} @var{remaining-units} @var{unit} @var{syntax})}
+that is called whenever a general motion function cannot complete the
+motion. @var{Mark} is the mark the object in motion;
+@var{original-offset} is the original offset of the mark, before any
+motion; @var{remaining-units} is the number of units left until the
+motion would be complete; @var{unit} is a string naming the unit; and
+@var{syntax} is the syntax instance passed to the motion function. There
+is a number of predefined limit actions:
+@cindex limit action
+
+@include fun-drei-motion-beep-limit-action.texi
+
+@include fun-drei-motion-revert-limit-action.texi
+
+@include condition-drei-motion-motion-limit-error.texi
+
+@include fun-drei-motion-error-limit-action.texi
+
+A @i{diligent motor} is a combination of two motion functions that has
+the same signature as a standard motion function (@pxref{Motion
+Protocol}). The primary motion function is called the @i{motor} and the
+secondary motion function is called the @i{fiddler}. When the diligent
+motor is called, it will start by calling its motor - if the motor
+cannot carry out its motion, the fiddler will be called, and if the
+fiddler is capable of performing its motion, the motor will be called
+again, and if this second motor call also fails, the fiddler will be
+called yet again, etc. If at any time the call to the fiddler fails, the
+limit action provided in the call to the diligent motor will be
+activated. A typical diligent motor is the one used to implement a
+@t{Backward Lisp Expression} command - it attempts to move backwards by
+a single expression, and if that fails, it tries to move up a level in
+the expression tree and tries again.
+@cindex limit-action
+
+@include fun-drei-motion-make-diligent-motor.texi
+
+@node Motion Protocol
+@subsection Motion Protocol
+
+The concept of a @i{basic motion function} was introduced in @ref{Unit
+Protocol}. A general motion function is a function named
+@cl{forward-@var{unit}} or @cl{backward-@var{unit}} of the signature
+@cl{(@var{mark} @var{syntax} &optional (@var{count} 1)
+(@var{limit-action} #'ERROR-LIMIT-ACTION))} that returns true if it
+could move forward or backward over the requested number of units,
+@var{count}, which may be positive or negative; and calls the limit
+action if it could not, or returns @cl{NIL} if the limit action is
+@cl{NIL}.
+
+@node Editing Protocol
+@subsection Editing Protocol
+
+An editing function is a function named
+@cl{forward-@var{frob}-@var{unit}} or
+@cl{backward-@var{frob}-@var{unit}}, or just @cl{@var{frob}-@var{unit}}
+in the case where discering between forward and backward commands does
+not make sense (an example is @cl{transpose-@var{unit}}).
+
+A proper unit is a unit for which all the functions required by the
+motion protocol has been implemented, this can be trivially done by
+using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
+
+@node Generator Macros
+@subsection Generator Macros
+
+@node Redisplay Protocol
+@section Redisplay Protocol
+@cindex Drei redisplay
+@cindex text-editor redisplay
+
+A buffer can be on display in several panes, possibly by being located
+in several Drei instances. Thus, the buffer does not concern itself with
+redisplay, but assumes that whatever is using it will redisplay when
+appropriate. There is no predictable definitive rule for when a Drei
+instance will be redisplayed, but when it is, it will be done by calling
+the following generic function.
+
+@include fun-drei-display-drei.texi
+
+The redisplay engine supports view-specific customization of the display
+in order to facilitate such functionality as syntax highlighting. This
+is done through the following two generic functions, both of which have
+sensible default methods defined by @class{drei-buffer-view} and
+@class{drei-syntax-view}, so if your view is a subclass of either of
+these, you do not need to define them yourself.
+
+@include fun-drei-display-drei-view-contents.texi
+
+@include fun-drei-display-drei-view-cursor.texi
+
+@node Undo Protocol
+@section Undo Protocol
+
+Undo is the facility by which previous modifications to the buffer can
+be undone, returning the buffer state to what it was prior to some
+modification.
+
+Undo is organized into a separate module.  This module conceptually
+maintains a tree where the nodes represent application states and the
+arcs represent transitions between these states.  The root of the tree
+represents the initial state of the application.  The undo module also
+maintains a current state.  During normal application operation, the
+current state is a leaf of a fairly long branch of the tree.  Normal
+application operations add new nodes to the end of this branch.  Moving
+the current state up the tree corresponds to an undo operation and
+moving it down some branch corresponds to some redo operation.
+
+Arcs in the tree are ordered so that they always point FROM the current
+state.  When the current state moves from one state to the other, the
+arc it traversed is reversed.  The undo module does this by calling a
+generic function that client code must supply a method for.
+
+@menu
+* Protocol Specification::
+* Implementation::
+* How The Buffer Handles Undo::
+@end menu
+
+@node Protocol Specification
+@subsection Protocol Specification
+
+@include condition-drei-undo-no-more-undo.texi
+
+@include class-drei-undo-undo-tree.texi
+
+@include class-drei-undo-undo-record.texi
+
+@include class-drei-undo-standard-undo-record.texi
+
+@include fun-drei-undo-add-undo.texi
+
+@include fun-drei-undo-flip-undo-record.texi
+
+@include fun-drei-undo-undo.texi
+
+@include fun-drei-undo-redo.texi
+
+@node Implementation
+@subsection Implementation
+
+Application states have no explicit representation, only undo records
+do.  The current state is a pointer to an undo record (meaning, the
+current state is BELOW the transition represented by the record) or to
+the undo tree itself if the current state is the initial state of the
+application.
+
+@node How The Buffer Handles Undo
+@subsection How The Buffer Handles Undo
+
+@include class-drei-undo-mixin.texi
+
+@include fun-drei-undo-tree.texi
+
+Undo is implemented as :before methods on, insert-buffer-object,
+insert-buffer-sequence and delete-buffer-range specialized on
+undo-mixin.
+
+@include fun-drei-undo-accumulate.texi
+
+@include fun-drei-performing-undo.texi
+
+Three subclasses @cl{insert-record}, @cl{delete-record}, and
+@cl{compound-record} of undo-record are used.  An insert record stores a
+position and some sequence of objects to be inserted, a delete record
+stores a position and the length of the sequence to be deleted, and a
+compound record stores a list of other undo records.
+
+The :before methods on @cl{insert-buffer-object} and
+@cl{insert-buffer-sequence} push a record of type delete-record onto the
+undo accumulator for the buffer, and the :before method on
+@cl{delete-buffer-range} pushes a record of type @cl{insert-record} onto
+the undo accumulator.
+
+@include macro-drei-with-undo.texi
+
+To avoid storing an undo record for each object that is inserted,
+the with-undo macro may in some cases just increment the length of
+the sequence in the last delete-record.
+
+The method on @cl{flip-undo-record} specialized on @cl{insert-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, inserts the
+sequence of objects in the buffer, and calls @cl{change-class} to
+convert the @cl{insert-record} to a @cl{delete-record}, giving it a the
+length of the stored sequence.
+
+The method on @cl{flip-undo-record} specialized on @cl{delete-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, deletes the range
+from the buffer, and calls @cl{change-class} to convert the
+@cl{delete-record} to an @cl{insert-record}, giving it the sequence at
+the stored offset in the buffer with the specified length.
+
+The method on @cl{flip-undo-record} specialized on @cl{compound-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, recursively calls
+@cl{flip-undo-record} on each element of the list of undo records, and
+finally destructively reverses the list.
+
+@include class-drei-drei-undo-record.texi
+
+@include class-drei-simple-undo-record.texi
+
+@include class-drei-insert-record.texi
+
+@include class-drei-delete-record.texi
+
+@include class-drei-compound-record.texi
+
+@node Kill Ring Protocol
+@section Kill Ring Protocol
+
+During the process of text editing it may become necessary for regions
+of text to be manipulated non-sequentially.  The kill ring and its
+surrounding protocol offers both a temporary location for data to be
+stored, as well as methods for stored data to be accessed.
+
+Conceptually, the kill ring is a stack of bounded depth, so that when
+elements are pushed beyond that depth, the oldest element is removed.
+All newly added data is attached to a single point at the ``start of
+ring position'' or SORP.
+
+This protocol provides two methods which govern how data is to be
+attached to the SORP.  The first method moves the current SORP to a new
+position, on to which a new object is attached.  The second conserves
+the current position and replaces its contents with a sequence
+constructed of new and pre-existing SORP objects.  This latter method is
+refered to as a ``concatenating push''.
+
+For data retrievial the kill ring class provides a ``yank point'' which
+allows focus to be shifted from the SORP to other positions within the
+kill ring.  The yank point is limited to two types of motition, one
+being a rotation away from the SORP and the other being an immediate
+return or ``reset'' to the start position. When the kill ring is
+modified, for example by a push, the yank point will be reset to the
+start position.
+
+@menu
+* Kill Ring Protocol Specification::
+* Kill Ring Implementation::
+@end menu
+
+@node Kill Ring Protocol Specification
+@subsection Kill Ring Protocol Specification
+
+@include class-drei-kill-ring-kill-ring.texi
+
+@include fun-drei-kill-ring-kill-ring-max-size.texi
+
+@include fun-drei-kill-ring-kill-ring-length.texi
+
+@include fun-drei-kill-ring-kill-ring-standard-push.texi
+
+@include fun-drei-kill-ring-kill-ring-concatenating-push.texi
+
+@include fun-drei-kill-ring-kill-ring-reverse-concatenating-push.texi
+
+@include fun-drei-kill-ring-rotate-yank-position.texi
+
+@include fun-drei-kill-ring-reset-yank-position.texi
+
+@include fun-drei-kill-ring-kill-ring-yank.texi
+
+@node Kill Ring Implementation
+@subsection Kill Ring Implementation
+
+The kill ring structure is built mainly of two parts: the stack like
+ring portion, which is a cursorchain, and the yank point, which is a
+left-sticky-flexicursor.  To initialize a kill ring, the :max-size slot
+initarg is simply used to set the max size.  The remaining slots
+constisting of the cursorchain and the left-sticky-flexicursor are
+instantized upon creation of the kill ring.
+
+Stored onto the cursorchain are simple-vectors of objects, mainly
+characters from a Drei buffer.  In order to facilitate this, the kill
+ring implementation borrows heavily from the flexichain library of
+functions. The following functions lie outside the kill ring and
+flexichain protocols, but are pertinent to the kill ring implementation.
+
+@include fun-drei-kill-ring-kill-ring-chain.texi
+
+@include fun-drei-kill-ring-kill-ring-cursor.texi
