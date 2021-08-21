@@ -22,7 +22,7 @@ protocols. This section lists some of them.
 @include reference/buffer-protocol.texi
 
 @node Buffer Modification Protocol
-@section Buffer Modification Protocol
+@subsection Buffer Modification Protocol
 
 The buffer modification protocol is based on the ESA observer/observable
 facility, which is in return a fairly ordinary Model-View
@@ -35,13 +35,7 @@ needs to be reparsed. This automatically happens whenever a request is
 made for information that might depend on outdated parsing data.
 
 @node Syntax Protocol
-@section Syntax Protocol
-
-A syntax module is an object that can be associated with a buffer. The
-syntax module usually consists of an incremental parser that analyzes
-the contents of the buffer and creates some kind of parse tree or other
-representation of the contents in order that it can be exploited by the
-redisplay module and by user commands.
+@subsection Syntax Protocol
 
 @menu
 * General Syntax Protocol::
@@ -52,54 +46,9 @@ redisplay module and by user commands.
 @end menu
 
 @node General Syntax Protocol
-@subsection General Syntax Protocol
+@subsubsection General Syntax Protocol
 
 @include class-drei-syntax-syntax.texi
-
-The redisplay module exploits the syntax module for several things:
-
-@itemize @bullet
-@item highlighting of various syntactic entities of the buffer
-@item highlighting of matching parenthesis,
-@item turning syntactic entities into clickable presentations,
-@item marking lines with inconsistent indentation,
-@item etc.
-@end itemize
-
-User commands can use the syntax module for:
-
-@itemize @bullet
-@item moving point by units that are specific to a particular buffer
-syntax, such as expressions, statements, or paragraphs,
-@item transposing syntactic units,
-@item sending the text of a syntactic unit to a language processor,
-@item indenting lines according to the syntax,
-@item etc.
-@end itemize
-
-The ideal is that the view that the syntax module has of the buffer is
-updated only when needed, and then only for the parts of the buffer that
-are needed, though implementing this in practise is decidedly
-nontrivial.  Most syntax modules (such as for programming languages)
-need to compute their representations from the beginning of the buffer
-up to a particular point beyond which the structure of the buffer does
-not need to be known.
-
-There are two primary situations where updating might be needed:
-
-@itemize @bullet
-@item Before redisplay is about to show
-the contents of part of the buffer in a pane, to inform the syntax
-module that its syntax must be valid in the particular region on
-display,
-@item as a result of a command that exploits the syntactic entities of
-the buffer contents.
-@end itemize
-
-These two cases do boil down to ``whenever there is need for the syntax
-information to be correct'', however.
-
-The first case is handled by the invocation of a single generic function:
 
 @include fun-drei-syntax-update-syntax.texi
 
@@ -119,7 +68,7 @@ sure that the view of the syntax is notified of any reparses.
 @include fun-drei-syntax-update-parse.texi
 
 @node Incremental Parsing Framework
-@subsection Incremental Parsing Framework
+@subsubsection Incremental Parsing Framework
 
 @include class-drei-syntax-parse-tree.texi
 
@@ -139,7 +88,7 @@ The start offset and the end offset may be NIL which is typically the
 case when a parse tree is derived from the empty sequence of lexemes.
 
 @node Lexical Analysis
-@subsection Lexical analysis
+@subsubsection Lexical analysis
 
 @include class-drei-syntax-lexer.texi
 
@@ -165,7 +114,7 @@ lexemes are indexed by a position starting from zero.
 @include fun-drei-syntax-next-lexeme.texi
 
 @node Earley Parser
-@subsection Earley Parser
+@subsubsection Earley Parser
 
 Drei contains an incremental parser that uses the Earley
 algorithm.  This algorithm accepts the full set of context-free
@@ -178,7 +127,7 @@ the grammar is sufficiently complicated, in particular if the grammar
 is ambiguous.
 
 @node Specifying A Grammar
-@subsection Specifying A Grammar
+@subsubsection Specifying A Grammar
 
 An incremental parser is created from a grammar.
 
@@ -247,7 +196,7 @@ a symbol.  These forms typically contain initargs, and will be passed as
 additional arguments to @code{(make-instance '@var{symbol})}.
 
 @node View Protocol
-@section View Protocol
+@subsection View Protocol
 @cindex view protocol
 @cindex views
 
@@ -281,7 +230,7 @@ functionality.
 @include fun-drei-synchronize-view.texi
 
 @node Unit Protocol
-@section Unit Protocol
+@subsection Unit Protocol
 @cindex Drei unit protocol
 @cindex Drei motion protocol
 @cindex Drei editing protocol
@@ -341,7 +290,7 @@ argument. Therefore, all @cl{@var{frob}-object} functions and commands
 @end menu
 
 @node Motors And Limit Actions
-@subsection Motors And Limit Actions
+@subsubsection Motors And Limit Actions
 
 A limit action is a function usually named
 @cl{@var{mumble}-limit-action} of the signature @cl{(@var{mark}
@@ -382,7 +331,7 @@ the expression tree and tries again.
 @include fun-drei-motion-make-diligent-motor.texi
 
 @node Motion Protocol
-@subsection Motion Protocol
+@subsubsection Motion Protocol
 
 The concept of a @i{basic motion function} was introduced in @ref{Unit
 Protocol}. A general motion function is a function named
@@ -395,7 +344,7 @@ action if it could not, or returns @cl{NIL} if the limit action is
 @cl{NIL}.
 
 @node Editing Protocol
-@subsection Editing Protocol
+@subsubsection Editing Protocol
 
 An editing function is a function named
 @cl{forward-@var{frob}-@var{unit}} or
@@ -408,10 +357,10 @@ motion protocol has been implemented, this can be trivially done by
 using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
 
 @node Generator Macros
-@subsection Generator Macros
+@subsubsection Generator Macros
 
 @node Redisplay Protocol
-@section Redisplay Protocol
+@subsection Redisplay Protocol
 @cindex Drei redisplay
 @cindex text-editor redisplay
 
@@ -436,7 +385,7 @@ these, you do not need to define them yourself.
 @include fun-drei-display-drei-view-cursor.texi
 
 @node Undo Protocol
-@section Undo Protocol
+@subsection Undo Protocol
 
 Undo is the facility by which previous modifications to the buffer can
 be undone, returning the buffer state to what it was prior to some
@@ -464,7 +413,7 @@ generic function that client code must supply a method for.
 @end menu
 
 @node Protocol Specification
-@subsection Protocol Specification
+@subsubsection Protocol Specification
 
 @include condition-drei-undo-no-more-undo.texi
 
@@ -483,7 +432,7 @@ generic function that client code must supply a method for.
 @include fun-drei-undo-redo.texi
 
 @node Implementation
-@subsection Implementation
+@subsubsection Implementation
 
 Application states have no explicit representation, only undo records
 do.  The current state is a pointer to an undo record (meaning, the
@@ -492,7 +441,7 @@ the undo tree itself if the current state is the initial state of the
 application.
 
 @node How The Buffer Handles Undo
-@subsection How The Buffer Handles Undo
+@subsubsection How The Buffer Handles Undo
 
 @include class-drei-undo-mixin.texi
 
@@ -552,7 +501,7 @@ finally destructively reverses the list.
 @include class-drei-compound-record.texi
 
 @node Kill Ring Protocol
-@section Kill Ring Protocol
+@subsection Kill Ring Protocol
 
 During the process of text editing it may become necessary for regions
 of text to be manipulated non-sequentially.  The kill ring and its
@@ -585,7 +534,7 @@ start position.
 @end menu
 
 @node Kill Ring Protocol Specification
-@subsection Kill Ring Protocol Specification
+@subsubsection Kill Ring Protocol Specification
 
 @include class-drei-kill-ring-kill-ring.texi
 
@@ -606,7 +555,7 @@ start position.
 @include fun-drei-kill-ring-kill-ring-yank.texi
 
 @node Kill Ring Implementation
-@subsection Kill Ring Implementation
+@subsubsection Kill Ring Implementation
 
 The kill ring structure is built mainly of two parts: the stack like
 ring portion, which is a cursorchain, and the yank point, which is a
