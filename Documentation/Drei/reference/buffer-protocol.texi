@@ -1,4 +1,4 @@
-@node Buffer Protocol
+@node [Ref] Buffer Protocol
 @section Buffer Protocol
 
 @menu

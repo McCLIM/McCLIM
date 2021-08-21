@@ -9,11 +9,11 @@ Much of Drei's functionality is based on generic function
 protocols. This section lists some of them.
 
 @menu
-* Buffer Protocol::
+* [Ref] Buffer Protocol::
 * Buffer Modification Protocol::
 * Syntax Protocol::
 * View Protocol::
-* Unit Protocol::
+* [Ref] Unit Protocol::
 * Redisplay Protocol::
 * Undo Protocol::
 * Kill Ring Protocol::
@@ -216,58 +216,8 @@ functionality.
 
 @include fun-drei-synchronize-view.texi
 
-@node Unit Protocol
+@node [Ref] Unit Protocol
 @subsection Unit Protocol
-@cindex Drei unit protocol
-@cindex Drei motion protocol
-@cindex Drei editing protocol
-
-Many of the actions performed by an editor is described in terms of the
-syntactically unit(s) they affect. The syntax module is responsible for
-actually dividing the buffer into syntactical units, but the @i{unit
-protocol} is the basic interface for acting on these units. A @i{unit}
-is some single syntactical construct - for example a word, a sentence,
-an expression or a definition. The unit protocol defines a number of
-generic functions for the various unit types that permit a uniform
-interface to moving a mark a given number of units, deleting a unit,
-killing a unit, transposing two units and so forth. A number of macros
-are also provided for automatically generating all these functions,
-given the definition of two simple movement functions. All generic
-functions of the unit protocol dispatch on a syntax, so that every
-syntax can implement its own idea of what exactly, for example, an
-``expression'' is. Defaults are provided for some units - if nothing
-else has been specified by the syntax, a word is considered any sequence
-of alphanumeric characters delimited by non-alphanumeric characters.
-@cindex unit
-
-The type of unit that a protocol function affects is represented
-directly in the name of the function - this means that a new set of
-functions must be generated for every new unit you want the protocol to
-support. In most cases, the code for these functions is very repetitive
-and similar across the unit types, which is why the motion protocol
-offers a set of macros that can generate function definitions for
-you. These generator macros define their generated functions in terms of
-basic motion functions.
-
-A basic motion function is a function named @cl{FORWARD-ONE-@var{unit}}
-or @cl{backward-one-@var{unit}} of the signature @cl{(@var{mark}
-@var{syntax})} that returns true if any motion happened or false if a
-limit was reached.
-@cindex basic motion function
-
-There isn't really a single all-encompassing unit protocol, instead, it
-is divided into two major parts - a motion protocol defining functions
-for moving point in terms of units, and an editing protocol for changing
-the buffer in terms of units. Both use a similar interface and a general
-mechanism for specifying the action to take if the intended operation
-cannot be carried out.
-
-Note that @cl{forward-object} and @cl{backward-object}, by virtue of
-their low-level status and placement in the buffer protocol (see
-buffer.lisp) do not obey this protocol, in that they have no syntax
-argument. Therefore, all @cl{@var{frob}-object} functions and commands
-(@pxref{Editing Protocol}) lack this argument as well. There are no
-@cl{forward-one-object} or @cl{backward-one-object} functions.
 
 @menu
 * Motors And Limit Actions::
@@ -320,8 +270,8 @@ the expression tree and tries again.
 @node Motion Protocol
 @subsubsection Motion Protocol
 
-The concept of a @i{basic motion function} was introduced in @ref{Unit
-Protocol}. A general motion function is a function named
+The concept of a @i{basic motion function} was introduced in @ref{[Ref] Unit
+Protocol, , Unit Protocol}. A general motion function is a function named
 @cl{forward-@var{unit}} or @cl{backward-@var{unit}} of the signature
 @cl{(@var{mark} @var{syntax} &optional (@var{count} 1)
 (@var{limit-action} #'ERROR-LIMIT-ACTION))} that returns true if it
