@@ -1,5 +1,5 @@
 @node Commands
-@chapter Commands
+@section Commands
 
 @menu
 * Drei Command Tables::
@@ -9,7 +9,7 @@
 @end menu
 
 @node Drei Command Tables
-@section Drei Command Tables
+@subsection Drei Command Tables
 
 Here is a list of the command tables that are always active, along with
 a note describing what they are used for:
@@ -72,7 +72,7 @@ When you define keybindings for your commands, you should put the
 keybindings in the same command table as the command itself.
 
 @node Numeric Argument In Drei
-@section Numeric Argument In Drei
+@subsection Numeric Argument In Drei
 @cindex numeric argument
 
 The numeric argument state is currently not directly accessible from
@@ -88,7 +88,7 @@ inserted. Note that you must write your commands to accept arguments
 before you can do this (@pxref{Examples Of Defining Drei Commands}).
 
 @node Examples Of Defining Drei Commands
-@section Examples Of Defining Drei Commands
+@subsection Examples Of Defining Drei Commands
 @cindex Drei command defining
 @cindex defining Drei commands
 
@@ -155,7 +155,7 @@ argument is always an integer, and we are guaranteed that the
 not explicitly provide a numeric argument.
 
 @node Drei's Syntax Command Table Protocol
-@section Drei's Syntax Command Table Protocol
+@subsection Drei's Syntax Command Table Protocol
 @cindex syntax command table
 
 In order to provide conditionally active command tables, Drei defines
