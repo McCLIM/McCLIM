@@ -318,6 +318,15 @@
                          (event window-manager-delete-event))
   (frame-exit (pane-frame (event-sheet event))))
 
+(defmethod handle-event ((pane top-level-sheet-pane)
+                         (event window-manager-iconify-event))
+  (setf (sheet-enabled-p pane) nil)
+  (shrink-frame (pane-frame pane)))
+
+(defmethod handle-event ((pane top-level-sheet-pane)
+                         (event window-manager-deiconify-event))
+  (enable-frame (pane-frame pane)))
+
 ;;; UNMANAGED-TOP-LEVEL-SHEET PANE
 
 (defclass unmanaged-top-level-sheet-pane (unmanaged-sheet-mixin top-level-sheet-pane)

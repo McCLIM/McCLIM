@@ -763,8 +763,7 @@ this might be different from the sheet's native region and transformation.")))
                          for example when its mirror is iconified.")))
 
 (defmethod shrink-sheet ((sheet top-level-sheet-mixin))
-  (when (sheet-enabled-p sheet)
-    (port-shrink-sheet (port sheet) sheet)))
+  (port-shrink-sheet (port sheet) sheet))
 
 ;;; Unmanaged sheet is not managed by the window manager.
 (defclass unmanaged-sheet-mixin () ())

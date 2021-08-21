@@ -223,9 +223,14 @@
                              :sheet sheet
                              :x x :y y :width width :height height))))
       (:map-notify
-       (make-instance 'window-map-event :sheet sheet))
+       (if (and (typep sheet 'top-level-sheet-pane)
+                (eq (frame-state (pane-frame sheet)) :shrunk))
+           (make-instance 'window-manager-deiconify-event :sheet sheet)
+           (make-instance 'window-map-event :sheet sheet)))
       (:unmap-notify
-       (make-instance 'window-unmap-event :sheet sheet))
+       (if (= 3 (car (xlib:get-property window :WM_STATE)))
+           (make-instance 'window-manager-iconify-event :sheet sheet)
+           (make-instance 'window-unmap-event :sheet sheet)))
       (:destroy-notify
        (make-instance 'window-destroy-event :sheet sheet))
       (:motion-notify

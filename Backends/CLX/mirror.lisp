@@ -122,6 +122,14 @@
     (xlib:display-force-output (clx-port-display port))))
 
 (defmethod port-shrink-sheet ((port clx-basic-port) (sheet mirrored-sheet-mixin))
-  (when-let ((mirror (sheet-direct-mirror sheet)))
-    (xlib:iconify-window (window mirror) (clx-port-screen port))
-    (xlib:display-force-output (clx-port-display port))))
+  ;; Not all x11 window-managers iconify windows (in particular many
+  ;; tiling window-managers). In those window managers, after the call
+  ;; of shrink-frame McClim think that the frame is iconified but it
+  ;; is not. -- admich 2021-08-21
+  (when-let ((window (window (sheet-direct-mirror sheet))))
+    (cond
+      ((eq 1 (car (xlib:get-property window :WM_STATE)))
+       (xlib:iconify-window window (clx-port-screen port))
+       (xlib:display-force-output (clx-port-display port)))
+      ((eq 2 (car (xlib:get-property window :WM_STATE)))
+       (warn "The sheet is already shrunk")))))
