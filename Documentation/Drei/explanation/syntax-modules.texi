@@ -1,0 +1,70 @@
+@node Syntax Modules
+@section Syntax Modules
+
+A syntax module is an object that can be associated with a buffer. The
+syntax module usually consists of an incremental parser that analyzes
+the contents of the buffer and creates some kind of parse tree or other
+representation of the contents in order that it can be exploited by the
+redisplay module and by user commands.
+
+The redisplay module exploits the syntax module for several things:
+
+@itemize @bullet
+@item highlighting of various syntactic entities of the buffer
+@item highlighting of matching parenthesis,
+@item turning syntactic entities into clickable presentations,
+@item marking lines with inconsistent indentation,
+@item etc.
+@end itemize
+
+User commands can use the syntax module for:
+
+@itemize @bullet
+@item moving point by units that are specific to a particular buffer
+syntax, such as expressions, statements, or paragraphs,
+@item transposing syntactic units,
+@item sending the text of a syntactic unit to a language processor,
+@item indenting lines according to the syntax,
+@item etc.
+@end itemize
+
+The ideal is that the view that the syntax module has of the buffer is
+updated only when needed, and then only for the parts of the buffer that
+are needed, though implementing this in practise is decidedly
+nontrivial.  Most syntax modules (such as for programming languages)
+need to compute their representations from the beginning of the buffer
+up to a particular point beyond which the structure of the buffer does
+not need to be known.
+
+There are two primary situations where updating might be needed:
+
+@itemize @bullet
+@item Before redisplay is about to show
+the contents of part of the buffer in a pane, to inform the syntax
+module that its syntax must be valid in the particular region on
+display,
+@item as a result of a command that exploits the syntactic entities of
+the buffer contents.
+@end itemize
+
+These two cases do boil down to ``whenever there is need for the syntax
+information to be correct'', however.
+
+The first case is handled by the invocation of a single generic function
+(@pxref{Generic-Function drei-syntax:update-syntax, ,
+@cl{drei-syntax:update-syntax}}).
+
+It is important to realize that the syntax module is not directly
+involved in displaying buffer contents in a pane.  In fact, the syntax
+module should work even if there is no graphic user interface present,
+and it should be exploitable by several, potentially totally different,
+display units.
+
+The second case is slightly trickier, as any views of the syntax should
+be informed that it has reparsed some part of the buffer. Since
+@cl{update-syntax} is only called by views, the view can easily record
+the fact that some part of the buffer has an up-to-date parse. Thus,
+functions accessing syntax information must go to some length to make
+sure that the view of the syntax is notified of any reparses
+(@pxref{Function drei-syntax:update-parse, ,
+@cl{drei-syntax:update-parse}}).

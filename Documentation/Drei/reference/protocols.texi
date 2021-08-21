@@ -52,19 +52,6 @@ made for information that might depend on outdated parsing data.
 
 @include fun-drei-syntax-update-syntax.texi
 
-It is important to realize that the syntax module is not directly
-involved in displaying buffer contents in a pane.  In fact, the syntax
-module should work even if there is no graphic user interface present,
-and it should be exploitable by several, potentially totally different,
-display units.
-
-The second case is slightly trickier, as any views of the syntax should
-be informed that it has reparsed some part of the buffer. Since
-@cl{update-syntax} is only called by views, the view can easily record
-the fact that some part of the buffer has an up-to-date parse. Thus,
-functions accessing syntax information must go to some length to make
-sure that the view of the syntax is notified of any reparses.
-
 @include fun-drei-syntax-update-parse.texi
 
 @node Incremental Parsing Framework

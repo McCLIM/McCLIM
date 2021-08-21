@@ -1,0 +1,187 @@
+@node Commands
+@chapter Commands
+
+@menu
+* Drei Command Tables::
+* Numeric Argument In Drei::
+* Examples Of Defining Drei Commands::
+* Drei's Syntax Command Table Protocol::
+@end menu
+
+@node Drei Command Tables
+@section Drei Command Tables
+
+Here is a list of the command tables that are always active, along with
+a note describing what they are used for:
+
+@deftp {Command Table} comment-table
+Commands for dealing with comments in, for example, source code. For
+syntaxes that do not have the concept of a comment, many of the commands
+of this table will not do anything.
+@end deftp
+@deftp {Command Table} deletion-table
+Commands that destructively modify buffer contents.
+@end deftp
+@deftp {Command Table} editing-table
+Commands that transform the buffer contents somehow (such as transposing
+two words).
+@end deftp
+@deftp {Command Table} fill-table
+Commands that fill (wrap) text.
+@end deftp
+@deftp {Command Table} case-table
+Commands that modify the case of characters.
+@end deftp
+@deftp {Command Table} indent-table
+Commands that indent text based on the current syntax.
+@end deftp
+@deftp {Command Table} marking-table
+Commands that deal with managing the mark or nondestructively copying
+buffer contents.
+@end deftp
+@deftp {Command Table} movement-table
+Commands that move point.
+@end deftp
+@deftp {Command Table} search-table
+Commands that can search the buffer.
+@end deftp
+@deftp {Command Table} info-table
+Commands that display information about the state of the buffer.
+@end deftp
+@deftp {Command Table} self-insert-table
+Commands that insert the gesture used to invoke them into the
+buffer. You probably won't need to add commands to this table.
+@end deftp
+@deftp {Command Table} editor-table
+A command table that inherits from the previously mentioned tables (plus
+some more). This command table is the ``basic'' table for accessing Drei
+commands, and is a good place to put your own user-defined commands if
+they do not fit in another table.
+@end deftp
+
+There are also two conditionally-active command tables:
+
+@deftp {Command Table} exclusive-gadget-table
+This command table is only active in the gadget version of Drei.
+@end deftp
+@deftp {Command Table} exclusive-input-editor-table
+This command table is only active when Drei is used as an input-editor.
+@end deftp
+
+When you define keybindings for your commands, you should put the
+keybindings in the same command table as the command itself.
+
+@node Numeric Argument In Drei
+@section Numeric Argument In Drei
+@cindex numeric argument
+
+The numeric argument state is currently not directly accessible from
+within commands. However, Drei uses ESA's numeric argument processing
+code, Drei commands can thus be provided with numeric arguments in the
+same way as ESA commands can. When using @cl{set-key} to setup
+keybindings, provide the value of @cl{*numeric-argument-marker*} as an
+argument to have the command processing code automatically insert the
+value of the numeric argument whenever the keybinding is invoked. You
+can also use @cl{*numeric-argument-p*} to have a boolean value, stating
+whether or not a numeric argument has been provided by the user,
+inserted. Note that you must write your commands to accept arguments
+before you can do this (@pxref{Examples Of Defining Drei Commands}).
+
+@node Examples Of Defining Drei Commands
+@section Examples Of Defining Drei Commands
+@cindex Drei command defining
+@cindex defining Drei commands
+
+A common text editing task is to repeat the word at point, but for some
+reason, Drei does not come with a command to do this, so we need to
+write our own. Fortunately, Drei is extensible software, and to that
+end, a @package{DREI-USER} package is provided that is intended for user
+customizations. We're going to create a standard CLIM command named
+@cl{com-repeat-word} in the command table @cl{editing-table}. The
+implementation consists of cloning the current point, move it a word
+backward, and insert into the buffer the sequence delimited by point and
+our moved mark. Our command takes no arguments.
+
+@lisp
+(define-command (com-repeat-word :name t
+                                 :command-table editing-table)
+    ()
+  (let ((mark (clone-mark (point)))
+    (backward-word mark (current-syntax 1)
+    (insert-sequence mark (region-to-sequence mark (point))))
+@end lisp
+
+For @cl{(point)} and @cl{(current-syntax)}, see @ref{Access Functions}.
+
+This command facilitates the single repeat of a word, but that's
+it. This is not very useful - instead, we would like a command that
+could repeat a word an arbitrary (user-supplied) number of times. The
+primary way for a CLIM command to ask for user-supplied values is to use
+command arguments. We define a new command that takes an integer
+argument specifying the number of times to repeat the word at point.
+
+@lisp
+(define-command (com-repeat-word :name t
+                                 :command-table editing-table)
+    ((count 'integer :prompt "Number of repeats"))
+  (let ((mark (clone-mark (point)))
+    (backward-word mark (current-syntax 1)
+    (let ((word (region-to-sequence mark (point)))
+      (dotimes (i count)
+        (insert-sequence mark word)))))
+@end lisp
+
+Great - our command is now pretty full-featured. But with an editing
+operation as common as this, we really want it to be quickly accessible
+via some intuitive keystroke. We choose @kbd{M-C-r}. Also, it'd be nice
+if, instead of interactively quering us for commands, the command would
+just use the value of the numeric argument as the number of times to
+repeat. There's no way to do this with a named command (ie. when you run
+the command with @kbd{M-x}), but it's quite easy to do in a
+keybinding. We use the ESA @cl{set-key} function:
+
+@lisp
+(set-key `(com-repeat-word ,*numeric-argument-marker*)
+         'editing-table
+         '((#\r :control :meta)))
+@end lisp
+
+Now, pressing @kbd{M-C-r} will result in the @cl{com-repeat-word}
+command being run with the first argument substituted for the value of
+the numeric argument. Since the numeric argument will be 1 if nothing
+else has been specified by the user, we are guaranteed that the first
+argument is always an integer, and we are guaranteed that the
+@var{count} argument will have a sensible default, even if the user does
+not explicitly provide a numeric argument.
+
+@node Drei's Syntax Command Table Protocol
+@section Drei's Syntax Command Table Protocol
+@cindex syntax command table
+
+In order to provide conditionally active command tables, Drei defines
+the @class{syntax-command-table} class. While this class is meant to
+facilitate the addition of commands to syntaxes when they are run in a
+specific context (for example, a large editor application adding a
+@command{Show Macroexpansion} command to Lisp syntax), their modus
+operandi is general enough to be used for all conditional activity of
+command tables. This is useful for making commands available that
+could not be generally implemented for all Drei instances ---
+returning to the @command{Show Macroexpansion} example, such a command
+can only be implemented if there is a sufficiently large place to show
+the expansion, and this might not be available for a generic Drei
+input-editor instance, but could be provided by an application
+designed for it.
+
+Syntax command tables work by conditionally inheriting from other
+command tables, so it is necessary to define one (or more) command
+tables for the commands you wish to make conditionally available.
+
+When providing a @var{:command-table} argument to
+@fmacro{define-syntax} that names a syntax command table, an instance
+of the syntax command table will be used for the syntax.
+
+@include class-drei-syntax-syntax-command-table.texi
+
+@include fun-drei-syntax-additional-command-tables.texi
+
+@include macro-drei-syntax-define-syntax-command-table.texi

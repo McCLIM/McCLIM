@@ -1,4 +1,4 @@
-@node Drei Commands
+@node [Explanation] Drei Commands
 @section Drei Commands
 
 Drei commands are standard CLIM commands that are stored in standard
