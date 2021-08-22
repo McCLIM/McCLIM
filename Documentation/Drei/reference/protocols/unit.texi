@@ -57,7 +57,7 @@ not make sense (an example is @cl{transpose-@var{unit}}).
 
 A proper unit is a unit for which all the functions required by the
 motion protocol has been implemented, this can be trivially done by
-using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
+using the macro @cl{define-motion-commands}. (@xref{Generator Macros})
 
 @node Generator Macros
 @subsubsection Generator Macros

@@ -9,8 +9,8 @@ Drei commands are standard CLIM commands that are stored in standard
 CLIM command tables. Drei uses a number of distinct command tables, some
 of which are merely used to group commands by category, and some whose
 contents may only be applicable under specific circumstances. When the
-contents of a command table is applicable, that command table is said to
-be active. Some syntaxes may define specific command tables that will
+contents of a command table are applicable, that command table is said
+to be active. Some syntaxes may define specific command tables that will
 only be active for buffers using that syntax. Commands in such tables
 are called @dfn{syntax-specific commands}.
 

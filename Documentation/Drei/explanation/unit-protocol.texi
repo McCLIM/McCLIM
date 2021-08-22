@@ -74,4 +74,4 @@ a single expression, and if that fails, it tries to move up a level in
 the expression tree and tries again.
 @cindex limit-action
 
-@xref{Function drei-motion:make-diligent-motor, , @cl{drei-motion:make-diligent-motor}}
+@xref{Function drei-motion:make-diligent-motor, , @cl{drei-motion:make-diligent-motor}}.
