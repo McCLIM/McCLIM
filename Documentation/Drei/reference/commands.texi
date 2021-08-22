@@ -154,31 +154,11 @@ argument is always an integer, and we are guaranteed that the
 @var{count} argument will have a sensible default, even if the user does
 not explicitly provide a numeric argument.
 
-@node Drei's Syntax Command Table Protocol
+@node [Ref] Drei's Syntax Command Table Protocol
 @subsection Drei's Syntax Command Table Protocol
 @cindex syntax command table
 
-In order to provide conditionally active command tables, Drei defines
-the @class{syntax-command-table} class. While this class is meant to
-facilitate the addition of commands to syntaxes when they are run in a
-specific context (for example, a large editor application adding a
-@command{Show Macroexpansion} command to Lisp syntax), their modus
-operandi is general enough to be used for all conditional activity of
-command tables. This is useful for making commands available that
-could not be generally implemented for all Drei instances ---
-returning to the @command{Show Macroexpansion} example, such a command
-can only be implemented if there is a sufficiently large place to show
-the expansion, and this might not be available for a generic Drei
-input-editor instance, but could be provided by an application
-designed for it.
-
-Syntax command tables work by conditionally inheriting from other
-command tables, so it is necessary to define one (or more) command
-tables for the commands you wish to make conditionally available.
-
-When providing a @var{:command-table} argument to
-@fmacro{define-syntax} that names a syntax command table, an instance
-of the syntax command table will be used for the syntax.
+See also @ref{Syntax Command Table Protocol}.
 
 @include class-drei-syntax-syntax-command-table.texi
 

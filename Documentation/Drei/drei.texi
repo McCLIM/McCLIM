@@ -68,7 +68,6 @@ editor substrates provided by McCLIM. Drei is activated by default.
 @menu
 * Drei Concepts::               The core Drei concepts and design philosophy.
 * Drei Variants::
-* Drei Commands::               Information about defining commands for Drei
 * DREI-BASE Package::
 * Buffer Protocol::
 * Syntax Modules::
@@ -76,11 +75,11 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Unit Protocol::
 * Undo Protocol::
 * Kill Ring Protocol::
+* Commands::               Information about defining commands for Drei
 @end menu
 
 @include explanation/concepts.texi
 @include explanation/variants.texi
-@include explanation/commands.texi
 @include explanation/drei-base.texi
 @include explanation/buffer-protocol.texi
 @include explanation/syntax-modules.texi
@@ -88,6 +87,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 @include explanation/unit-protocol.texi
 @include explanation/undo-protocol.texi
 @include explanation/kill-ring-protocol.texi
+@include explanation/commands.texi
 
 @node Reference
 @chapter Reference
