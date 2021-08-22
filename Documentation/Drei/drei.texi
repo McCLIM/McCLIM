@@ -73,9 +73,10 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Syntax Modules::
 * View Protocol::
 * Unit Protocol::
+* Redisplay Protocol::
 * Undo Protocol::
 * Kill Ring Protocol::
-* Commands::               Information about defining commands for Drei
+* Drei Commands::               Information about defining commands for Drei
 @end menu
 
 @include explanation/concepts.texi
@@ -85,6 +86,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 @include explanation/syntax-modules.texi
 @include explanation/view-protocol.texi
 @include explanation/unit-protocol.texi
+@include explanation/redisplay-protocol.texi
 @include explanation/undo-protocol.texi
 @include explanation/kill-ring-protocol.texi
 @include explanation/commands.texi

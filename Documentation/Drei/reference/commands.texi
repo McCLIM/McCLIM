@@ -5,7 +5,7 @@
 * Drei Command Tables::
 * Numeric Argument In Drei::
 * Examples Of Defining Drei Commands::
-* Drei's Syntax Command Table Protocol::
+* [Ref] Drei's Syntax Command Table Protocol::
 @end menu
 
 @node Drei Command Tables

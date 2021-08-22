@@ -3,21 +3,7 @@
 @cindex Drei redisplay
 @cindex text-editor redisplay
 
-A buffer can be on display in several panes, possibly by being located
-in several Drei instances. Thus, the buffer does not concern itself with
-redisplay, but assumes that whatever is using it will redisplay when
-appropriate. There is no predictable definitive rule for when a Drei
-instance will be redisplayed, but when it is, it will be done by calling
-the following generic function.
-
 @include fun-drei-display-drei.texi
-
-The redisplay engine supports view-specific customization of the display
-in order to facilitate such functionality as syntax highlighting. This
-is done through the following two generic functions, both of which have
-sensible default methods defined by @class{drei-buffer-view} and
-@class{drei-syntax-view}, so if your view is a subclass of either of
-these, you do not need to define them yourself.
 
 @include fun-drei-display-drei-view-contents.texi
 
