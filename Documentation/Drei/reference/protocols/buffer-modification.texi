@@ -1,4 +1,4 @@
-@node Buffer Modification Protocol
+@node [Ref] Buffer Modification Protocol
 @subsection Buffer Modification Protocol
 
 The buffer modification protocol is based on the ESA observer/observable

@@ -1,4 +1,4 @@
-@node Redisplay Protocol
+@node [Ref] Redisplay Protocol
 @subsection Redisplay Protocol
 @cindex Drei redisplay
 @cindex text-editor redisplay

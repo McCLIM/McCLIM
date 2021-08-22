@@ -10,13 +10,13 @@ protocols. This section lists some of them.
 
 @menu
 * [Ref] Buffer Protocol::
-* Buffer Modification Protocol::
-* Syntax Protocol::
+* [Ref] Buffer Modification Protocol::
+* [Ref] Syntax Protocol::
 * [Ref] View Protocol::
 * [Ref] Unit Protocol::
-* Redisplay Protocol::
-* Undo Protocol::
-* Kill Ring Protocol::
+* [Ref] Redisplay Protocol::
+* [Ref] Undo Protocol::
+* [Ref] Kill Ring Protocol::
 @end menu
 
 @include reference/protocols/buffer.texi

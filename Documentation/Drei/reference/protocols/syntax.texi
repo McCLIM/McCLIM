@@ -1,4 +1,4 @@
-@node Syntax Protocol
+@node [Ref] Syntax Protocol
 @subsection Syntax Protocol
 
 @menu

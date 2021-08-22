@@ -62,6 +62,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Syntax Modules::
 * View Protocol::
 * Unit Protocol::
+* Kill Ring Protocol::
 @end menu
 
 @include explanation/concepts.texi
@@ -72,6 +73,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 @include explanation/syntax-modules.texi
 @include explanation/view-protocol.texi
 @include explanation/unit-protocol.texi
+@include explanation/kill-ring-protocol.texi
 
 @node Reference
 @chapter Reference

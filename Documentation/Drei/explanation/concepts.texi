@@ -40,7 +40,7 @@ contains object sequences that have been killed from the buffer, and can
 be yanked back in at the user's behest. These are generally not shared.
 
 Every Drei instance is associated with an editor pane - this must be a
-CLIM stream pane that is used for redisplay (@pxref{Redisplay
+CLIM stream pane that is used for redisplay (@pxref{[Ref] Redisplay
 Protocol}). This is not necessarily the same object as the Drei instance
 itself, but it can be. (With a little work, the editor pane can be
 @cl{NIL}, which is useful for testing.)

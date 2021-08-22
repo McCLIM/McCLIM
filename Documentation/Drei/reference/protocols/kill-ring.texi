@@ -1,30 +1,5 @@
-@node Kill Ring Protocol
+@node [Ref] Kill Ring Protocol
 @subsection Kill Ring Protocol
-
-During the process of text editing it may become necessary for regions
-of text to be manipulated non-sequentially.  The kill ring and its
-surrounding protocol offers both a temporary location for data to be
-stored, as well as methods for stored data to be accessed.
-
-Conceptually, the kill ring is a stack of bounded depth, so that when
-elements are pushed beyond that depth, the oldest element is removed.
-All newly added data is attached to a single point at the ``start of
-ring position'' or SORP.
-
-This protocol provides two methods which govern how data is to be
-attached to the SORP.  The first method moves the current SORP to a new
-position, on to which a new object is attached.  The second conserves
-the current position and replaces its contents with a sequence
-constructed of new and pre-existing SORP objects.  This latter method is
-refered to as a ``concatenating push''.
-
-For data retrievial the kill ring class provides a ``yank point'' which
-allows focus to be shifted from the SORP to other positions within the
-kill ring.  The yank point is limited to two types of motition, one
-being a rotation away from the SORP and the other being an immediate
-return or ``reset'' to the start position. When the kill ring is
-modified, for example by a push, the yank point will be reset to the
-start position.
 
 @menu
 * Kill Ring Protocol Specification::

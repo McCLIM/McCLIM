@@ -1,4 +1,4 @@
-@node Undo Protocol
+@node [Ref] Undo Protocol
 @subsection Undo Protocol
 
 Undo is the facility by which previous modifications to the buffer can
