@@ -106,9 +106,9 @@ our moved mark. Our command takes no arguments.
 (define-command (com-repeat-word :name t
                                  :command-table editing-table)
     ()
-  (let ((mark (clone-mark (point)))
-    (backward-word mark (current-syntax 1)
-    (insert-sequence mark (region-to-sequence mark (point))))
+  (let ((mark (clone-mark (point))))
+    (backward-word mark (current-syntax 1))
+    (insert-sequence mark (region-to-sequence mark (point)))))
 @end lisp
 
 For @cl{(point)} and @cl{(current-syntax)}, see @ref{Access Functions}.
@@ -124,9 +124,9 @@ argument specifying the number of times to repeat the word at point.
 (define-command (com-repeat-word :name t
                                  :command-table editing-table)
     ((count 'integer :prompt "Number of repeats"))
-  (let ((mark (clone-mark (point)))
-    (backward-word mark (current-syntax 1)
-    (let ((word (region-to-sequence mark (point)))
+  (let ((mark (clone-mark (point))))
+    (backward-word mark (current-syntax 1))
+    (let ((word (region-to-sequence mark (point))))
       (dotimes (i count)
         (insert-sequence mark word)))))
 @end lisp
