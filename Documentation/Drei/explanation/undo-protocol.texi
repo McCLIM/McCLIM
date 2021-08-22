@@ -1,0 +1,34 @@
+@node Undo Protocol
+@section Undo Protocol
+
+@menu
+* Implementation::
+@end menu
+
+Undo is the facility by which previous modifications to the buffer can
+be undone, returning the buffer state to what it was prior to some
+modification.
+
+Undo is organized into a separate module.  This module conceptually
+maintains a tree where the nodes represent application states and the
+arcs represent transitions between these states.  The root of the tree
+represents the initial state of the application.  The undo module also
+maintains a current state.  During normal application operation, the
+current state is a leaf of a fairly long branch of the tree.  Normal
+application operations add new nodes to the end of this branch.  Moving
+the current state up the tree corresponds to an undo operation and
+moving it down some branch corresponds to some redo operation.
+
+Arcs in the tree are ordered so that they always point FROM the current
+state.  When the current state moves from one state to the other, the
+arc it traversed is reversed.  The undo module does this by calling a
+generic function that client code must supply a method for.
+
+@node Implementation
+@subsection Implementation
+
+Application states have no explicit representation, only undo records
+do.  The current state is a pointer to an undo record (meaning, the
+current state is BELOW the transition represented by the record) or to
+the undo tree itself if the current state is the initial state of the
+application.
