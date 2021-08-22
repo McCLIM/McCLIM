@@ -38,6 +38,8 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @cindex text-field
 
 @menu
+* Tutorials::
+* How-to Guides::
 * Explanation::                 Understanding Drei
 * Reference::
 
@@ -49,6 +51,16 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 
 Drei - an acronym for @i{Drei Replaces EINE's Inheritor} - is one of the
 editor substrates provided by McCLIM. Drei is activated by default.
+
+@node Tutorials
+@chapter Tutorials
+
+(TODO)
+
+@node How-to Guides
+@chapter How-to Guides
+
+(TODO)
 
 @node Explanation
 @chapter Explanation
