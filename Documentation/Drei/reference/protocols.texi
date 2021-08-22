@@ -339,9 +339,9 @@ application.
 
 @include fun-drei-undo-tree.texi
 
-Undo is implemented as :before methods on, insert-buffer-object,
-insert-buffer-sequence and delete-buffer-range specialized on
-undo-mixin.
+Undo is implemented as @cl{:before} methods on
+@cl{insert-buffer-object}, @cl{insert-buffer-sequence} and
+@cl{delete-buffer-range} specialized on @cl{undo-mixin}.
 
 @include fun-drei-undo-accumulate.texi
 
@@ -353,9 +353,9 @@ position and some sequence of objects to be inserted, a delete record
 stores a position and the length of the sequence to be deleted, and a
 compound record stores a list of other undo records.
 
-The :before methods on @cl{insert-buffer-object} and
-@cl{insert-buffer-sequence} push a record of type delete-record onto the
-undo accumulator for the buffer, and the :before method on
+The @cl{:before} methods on @cl{insert-buffer-object} and
+@cl{insert-buffer-sequence} push a record of type @cl{delete-record}
+onto the undo accumulator for the buffer, and the @cl{:before} method on
 @cl{delete-buffer-range} pushes a record of type @cl{insert-record} onto
 the undo accumulator.
 
