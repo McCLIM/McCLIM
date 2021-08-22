@@ -1,0 +1,63 @@
+@node [Ref] Unit Protocol
+@subsection Unit Protocol
+
+@menu
+* Motors And Limit Actions::
+* Motion Protocol::
+* Editing Protocol::
+* Generator Macros::
+@end menu
+
+@node Motors And Limit Actions
+@subsubsection Motors And Limit Actions
+
+A limit action is a function usually named
+@cl{@var{mumble}-limit-action} of the signature @cl{(@var{mark}
+@var{original-offset} @var{remaining-units} @var{unit} @var{syntax})}
+that is called whenever a general motion function cannot complete the
+motion. @var{Mark} is the mark the object in motion;
+@var{original-offset} is the original offset of the mark, before any
+motion; @var{remaining-units} is the number of units left until the
+motion would be complete; @var{unit} is a string naming the unit; and
+@var{syntax} is the syntax instance passed to the motion function. There
+is a number of predefined limit actions:
+@cindex limit action
+
+@include fun-drei-motion-beep-limit-action.texi
+
+@include fun-drei-motion-revert-limit-action.texi
+
+@include condition-drei-motion-motion-limit-error.texi
+
+@include fun-drei-motion-error-limit-action.texi
+
+@include fun-drei-motion-make-diligent-motor.texi
+
+@node Motion Protocol
+@subsubsection Motion Protocol
+
+The concept of a @i{basic motion function} was introduced in @ref{[Ref] Unit
+Protocol, , Unit Protocol}. A general motion function is a function named
+@cl{forward-@var{unit}} or @cl{backward-@var{unit}} of the signature
+@cl{(@var{mark} @var{syntax} &optional (@var{count} 1)
+(@var{limit-action} #'ERROR-LIMIT-ACTION))} that returns true if it
+could move forward or backward over the requested number of units,
+@var{count}, which may be positive or negative; and calls the limit
+action if it could not, or returns @cl{NIL} if the limit action is
+@cl{NIL}.
+
+@node Editing Protocol
+@subsubsection Editing Protocol
+
+An editing function is a function named
+@cl{forward-@var{frob}-@var{unit}} or
+@cl{backward-@var{frob}-@var{unit}}, or just @cl{@var{frob}-@var{unit}}
+in the case where discering between forward and backward commands does
+not make sense (an example is @cl{transpose-@var{unit}}).
+
+A proper unit is a unit for which all the functions required by the
+motion protocol has been implemented, this can be trivially done by
+using the macro @cl{define-motion-commands} (@pxref{Generator Macros}).
+
+@node Generator Macros
+@subsubsection Generator Macros

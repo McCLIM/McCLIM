@@ -1,0 +1,73 @@
+@node Kill Ring Protocol
+@subsection Kill Ring Protocol
+
+During the process of text editing it may become necessary for regions
+of text to be manipulated non-sequentially.  The kill ring and its
+surrounding protocol offers both a temporary location for data to be
+stored, as well as methods for stored data to be accessed.
+
+Conceptually, the kill ring is a stack of bounded depth, so that when
+elements are pushed beyond that depth, the oldest element is removed.
+All newly added data is attached to a single point at the ``start of
+ring position'' or SORP.
+
+This protocol provides two methods which govern how data is to be
+attached to the SORP.  The first method moves the current SORP to a new
+position, on to which a new object is attached.  The second conserves
+the current position and replaces its contents with a sequence
+constructed of new and pre-existing SORP objects.  This latter method is
+refered to as a ``concatenating push''.
+
+For data retrievial the kill ring class provides a ``yank point'' which
+allows focus to be shifted from the SORP to other positions within the
+kill ring.  The yank point is limited to two types of motition, one
+being a rotation away from the SORP and the other being an immediate
+return or ``reset'' to the start position. When the kill ring is
+modified, for example by a push, the yank point will be reset to the
+start position.
+
+@menu
+* Kill Ring Protocol Specification::
+* Kill Ring Implementation::
+@end menu
+
+@node Kill Ring Protocol Specification
+@subsubsection Kill Ring Protocol Specification
+
+@include class-drei-kill-ring-kill-ring.texi
+
+@include fun-drei-kill-ring-kill-ring-max-size.texi
+
+@include fun-drei-kill-ring-kill-ring-length.texi
+
+@include fun-drei-kill-ring-kill-ring-standard-push.texi
+
+@include fun-drei-kill-ring-kill-ring-concatenating-push.texi
+
+@include fun-drei-kill-ring-kill-ring-reverse-concatenating-push.texi
+
+@include fun-drei-kill-ring-rotate-yank-position.texi
+
+@include fun-drei-kill-ring-reset-yank-position.texi
+
+@include fun-drei-kill-ring-kill-ring-yank.texi
+
+@node Kill Ring Implementation
+@subsubsection Kill Ring Implementation
+
+The kill ring structure is built mainly of two parts: the stack like
+ring portion, which is a cursorchain, and the yank point, which is a
+left-sticky-flexicursor.  To initialize a kill ring, the :max-size slot
+initarg is simply used to set the max size.  The remaining slots
+constisting of the cursorchain and the left-sticky-flexicursor are
+instantized upon creation of the kill ring.
+
+Stored onto the cursorchain are simple-vectors of objects, mainly
+characters from a Drei buffer.  In order to facilitate this, the kill
+ring implementation borrows heavily from the flexichain library of
+functions. The following functions lie outside the kill ring and
+flexichain protocols, but are pertinent to the kill ring implementation.
+
+@include fun-drei-kill-ring-kill-ring-chain.texi
+
+@include fun-drei-kill-ring-kill-ring-cursor.texi

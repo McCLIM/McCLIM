@@ -1,0 +1,17 @@
+@node [Ref] View Protocol
+@subsection View Protocol
+
+@include class-drei-drei-view.texi
+
+@include class-drei-drei-buffer-view.texi
+
+@include method-drei-buffer-buffer-nil-drei-buffer-view.texi
+
+@include class-drei-drei-syntax-view.texi
+
+@include class-drei-point-mark-view.texi
+
+The @cl{synchronize-view} generic function is the heart of all view
+functionality.
+
+@include fun-drei-synchronize-view.texi

@@ -1,8 +1,12 @@
 @node Unit Protocol
-@subsection Unit Protocol
+@section Unit Protocol
 @cindex Drei unit protocol
 @cindex Drei motion protocol
 @cindex Drei editing protocol
+
+@menu
+* Diligent Motors::
+@end menu
 
 Many of the actions performed by an editor is described in terms of the
 syntactically unit(s) they affect. The syntax module is responsible for
@@ -52,7 +56,7 @@ argument. Therefore, all @cl{@var{frob}-object} functions and commands
 @cl{forward-one-object} or @cl{backward-one-object} functions.
 
 @node Diligent Motors
-@subsubsection Diligent Motors
+@subsection Diligent Motors
 
 A @i{diligent motor} is a combination of two motion functions that has
 the same signature as a standard motion function (@pxref{Motion

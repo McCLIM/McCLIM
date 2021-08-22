@@ -60,13 +60,13 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * DREI-BASE Package::
 * Buffer Protocol::
 * Syntax Modules::
-* Unit Protocol::
 * View Protocol::
+* Unit Protocol::
 @end menu
 
 @include explanation/concepts.texi
 @include explanation/variants.texi
-@include explanation/drei-commands.texi
+@include explanation/commands.texi
 @include explanation/drei-base.texi
 @include explanation/buffer-protocol.texi
 @include explanation/syntax-modules.texi
@@ -81,7 +81,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Special Variables::
 * External API::                The classes, functions and macros that make up the core of Drei
 * Protocols::                   Description of protocols used by Drei.
-* Drei Commands::
+* Commands::
 @end menu
 
 @include reference/access.texi

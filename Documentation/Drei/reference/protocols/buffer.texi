@@ -1,5 +1,5 @@
 @node [Ref] Buffer Protocol
-@section Buffer Protocol
+@subsection Buffer Protocol
 
 @menu
 * General Buffer Protocol Parts::
@@ -9,7 +9,7 @@
 @end menu
 
 @node General Buffer Protocol Parts
-@subsection General Buffer Protocol Parts
+@subsubsection General Buffer Protocol Parts
 
 @include class-drei-buffer-buffer.texi
 
@@ -46,7 +46,7 @@
 @include fun-drei-buffer-number-of-lines.texi
 
 @node Operations Related To The Offset Of Marks
-@subsection Operations Related To The Offset Of Marks
+@subsubsection Operations Related To The Offset Of Marks
 
 @include fun-drei-buffer-forward-object.texi
 
@@ -87,7 +87,7 @@
 @include fun-drei-buffer-column-number.texi
 
 @node Inserting And Deleting Objects
-@subsection Inserting And Deleting Objects
+@subsubsection Inserting And Deleting Objects
 
 @include fun-drei-buffer-insert-buffer-object.texi
 
@@ -104,7 +104,7 @@
 @include fun-drei-buffer-delete-region.texi
 
 @node Getting Objects Out Of The Buffer
-@subsection Getting Objects Out Of The Buffer
+@subsubsection Getting Objects Out Of The Buffer
 
 @include fun-drei-buffer-buffer-object.texi
 

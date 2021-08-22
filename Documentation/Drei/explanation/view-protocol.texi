@@ -1,5 +1,5 @@
 @node View Protocol
-@subsection View Protocol
+@section View Protocol
 @cindex view protocol
 @cindex views
 

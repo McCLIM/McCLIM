@@ -1,0 +1,12 @@
+@node Buffer Modification Protocol
+@subsection Buffer Modification Protocol
+
+The buffer modification protocol is based on the ESA observer/observable
+facility, which is in return a fairly ordinary Model-View
+implementation.
+
+@include class-drei-buffer-observable-buffer-mixin.texi
+
+Syntax-views use this information to determine what part of the buffer
+needs to be reparsed. This automatically happens whenever a request is
+made for information that might depend on outdated parsing data.

@@ -1,6 +1,10 @@
 @node Syntax Modules
 @section Syntax Modules
 
+@menu
+* Earley Parser::
+@end menu
+
 A syntax module is an object that can be associated with a buffer. The
 syntax module usually consists of an incremental parser that analyzes
 the contents of the buffer and creates some kind of parse tree or other
