@@ -3,6 +3,7 @@
 
 @menu
 * Syntax Command Table Protocol::
+* Numeric Argument in Drei Commands::
 @end menu
 
 Drei commands are standard CLIM commands that are stored in standard
@@ -40,4 +41,20 @@ When providing a @var{:command-table} argument to
 @fmacro{define-syntax} that names a syntax command table, an instance
 of the syntax command table will be used for the syntax.
 
-@xref{Syntax Command Table Protocol Reference}
+@sref{Syntax Command Table Protocol Reference}
+
+@node Numeric Argument in Drei Commands
+@subsection Numeric Argument in Drei Commands
+@cindex numeric argument
+
+The numeric argument state is currently not directly accessible from
+within commands. However, Drei uses ESA's numeric argument processing
+code --- thus, Drei commands can be provided with numeric arguments in the
+same way as ESA commands can. When using @cl{set-key} to setup
+keybindings, provide the value of @cl{*numeric-argument-marker*} as an
+argument to have the command processing code automatically insert the
+value of the numeric argument whenever the keybinding is invoked. You
+can also use @cl{*numeric-argument-p*} to have a boolean value, stating
+whether or not a numeric argument has been provided by the user,
+inserted. Note that you must write your commands to accept arguments
+before you can do this - @pxref{Examples Of Defining Drei Commands}.

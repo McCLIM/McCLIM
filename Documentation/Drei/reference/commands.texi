@@ -1,11 +1,10 @@
-@node Commands
-@section Commands
+@node Command Reference
+@section Command Reference
 
 @menu
 * Drei Command Tables::
-* Numeric Argument In Drei::
 * Examples Of Defining Drei Commands::
-* Drei's Syntax Command Table Protocol Reference::
+* Syntax Command Table Protocol Reference::
 @end menu
 
 @node Drei Command Tables
@@ -70,22 +69,6 @@ This command table is only active when Drei is used as an input-editor.
 
 When you define keybindings for your commands, you should put the
 keybindings in the same command table as the command itself.
-
-@node Numeric Argument In Drei
-@subsection Numeric Argument In Drei
-@cindex numeric argument
-
-The numeric argument state is currently not directly accessible from
-within commands. However, Drei uses ESA's numeric argument processing
-code, Drei commands can thus be provided with numeric arguments in the
-same way as ESA commands can. When using @cl{set-key} to setup
-keybindings, provide the value of @cl{*numeric-argument-marker*} as an
-argument to have the command processing code automatically insert the
-value of the numeric argument whenever the keybinding is invoked. You
-can also use @cl{*numeric-argument-p*} to have a boolean value, stating
-whether or not a numeric argument has been provided by the user,
-inserted. Note that you must write your commands to accept arguments
-before you can do this. (@xref{Examples Of Defining Drei Commands})
 
 @node Examples Of Defining Drei Commands
 @subsection Examples Of Defining Drei Commands

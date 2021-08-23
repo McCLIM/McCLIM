@@ -99,7 +99,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 * Special Variables::
 * External API::                The classes, functions and macros that make up the core of Drei
 * Protocols::                   Description of protocols used by Drei.
-* Commands::
+* Command Reference::
 @end menu
 
 @include reference/access.texi
