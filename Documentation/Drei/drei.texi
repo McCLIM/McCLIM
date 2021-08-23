@@ -38,10 +38,10 @@ Copyright @copyright{} 2004,2005,2006,2007,2008,2017 the McCLIM hackers.
 @cindex text-field
 
 @menu
-* Tutorials::
-* How-to Guides::
-* Explanation::                 Understanding Drei
-* Reference::
+* Tutorials::                   Learning to use Drei
+* How-to Guides::               Recipes for solving real-world problems
+* Explanation::                 Understanding the how and why
+* Reference::                   Technical information about correct use
 
 @c Index
 * Concept Index::
