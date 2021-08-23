@@ -1,5 +1,5 @@
-@node [Ref] Undo Protocol
-@subsection Undo Protocol
+@node Undo Protocol Reference
+@subsection Undo Protocol Reference
 
 @menu
 * Protocol Specification::

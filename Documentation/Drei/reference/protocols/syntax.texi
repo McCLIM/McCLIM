@@ -1,5 +1,5 @@
-@node [Ref] Syntax Protocol
-@subsection Syntax Protocol
+@node Syntax Protocol Reference
+@subsection Syntax Protocol Reference
 
 @menu
 * General Syntax Protocol::

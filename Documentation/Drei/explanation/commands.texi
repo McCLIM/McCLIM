@@ -40,4 +40,4 @@ When providing a @var{:command-table} argument to
 @fmacro{define-syntax} that names a syntax command table, an instance
 of the syntax command table will be used for the syntax.
 
-@xref{[Ref] Drei's Syntax Command Table Protocol}
+@xref{Syntax Command Table Protocol Reference}

@@ -1,5 +1,5 @@
-@node [Ref] Buffer Protocol
-@subsection Buffer Protocol
+@node Buffer Protocol Reference
+@subsection Buffer Protocol Reference
 
 @menu
 * General Buffer Protocol Parts::

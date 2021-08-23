@@ -9,14 +9,14 @@ Much of Drei's functionality is based on generic function
 protocols. This section lists some of them.
 
 @menu
-* [Ref] Buffer Protocol::
-* [Ref] Buffer Modification Protocol::
-* [Ref] Syntax Protocol::
-* [Ref] View Protocol::
-* [Ref] Unit Protocol::
-* [Ref] Redisplay Protocol::
-* [Ref] Undo Protocol::
-* [Ref] Kill Ring Protocol::
+* Buffer Protocol Reference::
+* Buffer Modification Protocol Reference::
+* Syntax Protocol Reference::
+* View Protocol Reference::
+* Unit Protocol Reference::
+* Redisplay Protocol Reference::
+* Undo Protocol Reference::
+* Kill Ring Protocol Reference::
 @end menu
 
 @include reference/protocols/buffer.texi

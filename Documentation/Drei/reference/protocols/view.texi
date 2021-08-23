@@ -1,5 +1,5 @@
-@node [Ref] View Protocol
-@subsection View Protocol
+@node View Protocol Reference
+@subsection View Protocol Reference
 
 @include class-drei-drei-view.texi
 

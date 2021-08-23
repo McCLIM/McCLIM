@@ -24,7 +24,7 @@ state.  When the current state moves from one state to the other, the
 arc it traversed is reversed.  The undo module does this by calling a
 generic function that client code must supply a method for.
 
-@sref{[Ref] Undo Protocol}
+@sref{Undo Protocol Reference}
 
 @node Implementation
 @subsection Implementation

@@ -1,7 +1,7 @@
 @node Kill Ring Protocol
 @section Kill Ring Protocol
 
-@sref{[Ref] Kill Ring Protocol}
+@sref{Kill Ring Protocol Reference}
 
 During the process of text editing it may become necessary for regions
 of text to be manipulated non-sequentially.  The kill ring and its
