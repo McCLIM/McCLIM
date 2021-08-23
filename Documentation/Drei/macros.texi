@@ -16,7 +16,7 @@
 @end macro
 
 @macro sref{REF}
-See also @ref{\REF\}
+See also @ref{\REF\}.
 @end macro
 
 @alias gloss = i

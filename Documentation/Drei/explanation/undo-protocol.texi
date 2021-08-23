@@ -24,6 +24,8 @@ state.  When the current state moves from one state to the other, the
 arc it traversed is reversed.  The undo module does this by calling a
 generic function that client code must supply a method for.
 
+@sref{[Ref] Undo Protocol}
+
 @node Implementation
 @subsection Implementation
 
@@ -32,3 +34,40 @@ do.  The current state is a pointer to an undo record (meaning, the
 current state is BELOW the transition represented by the record) or to
 the undo tree itself if the current state is the initial state of the
 application.
+
+Undo is implemented as @cl{:before} methods on
+@cl{insert-buffer-object}, @cl{insert-buffer-sequence} and
+@cl{delete-buffer-range} specialized on @cl{undo-mixin}.
+
+Three subclasses of @cl{undo-record} are used - @cl{insert-record},
+@cl{delete-record}, and @cl{compound-record}.  An insert record stores a
+position and some sequence of objects to be inserted, a delete record
+stores a position and the length of the sequence to be deleted, and a
+compound record stores a list of other undo records.
+
+The @cl{:before} methods on @cl{insert-buffer-object} and
+@cl{insert-buffer-sequence} push a record of type @cl{delete-record}
+onto the undo accumulator for the buffer, and the @cl{:before} method on
+@cl{delete-buffer-range} pushes a record of type @cl{insert-record} onto
+the undo accumulator.
+
+To avoid storing an undo record for each object that is inserted,
+the with-undo macro may in some cases just increment the length of
+the sequence in the last delete-record.
+
+The method on @cl{flip-undo-record} specialized on @cl{insert-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, inserts the
+sequence of objects in the buffer, and calls @cl{change-class} to
+convert the @cl{insert-record} to a @cl{delete-record}, giving it a the
+length of the stored sequence.
+
+The method on @cl{flip-undo-record} specialized on @cl{delete-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, deletes the range
+from the buffer, and calls @cl{change-class} to convert the
+@cl{delete-record} to an @cl{insert-record}, giving it the sequence at
+the stored offset in the buffer with the specified length.
+
+The method on @cl{flip-undo-record} specialized on @cl{compound-record}
+binds @cl{performing-undo} for the buffer to @cl{T}, recursively calls
+@cl{flip-undo-record} on each element of the list of undo records, and
+finally destructively reverses the list.
