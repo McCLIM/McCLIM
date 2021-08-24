@@ -1,0 +1,121 @@
+@node Buffer Protocol Reference
+@subsection Buffer Protocol Reference
+
+@sref{Buffer Protocol}
+
+@menu
+* General Buffer Protocol Parts::
+* Operations Related To The Offset Of Marks::
+* Inserting And Deleting Objects::
+* Getting Objects Out Of The Buffer::
+@end menu
+
+@node General Buffer Protocol Parts
+@subsubsection General Buffer Protocol Parts
+
+@include class-drei-buffer-buffer.texi
+
+@include class-drei-buffer-standard-buffer.texi
+
+@include class-drei-buffer-mark.texi
+
+@include class-drei-buffer-left-sticky-mark.texi
+
+@include class-drei-buffer-right-sticky-mark.texi
+
+@include fun-drei-buffer-offset.texi
+
+@include fun-drei-buffer-setf-offset.texi
+
+@include fun-drei-buffer-clone-mark.texi
+
+@include fun-drei-buffer-buffer.texi
+
+@include condition-drei-buffer-no-such-offset.texi
+
+@include condition-drei-buffer-offset-before-beginning.texi
+
+@include condition-drei-buffer-offset-after-end.texi
+
+@include condition-drei-buffer-invalid-motion.texi
+
+@include condition-drei-buffer-motion-before-beginning.texi
+
+@include condition-drei-buffer-motion-after-end.texi
+
+@include fun-drei-buffer-size.texi
+
+@include fun-drei-buffer-number-of-lines.texi
+
+@node Operations Related To The Offset Of Marks
+@subsubsection Operations Related To The Offset Of Marks
+
+@include fun-drei-buffer-forward-object.texi
+
+@include fun-drei-buffer-backward-object.texi
+
+@include fun-drei-buffer-mark=.texi
+
+@include fun-drei-buffer-mark-lt.texi
+
+@include fun-drei-buffer-mark-lt=.texi
+
+@include fun-drei-buffer-mark-gt.texi
+
+@include fun-drei-buffer-mark-gt=.texi
+
+@include fun-drei-buffer-beginning-of-buffer.texi
+
+@include fun-drei-buffer-end-of-buffer.texi
+
+@include fun-drei-buffer-beginning-of-buffer-p.texi
+
+@include fun-drei-buffer-end-of-buffer-p.texi
+
+@include fun-drei-buffer-beginning-of-line.texi
+
+@include fun-drei-buffer-end-of-line.texi
+
+@include fun-drei-buffer-beginning-of-line-p.texi
+
+@include fun-drei-buffer-end-of-line-p.texi
+
+@include fun-drei-buffer-buffer-line-number.texi
+
+@include fun-drei-buffer-buffer-column-number.texi
+
+@include fun-drei-buffer-line-number.texi
+
+@include fun-drei-buffer-column-number.texi
+
+@node Inserting And Deleting Objects
+@subsubsection Inserting And Deleting Objects
+
+@include fun-drei-buffer-insert-buffer-object.texi
+
+@include fun-drei-buffer-insert-buffer-sequence.texi
+
+@include fun-drei-buffer-insert-object.texi
+
+@include fun-drei-buffer-insert-sequence.texi
+
+@include fun-drei-buffer-delete-buffer-range.texi
+
+@include fun-drei-buffer-delete-range.texi
+
+@include fun-drei-buffer-delete-region.texi
+
+@node Getting Objects Out Of The Buffer
+@subsubsection Getting Objects Out Of The Buffer
+
+@include fun-drei-buffer-buffer-object.texi
+
+@include fun-drei-buffer-setf-buffer-object.texi
+
+@include fun-drei-buffer-buffer-sequence.texi
+
+@include fun-drei-buffer-object-before.texi
+
+@include fun-drei-buffer-object-after.texi
+
+@include fun-drei-buffer-region-to-sequence.texi

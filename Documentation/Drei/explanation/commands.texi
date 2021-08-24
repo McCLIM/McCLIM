@@ -1,0 +1,66 @@
+@node Drei Commands
+@section Drei Commands
+
+See also
+@itemize @bullet
+@item @ref{Defining Drei Commands}
+@item @ref{Command Reference}
+@end itemize
+
+@menu
+* Syntax Command Table Protocol::
+* Numeric Argument in Drei Commands::
+@end menu
+
+Drei commands are standard CLIM commands that are stored in standard
+CLIM command tables. Drei uses a number of distinct command tables, some
+of which are merely used to group commands by category, and some whose
+contents may only be applicable under specific circumstances. When the
+contents of a command table are applicable, that command table is said
+to be active. Some syntaxes may define specific command tables that will
+only be active for buffers using that syntax. Commands in such tables
+are called @dfn{syntax-specific commands}.
+
+@node Syntax Command Table Protocol
+@subsection Syntax Command Table Protocol
+@cindex syntax command table
+
+@sref{Syntax Command Table Protocol Reference}
+
+In order to provide conditionally active command tables, Drei defines
+the @class{syntax-command-table} class. While this class is meant to
+facilitate the addition of commands to syntaxes when they are run in a
+specific context (for example, a large editor application adding a
+@command{Show Macroexpansion} command to Lisp syntax), their modus
+operandi is general enough to be used for all conditional activity of
+command tables. This is useful for making commands available that
+could not be generally implemented for all Drei instances ---
+returning to the @command{Show Macroexpansion} example, such a command
+can only be implemented if there is a sufficiently large place to show
+the expansion, and this might not be available for a generic Drei
+input-editor instance, but could be provided by an application
+designed for it.
+
+Syntax command tables work by conditionally inheriting from other
+command tables, so it is necessary to define one (or more) command
+tables for the commands you wish to make conditionally available.
+
+When providing a @var{:command-table} argument to
+@fmacro{define-syntax} that names a syntax command table, an instance
+of the syntax command table will be used for the syntax.
+
+@node Numeric Argument in Drei Commands
+@subsection Numeric Argument in Drei Commands
+@cindex numeric argument
+
+The numeric argument state is currently not directly accessible from
+within commands. However, Drei uses ESA's numeric argument processing
+code --- thus, Drei commands can be provided with numeric arguments in the
+same way as ESA commands can. When using @cl{set-key} to setup
+keybindings, provide the value of @cl{*numeric-argument-marker*} as an
+argument to have the command processing code automatically insert the
+value of the numeric argument whenever the keybinding is invoked. You
+can also use @cl{*numeric-argument-p*} to have a boolean value, stating
+whether or not a numeric argument has been provided by the user,
+inserted. Note that you must write your commands to accept arguments
+before you can do this - @pxref{Defining Drei Commands}.

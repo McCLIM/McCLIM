@@ -1,0 +1,109 @@
+@node DREI-BASE Package
+@section DREI-BASE Package
+
+The buffer protocol has been designed to be reasonably efficient with a
+variety of different implementation strategies (single gap buffer or
+sequence of independent lines).  It contains (and should only contain)
+the absolute minimum of functionality that can be implemented
+efficiently independently of strategy.  However, this minimum of
+functionality is not always convenient.
+
+The purpose of the @package{DREI-BASE} package is to implement
+additional functionality on top of the buffer protocol, in a way that
+does not depend on how the buffer protocol was implemented.  Thus, the
+@package{DREI-BASE} package should remain intact across different
+implementation strategies of the buffer protocol.
+
+Achieving portability of the @package{DREI-BASE} package is not terribly
+hard as long as only buffer protocol functions are used.  What is
+slightly harder is to be sure to maximize efficiency across several
+implementation strategies.  The next section discusses such
+considerations and gives guidelines to implementers of additional
+functionality.
+
+Implementers of the buffer protocol may use the contents of the next
+section to make sure they respect the efficiency considerations that are
+expected by the @package{DREI-BASE} package.
+
+@menu
+* Efficiency Considerations::
+@end menu
+
+@node Efficiency Considerations
+@subsection Efficiency considerations
+
+In this section, we give a list of rules that implementors of
+additional functionality should follow in order to make sure that such
+functionality remains efficient (in addition to being portable) across
+a variety of implementation strategies of the buffer protocol.
+
+@quotation Rule
+Comparing the position of two marks is efficient, i.e. at most O(log n)
+where n is the number of marks in the buffer (which is expected to be
+very small compared to the number of objects) in all implementations.
+This is true for all types of comparisons.
+@end quotation
+
+It is expected that marks are managed very efficiently.  Some balanced
+tree management might be necessary, which will make operations have
+logarithmic complexity, but only in the number of marks that are
+actually used.
+
+@quotation Rule
+While computing and setting the offset of a mark is fairly efficient,
+it is not guaranteed to be O(1) even though it might be in an
+implementation using a single gap buffer.  It might have a complexity
+of O(log n) where n is the number of lines in the buffer.  This is
+true for using incf on the offset of a mark as well, as incf expands
+to a setf of the offset.
+
+Do not hesitate computing or setting the offset of a mark, but avoid
+doing it in a tight loop over many objects of the buffer.
+@end quotation
+
+@quotation Rule
+Determining whether a mark is at the beginning or at the end of the
+buffer is efficient, i.e. O(1), in all implementations.
+@end quotation
+
+@quotation Rule
+Determining whether a mark is at the beginning or at the end of a line
+is efficient, i.e. O(1), in all implementations.
+@end quotation
+
+@quotation Rule
+Going to the beginning or to the end of a line might have linear-time
+complexity in the number of characters of the line, though it is
+constant-time complexity if the implementation is line oriented.
+
+It is sometimes inevitable to use this functionality, and since lines
+are expected to be short, it should not be avoided at all cost,
+especially since it might be very efficient in some implementations.
+We do recommend, however to avoid it in tight loops.
+
+Always use this functionality rather than manually incrementing the
+offset of a mark in a loop until a Newline character has been found,
+especially since each iteration might take logarithmic time then.
+@end quotation
+
+@quotation Rule
+Computing the size of the buffer is always efficient, i.e., O(1).
+@end quotation
+
+@quotation Rule
+Computing the number of lines of the buffer is always efficient, i.e.,
+O(1).
+@end quotation
+
+Implementations of the buffer protocol could always track the number
+of insertions and deletions of objects, so there is no reason why this
+operation should be inefficient.
+
+@quotation Rule
+Computing the line number of a mark or of an offset can be very
+costly, i.e. O(n) where n is size of the buffer.
+@end quotation
+
+This operation is part of the buffer protocol because some
+implementations may implement it fairly efficiently, say O(log n)
+where n is the number of lines in the buffer.

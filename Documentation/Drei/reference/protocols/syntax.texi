@@ -1,0 +1,137 @@
+@node Syntax Protocol Reference
+@subsection Syntax Protocol Reference
+
+@sref{Syntax Modules}
+
+@menu
+* General Syntax Protocol::
+* Incremental Parsing Framework::
+* Lexical Analysis::
+* Specifying A Grammar::
+@end menu
+
+@node General Syntax Protocol
+@subsubsection General Syntax Protocol
+
+@include class-drei-syntax-syntax.texi
+
+@include fun-drei-syntax-update-syntax.texi
+
+@include fun-drei-syntax-update-parse.texi
+
+@node Incremental Parsing Framework
+@subsubsection Incremental Parsing Framework
+
+@include class-drei-syntax-parse-tree.texi
+
+We use the term parse tree in a wider sense than what is common in the
+parsing literature, in that a lexeme is a (trivial) parse tree.  The
+parser does not distinguish between lexemes and other parse trees, and
+a grammar rule can produce a lexeme if that should be desired.
+
+@include fun-drei-syntax-start-offset.texi
+
+@include fun-drei-syntax-end-offset.texi
+
+The length of a parse-tree is thus the difference of its end offset
+and its start offset.
+
+The start offset and the end offset may be NIL which is typically the
+case when a parse tree is derived from the empty sequence of lexemes.
+
+@node Lexical Analysis
+@subsubsection Lexical analysis
+
+@include class-drei-syntax-lexer.texi
+
+@include class-drei-syntax-incremental-lexer.texi
+
+In the sequence of lexemes maintained by the incremental lexer, the
+lexemes are indexed by a position starting from zero.
+
+@include fun-drei-syntax-nb-lexemes.texi
+
+@include fun-drei-syntax-lexeme.texi
+
+@include fun-drei-syntax-insert-lexeme.texi
+
+@include fun-drei-syntax-delete-invalid-lexemes.texi
+
+@include fun-drei-syntax-inter-lexeme-object-p.texi
+
+@include fun-drei-syntax-skip-inter-lexeme-objects.texi
+
+@include fun-drei-syntax-update-lex.texi
+
+@include fun-drei-syntax-next-lexeme.texi
+
+@node Specifying A Grammar
+@subsubsection Specifying A Grammar
+
+@sref{Earley Parser}
+
+An incremental parser is created from a grammar.
+
+@include macro-drei-syntax-grammar.texi
+
+@deftp {Rule} symbol -> (&rest arguments) &optional body
+
+Each rule is a list of this form.
+@end deftp
+
+Here @var{symbol} is the target symbol of the rule, and should be the
+name of a CLOS class.
+
+@deftp {Rule argument} (var type test)
+
+The most general form of a rule argument.
+@end deftp
+
+@noindent
+
+Here @var{var} is the name of a lexical variable.  The scope of the
+variable contains the test, all the following arguments and the body
+of the rule.  The @var{type} is a Common Lisp type specification.  The
+rule applies only of the @var{type} of the object contain in var is of
+that type.  The @var{test} contains arbitrary Common Lisp code for
+additional checks as to the applicability of the rule.
+
+@deftp {Rule argument} (var type)
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+Here, @var{type} must be a symbol typically the name of a CLOS class.
+This form is an abbreviation for @code{(@var{var} @var{type} t)}.
+
+@deftp {Rule argument} (var test)
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+Here, @var{test} must not be a symbol.  This form is an abbreviation
+of @code{(@var{var} @var{var} @var{test})}, i.e., the name of the
+variable is also the name of a type, typically a CLOS class.
+
+@deftp {Rule argument} var
+
+Abbreviated form of a rule argument.
+@end deftp
+
+@noindent
+This form is an abbreviation of @code{(@var{var} @var{var} t)}.
+
+The @var{body} of a rule, if present, contains an expression that should
+have an instance (not necessarily direct) of the class named by the
+symbol (the left-hand-side) of the rule.  It is important that this
+restriction be respected, since the Earley algorithm will not work
+otherwise.
+
+If the @var{body} is absent, it is the same as if a body of the form
+@code{(make-instance '@var{symbol})} had been given.
+
+The body can also be a sequence of forms, the first one of which must be
+a symbol.  These forms typically contain initargs, and will be passed as
+additional arguments to @code{(make-instance '@var{symbol})}.

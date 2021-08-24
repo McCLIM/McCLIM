@@ -1,0 +1,29 @@
+@node Protocols
+@section Protocols
+@cindex Drei protocols
+@cindex text-editor protocols
+@cindex text-editor API
+@cindex Drei API
+
+Much of Drei's functionality is based on generic function
+protocols. This section lists some of them.
+
+@menu
+* Buffer Protocol Reference::
+* Buffer Modification Protocol Reference::
+* Syntax Protocol Reference::
+* View Protocol Reference::
+* Unit Protocol Reference::
+* Redisplay Protocol Reference::
+* Undo Protocol Reference::
+* Kill Ring Protocol Reference::
+@end menu
+
+@include reference/protocols/buffer.texi
+@include reference/protocols/buffer-modification.texi
+@include reference/protocols/syntax.texi
+@include reference/protocols/view.texi
+@include reference/protocols/unit.texi
+@include reference/protocols/redisplay.texi
+@include reference/protocols/undo.texi
+@include reference/protocols/kill-ring.texi

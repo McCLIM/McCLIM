@@ -1,0 +1,12 @@
+@node Redisplay Protocol Reference
+@subsection Redisplay Protocol Reference
+@cindex Drei redisplay
+@cindex text-editor redisplay
+
+@sref{Redisplay Protocol}
+
+@include fun-drei-display-drei.texi
+
+@include fun-drei-display-drei-view-contents.texi
+
+@include fun-drei-display-drei-view-cursor.texi

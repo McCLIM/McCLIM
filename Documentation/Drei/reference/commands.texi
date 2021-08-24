@@ -1,0 +1,89 @@
+@node Command Reference
+@section Command Reference
+
+See also
+@itemize @bullet
+@item @ref{Defining Drei Commands}
+@item @ref{Drei Commands}
+@item @ref{Numeric Argument in Drei Commands}
+@end itemize
+
+@menu
+* Drei Command Tables::
+* Syntax Command Table Protocol Reference::
+@end menu
+
+@node Drei Command Tables
+@subsection Drei Command Tables
+
+Here is a list of the command tables that are always active, along with
+a note describing what they are used for:
+
+@deftp {Command Table} comment-table
+Commands for dealing with comments in, for example, source code. For
+syntaxes that do not have the concept of a comment, many of the commands
+of this table will not do anything.
+@end deftp
+@deftp {Command Table} deletion-table
+Commands that destructively modify buffer contents.
+@end deftp
+@deftp {Command Table} editing-table
+Commands that transform the buffer contents somehow (such as transposing
+two words).
+@end deftp
+@deftp {Command Table} fill-table
+Commands that fill (wrap) text.
+@end deftp
+@deftp {Command Table} case-table
+Commands that modify the case of characters.
+@end deftp
+@deftp {Command Table} indent-table
+Commands that indent text based on the current syntax.
+@end deftp
+@deftp {Command Table} marking-table
+Commands that deal with managing the mark or nondestructively copying
+buffer contents.
+@end deftp
+@deftp {Command Table} movement-table
+Commands that move point.
+@end deftp
+@deftp {Command Table} search-table
+Commands that can search the buffer.
+@end deftp
+@deftp {Command Table} info-table
+Commands that display information about the state of the buffer.
+@end deftp
+@deftp {Command Table} self-insert-table
+Commands that insert the gesture used to invoke them into the
+buffer. You probably won't need to add commands to this table.
+@end deftp
+@deftp {Command Table} editor-table
+A command table that inherits from the previously mentioned tables (plus
+some more). This command table is the ``basic'' table for accessing Drei
+commands, and is a good place to put your own user-defined commands if
+they do not fit in another table.
+@end deftp
+
+There are also two conditionally-active command tables:
+
+@deftp {Command Table} exclusive-gadget-table
+This command table is only active in the gadget version of Drei.
+@end deftp
+@deftp {Command Table} exclusive-input-editor-table
+This command table is only active when Drei is used as an input-editor.
+@end deftp
+
+When you define keybindings for your commands, you should put the
+keybindings in the same command table as the command itself.
+
+@node Syntax Command Table Protocol Reference
+@subsection Syntax Command Table Protocol Reference
+@cindex syntax command table
+
+@sref{Syntax Command Table Protocol}.
+
+@include class-drei-syntax-syntax-command-table.texi
+
+@include fun-drei-syntax-additional-command-tables.texi
+
+@include macro-drei-syntax-define-syntax-command-table.texi

@@ -1,0 +1,12 @@
+@node Special Variables
+@section Special Variables
+
+Drei uses only a few special variables to provide access to data
+structures.
+
+@include var-drei-kill-ring-star-kill-ring-star.texi
+
+Additionally, a number of ESA special variables are used in Drei.
+
+@include var-esa-star-minibuffer-star.texi
+@include var-esa-star-previous-command-star.texi

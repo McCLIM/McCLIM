@@ -1,0 +1,8 @@
+@node Drei Variants
+@section Drei Variants
+
+Because the standard @class{drei} class doesn't implement
+immediately-usable editor behavior, three subclasses have been defined
+to provide a concrete implementaton of the editor substrate. These are
+the input-editor-oriented Drei variant, the pane-oriented Drei variant
+and the gadget-oriented Drei variant.

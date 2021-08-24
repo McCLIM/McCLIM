@@ -1,0 +1,51 @@
+@node Undo Protocol Reference
+@subsection Undo Protocol Reference
+
+@sref{Undo Protocol}
+
+@menu
+* Protocol Specification::
+* How The Buffer Handles Undo::
+@end menu
+
+@node Protocol Specification
+@subsubsection Protocol Specification
+
+@include condition-drei-undo-no-more-undo.texi
+
+@include class-drei-undo-undo-tree.texi
+
+@include class-drei-undo-undo-record.texi
+
+@include class-drei-undo-standard-undo-record.texi
+
+@include fun-drei-undo-add-undo.texi
+
+@include fun-drei-undo-flip-undo-record.texi
+
+@include fun-drei-undo-undo.texi
+
+@include fun-drei-undo-redo.texi
+
+@node How The Buffer Handles Undo
+@subsubsection How The Buffer Handles Undo
+
+@include class-drei-undo-mixin.texi
+
+@include fun-drei-undo-tree.texi
+
+@include fun-drei-undo-accumulate.texi
+
+@include fun-drei-performing-undo.texi
+
+@include macro-drei-with-undo.texi
+
+@include class-drei-drei-undo-record.texi
+
+@include class-drei-simple-undo-record.texi
+
+@include class-drei-insert-record.texi
+
+@include class-drei-delete-record.texi
+
+@include class-drei-compound-record.texi

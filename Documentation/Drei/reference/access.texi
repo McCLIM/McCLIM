@@ -1,0 +1,14 @@
+@node Access Functions
+@section Access Functions
+
+The access functions are the primary interface to Drei state, and should
+be used to access the various parts. It is not recommended to save the
+return value of these functions, as they are by nature ephemeral, and
+may change over the course of a command.
+
+@include fun-drei-drei-instance.texi
+@include fun-drei-current-view.texi
+@include fun-esa-current-buffer.texi
+@include fun-drei-point.texi
+@include fun-drei-mark.texi
+@include fun-drei-current-syntax.texi

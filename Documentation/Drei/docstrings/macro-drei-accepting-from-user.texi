@@ -1,7 +1,7 @@
 @anchor{Macro drei:accepting-from-user}
 @deffn {Macro} {drei:accepting-from-user} (drei) &body body
 @findex drei:accepting-from-user
-Modidfy @code{drei} and the environment so that calls to @code{accept}
+Modify @code{drei} and the environment so that calls to @code{accept}
 can be done to arbitrary streams from within @code{body}. Or, at
 least, make sure the Drei instance will not be a problem. When
 Drei calls a command, it will be wrapped in this macro, so it

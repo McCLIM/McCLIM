@@ -1,0 +1,37 @@
+@node Kill Ring Protocol Reference
+@subsection Kill Ring Protocol Reference
+
+@sref{Kill Ring Protocol}
+
+@menu
+* Kill Ring Protocol Specification::
+* Kill Ring Implementation::
+@end menu
+
+@node Kill Ring Protocol Specification
+@subsubsection Kill Ring Protocol Specification
+
+@include class-drei-kill-ring-kill-ring.texi
+
+@include fun-drei-kill-ring-kill-ring-max-size.texi
+
+@include fun-drei-kill-ring-kill-ring-length.texi
+
+@include fun-drei-kill-ring-kill-ring-standard-push.texi
+
+@include fun-drei-kill-ring-kill-ring-concatenating-push.texi
+
+@include fun-drei-kill-ring-kill-ring-reverse-concatenating-push.texi
+
+@include fun-drei-kill-ring-rotate-yank-position.texi
+
+@include fun-drei-kill-ring-reset-yank-position.texi
+
+@include fun-drei-kill-ring-kill-ring-yank.texi
+
+@node Kill Ring Implementation
+@subsubsection Kill Ring Implementation
+
+@include fun-drei-kill-ring-kill-ring-chain.texi
+
+@include fun-drei-kill-ring-kill-ring-cursor.texi
