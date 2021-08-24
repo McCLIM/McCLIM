@@ -16,8 +16,7 @@ The Drei buffer implementation differs from that of a vector, because it
 allows for very efficient editing operations, such as inserting and
 removing objects at arbitrary offsets.
 
-In addition, the Drei buffer protocols defines that concept of a
-mark.
+In addition, the Drei buffer protocol defines the concept of a mark.
 
 @node Implementation Hints
 @subsection Implementation Hints
