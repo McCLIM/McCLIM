@@ -217,6 +217,10 @@
     (port manager)
     nil))
 
+(defmethod graft ((frame application-frame))
+  (when-let ((tls (frame-top-level-sheet frame)))
+    (graft tls)))
+
 (defmethod (setf frame-manager)
     (new-manager (frame standard-application-frame))
   (let ((old-manager (frame-manager frame)))
@@ -657,17 +661,20 @@
     (apply #'display-command-table-menu command-table stream args)))
 
 (defmethod enable-frame ((frame application-frame))
-  (ecase (slot-value frame 'state)
-    (:disabled
-     (note-frame-enabled (frame-manager frame) frame))
-    (:shrunk
-     (note-frame-deiconified (frame-manager frame) frame))
-    (:enabled))
-  (setf (slot-value frame 'state) :enabled))
+  (let ((old-value (slot-value frame 'state)))
+    (setf (slot-value frame 'state) :enabled)
+    (ecase old-value
+      (:disabled
+       (note-frame-enabled (frame-manager frame) frame))
+      (:shrunk
+       (note-frame-deiconified (frame-manager frame) frame))
+      (:enabled))
+    (frame-state frame)))
 
 (defmethod disable-frame ((frame application-frame))
   (setf (slot-value frame 'state) :disabled)
-  (note-frame-disabled (frame-manager frame) frame))
+  (note-frame-disabled (frame-manager frame) frame)
+  (frame-state frame))
 
 (defmethod shrink-frame ((frame application-frame))
   (unless (eq (slot-value frame 'state) :disabled)
@@ -681,10 +688,12 @@
   (disown-frame (frame-manager frame) frame))
 
 (defmethod raise-frame ((frame application-frame))
-  (raise-sheet (frame-top-level-sheet frame)))
+  (when (eq (frame-state frame) :enabled)
+    (raise-sheet (frame-top-level-sheet frame))))
 
 (defmethod bury-frame ((frame application-frame))
-  (bury-sheet (frame-top-level-sheet frame)))
+  (when (eq (frame-state frame) :enabled)
+    (bury-sheet (frame-top-level-sheet frame))))
 
 (defun make-application-frame (frame-name
                                &rest options

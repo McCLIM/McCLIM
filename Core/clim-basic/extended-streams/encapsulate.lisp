@@ -423,6 +423,9 @@ if there is one, or STREAM"
 (def-stream-method medium-draw-polygon* ((stream standard-encapsulating-stream)
                                          coord-seq closed filled))
 
+(def-stream-method medium-draw-bezigon* ((stream standard-encapsulating-stream)
+                                         coord-seq filled))
+
 (def-stream-method medium-draw-rectangle*
     ((stream standard-encapsulating-stream) x1 y1 x2 y2 filled))
 
@@ -432,11 +435,6 @@ if there is one, or STREAM"
 (def-stream-method medium-draw-ellipse*
     ((stream standard-encapsulating-stream)
      center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-     start-angle end-angle filled))
-
-(def-stream-method medium-draw-circle*
-    ((stream standard-encapsulating-stream)
-     center-x center-y radius
      start-angle end-angle filled))
 
 (def-stream-method medium-draw-text*
@@ -542,10 +540,6 @@ if there is one, or STREAM"
     (declare (dynamic-extent #'trampoline))
     (apply #'invoke-with-drawing-options
            (slot-value medium 'stream) #'trampoline drawing-options)))
-
-(def-stream-method do-graphics-with-options-internal
-    ((stream standard-encapsulating-stream) (orig-medium t) function
-     &rest args &key))
 
 (def-stream-method invoke-with-room-for-graphics
     (cont (stream standard-encapsulating-stream) &rest options))

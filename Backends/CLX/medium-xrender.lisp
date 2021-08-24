@@ -106,11 +106,6 @@
                                  start-angle end-angle filled)
   (call-next-method))
 
-(defmethod medium-draw-circle* ((medium clx-render-medium)
-                                center-x center-y radius start-angle end-angle
-                                filled)
-  (call-next-method))
-
 (defmethod text-size ((medium clx-render-medium) string &key text-style (start 0) end
                       &aux
                         (string (string string))

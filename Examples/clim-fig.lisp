@@ -242,7 +242,7 @@
   (:panes
    (canvas canvas-pane
            :name 'canvas
-           :display-time nil)
+           :display-time t)
    (line-width-slider :slider
                       :label "Line Width"
                       :value 1

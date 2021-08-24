@@ -15,7 +15,7 @@
    (canvas :application
            :min-width 600
            :incremental-redisplay nil
-           :display-time nil)
+           :display-time t)
    (mode
     (with-radio-box ()
       (radio-box-current-selection

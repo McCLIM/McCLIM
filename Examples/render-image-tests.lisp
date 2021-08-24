@@ -47,7 +47,7 @@
    (output :application-pane
            :min-width *render-image-width*
            :min-height *render-image-height*
-           :display-time nil
+           :display-time t
            :display-function #'render-image-display-output
            :end-of-line-action :wrap
            :end-of-page-action :wrap)

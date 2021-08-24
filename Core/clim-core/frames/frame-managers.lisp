@@ -87,6 +87,7 @@
 
 (defmethod disown-frame :before
     ((fm headless-frame-manager) (frame application-frame))
+  (disable-frame frame)
   (alexandria:removef (slot-value fm 'frames) frame))
 
 (defmethod adopt-frame
@@ -114,10 +115,7 @@
 (defclass standard-frame-manager (headless-frame-manager)
   ((port
     :initarg :port
-    :reader port)
-   (frames
-    :initform nil
-    :reader frame-manager-frames)))
+    :reader port)))
 
 (defmethod adopt-frame
     ((fm standard-frame-manager) (frame standard-application-frame))
@@ -189,9 +187,12 @@
 (defun disown-frame-panes (fm frame)
   (declare (ignore fm))
   (when-let ((panes (frame-panes frame)))
-    (let ((top-level-sheet (frame-top-level-sheet frame)))
-      (when (sheet-ancestor-p panes top-level-sheet)
-        (sheet-disown-child top-level-sheet (sheet-child top-level-sheet)))))
+    (labels ((disown-direct-child (ancestor sheet)
+               (when-let ((parent (sheet-parent sheet)))
+                 (if (eq ancestor parent)
+                     (sheet-disown-child ancestor sheet)
+                     (disown-direct-child ancestor parent)))))
+      (disown-direct-child (frame-top-level-sheet frame) panes)))
   (loop for (nil . pane) in (frame-panes-for-layout frame)
         for parent = (sheet-parent pane)
         when parent
@@ -215,19 +216,19 @@
                             (make-menu-bar menu frame 'hmenu-pane))))
                (setf menu (frame-menu-bar-pane frame)))
              (when pdoc
-               (if (frame-pointer-documentation-output frame)
-                   (setf pdoc nil)
-                   (multiple-value-bind (pane stream)
-                       (make-clim-pointer-documentation-pane)
-                     (setf pdoc pane
-                           (frame-pointer-documentation-output frame) stream))))
+               (multiple-value-bind (pane stream)
+                   (make-clim-pointer-documentation-pane)
+                 (setf pdoc pane
+                       (frame-pointer-documentation-output frame) stream)))
              (if (or menu pdoc)
                  (make-instance 'vrack-pane
                                 :contents (remove nil (list menu root pdoc))
                                 :port (port frame))
                  root))))
-    (let ((tpl-sheet (frame-top-level-sheet frame)))
-      (sheet-adopt-child tpl-sheet (maybe-add-auxiliary-panes frame))
+    (let ((tpl-sheet (frame-top-level-sheet frame))
+          (new-root (maybe-add-auxiliary-panes frame)))
+      (setf (frame-panes frame) new-root)
+      (sheet-adopt-child tpl-sheet new-root)
       (unless (sheet-parent tpl-sheet)
         (sheet-adopt-child (find-graft :port (port fm)) tpl-sheet))
       ;; Find the size of the new frame.

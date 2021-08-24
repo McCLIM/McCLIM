@@ -364,6 +364,13 @@
   `(multiple-value-bind (,dx ,dy) (transform-distance ,transformation ,dx ,dy)
      ,@body))
 
+(defmacro with-transformed-angles
+    ((transformation clockwisep &rest angles) &body body)
+  (let ((op (if clockwisep 'transform-angle 'untransform-angle)))
+    `(let ,(loop for angle in angles
+                 collect `(,angle (,op ,transformation ,angle)))
+       ,@body)))
+
 (defmacro with-transformed-positions ((transformation coord-seq) &body body)
   `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
      ,@body))
@@ -410,6 +417,16 @@
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq closed filled))))
 
+(defmethod medium-draw-bezigon* :around ((medium transform-coordinates-mixin) coord-seq filled)
+  (let ((tr (medium-transformation medium)))
+    (with-transformed-positions (tr coord-seq)
+      (call-next-method medium coord-seq filled))))
+
+(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
+  (let ((polygon-coord-seq (polygonalize* coord-seq)))
+    (with-identity-transformation (medium)
+      (medium-draw-polygon* medium polygon-coord-seq nil filled))))
+
 (defun expand-rectangle-coords (left top right bottom)
   "Expand the two corners of a rectangle into a polygon coord-seq"
   (vector left top right top right bottom left bottom))
@@ -422,8 +439,6 @@
           (call-next-method medium left top right bottom filled))
         (medium-draw-polygon* medium (expand-rectangle-coords left top right bottom)
                               t filled))) )
-
-(defgeneric medium-draw-rectangles* (medium coord-seq filled))
 
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
   (let ((tr (medium-transformation medium)))
@@ -463,26 +478,6 @@
                           radius-1-dx radius-1-dy
                           radius-2-dx radius-2-dy
                           start-angle end-angle filled)))))
-
-(defmethod medium-draw-circle* :around (medium center-x center-y
-                                        radius start-angle end-angle filled)
-  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
-    (setf start-angle 0 end-angle (* 2 pi)))
-  (call-next-method))
-
-(defmethod medium-draw-circle* :around ((medium transform-coordinates-mixin) center-x center-y
-                                        radius start-angle end-angle filled)
-  (let* ((ellipse (make-elliptical-arc* center-x center-y
-                                        radius 0
-                                        0 radius
-                                        :start-angle start-angle
-                                        :end-angle end-angle))
-         (transformed-ellipse (transform-region (medium-transformation medium)
-                                                ellipse))
-         (start-angle (ellipse-start-angle transformed-ellipse))
-         (end-angle (ellipse-end-angle transformed-ellipse)))
-    (multiple-value-bind (center-x center-y) (ellipse-center-point* transformed-ellipse)
-      (call-next-method medium center-x center-y radius start-angle end-angle filled))))
 
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height

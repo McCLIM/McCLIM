@@ -72,11 +72,9 @@ advised of the possiblity of such damages.
          ;; height = inches x 72
          (values 0 0 #.(* 72 7) #.(* 72 10)))
         (t
-         (let ((v (and (not (typep (clim:medium-sheet
-                                    (clim:sheet-medium stream))
-                                   'climi::pixmap))
-                       (clim:window-viewport stream))))
-           (if v (clim:rectangle-edges* v)
+         (let ((v (clim:window-viewport stream)))
+           (if v
+               (clim:rectangle-edges* v)
                (values 0 0
                        (clim:bounding-rectangle-width stream)
                        (clim:bounding-rectangle-height stream)))))))

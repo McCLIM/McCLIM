@@ -141,7 +141,6 @@ graft-width  ; screen width
 MEDIUM DRAWING (in medium.lisp)
 -------------------------------
 ;;; Originally in CLIM
-medium-draw-circle*
 medium-draw-ellipse*
 medium-draw-line*
 medium-draw-lines*

@@ -247,6 +247,12 @@ Note:
 symbol).  At each iteration the variables in VARS are bound to the
 initial elements of the sequence.  The iteration is then \"stepped\"
 by the number of variables in VARS."
+  `(do-sequence* (,vars ,sequence nil ,result-form) ,@body))
+
+(defmacro do-sequence* ((vars sequence step &optional result-form) &body body)
+  "Iterate over SEQUENCE.  VARS is a list of symbols (or a single symbol).  At
+each iteration the variables in VARS are bound to the initial elements of the
+sequence.  The iteration is then \"stepped\" by the specified number."
   (flet ((list-stepper (n)
            (case n
              (1 'cdr)
@@ -254,10 +260,11 @@ by the number of variables in VARS."
              (3 'cdddr)
              (4 'cddddr)
              (t `(lambda (list) (nthcdr ,n list))))))
-    (with-gensyms (body-fun i)
+    (with-gensyms (body-fun i iter-limit)
       (once-only (sequence)
         (let* ((vars        (alexandria:ensure-list vars))
                (count       (length vars))
+               (step        (or step count))
                (vector-args (loop for j from 0 below count
                                   collect `(aref ,sequence (+ ,i ,j)))))
           `(block nil
@@ -267,11 +274,15 @@ by the number of variables in VARS."
                (declare (dynamic-extent (function ,body-fun)))
                (etypecase ,sequence
                  (list
-                  (loop for ,vars on ,sequence by (function ,(list-stepper count))
+                  (loop with ,iter-limit = (- (length ,sequence) ,count)
+                        for ,i of-type alexandria:array-index from 0 by ,step
+                        for ,vars on ,sequence by (function ,(list-stepper step))
+                        until (> ,i ,iter-limit)
                         do (,body-fun ,@vars)))
                  (vector
-                  (loop for ,i of-type alexandria:array-index
-                          from 0 below (length ,sequence) by ,count
+                  (loop with ,iter-limit = (- (length ,sequence) ,count)
+                        for ,i of-type alexandria:array-index from 0 by ,step
+                        until (> ,i ,iter-limit)
                         do (,body-fun ,@vector-args)))))
              ,@(when result-form
                  `((let ,vars ; bind variables to NIL
@@ -735,31 +746,6 @@ index being halfway between INDEX-1 and INDEX-2."
                           (collect-normal-expander ',n-value ',kind args))
                   macros))))
     `(macrolet ,macros (let* ,(nreverse binds) ,@body))))
-
-(defun coord-seq->point-seq (sequence)
-  (collect (collect-point)
-    (do-sequence ((x y) sequence (collect-point))
-      (collect-point (make-point x y)))))
-
-(defun remove-duplicated-points (point-sequence &optional closed)
-  "Given points A B C ... Z removes consecutive points which are duplicated. If
-a flag CLOSED is T then beginning and end of the list are consecutive too."
-  (when (alexandria:emptyp point-sequence)
-    (return-from remove-duplicated-points point-sequence))
-  (collect (collect-point)
-    (let* ((first-point (elt point-sequence 0))
-           (last-point first-point))
-      (collect-point first-point)
-      (mapc (lambda (current-point)
-              (unless (region-equal current-point last-point)
-                (setf last-point current-point)
-                (collect-point last-point)))
-            point-sequence)
-      (if (and closed
-               (region-equal first-point last-point)
-               (null (alexandria:length= 1 (collect-point))))
-          (butlast (collect-point))
-          (collect-point)))))
 
 ;;;
 ;;; pretty printing

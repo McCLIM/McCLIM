@@ -16,10 +16,10 @@
 (defclass window-stream (clim-stream-pane)
   ())
 
-(define-application-frame a-window-stream (standard-encapsulating-stream
+(define-application-frame a-window-stream (standard-application-frame
+                                           standard-encapsulating-stream
                                            standard-extended-input-stream
-                                           fundamental-character-output-stream
-                                           standard-application-frame)
+                                           fundamental-character-output-stream)
   ((scroll-bars :initform :vertical
                 :initarg :scroll-bars)
    stream
