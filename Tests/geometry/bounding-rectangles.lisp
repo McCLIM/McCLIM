@@ -44,7 +44,7 @@
                                                :start-angle 0
                                                :end-angle (/ pi 2))))
     (has-valid-bounding-rectangle elliptical-arc1 -10 -15 10 15)
-    (fails (has-valid-bounding-rectangle elliptical-arc1 0 -15 10 0))))
+    (has-valid-bounding-rectangle elliptical-arc2 0 -15 10 0)))
 
 (test bounding-rectangle.polygon
   (let ((polygon (make-polygon* '(0 0 1 0 1 1 -1 1))))
@@ -60,4 +60,4 @@
                                  :start-angle 0
                                  :end-angle (/ pi 2))))
     (has-valid-bounding-rectangle ellipse1 -10 -15 10 15)
-    (fails (has-valid-bounding-rectangle ellipse2 0 -15 10 0))))
+    (has-valid-bounding-rectangle ellipse2 0 -15 10 0)))

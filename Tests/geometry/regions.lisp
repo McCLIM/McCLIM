@@ -356,11 +356,7 @@
               (is-true (region-contains-position-p el 210 210))
               (is-false (region-contains-position-p el 100 300)) ; outside the angle
               ;; points outside the ellipse
-              ;;
-              ;; FIXME this test may fail because we add an additional epsilon
-              ;; for sake of CLX rendering of rotated ellipses. -- jd 2019-11-19
-              (fails
-                (is-false (region-contains-position-p el 301 101))) ; too far away
+              (is-false (region-contains-position-p el 301 101)) ; too far away
               (is-false (region-contains-position-p el 303 103)) ; too far away
               (is-false (region-contains-position-p el 200 100)) ; y-aligned tip
               (is-false (region-contains-position-p el 300 200)) ; x-aligned tip

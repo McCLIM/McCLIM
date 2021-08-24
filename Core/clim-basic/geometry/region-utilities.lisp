@@ -15,6 +15,9 @@
 ;;;
 ;;; Utilities used in the regions module.
 ;;;
+;;; When possible provide and use a spilled version of the utility, this way
+;;; they are reusable without a need for consing new objects.
+;;;
 
 (in-package #:climi)
 
@@ -69,12 +72,40 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
     (return-from arc-contains-point-p t))
   (arc-contains-angle-p start-angle end-angle (atan* x (- y))))
 
+(declaim (inline colinear-p* colinear-p
+                 distance* distance
+                 part-way* part-way square))
+
+(defun colinear-p* (x1 y1 x2 y2 x3 y3)
+  (coordinate= (* (- x2 x1) (- y3 y2))
+               (* (- x3 x2) (- y2 y1))))
+
 (defun colinear-p (p1 p2 p3)
   (multiple-value-bind (x1 y1) (point-position p1)
     (multiple-value-bind (x2 y2) (point-position p2)
       (multiple-value-bind (x3 y3) (point-position p3)
-        (coordinate= (* (- x2 x1) (- y3 y2))
-                     (* (- x3 x2) (- y2 y1)))))))
+        (colinear-p* x1 y1 x2 y2 x3 y3)))))
+
+;;; Return the Euclidean distance between two points.
+(defun distance* (x0 y0 x1 y1)
+  (sqrt (+ (square (- x1 x0))
+           (square (- y1 y0)))))
+
+(defun distance (p0 p1)
+  (multiple-value-bind (x0 y0) (point-position p0)
+    (multiple-value-bind (x1 y1) (point-position p1)
+      (distance* x0 y0 x1 y1))))
+
+(defun part-way* (x0 y0 x1 y1 alpha)
+  (values (lerp alpha x0 x1)
+          (lerp alpha y0 y1)))
+
+;;; Return a point that is part way between two other points.
+(defun part-way (p0 p1 alpha)
+  (multiple-value-bind (x0 y0) (point-position p0)
+    (multiple-value-bind (x1 y1) (point-position p1)
+      (multiple-value-bind (rx ry) (part-way* x0 y0 x1 y1 alpha)
+        (make-point rx ry)))))
 
 (defun square (x)
   "Returns the number X squared."
@@ -756,19 +787,102 @@ y2."
 ;;; ELLIPSE
 
 (defun %ellipse-angle->position (ellipse angle)
-  (with-slots (tr) ellipse
-    (let* ((base-angle (untransform-angle tr (- (* 2 pi) angle)))
-           (x0 (cos base-angle))
-           (y0 (sin base-angle)))
-      (transform-position tr x0 y0))))
+  (let* ((tr (polar->screen ellipse))
+         (base-angle (untransform-angle tr (- (* 2 pi) angle)))
+         (x0 (cos base-angle))
+         (y0 (sin base-angle)))
+    (transform-position tr x0 y0)))
 
-(defun %ellipse-position->angle (ellipse x y)
-  (multiple-value-bind (xc yc) (ellipse-center-point* ellipse)
-    ;; remember, that y-axis is reverted
-    (coordinate (atan* (- x xc) (- (- y yc))))))
+(defun %ellipse-position->angle (cx cy x y)
+  ;; remember, that y-axis is reverted
+  (coordinate (atan* (- x cx) (- (- y cy)))))
 
-;;; Ellipse simplified representation
+;;; A transformation from the unit circle to get the elliptical object.
+(defun %polar->screen (cx cy rdx1 rdy1 rdx2 rdy2)
+  (make-3-point-transformation* 0 0 1 0 0 1
+                                cx cy
+                                (+ cx rdx1) (+ cy rdy1)
+                                (+ cx rdx2) (+ cy rdy2)))
 
+(defun transform-ellipse (tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
+  (when eta1
+    (setf eta1 (untransform-angle tr eta1))
+    (setf eta2 (untransform-angle tr eta2))
+    (when (reflection-transformation-p tr)
+      (rotatef eta1 eta2)))
+  (multiple-value-bind (cx cy) (transform-position tr cx cy)
+    (multiple-value-bind (rdx1 rdy1) (transform-distance tr rdx1 rdy1)
+      (multiple-value-bind (rdx2 rdy2) (transform-distance tr rdx2 rdy2)
+        (values cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)))))
+
+;;; See "A rotated ellipse from three points" by Jerry R. Van Aken for math
+;;; behind the following three functions. Each of them assumes that the ellipse
+;;; is centered at [0,0].
+
+;;; Ax² + Bxy + Cy² + Dx + Ey + F = 0
+(defun ellipse-implicit-equation (rdx1 rdy1 rdx2 rdy2)
+  (values (+ (square rdy1) (square rdy2))           ; A
+          (* (- 2) (+ (* rdx1 rdy1) (* rdx2 rdy2))) ; B
+          (+ (square rdx1) (square rdx2))           ; C
+          ;; 0                                           ; D
+          ;; 0                                           ; E
+          (- (square (- (* rdx1 rdy2) (* rdx2 rdy1)))))) ; F
+
+(defun ellipse-bounding-rectangle (rdx1 rdy1 rdx2 rdy2)
+  (let ((x (sqrt (+ (square rdx1) (square rdx2))))
+        (y (sqrt (+ (square rdy1) (square rdy2)))))
+    (values (- x) (- y) x y)))
+
+;;; This variant returns a bounding rectangle that accounts for
+;;; start-angle and end-angle.
+(defun ellipse-bounding-rectangle* (cx cy rdx1 rdy1 rdx2 rdy2
+                                    start-angle end-angle filled)
+  (multiple-value-bind (min-x min-y max-x max-y)
+      (ellipse-bounding-rectangle rdx1 rdy1 rdx2 rdy2)
+    (if (and (null start-angle) (null end-angle))
+        (values (+ cx min-x) (+ cy min-y)
+                (+ cx max-x) (+ cy max-y))
+        (collect (coords)
+          (unless start-angle (setf start-angle 0))
+          (unless end-angle   (setf end-angle (* 2 pi)))
+          (when filled
+            (coords cx cy))
+          (multiple-value-bind (start-x start-y)
+              (ellipse-point* (- end-angle) cx cy rdx1 rdy1 rdx2 rdy2)
+            (coords start-x start-y))
+          (multiple-value-bind (end-x end-y)
+              (ellipse-point* (- start-angle) cx cy rdx1 rdy1 rdx2 rdy2)
+            (coords end-x end-y))
+          (when (arc-contains-angle-p start-angle end-angle 0)
+            (coords (+ cx max-x) cy))
+          (when (arc-contains-angle-p start-angle end-angle (/ pi 2))
+            (coords cx (+ cy min-y)))
+          (when (arc-contains-angle-p start-angle end-angle pi)
+            (coords (+ cx min-x) cy))
+          (when (arc-contains-angle-p start-angle end-angle (* 3 (/ pi 2)))
+            (coords cx (+ cy max-y)))
+          (loop for (x y) on (coords) by #'cddr
+                minimizing x into xmin
+                minimizing y into ymin
+                maximizing x into xmax
+                maximizing y into ymax
+                finally (return (values xmin ymin xmax ymax)))))))
+
+(defun ellipse-normal-radii* (a b c f)
+  (let* ((beta (/ (- c a) b))
+         (slope- (- beta (sqrt (1+ (square beta)))))
+         (slope+ (+ beta (sqrt (1+ (square beta)))))
+         (denom- (+ a (* b slope-) (* c (square slope-))))
+         (denom+ (+ a (* b slope+) (* c (square slope+)))))
+    (when (and (> denom- 0) (> denom+ 0))
+      (let* ((x1 (sqrt (/ (- f) denom-)))
+             (y1 (* slope- x1))
+             (x2 (sqrt (/ (- f) denom+)))
+             (y2 (* slope+ x2)))
+        (values x1 y1 x2 y2)))))
+
+;;; This is similar to the ellipse-implicit-equation but it doesn't assume that
+;;; the ellipse is positioned at the center.
 (defun ellipse-coefficients (ell)
   ;; Returns the coefficients of the equation specifying the ellipse
   ;; as in ax^2 + by^2 + cxy + dx + dy - f = 0
@@ -782,8 +896,7 @@ y2."
   ;;   (x^2)/a + (y^2)/b - 1 = 0 for an axis aligned ellipse, but
   ;;   I rather choose to treat all coefficients as simple factors instead
   ;;   of denominators.
-  (with-slots (tr) ell
-    ;; Why the inverse here?
+  (let ((tr (polar->screen ell)))
     (multiple-value-bind (a b d e c f)
         (get-transformation (invert-transformation tr))
       (values
@@ -794,150 +907,35 @@ y2."
        (+ (* 2 b c) (* 2 e f))          ; y
        (+ (* c c) (* f f) -1)))))
 
-;;; Straight from the horse's mouth -- moore
-;;;
-;;; Axis of an ellipse
-;;; ------------------
-;;;
-;;; Given an ellipse with its center at the origin, as
-;;;
-;;;    ax^2 + by^2 + cxy - 1 = 0
-;;;
-;;; The two axis of an ellipse are characterized by minimizing and
-;;; maximizing the radius. Let (x,y) be a point on the delimiter of
-;;; the ellipse. It's radius (distance from the origin) then is:
-;;;
-;;;    r^2 = x^2 + y^2
-;;;
-;;; To find the axis can now be stated as an minimization problem with
-;;; constraints. So mechanically construct the auxiliarry function H:
-;;;
-;;;   H = x^2 + y^2 - k(ax^2 + by^2 + cxy - 1)
-;;;
-;;; So the following set of equations remain to be solved
-;;;
-;;;   (I)   dH/dx = 0 = 2x + 2kax + kcy
-;;;  (II)   dH/dy = 0 = 2y + 2kby + kcx
-;;; (III)   dH/dk = 0 = ax^2 + by^2 + cxy - 1
-;;;
-;;; Unfortunately, as I always do the math work - hopelessly, even -
-;;; Maxima is the tool of my choice:
-;;;
-;;; g1: 2*x + 2*k*a*x + k*c*y$
-;;; g2: 2*y + 2*k*b*y + k*c*x$
-;;; g3: a*x*x + b*y*y + c*x*y -1$
-;;;
-;;; sol1: solve ([g1,g2],[k,y])$
-;;;
-;;; /* This yields two solutions because of the squares with occur. The
-;;;  * last equation (G3) must therefore be handled for both solutions for
-;;;  * y.
-;;;  */
-;;;
-;;; y1: rhs(first(rest(first(sol1))))$
-;;; y2: rhs(first(rest(first(rest(sol1)))))$
-;;;
-;;; /* Substitute the 'y' found. */
-;;; sol2: solve(subst(y1,y,g3),x);
-;;; x11: rhs(first(sol2));
-;;; x12: rhs(first(rest(sol2)));
-;;;
-;;; sol3: solve(subst(y2,y,g3),x);
-;;; x21: rhs(first(sol3));
-;;; x22: rhs(first(rest(sol3)));
-;;;
-;;; /* dump everything */
-;;; dumpsol([[x=x11,y=y1], [x=x12,y=y1], [x=x21,y=y2], [x=x22,y=y2]]);
-
-(defun ellipse-normal-radii* (ell)
-  (multiple-value-bind (a b c) (ellipse-coefficients ell)
-    (cond ((coordinate= 0 c)
-           ;; this is the unit circle
-           (values  0 (sqrt (/ 1 b))
-                    (sqrt (/ 1 a)) 0))
-          (t
-           (let* ((x1 (- (/ c
-                            (sqrt (+ (- (* (* c c)
-                                           (sqrt (+ (* c c)
-                                                    (* b b)
-                                                    (- (* 2 a b)) (* a a)))))
-                                     (- (* 2 (* b b)
-                                           (sqrt (+ (* c c) (* b b)
-                                                    (- (* 2 a b)) (* a a)))))
-                                     (* 2 a b (sqrt (+ (* c c) (* b b)
-                                                       (- (* 2 a b))
-                                                       (* a a))))
-                                     (* 2 b (* c c))
-                                     (* 2 (expt b 3))
-                                     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
-                  (y1 (- (/ (+ (* (sqrt (+ (* c c)
-                                           (* b b)
-                                           (- (* 2 a b))
-                                           (* a a)))
-                                  x1)
-                               (- (* b x1)) (* a x1))
-                            c)))
-                  (x2 (- (/ c
-                            (sqrt (+ (* (* c c)
-                                        (sqrt (+ (* c c)
-                                                 (* b b)
-                                                 (- (* 2 a b))
-                                                 (* a a))))
-                                     (* 2 (* b b) (sqrt (+ (* c c)
-                                                           (* b b)
-                                                           (- (* 2 a b))
-                                                           (* a a))))
-                                     (- (* 2 a b (sqrt (+ (* c c)
-                                                          (* b b)
-                                                          (- (* 2 a b))
-                                                          (* a a)))))
-                                     (* 2 b (* c c))
-                                     (* 2 (expt b 3))
-                                     (- (* 4 a (* b b))) (* 2 (* a a) b))))))
-                  (y2 (- (/ (+ (- (* (sqrt (+ (* c c)
-                                              (* b b)
-                                              (- (* 2 a b))
-                                              (* a a)))
-                                     x2))
-                               (- (* b x2)) (* a x2))
-                            c))))
-             (values x1 y1 x2 y2))))))
-
-;;; This function is used in `ellipse-simplified-representation' to fixup
-;;; normalized radius lengths. Can't be interchanged with
-;;; `%ellipse-angle->position' because of the rotation inversion.
-(defun %ellipse-simplified-representation/radius (ellipse angle)
-  (declare (optimize (speed 3)) (inline))
-  (with-slots (tr) ellipse
-    (let* ((base-angle (untransform-angle tr angle))
-           (x (cos base-angle))
-           (y (sin base-angle)))
-      (multiple-value-bind (mxx mxy myx myy tx ty) (get-transformation tr)
-        (values (+ (* mxx x) (* mxy y) tx)
-                (+ (* myx x) (* myy y) ty))))))
-
 (defun ellipse-simplified-representation (el)
-  ;; returns H (horizontal radius), V (vertical radius) and rotation
-  ;; angle in screen coordinates. `ellipse-normal-radii*' returns
-  ;; vectors with correct direction, but radius length is shorter than
-  ;; in reality (verified with experimentation, not analytically), so
-  ;; we compute radius from phi.  If the length were right, we'd
-  ;; compute h/v with the following: (sqrt (+ (expt (* hx (cos phi))
-  ;; 2) (expt (* hy (sin phi)) 2))) (sqrt (+ (expt (* vx (sin phi)) 2)
-  ;; (expt (* vy (cos phi)) 2)))
   (multiple-value-bind (center-x center-y) (ellipse-center-point* el)
-    (multiple-value-bind (hx hy) (ellipse-normal-radii* el)
-      (let* ((phi (atan* hx hy)))
-        ;(multiple-value-bind (hx hy vx vy) (%ellipse-angle->distance el phi))
-        (multiple-value-bind (hx hy)
-            (%ellipse-simplified-representation/radius el phi)
-          (multiple-value-bind (vx vy)
-              (%ellipse-simplified-representation/radius el (+ phi (/ pi 2)))
-           (values center-x
-                   center-y
-                   (sqrt (+ (expt (- center-x hx) 2) (expt (- center-y hy) 2)))
-                   (sqrt (+ (expt (- center-x vx) 2) (expt (- center-y vy) 2)))
-                   phi)))))))
+    (values center-x center-y
+            (ellipse-radius-x el)
+            (ellipse-radius-y el)
+            (ellipse-rotation el))))
+
+(defun ellipse-normalized-representation* (rdx1 rdy1 rdx2 rdy2)
+  (multiple-value-bind (a b c f)
+      (ellipse-implicit-equation rdx1 rdy1 rdx2 rdy2)
+    (cond
+      ((coordinate= f 0)
+       nil)
+      ;; The ellipse is in "standard" position, that is it is xy-axis
+      ;; aligned or it is a circle.
+      ((coordinate= b 0)
+       (multiple-value-bind (min-x min-y max-x max-y)
+           (ellipse-bounding-rectangle rdx1 rdy1 rdx2 rdy2)
+         (declare (ignore min-x min-y))
+         (values max-x max-y 0 max-x 0 0 max-y)))
+      (t
+       (multiple-value-bind (cdx1 cdy1 cdx2 cdy2)
+           (ellipse-normal-radii* a b c f)
+         (if (null cdx1)               ; ultra thin ellipse (negligible)
+             nil
+             (let ((rx (sqrt (+ (square cdx1) (square cdy1))))
+                   (ry (sqrt (+ (square cdx2) (square cdy2))))
+                   (theta (find-angle* cdx1 cdy1 1 0)))
+               (values rx ry theta cdx1 cdy1 cdx2 cdy2))))))))
 
 ;;; Intersection of Ellipse vs. Line
 
@@ -1022,46 +1020,43 @@ y2."
 
 (defun intersection-ellipse/ellipse (e1 e2)
   ;; We reduce one of the two ellipses to the unit circle.
-  (let ((a (invert-transformation (slot-value e1 'tr))))
-    (let ((r (intersection-ellipse/unit-circle (transform-region a e2))))
-      (if (atom r)
-          r
+  (let* ((e1-tr (polar->screen e1))
+         (a (invert-transformation e1-tr))
+         (r (intersection-ellipse/unit-circle (transform-region a e2))))
+    (if (atom r)
+        r
         (mapcar (lambda (p)
                   (multiple-value-bind (x y)
-                      (transform-position (slot-value e1 'tr) (car p) (cdr p))
+                      (transform-position e1-tr (car p) (cdr p))
                     (make-point x y)))
-                r)))))
+                r))))
 
 (defun intersection-ellipse/unit-circle (ell)
   (multiple-value-bind (a b c d e f) (ellipse-coefficients ell)
-    (let ((pn (elli-polynom ell)))
-      (cond ((= (length pn) 0)
-             :coincident)
-            (t
-             (let ((ys (newton-iteration pn 0d0))
-                   (res nil))
-               (dolist (y ys)
-                 (let ((x (sqrt (- 1 (* y y)))))
-                   (when (realp x)
-                     (when (coordinate= 0 (ellipse-equation a b c d e f x y))
-                       (pushnew (cons x y) res :test #'equal))
-                     (when (coordinate= 0 (ellipse-equation a b c d e f (- x) y))
-                       (pushnew (cons (- x) y) res :test #'equal)))))
-               res))))))
-
-(defun ellipse-equation (a b c d e f x y)
-  (+ (* a x x) (* b y y) (* c x y) (* d x) (* e y) f))
-
-(defun elli-polynom (ell)
-  ;; It is rather funny that for two circles we always get a polynomial
-  ;; of degree two.
-  (multiple-value-bind (a b c d e f) (ellipse-coefficients ell)
-    (canonize-polynom
-     (vector (+ (* (- b a) (- b a)) (* c c))
-             (+ (* 2 b e) (* -2 a e) (* 2 c d))
-             (+ (* e e) (* 2 (- b a) (+ a f)) (* -1 c c) (* d d))
-             (+ (* 2 e a) (* 2 e f) (* -2 c d))
-             (+ (* (+ a f) (+ a f)) (* -1 d d))))))
+    (flet ((ellipse-equation (x y)
+             (+ (* a x x) (* b y y) (* c x y) (* d x) (* e y) f))
+           (ellipse-polynom ()
+             ;; It is rather funny that for two circles we always get a
+             ;; polynomial of degree two.
+             (canonize-polynom
+              (vector (+ (* (- b a) (- b a)) (* c c))
+                      (+ (* 2 b e) (* -2 a e) (* 2 c d))
+                      (+ (* e e) (* 2 (- b a) (+ a f)) (* -1 c c) (* d d))
+                      (+ (* 2 e a) (* 2 e f) (* -2 c d))
+                      (+ (* (+ a f) (+ a f)) (* -1 d d))))))
+      (let ((pn (ellipse-polynom)))
+        (when (= (length pn) 0)
+          (return-from intersection-ellipse/unit-circle :coincident))
+        (let ((ys (newton-iteration pn 0d0))
+              (res nil))
+          (dolist (y ys)
+            (let ((x (sqrt (- 1 (* y y)))))
+              (when (realp x)
+                (when (coordinate= 0 (ellipse-equation x y))
+                  (pushnew (cons x y) res :test #'equal))
+                (when (coordinate= 0 (ellipse-equation (- x) y))
+                  (pushnew (cons (- x) y) res :test #'equal)))))
+          res)))))
 
 ;;; We just build ourselves a simple newton iteration. Sometimes we fail
 ;;; desperately at local minima. But apart from that convergence behaviour for
@@ -1074,39 +1069,31 @@ y2."
 ;;; be something better than newton iteration. I vaguely remember a numerics
 ;;; lecture ...
 
-(defun newton-ziel-gerade (pn x &optional (n 4))
-  (cond ((= n 0) x)
-        ((multiple-value-bind (f p2) (horner-schema pn x)
-           (multiple-value-bind (f*) (horner-schema p2 x)
-             (newton-ziel-gerade pn (- x (/ f f*)) (- n 1)))))))
-
-(defun solve-p1 (b c)
-  (if (= b 0)
-      nil
-    (list (- (/ c b)))))
-
-(defun solve-p2 (a b c)
-  (cond ((= a 0)
-         (solve-p1 b c))
-        (t
-         (let* ((p (/ b a))
-                (q (/ c a))
-                (d (- (/ (* p p) 4) q)))
-           (cond ((< d 0)
-                  nil)
-                 ((= d 0)
-                  (list (/ p 2)))
-                 (t
-                  (list (+ (/ p 2) (sqrt d))
-                        (- (/ p 2) (sqrt d)))))))))
-
 (defun maybe-solve-polynom-trivially (pn)
-  (case (length pn)
-    (0 (values nil t))
-    (1 (values nil t))
-    (2 (values (solve-p1 (aref pn 0) (aref pn 1)) t))
-    (3 (values (solve-p2 (aref pn 0) (aref pn 1) (aref pn 2)) t))
-    (t (values nil nil))))
+  (labels ((solve-p1 (b c)
+             (if (= b 0)
+                 nil
+                 (list (- (/ c b)))))
+           (solve-p2 (a b c)
+             (cond ((= a 0)
+                    (solve-p1 b c))
+                   (t
+                    (let* ((p (/ b a))
+                           (q (/ c a))
+                           (d (- (/ (* p p) 4) q)))
+                      (cond ((< d 0)
+                             nil)
+                            ((= d 0)
+                             (list (/ p 2)))
+                            (t
+                             (list (+ (/ p 2) (sqrt d))
+                                   (- (/ p 2) (sqrt d))))))))))
+   (case (length pn)
+     (0 (values nil t))
+     (1 (values nil t))
+     (2 (values (solve-p1 (aref pn 0) (aref pn 1)) t))
+     (3 (values (solve-p2 (aref pn 0) (aref pn 1) (aref pn 2)) t))
+     (t (values nil nil)))))
 
 (defun canonize-polynom (pn)
   (cond ((= (length pn) 0) pn)
@@ -1117,75 +1104,169 @@ y2."
 (defun newton-iteration (polynom x-start)
   ;; ATTENTION: Adapted specifically to our problem, do not use this without
   ;; reading!
-  (multiple-value-bind (sol done?) (maybe-solve-polynom-trivially polynom)
-    (cond (done?
-           sol)
-          (t
-           (let ((x x-start)
-                 x1
-                 (n 0)
-                 (pn polynom)
-                 (eps-f 0d0)
-                 (eps-f* 0d-16)
-                 (eps-x 1d-20)
-                 (m 20) ; maximum number of steps
-                 (res nil))
-             (loop
-               (cond ((> n m)
-                      (return)))
-               (multiple-value-bind (f p2) (horner-schema pn x)
-                 (multiple-value-bind (f*) (horner-schema p2 x)
-                   (cond ((<= (abs f*) eps-f*)
-                          ;; We are stuck at an extremum -- continue with random
-                          ;; starting value
-                          (setf x1 (+ 1d0 (random 2d0))))
-                         (t
-                          (setf x1 (- x (/ f f*)))
-                          (cond ((or (<= (abs f) eps-f)
-                                     (<= (abs (- x1 x)) eps-x))
-                                 ;; a few more steps of newton, to improve
-                                 ;; the result
-                                 (setf x1 (newton-ziel-gerade polynom x1))
-                                 (push x1 res)
-                                 ;; divide (roots)
-                                 (multiple-value-bind (f p2) (horner-schema pn x1)
-                                   f
-                                   (setq pn (canonize-polynom p2))
-                                   (multiple-value-bind (sol done?)
-                                       (maybe-solve-polynom-trivially pn)
-                                     (when done?
-                                       ;; iterate more nonetheless here -- is
-                                       ;; this a good idea?
-                                       (setf sol
-                                             (mapcar (lambda (x)
-                                                       (newton-ziel-gerade
-                                                        polynom x))
-                                                     sol))
-                                       (setf res (nconc sol res))
-                                       (return))))
-                                 (setf x1 x-start)
-                                 (setq n 0))))))
-                 (setf x (min 1d0 (max -1d0 x1))) ; Is this allowed?
-                 (incf n)))
-             res)))))
+  (labels ((horner-schema (polynomial x)
+             ;; Evaluate POLYNOMIAL by means of horner's method at the
+             ;; place `x'; returns two values:
+             ;; - the value of the function
+             ;; - the last line of horner's method (result of division)
+             (let ((n (length polynomial)))
+               (cond ((= n 0) (values 0))
+                     ((= n 1) (values (aref polynomial 0) '#()))
+                     (t
+                      (let ((b (make-array (1- n))))
+                        (setf (aref b 0) (aref polynomial 0))
+                        (do ((i 1 (+ i 1)))
+                            ((= i (- n 1))
+                             (values
+                              (+ (* (aref b (- i 1)) x) (aref polynomial i))
+                              b))
+                          (setf (aref b i) (+ (* (aref b (- i 1)) x)
+                                              (aref polynomial i)))))))))
+           (newton-ziel-gerade (pn x &optional (n 4))
+             (cond ((= n 0) x)
+                   ((multiple-value-bind (f p2) (horner-schema pn x)
+                      (multiple-value-bind (f*) (horner-schema p2 x)
+                        (newton-ziel-gerade pn (- x (/ f f*)) (- n 1))))))))
+    (multiple-value-bind (sol done?) (maybe-solve-polynom-trivially polynom)
+      (when done? (return-from newton-iteration sol))
+      (let ((x x-start)
+            x1
+            (n 0)
+            (pn polynom)
+            (eps-f 0d0)
+            (eps-f* 0d-16)
+            (eps-x 1d-20)
+            (m 20)               ; maximum number of steps
+            (res nil))
+        (loop
+          (when (> n m)
+            (return))
+          (multiple-value-bind (f p2) (horner-schema pn x)
+            (multiple-value-bind (f*) (horner-schema p2 x)
+              (cond ((<= (abs f*) eps-f*)
+                     ;; We are stuck at an extremum -- continue with random
+                     ;; starting value
+                     (setf x1 (+ 1d0 (random 2d0))))
+                    (t
+                     (setf x1 (- x (/ f f*)))
+                     (cond ((or (<= (abs f) eps-f)
+                                (<= (abs (- x1 x)) eps-x))
+                            ;; a few more steps of newton, to improve
+                            ;; the result
+                            (setf x1 (newton-ziel-gerade polynom x1))
+                            (push x1 res)
+                            ;; divide (roots)
+                            (multiple-value-bind (f p2) (horner-schema pn x1)
+                              f
+                              (setq pn (canonize-polynom p2))
+                              (multiple-value-bind (sol done?)
+                                  (maybe-solve-polynom-trivially pn)
+                                (when done?
+                                  ;; iterate more nonetheless here -- is
+                                  ;; this a good idea?
+                                  (setf sol
+                                        (mapcar (lambda (x)
+                                                  (newton-ziel-gerade
+                                                   polynom x))
+                                                sol))
+                                  (setf res (nconc sol res))
+                                  (return))))
+                            (setf x1 x-start)
+                            (setq n 0))))))
+            (setf x (min 1d0 (max -1d0 x1))) ; Is this allowed?
+            (incf n)))
+        res))))
 
-(defun horner-schema (polynomial x)
-  ;; Evaluate POLYNOMIAL by means of horner's method at the
-  ;; place `x'; returns two values:
-  ;; - the value of the function
-  ;; - the last line of horner's method (result of division)
-  (let ((n (length polynomial)))
-    (cond ((= n 0) (values 0))
-          ((= n 1) (values (aref polynomial 0) '#()))
-          (t
-           (let ((b (make-array (1- n))))
-             (setf (aref b 0) (aref polynomial 0))
-             (do ((i 1 (+ i 1)))
-                 ((= i (- n 1))
-                  (values
-                   (+ (* (aref b (- i 1)) x) (aref polynomial i))
-                   b))
-               (setf (aref b i) (+ (* (aref b (- i 1)) x) (aref polynomial i)))))))))
+(defun polygonalize-ellipse (cx cy rdx1 rdy1 rdx2 rdy2
+                             start-angle end-angle
+                             &key (filled t) (precision 0.1))
+  (multiple-value-bind (a b theta #|cdx1 cdy1 cdx2 cdy2|#)
+      (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
+    (collect (control-coords)
+      (labels ((value (eta)
+                 (ellipse-point (- eta theta) cx cy a b theta))
+               (approximate-ellipse-inner (eta1 eta2)
+                 (let ((boundary (+ eta1 (/ pi 2) (* eta2 long-float-epsilon))))
+                   (when (> eta2 boundary)
+                     (approximate-ellipse-inner eta1 boundary)
+                     (approximate-ellipse-inner boundary eta2)
+                     (return-from approximate-ellipse-inner))
+                   (multiple-value-bind (x1 y1) (value eta1)
+                     (multiple-value-bind (x2 y2) (value eta2)
+                       (if (> (distance* x1 y1 x2 y2) precision)
+                           (let ((middle (/ (+ eta1 eta2) 2)))
+                             (approximate-ellipse-inner eta1 middle)
+                             (approximate-ellipse-inner middle eta2))
+                           (control-coords x2 y2)))))))
+        (when filled
+          (control-coords cx cy))
+        ;; Ellipse angles are specified CCW.
+        (let ((eta1 (- end-angle))
+              (eta2 (- start-angle)))
+          (multiple-value-bind (x0 y0) (value eta1)
+            (control-coords x0 y0))
+          (approximate-ellipse-inner eta1 eta2))
+        (control-coords)))))
+
+;;; Bezier utilities
+
+(defun cubic-bezier-dimension-min-max (w0 w1 w2 w3)
+  (flet ((solve-quadratic (a2 a1 a0 &key complex-roots multiple-roots)
+           (when (zerop a2)
+             (return-from solve-quadratic (- (/ a0 a1))))
+           (unless (= a2 1)
+             (setf a1 (/ a1 a2)
+                   a0 (/ a0 a2)))
+           (let* ((-a1/2 (- (/ a1 2.0)))
+                  (r (- (* -a1/2 -a1/2) a0)))
+             (cond ((zerop r)
+                    (if multiple-roots
+                        (values -a1/2 -a1/2)
+                        -a1/2))
+                   ((minusp r)
+                    (if complex-roots
+                        (values (+ -a1/2 (sqrt r)) (- -a1/2 (sqrt r)))
+                        (values)))
+                   (t
+                    (values (+ -a1/2 (sqrt r)) (- -a1/2 (sqrt r)))))))
+         (evaluate-bezier (w0 w1 w2 w3 a)
+           (let ((1-a (- 1.0 a)))
+             (+ (* 1-a 1-a 1-a w0)
+                (* 3.0 1-a 1-a a w1)
+                (* 3.0 1-a a a w2)
+                (* a a a w3)))))
+    (when (> w0 w3)
+      (rotatef w0 w3)
+      (rotatef w1 w2))
+    (when (and (<= w0 w1 w3)
+               (<= w0 w2 w3))
+      (return-from cubic-bezier-dimension-min-max
+        (values w0 w3)))
+    (let ((a (+ (- w0) (* 3 w1) (* -3 w2) w3))
+          (b (+ (* 2 w0) (* -4 w1) (* 2 w2)))
+          (c (- w1 w0)))
+      (if (zerop a)
+          (if (zerop b)
+              (values w0 w3)
+              (let ((candidate (/ (- c) b)))
+                (if (or (<= candidate 0.0)
+                        (>= candidate 1.0))
+                    (values w0 w3)
+                    (let ((w (evaluate-bezier w0 w1 w2 w3 candidate)))
+                      (values (min w w0) (max w w3))))))
+          (multiple-value-bind (candidate0 candidate1)
+              (solve-quadratic a b c :multiple-roots t)
+            (if (null candidate0)
+                (values w0 w3)
+                (let ((wa (evaluate-bezier w0 w1 w2 w3 candidate0))
+                      (wb (evaluate-bezier w0 w1 w2 w3 candidate1)))
+                  (if (or (<= candidate0 0.0) (>= candidate0 1.0))
+                      (if (or (<= candidate1 0.0) (>= candidate1 1.0))
+                          (values w0 w3)
+                          (values (min wb w0) (max wb w3)))
+                      (if (or (<= candidate1 0.0) (>= candidate1 1.0))
+                          (values (min wa w0) (max wa w3))
+                          (values (min wa wb w0) (max wa wb w3)))))))))))
 
 ;;; Routines for approximating ellipses as bezier curves
 ;;;
@@ -1217,16 +1298,13 @@ y2."
 ;;; to the semi-major axis, and the angle of the semi-major axis
 ;;; relative to the positive x-axis. So, given two radii, we call the
 ;;; code in clim-basic/region.lisp that gives a, b, and theta.
-(defun reparameterize-ellipse (radius1-dx radius1-dy radius2-dx radius2-dy)
-  "Returns three values, the length of radius 1, the length of radius
-2, and the angle (CCW in cartesian coordinates) between the two
-vectors."
 
-  (let ((ell (make-ellipse* 0 0 radius1-dx radius1-dy radius2-dx radius2-dy)))
-    (multiple-value-bind (cx cy a b theta)
-        (climi::ellipse-simplified-representation ell)
-      (declare (ignore cx cy))
-      (values a b theta))))
+(defun reparameterize-ellipse (rdx1 rdy1 rdx2 rdy2)
+  "Returns three values, the length of radius 1, the length of radius 2,
+and the angle (CCW in cartesian coordinates) between the two vectors."
+  (multiple-value-bind (a b theta)
+      (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
+    (values a b theta)))
 
 (defun ellipse-point (lambda0 center-x center-y a b theta)
   "Given an ellipse having center CENTER-X, CENTER-Y, and two radii of
@@ -1351,110 +1429,29 @@ and RADIUS2-DY"
                 (- p2x e2x) (- p2y e2y)
                 p2x p2y)))))
 
-;;; Bezier utilities
-
-(defun cubic-bezier-dimension-min-max (w0 w1 w2 w3)
-  (flet ((solve-quadratic (a2 a1 a0 &key complex-roots multiple-roots)
-           (when (zerop a2)
-             (return-from solve-quadratic (- (/ a0 a1))))
-           (unless (= a2 1)
-             (setf a1 (/ a1 a2)
-                   a0 (/ a0 a2)))
-           (let* ((-a1/2 (- (/ a1 2.0)))
-                  (r (- (* -a1/2 -a1/2) a0)))
-             (cond ((zerop r)
-                    (if multiple-roots
-                        (values -a1/2 -a1/2)
-                        -a1/2))
-                   ((minusp r)
-                    (if complex-roots
-                        (values (+ -a1/2 (sqrt r)) (- -a1/2 (sqrt r)))
-                        (values)))
-                   (t
-                    (values (+ -a1/2 (sqrt r)) (- -a1/2 (sqrt r)))))))
-         (evaluate-bezier (w0 w1 w2 w3 a)
-           (let ((1-a (- 1.0 a)))
-             (+ (* 1-a 1-a 1-a w0)
-                (* 3.0 1-a 1-a a w1)
-                (* 3.0 1-a a a w2)
-                (* a a a w3)))))
-    (when (> w0 w3)
-      (rotatef w0 w3)
-      (rotatef w1 w2))
-    (when (and (<= w0 w1 w3)
-               (<= w0 w2 w3))
-      (return-from cubic-bezier-dimension-min-max
-        (values w0 w3)))
-    (let ((a (+ (- w0) (* 3 w1) (* -3 w2) w3))
-          (b (+ (* 2 w0) (* -4 w1) (* 2 w2)))
-          (c (- w1 w0)))
-      (if (zerop a)
-          (if (zerop b)
-              (values w0 w3)
-              (let ((candidate (/ (- c) b)))
-                (if (or (<= candidate 0.0)
-                        (>= candidate 1.0))
-                    (values w0 w3)
-                    (let ((w (evaluate-bezier w0 w1 w2 w3 candidate)))
-                      (values (min w w0) (max w w3))))))
-          (multiple-value-bind (candidate0 candidate1)
-              (solve-quadratic a b c :multiple-roots t)
-            (if (null candidate0)
-                (values w0 w3)
-                (let ((wa (evaluate-bezier w0 w1 w2 w3 candidate0))
-                      (wb (evaluate-bezier w0 w1 w2 w3 candidate1)))
-                  (if (or (<= candidate0 0.0) (>= candidate0 1.0))
-                      (if (or (<= candidate1 0.0) (>= candidate1 1.0))
-                          (values w0 w3)
-                          (values (min wb w0) (max wb w3)))
-                      (if (or (<= candidate1 0.0) (>= candidate1 1.0))
-                          (values (min wa w0) (max wa w3))
-                          (values (min wa wb w0) (max wa wb w3)))))))))))
-
 ;;; Bezier -> Polygon
 ;;; Converting a path to a polyline or an area to a polygon
 
-;;; Return a point that is part way between two other points.
-(defun part-way (p0 p1 alpha)
-  (multiple-value-bind (x0 y0) (point-position p0)
-    (multiple-value-bind (x1 y1) (point-position p1)
-      (make-point (+ (* (- 1 alpha) x0) (* alpha x1))
-                  (+ (* (- 1 alpha) y0) (* alpha y1))))))
-
-;;; Return the Euclidean distance between two points.
-(defun distance (p0 p1)
-  (multiple-value-bind (x0 y0) (point-position p0)
-    (multiple-value-bind (x1 y1) (point-position p1)
-      (let* ((dx (- x1 x0))
-             (dx2 (* dx dx))
-             (dy (- y1 y0))
-             (dy2 (* dy dy)))
-        (sqrt (+ dx2 dy2))))))
-
-;;; convert a cubic bezier segment to a list of line segments.
-(defun %polygonalize (p0 p1 p2 p3 &key (precision 0.01))
-  (if (< (- (+ (distance p0 p1)
-               (distance p1 p2)
-               (distance p2 p3))
-            (distance p0 p3))
-         precision)
-      (list p3)
-      (let* ((p01 (part-way p0 p1 0.5))
-             (p12 (part-way p1 p2 0.5))
-             (p23 (part-way p2 p3 0.5))
-             (p012 (part-way p01 p12 0.5))
-             (p123 (part-way p12 p23 0.5))
-             (p0123 (part-way p012 p123 0.5)))
-        (nconc (%polygonalize p0 p01 p012 p0123 :precision precision)
-               (%polygonalize p0123 p123 p23 p3 :precision precision)))))
-
-(defun polygonalize (points)
-  (loop with start = (first points)
-        for (p0 p1 p2 p3) on points by #'cdr
-        while p3
-        appending (%polygonalize p0 p1 p2 p3) into result
-        finally (return (list* start result))))
-
-(defun polygonalize* (coords)
-  (expand-point-seq
-   (polygonalize (coord-seq->point-seq coords))))
+(defun polygonalize-bezigon (coords &key (precision 0.1))
+  (labels ((%polygonalize (p0 p1 p2 p3)
+             "Convert a cubic bezier segment to a list of line segments."
+             (if (< (- (+ (distance p0 p1)
+                          (distance p1 p2)
+                          (distance p2 p3))
+                       (distance p0 p3))
+                    precision)
+                 (list p3)
+                 (let* ((p01 (part-way p0 p1 0.5))
+                        (p12 (part-way p1 p2 0.5))
+                        (p23 (part-way p2 p3 0.5))
+                        (p012 (part-way p01 p12 0.5))
+                        (p123 (part-way p12 p23 0.5))
+                        (p0123 (part-way p012 p123 0.5)))
+                   (nconc (%polygonalize p0 p01 p012 p0123)
+                          (%polygonalize p0123 p123 p23 p3))))))
+    (loop with points = (coord-seq->point-seq coords)
+          with start = (first points)
+          for (p0 p1 p2 p3) on points by #'cdr
+          while p3
+          appending (%polygonalize p0 p1 p2 p3) into result
+          finally (return (expand-point-seq (list* start result))))))

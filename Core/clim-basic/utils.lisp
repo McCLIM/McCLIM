@@ -115,6 +115,11 @@
 (defun 2- (x)
   (- x 2))
 
+(declaim (inline lerp unlerp))
+
+(defun lerp (v a b)
+  (+ (* (- 1 v) a) (* v b)))
+
 (defun unlerp (v a b)
   "Inverse linear interpolate (lerp).
 

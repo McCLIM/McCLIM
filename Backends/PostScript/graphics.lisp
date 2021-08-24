@@ -169,7 +169,7 @@ concat dup rotate sub
 { 0 0 lineto 1 0 lineto } {} ifelse
 setmatrix")
     (stream ellipse filled)
-  (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-normal-radii* ellipse)
+  (multiple-value-bind (ndx1 ndy1 ndx2 ndy2) (ellipse-radii ellipse)
     (let* ((center (ellipse-center-point ellipse))
            (cx (point-x center))
            (cy (point-y center))

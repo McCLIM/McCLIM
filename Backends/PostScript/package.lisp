@@ -14,8 +14,6 @@
                 #:map-repeated-sequence
                 #:atan*
 
-                #:ellipse-normal-radii*
-
                 #:get-transformation
                 #:untransform-angle
                 #:with-transformed-position
