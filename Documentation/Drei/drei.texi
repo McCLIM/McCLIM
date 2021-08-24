@@ -55,7 +55,7 @@ editor substrates provided by McCLIM. Drei is activated by default.
 @node Tutorials
 @chapter Tutorials
 
-(TODO)
+@include tutorials/commands.texi
 
 @node How-to Guides
 @chapter How-to Guides

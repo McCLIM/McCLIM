@@ -3,7 +3,6 @@
 
 @menu
 * Drei Command Tables::
-* Examples Of Defining Drei Commands::
 * Syntax Command Table Protocol Reference::
 @end menu
 
@@ -69,73 +68,6 @@ This command table is only active when Drei is used as an input-editor.
 
 When you define keybindings for your commands, you should put the
 keybindings in the same command table as the command itself.
-
-@node Examples Of Defining Drei Commands
-@subsection Examples Of Defining Drei Commands
-@cindex Drei command defining
-@cindex defining Drei commands
-
-A common text editing task is to repeat the word at point, but for some
-reason, Drei does not come with a command to do this, so we need to
-write our own. Fortunately, Drei is extensible software, and to that
-end, a @package{DREI-USER} package is provided that is intended for user
-customizations. We're going to create a standard CLIM command named
-@cl{com-repeat-word} in the command table @cl{editing-table}. The
-implementation consists of cloning the current point, move it a word
-backward, and insert into the buffer the sequence delimited by point and
-our moved mark. Our command takes no arguments.
-
-@lisp
-(define-command (com-repeat-word :name t
-                                 :command-table editing-table)
-    ()
-  (let ((mark (clone-mark (point))))
-    (backward-word mark (current-syntax 1))
-    (insert-sequence mark (region-to-sequence mark (point)))))
-@end lisp
-
-For @cl{(point)} and @cl{(current-syntax)}, see @ref{Access Functions}.
-
-This command facilitates the single repeat of a word, but that's
-it. This is not very useful - instead, we would like a command that
-could repeat a word an arbitrary (user-supplied) number of times. The
-primary way for a CLIM command to ask for user-supplied values is to use
-command arguments. We define a new command that takes an integer
-argument specifying the number of times to repeat the word at point.
-
-@lisp
-(define-command (com-repeat-word :name t
-                                 :command-table editing-table)
-    ((count 'integer :prompt "Number of repeats"))
-  (let ((mark (clone-mark (point))))
-    (backward-word mark (current-syntax 1))
-    (let ((word (region-to-sequence mark (point))))
-      (dotimes (i count)
-        (insert-sequence mark word)))))
-@end lisp
-
-Great - our command is now pretty full-featured. But with an editing
-operation as common as this, we really want it to be quickly accessible
-via some intuitive keystroke. We choose @kbd{M-C-r}. Also, it'd be nice
-if, instead of interactively quering us for commands, the command would
-just use the value of the numeric argument as the number of times to
-repeat. There's no way to do this with a named command (ie. when you run
-the command with @kbd{M-x}), but it's quite easy to do in a
-keybinding. We use the ESA @cl{set-key} function:
-
-@lisp
-(set-key `(com-repeat-word ,*numeric-argument-marker*)
-         'editing-table
-         '((#\r :control :meta)))
-@end lisp
-
-Now, pressing @kbd{M-C-r} will result in the @cl{com-repeat-word}
-command being run with the first argument substituted for the value of
-the numeric argument. Since the numeric argument will be 1 if nothing
-else has been specified by the user, we are guaranteed that the first
-argument is always an integer, and we are guaranteed that the
-@var{count} argument will have a sensible default, even if the user does
-not explicitly provide a numeric argument.
 
 @node Syntax Command Table Protocol Reference
 @subsection Syntax Command Table Protocol Reference

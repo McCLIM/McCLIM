@@ -57,4 +57,4 @@ value of the numeric argument whenever the keybinding is invoked. You
 can also use @cl{*numeric-argument-p*} to have a boolean value, stating
 whether or not a numeric argument has been provided by the user,
 inserted. Note that you must write your commands to accept arguments
-before you can do this - @pxref{Examples Of Defining Drei Commands}.
+before you can do this - @pxref{Defining Drei Commands}.
