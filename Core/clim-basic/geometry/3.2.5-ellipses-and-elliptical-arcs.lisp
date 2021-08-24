@@ -77,40 +77,17 @@
 ;;; 2.5.6.1 Constructor Functions for Ellipses and Elliptical Arcs in CLIM
 
 (defun make-elliptical-thing (class cx cy rdx1 rdy1 rdx2 rdy2 start end)
-  (multiple-value-bind (a b c #|d e|# f)
-      (ellipse-implicit-equation rdx1 rdy1 rdx2 rdy2)
-    (cond
-      ((coordinate= f 0)
-       +nowhere+)
-      ;; The ellipse is in "standard" position, that is it is xy-axis
-      ;; aligned or it is a circle.
-      ((coordinate= b 0)
-       (multiple-value-bind (min-x min-y max-x max-y)
-           (ellipse-bounding-rectangle rdx1 rdy1 rdx2 rdy2)
-         (declare (ignore min-x min-y))
-         (make-instance class
-                        :center-point (make-point cx cy)
-                        :conjugate-diameter-1 (make-point max-x 0)
-                        :conjugate-diameter-2 (make-point 0 max-y)
-                        :start-angle start :end-angle end
-                        :theta 0 :radius-x max-x :radius-y max-y
-                        :polar->screen (%polar->screen cx cy max-x 0 0 max-y))))
-      (t
-       (multiple-value-bind (cdx1 cdy1 cdx2 cdy2)
-           (ellipse-normal-radii* a b c f)
-         (if (null cdx1)                ; ultra thin ellipse (negligible)
-             +nowhere+
-             (let ((theta (find-angle* cdx1 cdy1 1 0))
-                   (rx (sqrt (+ (square cdx1) (square cdy1))))
-                   (ry (sqrt (+ (square cdx2) (square cdy2))))
-                   (tr  (%polar->screen cx cy cdx1 cdy1 cdx2 cdy2)))
-               (make-instance class
-                              :center-point (make-point cx cy)
-                              :conjugate-diameter-1 (make-point cdx1 cdy1)
-                              :conjugate-diameter-2 (make-point cdx2 cdy2)
-                              :start-angle start :end-angle end
-                              :theta theta :radius-x rx :radius-y ry
-                              :polar->screen tr))))))))
+  (multiple-value-bind (rx ry theta cdx1 cdy1 cdx2 cdy2)
+      (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
+    (if (null rx)
+        +nowhere+
+        (make-instance class
+         :center-point (make-point cx cy)
+         :conjugate-diameter-1 (make-point cdx1 cdy1)
+         :conjugate-diameter-2 (make-point cdx2 cdy2)
+         :start-angle start :end-angle end
+         :theta theta :radius-x rx :radius-y ry
+         :polar->screen (%polar->screen cx cy cdx1 cdy1 cdx2 cdy2)))))
 
 (defun make-ellipse (center-point
                      radius-1-dx radius-1-dy

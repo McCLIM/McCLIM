@@ -879,6 +879,29 @@ y2."
             (ellipse-radius-y el)
             (ellipse-rotation el))))
 
+(defun ellipse-normalized-representation* (rdx1 rdy1 rdx2 rdy2)
+  (multiple-value-bind (a b c f)
+      (ellipse-implicit-equation rdx1 rdy1 rdx2 rdy2)
+    (cond
+      ((coordinate= f 0)
+       nil)
+      ;; The ellipse is in "standard" position, that is it is xy-axis
+      ;; aligned or it is a circle.
+      ((coordinate= b 0)
+       (multiple-value-bind (min-x min-y max-x max-y)
+           (ellipse-bounding-rectangle rdx1 rdy1 rdx2 rdy2)
+         (declare (ignore min-x min-y))
+         (values max-x max-y 0 max-x 0 0 max-y)))
+      (t
+       (multiple-value-bind (cdx1 cdy1 cdx2 cdy2)
+           (ellipse-normal-radii* a b c f)
+         (if (null cdx1)               ; ultra thin ellipse (negligible)
+             nil
+             (let ((rx (sqrt (+ (square cdx1) (square cdy1))))
+                   (ry (sqrt (+ (square cdx2) (square cdy2))))
+                   (theta (find-angle* cdx1 cdy1 1 0)))
+               (values rx ry theta cdx1 cdy1 cdx2 cdy2))))))))
+
 ;;; Intersection of Ellipse vs. Line
 
 (defun intersection-hline/ellipse (el y)
@@ -1211,13 +1234,12 @@ y2."
 ;;; relative to the positive x-axis. So, given two radii, we call the
 ;;; code in clim-basic/region.lisp that gives a, b, and theta.
 
-(defun reparameterize-ellipse (radius1-dx radius1-dy radius2-dx radius2-dy)
-  "Returns three values, the length of radius 1, the length of radius 2, and the
-angle (CCW in cartesian coordinates) between the two vectors."
-  (let ((ell (make-ellipse* 0 0 radius1-dx radius1-dy radius2-dx radius2-dy)))
-    (multiple-value-bind (cx cy a b theta) (ellipse-simplified-representation ell)
-      (declare (ignore cx cy))
-      (values a b theta))))
+(defun reparameterize-ellipse (rdx1 rdy1 rdx2 rdy2)
+  "Returns three values, the length of radius 1, the length of radius 2,
+and the angle (CCW in cartesian coordinates) between the two vectors."
+  (multiple-value-bind (a b theta)
+      (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
+    (values a b theta)))
 
 (defun ellipse-point (lambda0 center-x center-y a b theta)
   "Given an ellipse having center CENTER-X, CENTER-Y, and two radii of
