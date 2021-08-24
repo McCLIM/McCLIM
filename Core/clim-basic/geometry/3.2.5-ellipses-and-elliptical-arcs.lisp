@@ -177,16 +177,21 @@
            (position-contains-p (polar->screen region)))
       (position-contains-p (polar->screen region)))))
 
-(defmethod bounding-rectangle* ((region elliptical-thing))
-  (multiple-value-bind (min-x min-y max-x max-y)
-      (multiple-value-call #'ellipse-bounding-rectangle
-        (ellipse-radii region))
-    (multiple-value-bind (cx cy)
-        (ellipse-center-point* region)
-      (values (+ cx min-x)
-              (+ cy min-y)
-              (+ cx max-x)
-              (+ cy max-y)))))
+(defmethod bounding-rectangle* ((region ellipse))
+  (multiple-value-call #'ellipse-bounding-rectangle*
+    (ellipse-center-point* region)
+    (ellipse-radii region)
+    (ellipse-start-angle region)
+    (ellipse-end-angle region)
+    t))
+
+(defmethod bounding-rectangle* ((region elliptical-arc))
+  (multiple-value-call #'ellipse-bounding-rectangle*
+    (ellipse-center-point* region)
+    (ellipse-radii region)
+    (ellipse-start-angle region)
+    (ellipse-end-angle region)
+    nil))
 
 (defmethod transform-region (tr (region elliptical-thing))
   (multiple-value-bind (cx cy) (ellipse-center-point* region)

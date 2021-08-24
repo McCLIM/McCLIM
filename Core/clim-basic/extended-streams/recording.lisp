@@ -1543,11 +1543,9 @@ were added."
     (when (reflection-transformation-p transform)
       (rotatef start-angle end-angle))
     (multiple-value-bind (min-x min-y max-x max-y)
-        (bounding-rectangle* (make-ellipse* center-x center-y
-                                            radius-1-dx radius-1-dy
-                                            radius-2-dx radius-2-dy
-                                            :start-angle start-angle
-                                            :end-angle end-angle))
+        (ellipse-bounding-rectangle*
+         center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+         start-angle end-angle filled)
       (if filled
           (values min-x min-y max-x max-y)
           (let ((border (/ (fix-line-style-unit graphic medium) 2)))

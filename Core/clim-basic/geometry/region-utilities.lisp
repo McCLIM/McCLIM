@@ -833,6 +833,41 @@ y2."
         (y (sqrt (+ (square rdy1) (square rdy2)))))
     (values (- x) (- y) x y)))
 
+;;; This variant returns a bounding rectangle that accounts for
+;;; start-angle and end-angle.
+(defun ellipse-bounding-rectangle* (cx cy rdx1 rdy1 rdx2 rdy2
+                                    start-angle end-angle filled)
+  (multiple-value-bind (min-x min-y max-x max-y)
+      (ellipse-bounding-rectangle rdx1 rdy1 rdx2 rdy2)
+    (if (and (null start-angle) (null end-angle))
+        (values (+ cx min-x) (+ cy min-y)
+                (+ cx max-x) (+ cy max-y))
+        (collect (coords)
+          (unless start-angle (setf start-angle 0))
+          (unless end-angle   (setf end-angle (* 2 pi)))
+          (when filled
+            (coords cx cy))
+          (multiple-value-bind (start-x start-y)
+              (ellipse-point* (- end-angle) cx cy rdx1 rdy1 rdx2 rdy2)
+            (coords start-x start-y))
+          (multiple-value-bind (end-x end-y)
+              (ellipse-point* (- start-angle) cx cy rdx1 rdy1 rdx2 rdy2)
+            (coords end-x end-y))
+          (when (arc-contains-angle-p start-angle end-angle 0)
+            (coords (+ cx max-x) cy))
+          (when (arc-contains-angle-p start-angle end-angle (/ pi 2))
+            (coords cx (+ cy min-y)))
+          (when (arc-contains-angle-p start-angle end-angle pi)
+            (coords (+ cx min-x) cy))
+          (when (arc-contains-angle-p start-angle end-angle (* 3 (/ pi 2)))
+            (coords cx (+ cy max-y)))
+          (loop for (x y) on (coords) by #'cddr
+                minimizing x into xmin
+                minimizing y into ymin
+                maximizing x into xmax
+                maximizing y into ymax
+                finally (return (values xmin ymin xmax ymax)))))))
+
 (defun ellipse-normal-radii* (a b c f)
   (let* ((beta (/ (- c a) b))
          (slope- (- beta (sqrt (1+ (square beta)))))
