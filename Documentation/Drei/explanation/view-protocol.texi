@@ -3,6 +3,8 @@
 @cindex view protocol
 @cindex views
 
+@sref{View Protocol Reference}
+
 Drei extends CLIMs concept of ``views'' to be more than just a manner
 for determining the user interface for accepting values from the
 user. Instead, the view is what controls the user interface of the Drei

@@ -1,6 +1,8 @@
 @node Unit Protocol Reference
 @subsection Unit Protocol Reference
 
+@sref{Unit Protocol}
+
 @menu
 * Motors And Limit Actions::
 * Motion Protocol::

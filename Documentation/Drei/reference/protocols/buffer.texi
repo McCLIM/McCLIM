@@ -1,6 +1,8 @@
 @node Buffer Protocol Reference
 @subsection Buffer Protocol Reference
 
+@sref{Buffer Protocol}
+
 @menu
 * General Buffer Protocol Parts::
 * Operations Related To The Offset Of Marks::

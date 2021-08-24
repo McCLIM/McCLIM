@@ -4,6 +4,8 @@
 @cindex Drei motion protocol
 @cindex Drei editing protocol
 
+@sref{Unit Protocol Reference}
+
 @menu
 * Diligent Motors::
 @end menu

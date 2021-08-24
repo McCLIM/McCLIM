@@ -1,6 +1,8 @@
 @node Undo Protocol
 @section Undo Protocol
 
+@sref{Undo Protocol Reference}
+
 @menu
 * Implementation::
 @end menu
@@ -23,8 +25,6 @@ Arcs in the tree are ordered so that they always point FROM the current
 state.  When the current state moves from one state to the other, the
 arc it traversed is reversed.  The undo module does this by calling a
 generic function that client code must supply a method for.
-
-@sref{Undo Protocol Reference}
 
 @node Implementation
 @subsection Implementation

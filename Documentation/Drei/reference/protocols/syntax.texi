@@ -1,6 +1,8 @@
 @node Syntax Protocol Reference
 @subsection Syntax Protocol Reference
 
+@sref{Syntax Modules}
+
 @menu
 * General Syntax Protocol::
 * Incremental Parsing Framework::
@@ -65,6 +67,8 @@ lexemes are indexed by a position starting from zero.
 
 @node Specifying A Grammar
 @subsubsection Specifying A Grammar
+
+@sref{Earley Parser}
 
 An incremental parser is created from a grammar.
 

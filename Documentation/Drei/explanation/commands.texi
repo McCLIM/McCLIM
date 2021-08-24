@@ -1,6 +1,12 @@
 @node Drei Commands
 @section Drei Commands
 
+See also
+@itemize @bullet
+@item @ref{Defining Drei Commands}
+@item @ref{Command Reference}
+@end itemize
+
 @menu
 * Syntax Command Table Protocol::
 * Numeric Argument in Drei Commands::
@@ -18,6 +24,8 @@ are called @dfn{syntax-specific commands}.
 @node Syntax Command Table Protocol
 @subsection Syntax Command Table Protocol
 @cindex syntax command table
+
+@sref{Syntax Command Table Protocol Reference}
 
 In order to provide conditionally active command tables, Drei defines
 the @class{syntax-command-table} class. While this class is meant to
@@ -40,8 +48,6 @@ tables for the commands you wish to make conditionally available.
 When providing a @var{:command-table} argument to
 @fmacro{define-syntax} that names a syntax command table, an instance
 of the syntax command table will be used for the syntax.
-
-@sref{Syntax Command Table Protocol Reference}
 
 @node Numeric Argument in Drei Commands
 @subsection Numeric Argument in Drei Commands

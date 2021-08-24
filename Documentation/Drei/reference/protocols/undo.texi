@@ -1,6 +1,8 @@
 @node Undo Protocol Reference
 @subsection Undo Protocol Reference
 
+@sref{Undo Protocol}
+
 @menu
 * Protocol Specification::
 * How The Buffer Handles Undo::

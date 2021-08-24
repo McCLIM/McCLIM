@@ -1,6 +1,8 @@
 @node Syntax Modules
 @section Syntax Modules
 
+@sref{Syntax Protocol Reference}
+
 @menu
 * Earley Parser::
 @end menu
@@ -76,6 +78,8 @@ sure that the view of the syntax is notified of any reparses
 @node Earley Parser
 @subsection Earley Parser
 
+@sref{Specifying A Grammar}
+
 Drei contains an incremental parser that uses the Earley
 algorithm.  This algorithm accepts the full set of context-free
 grammars, allowing greater freedom for the developer to define natural
@@ -85,5 +89,3 @@ LALR(k).
 Beware, though, that the Earley algorithm can be quite inefficient if
 the grammar is sufficiently complicated, in particular if the grammar
 is ambiguous.
-
-@xref{Specifying A Grammar}

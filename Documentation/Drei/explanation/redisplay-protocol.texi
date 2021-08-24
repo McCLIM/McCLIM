@@ -1,6 +1,8 @@
 @node Redisplay Protocol
 @section Redisplay Protocol
 
+@sref{Redisplay Protocol Reference}
+
 A buffer can be on display in several panes, possibly by being located
 in several Drei instances. Thus, the buffer does not concern itself with
 redisplay, but assumes that whatever is using it will redisplay when

@@ -1,6 +1,8 @@
 @node Kill Ring Protocol Reference
 @subsection Kill Ring Protocol Reference
 
+@sref{Kill Ring Protocol}
+
 @menu
 * Kill Ring Protocol Specification::
 * Kill Ring Implementation::

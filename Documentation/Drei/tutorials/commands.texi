@@ -3,7 +3,11 @@
 @cindex Drei command defining
 @cindex defining Drei commands
 
-@sref{Command Reference}
+See also
+@itemize @bullet
+@item @ref{Drei Commands}
+@item @ref{Command Reference}
+@end itemize
 
 A common text editing task is to repeat the word at point, but for some
 reason, Drei does not come with a command to do this, so we need to

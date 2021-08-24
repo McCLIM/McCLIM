@@ -1,6 +1,13 @@
 @node Command Reference
 @section Command Reference
 
+See also
+@itemize @bullet
+@item @ref{Defining Drei Commands}
+@item @ref{Drei Commands}
+@item @ref{Numeric Argument in Drei Commands}
+@end itemize
+
 @menu
 * Drei Command Tables::
 * Syntax Command Table Protocol Reference::
@@ -73,7 +80,7 @@ keybindings in the same command table as the command itself.
 @subsection Syntax Command Table Protocol Reference
 @cindex syntax command table
 
-See also @ref{Syntax Command Table Protocol}.
+@sref{Syntax Command Table Protocol}.
 
 @include class-drei-syntax-syntax-command-table.texi
 

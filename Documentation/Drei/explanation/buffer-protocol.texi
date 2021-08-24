@@ -1,6 +1,8 @@
 @node Buffer Protocol
 @section Buffer Protocol
 
+@sref{Buffer Protocol Reference}
+
 @menu
 * Implementation Hints::
 @end menu
