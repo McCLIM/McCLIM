@@ -1,5 +1,9 @@
 (in-package #:clim-clx)
 
+(defconstant +icccm-withdrawn-state+ 0)
+(defconstant +icccm-normal-state+ 1)
+(defconstant +icccm-iconic-state+ 3)
+
 (defclass clx-mirror ()
   ((window
     :initarg :window
@@ -127,9 +131,15 @@
   ;; of shrink-frame McClim think that the frame is iconified but it
   ;; is not. -- admich 2021-08-21
   (when-let ((window (window (sheet-direct-mirror sheet))))
-    (cond
-      ((eq 1 (car (xlib:get-property window :WM_STATE)))
-       (xlib:iconify-window window (clx-port-screen port))
-       (xlib:display-force-output (clx-port-display port)))
-      ((eq 2 (car (xlib:get-property window :WM_STATE)))
-       (warn "The sheet is already shrunk")))))
+    (let ((wm-state (car (xlib:get-property window :WM_STATE))))
+      (cond
+        ((or (eq +icccm-withdrawn-state+ wm-state) (not wm-state))
+         (let ((hints (xlib:wm-hints window)))
+           (setf (xlib:wm-hints-initial-state hints) :iconic)
+           (setf (xlib:wm-hints window) hints)
+           (xlib:map-window window)
+           (xlib:display-force-output (clx-port-display port))))
+        ((eq +icccm-normal-state+ wm-state)
+         (xlib:iconify-window window (clx-port-screen port))
+         (xlib:display-force-output (clx-port-display port)))
+        ((eq +icccm-iconic-state+ wm-state) nil)))))

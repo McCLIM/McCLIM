@@ -498,12 +498,10 @@
                             (with-input-focus (query-io)
                               (call-next-method))
                             (call-next-method))))))
-      (case original-state
-        (:disabled
-         (disable-frame frame))
-        (:disowned
-         (when-let ((fm (frame-manager frame)))
-           (disown-frame fm frame)))))))
+      (if  (eq original-state :disowned)
+           (when-let ((fm (frame-manager frame)))
+             (disown-frame fm frame))
+           (disable-frame frame)))))
 
 (defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
 
@@ -677,7 +675,7 @@
   (frame-state frame))
 
 (defmethod shrink-frame ((frame application-frame))
-  (unless (eq (slot-value frame 'state) :disabled)
+  (unless (eq (slot-value frame 'state) :disowned)
     (setf (slot-value frame 'state) :shrunk)
     (note-frame-iconified (frame-manager frame) frame))
   (frame-state frame))
@@ -709,14 +707,16 @@
                         :name frame-name
                         options)))
       (when frame-manager-p
-        (adopt-frame frame-manager frame))
-      (cond ((or enable (eq state :enabled))
-             (enable-frame frame))
-            ((and (eq state :disowned)
-                  (not (eq (frame-state frame) :disowned)))
-             (disown-frame (frame-manager frame) frame))
-            (state-supplied-p
-             (warn ":state ~S not supported yet." state)))
+        (adopt-frame frame-manager frame)
+        (cond ((or enable (eq state :enabled))
+               (enable-frame frame))
+              ((eq state :shrunk)
+               (shrink-frame frame))
+              ((and (eq state :disowned)
+                    (not (eq (frame-state frame) :disowned)))
+               (disown-frame (frame-manager frame) frame))
+              (state-supplied-p
+               (warn ":state ~S not supported yet." state))))
       frame)))
 
 (defgeneric clim-extensions:find-frame-type (frame)
