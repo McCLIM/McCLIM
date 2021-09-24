@@ -255,9 +255,11 @@
 (define-event-class window-destroy-event (window-event) ())
 (define-event-class window-repaint-event (window-event) ())
 
-(define-event-class window-manager-event        (standard-event)       ())
-(define-event-class window-manager-delete-event (window-manager-event) ())
-(define-event-class window-manager-focus-event  (window-manager-event) ())
+(define-event-class window-manager-event            (standard-event)       ())
+(define-event-class window-manager-delete-event     (window-manager-event) ())
+(define-event-class window-manager-focus-event      (window-manager-event) ())
+(define-event-class window-manager-iconify-event    (window-manager-event) ())
+(define-event-class window-manager-deiconify-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
   ())

@@ -2029,6 +2029,8 @@
    #:set-sheet-pointer-cursor
    #:synthesize-pointer-motion-event
    #:window-manager-focus-event
+   #:window-manager-iconify-event
+   #:window-manager-deiconify-event
    #:window-map-event
    #:window-unmap-event
    #:with-port
