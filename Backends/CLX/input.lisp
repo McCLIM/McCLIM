@@ -228,7 +228,7 @@
            (make-instance 'window-manager-deiconify-event :sheet sheet)
            (make-instance 'window-map-event :sheet sheet)))
       (:unmap-notify
-       (if (= +icccm-iconic-state+ (car (xlib:get-property window :WM_STATE)))
+       (if (eq +icccm-iconic-state+ (car (xlib:get-property window :WM_STATE)))
            (make-instance 'window-manager-iconify-event :sheet sheet)
            (make-instance 'window-unmap-event :sheet sheet)))
       (:destroy-notify
