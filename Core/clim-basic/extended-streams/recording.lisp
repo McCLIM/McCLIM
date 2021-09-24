@@ -1893,8 +1893,7 @@ were added."
   ())
 
 ;;; 16.4. Output Recording Streams
-(defclass standard-output-recording-stream (output-recording-stream
-                                            always-repaint-background-mixin)
+(defclass standard-output-recording-stream (output-recording-stream)
   ((recording-p :initform t :reader stream-recording-p)
    (drawing-p :initform t :accessor stream-drawing-p)
    (output-history :initform (make-instance 'standard-tree-output-history)

@@ -118,6 +118,7 @@ returned or error is signaled depending on the argument ERRORP.")
 (defclass basic-pane (standard-space-requirement-options-mixin
                       sheet-parent-mixin ;mirrored-sheet-mixin
                       ;; UX mixins
+                      always-repaint-background-mixin
                       mouse-wheel-scroll-mixin
                       permanent-medium-sheet-output-mixin
                       clim-repainting-mixin

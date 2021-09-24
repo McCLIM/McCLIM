@@ -19,7 +19,7 @@
 ;;;  CUSTOM-PANE is built outside of CLIM abstractions which are
 ;;;  arranged around streams and output records. It will draft how
 ;;;  drag-and-drop could be implemented from scratch.
-(defclass custom-pane (basic-pane clime:always-repaint-background-mixin)
+(defclass custom-pane (basic-pane)
   ((pos-x :initform 50)
    (pos-y :initform 50)
    (dragp :initform nil)

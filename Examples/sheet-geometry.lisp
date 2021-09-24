@@ -15,8 +15,8 @@
 
 (defclass tracked-sheet-mixin () ())
 
-(defclass my-pane (basic-pane clime:always-repaint-background-mixin) ())
-(defclass my-bbrd (bboard-pane clime:always-repaint-background-mixin) ())
+(defclass my-pane (basic-pane) ())
+(defclass my-bbrd (bboard-pane) ())
 
 (defmethod compose-space ((pane my-pane) &key width height)
   (multiple-value-bind (w h)

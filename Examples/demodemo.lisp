@@ -211,7 +211,7 @@ name."))
               (1/4 (make-label-test-column
                     "Multi-line w/o content" #2# :label))))))))
 
-(defclass foo-pane (basic-pane clime:always-repaint-background-mixin)
+(defclass foo-pane (basic-pane)
   ())
 
 (defmethod compose-space ((pane foo-pane) &key width height)

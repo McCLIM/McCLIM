@@ -37,6 +37,7 @@
     :components ((:file "events")
                  (:file "output")
                  (:file "sheets")
+                 (:file "pixmaps" :depends-on ("output"))
                  (:file "mirrors" :depends-on ("sheets"))
                  (:file "ports"   :depends-on ("sheets" "events"))
                  (:file "input"   :depends-on ("sheets" "ports"))
