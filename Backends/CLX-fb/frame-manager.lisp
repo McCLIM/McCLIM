@@ -29,7 +29,6 @@
      (symbol-name (class-gensym fm)) (find-package '#:clim-clx-fb)
      (lambda (concrete-pane-class)
        `(,(find-class 'mirrored-sheet-mixin)
-         ,(find-class 'climi::always-repaint-background-mixin)
          ,@(unless (subtypep concrete-pane-class 'sheet-with-medium-mixin)
              `(;; temporary-medium-sheet-output-mixin
                ,(find-class 'permanent-medium-sheet-output-mixin)))

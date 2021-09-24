@@ -19,7 +19,6 @@
 (defclass draw-pane
     (standard-extended-input-stream ; must have precedence over basic-pane
      basic-pane
-     clime:always-repaint-background-mixin
      permanent-medium-sheet-output-mixin)
   ())
 

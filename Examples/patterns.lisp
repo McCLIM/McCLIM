@@ -94,7 +94,7 @@ Space: redisplay application")
 
 (defvar *draw* :pattern)
 
-(defclass my-basic-pane (basic-pane clime:always-repaint-background-mixin) ())
+(defclass my-basic-pane (basic-pane) ())
 
 (defmethod compose-space ((pane my-basic-pane) &key (width 100) (height 100))
   (make-space-requirement :width (max 650 width) :height (max 400 height)))
