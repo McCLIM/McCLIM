@@ -1,7 +1,7 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-core"
-  :depends-on ("clim-basic" #+sbcl (:require "sb-introspect"))
+  :depends-on ("clim-basic" (:feature :sbcl "sb-introspect"))
   :components
   ((:file "defresource")
    (:file "theming")

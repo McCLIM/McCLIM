@@ -67,9 +67,9 @@ interface management system."
 ;;; A system that loads the appropriate backend for the current platform.
 (defsystem #:mcclim/looks
   :depends-on (#:clim
-               #:mcclim-clx                                #| truetype clx backend |#
-               #+mcclim-ffi-freetype #:mcclim-clx/freetype #| adds freetype        |#
-               #:mcclim-clx-fb                             #| experimental backend |#
+               #:mcclim-clx                                          #| truetype clx backend |#
+               (:feature :mcclim-ffi-freetype #:mcclim-clx/freetype) #| adds freetype        |#
+               #:mcclim-clx-fb                                       #| experimental backend |#
                ;; null backend
                #:mcclim-null))
 

@@ -8,8 +8,7 @@
   :components (;; First possible patches
                (:file "patch")
                (:module "Lisp-Dep"
-                        :components
-                        (#+(or excl clisp)
-                           (:file   #+excl      "fix-acl"
-                                    #+clisp     "fix-clisp")))
+                :components
+                ((:file "fix-acl" :if-feature :excl)
+                 (:file "fix-clisp" :if-feature :clisp)))
                (:file "package")))
