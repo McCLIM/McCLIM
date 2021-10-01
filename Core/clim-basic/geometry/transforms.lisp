@@ -440,6 +440,25 @@ real numbers, and default to 0."
   (compose-transformations (make-rotation-transformation angle origin)
                            transformation))
 
+(defmacro with-transformed-position ((transformation x y) &body body)
+  `(multiple-value-bind (,x ,y) (transform-position ,transformation ,x ,y)
+     ,@body))
+
+(defmacro with-transformed-distance ((transformation dx dy) &body body)
+  `(multiple-value-bind (,dx ,dy) (transform-distance ,transformation ,dx ,dy)
+     ,@body))
+
+(defmacro with-transformed-angles
+    ((transformation clockwisep &rest angles) &body body)
+  (let ((op (if clockwisep 'transform-angle 'untransform-angle)))
+    `(let ,(loop for angle in angles
+                 collect `(,angle (,op ,transformation ,angle)))
+       ,@body)))
+
+(defmacro with-transformed-positions ((transformation coord-seq) &body body)
+  `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
+     ,@body))
+
 (defmacro with-translation ((medium dx dy) &body body)
   `(with-drawing-options (,medium
                           :transformation
