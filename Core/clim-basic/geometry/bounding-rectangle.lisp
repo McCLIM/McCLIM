@@ -118,3 +118,19 @@
   (def bounding-rectangle-size     (:width width) (:height height))
   (def bounding-rectangle-width    (:width width))
   (def bounding-rectangle-height   (:height height)))
+
+;;; Bounding rectangles are special in that they are not canonicalized
+;;; to +nowhere+ when they have no width or height. When the result may
+;;; be represented by a standard-bounding-rectangle then instance of
+;;; this class is created. Otherwise it is transformed like an instance
+;;; of a standard-rectangle and may be canonicalized to +nowhere+.
+
+(defmethod transform-region (transformation (bbox standard-bounding-rectangle))
+  (with-bounding-rectangle* (x1 y1 x2 y2) bbox
+    (if (or (and (coordinate= x1 x2) (coordinate= y1 y2))
+            (rectilinear-transformation-p transformation))
+        (progn
+          (multiple-value-setq (x1 y1) (transform-position transformation x1 y1))
+          (multiple-value-setq (x2 y2) (transform-position transformation x2 y2))
+          (make-bounding-rectangle x1 y1 x2 y2))
+        (call-next-method))))
