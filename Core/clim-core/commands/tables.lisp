@@ -15,26 +15,40 @@
 (in-package #:clim-internals)
 
 (defclass standard-command-table (command-table)
-  ((name :initarg :name :reader command-table-name)
-   (inherit-from :initarg :inherit-from
-                 :initform '()
-                 :reader command-table-inherit-from
-                 :type list)
-   (commands :accessor commands
-             :initarg :commands
-             :initform (make-hash-table :test #'eq))
-   (command-line-names :accessor command-line-names
-                       :initform (make-hash-table :test #'equal))
-   (presentation-translators :reader presentation-translators
-                             :initform (make-instance 'translator-table))
-   (inherit-menu :reader inherit-menu
-                 :initform nil
-                 ;; We interpret :menu to mean "inherit menu items without
-                 ;; keystrokes" and :keystrokes to mean "inherit menu items
-                 ;; with keystrokes".
-                 :type (member nil t :menu :keystrokes)
-                 :initarg :inherit-menu)
-   (menu :initarg :menu :initform '())))
+  ((name
+    :initarg :name
+    :reader command-table-name
+    :type symbol)
+   (inherit-from
+    :initarg :inherit-from
+    :initform '()
+    :reader command-table-inherit-from
+    :type list)
+   (commands
+    :initarg :commands
+    :initform (make-hash-table :test #'eq)
+    :accessor commands
+    :type hash-table)
+   (command-line-names
+    :initform (make-hash-table :test #'equal)
+    :accessor command-line-names
+    :type hash-table)
+   (presentation-translators
+    :initform (make-instance 'translator-table)
+    :reader presentation-translators
+    :type translator-table)
+   (inherit-menu
+    :initarg :inherit-menu
+    :initform nil
+    :reader inherit-menu
+    ;; We interpret :menu to mean "inherit menu items without
+    ;; keystrokes" and :keystrokes to mean "inherit menu items
+    ;; with keystrokes".
+    :type (member nil t :menu :keystrokes))
+   (menu
+    :initarg :menu
+    :initform '()
+    :type list)))
 
 (defmethod print-object ((table standard-command-table) stream)
   (print-unreadable-object (table stream :identity t :type t)
