@@ -224,11 +224,7 @@
               `(add-command-to-command-table
                 ',command-name ',command-table
                 :name ,name :menu ',menu
-                :keystroke ',keystroke :errorp nil
-                ,@(when (or menu keystroke)
-                    `(:menu-command
-                      (list ',command-name ,@(make-unsupplied-arguments
-                                              (length required-args)))))))
+                :keystroke ',keystroke :errorp nil))
            ,(make-argument-accept-fun
              accept-fun-name required-args keyword-args)
            ,(make-partial-parser-fun partial-parser-fun-name required-args)

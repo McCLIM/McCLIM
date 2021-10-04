@@ -280,8 +280,7 @@ designator) inherits menu items."
           (map-func command-table)))))
 
 (defun add-command-to-command-table
-    (command-name command-table
-     &key name menu keystroke (errorp t) (menu-command command-name))
+    (command-name command-table &key name menu keystroke (errorp t))
   (let ((table (find-command-table command-table))
         (name (cond ((stringp name)
                      name)
@@ -301,7 +300,7 @@ designator) inherits menu items."
                (values (car menu) (cdr menu))))
       (let ((item (if (or menu keystroke)
                       (apply #'make-menu-item
-                             menu-name :command (alexandria:ensure-list menu-command)
+                             menu-name :command command-name
                                        :command-name command-name
                                        :command-line-name name
                                        `(,@(when keystroke `(:keystroke ,keystroke))
