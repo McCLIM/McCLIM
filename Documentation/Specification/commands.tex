@@ -751,8 +751,8 @@ in the command table.  The supplied gesture will generally be an event object,
 so the default for \arg{test} is \cl{event-matches-gesture-name-p}.
 
 If the keystroke accelerator is not present in \arg{command-table} and
-\arg{errorp} is \term{true}, then the \cl{command-not-present} error will be
-signalled.  \arg{command-table} is a \term{command table designator}.
+\arg{errorp} is \term{true}, then the \cl{command-not-accessible} error will
+be signalled.  \arg{command-table} is a \term{command table designator}.
 
 \Defun {lookup-keystroke-item} {gesture command-table \key test}
 
