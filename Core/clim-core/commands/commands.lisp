@@ -88,10 +88,7 @@
                                        &allow-other-keys)
   (ecase type
     (:command
-     ;; This is specified to be a cons, but McCLIM is more permissive
-     ;; (and we don't want to break the backward compatibility).
-     (unless (consp value)
-       (setf value (list value))))
+     (check-type value (or symbol cons)))
     (:function
      ;; A function of two arguments (funcalled).
      (check-type value function-designator))

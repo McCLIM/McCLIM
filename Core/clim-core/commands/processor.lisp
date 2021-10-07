@@ -108,6 +108,8 @@
 (defun ensure-complete-command (command command-table stream)
   (unless command
     (return-from ensure-complete-command))
+  (unless (consp command)
+    (setf command (list command)))
   (let ((canonical (partial-command-from-name (car command) command-table)))
     ;; When the command has more arguments than its "canonical form", that is
     ;; the command with all required arguments filled, that means that it has
