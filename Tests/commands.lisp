@@ -332,7 +332,7 @@
 (test commands.find-presentation-translator.smoke
   (with-command-table (table 'test)
     ;; Not present - should signal
-    (signals command-not-present
+    (signals command-not-accessible
       (find-presentation-translator 'dummy-translator 'test))
     ;; Not present, but with ERRORP being NIL - should not signal
     (is (eq nil (find-presentation-translator

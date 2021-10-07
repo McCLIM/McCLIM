@@ -362,7 +362,7 @@ designator) inherits menu items."
            (values menu-item table))))
    command-table :inherited inherited)
   (if errorp
-      (error 'command-not-present
+      (error 'command-not-accessible
              :command-table-name (command-table-designator-as-name command-table))
       (values nil nil)))
 
@@ -542,13 +542,16 @@ menu item to see if it is `:menu'."
 
 (defun find-presentation-translator
     (translator-name command-table &key (errorp t))
-  (let* ((table (find-command-table command-table))
-         (translators (presentation-translators table))
-         (translator (gethash translator-name
-                              (slot-value translators 'translators))))
-    (when (and errorp (null translator))
-      (error 'command-not-present :command-table-name command-table))
-    translator))
+  (flet ((map-func (table)
+           (let* ((translators (presentation-translators table))
+                  (ptr-table (slot-value translators 'translators)))
+             (when-let ((translator (gethash translator-name ptr-table)))
+               (return-from find-presentation-translator
+                 (values translator table))))))
+    (let ((command-table (find-command-table command-table)))
+      (apply-with-command-table-inheritance #'map-func command-table)
+      (when errorp
+        (error 'command-not-accessible :command-table-name command-table)))))
 
 (defun add-presentation-translator-to-command-table
     (command-table translator &key (errorp t))
