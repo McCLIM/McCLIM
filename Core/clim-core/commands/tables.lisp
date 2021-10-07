@@ -318,9 +318,8 @@ designator) inherits menu items."
         (when (or menu keystroke)
           (%add-menu-item table item after))))))
 
-(defun remove-command-from-command-table (command-name
-                                          command-table
-                                          &key (errorp t))
+(defun remove-command-from-command-table
+    (command-name command-table &key (errorp t))
   (let* ((table (find-command-table command-table))
          (commands (commands table))
          (item (gethash command-name commands)))
@@ -351,6 +350,22 @@ designator) inherits menu items."
     (dolist (sub-table (command-table-inherit-from table))
       (map-over-command-table-menu function sub-table))))
 
+;;; This internal function is like find-menu-item, but it allows looking for
+;;; entries by a command name, a menu name or a keystroke. Moreover it allows
+;;; specifying whether it should look in inherited menus.
+(defun find-menu-item*
+    (item command-table &key (inherited t) (errorp t) key test)
+  (map-over-command-table-menu
+   #'(lambda (menu-item table)
+       (when (funcall test item (funcall key menu-item))
+         (return-from find-menu-item*
+           (values menu-item table))))
+   command-table :inherited inherited)
+  (if errorp
+      (error 'command-not-present
+             :command-table-name (command-table-designator-as-name command-table))
+      (values nil nil)))
+
 (defun map-over-command-table-menu-items (function table &key (inherited t))
   "Applies function to all of the items in `table's menu. `table' must be a
 command table or the name of a command table. `Function' must be a function of
@@ -373,17 +388,13 @@ menu item to see if it is `:menu'."
      #'fun table :inherited (and inherited (inherit-menu-items table))))
   (values))
 
-(defun find-menu-item (menu-name table &key (errorp t))
+(defun find-menu-item (menu-name command-table &key (errorp t))
   (check-type menu-name string)
-  (flet ((fun (item table)
-           (let ((item-name (command-menu-item-name item)))
-             (when (equalp item-name menu-name)
-               (return-from find-menu-item (values item table))))))
-    (map-over-command-table-menu
-     #'fun table :inherited (inherit-menu-items table)))
-  (when errorp
-    (error 'command-not-present :command-table-name
-           (command-table-designator-as-name table))))
+  (find-menu-item* menu-name command-table
+                   :inherited (inherit-menu-items command-table)
+                   :errorp errorp
+                   :key #'command-menu-item-name
+                   :test #'equalp))
 
 (defun add-menu-item-to-command-table (command-table
                                        string type value
@@ -447,18 +458,14 @@ menu item to see if it is `:menu'."
       (map-over-command-table-menu #'map-menus table :inherited inherit))
     (values)))
 
-(defun find-keystroke-item (gesture table
-                            &key (test #'event-matches-gesture-name-p)
-                                 (errorp t))
-  (flet ((fun (item table)
-           (when-let ((keystroke (command-menu-item-keystroke item)))
-             (when (funcall test gesture keystroke)
-               (return-from find-keystroke-item (values item table))))))
-    (map-over-command-table-menu
-     #'fun table :inherited (inherit-keystrokes table)))
-  (when errorp
-    (error 'command-not-present :command-table-name
-           (command-table-designator-as-name table))))
+(defun find-keystroke-item
+    (gesture command-table &key (test #'event-matches-gesture-name-p) (errorp t))
+  (find-menu-item* gesture command-table
+                   :inherited (inherit-keystrokes command-table)
+                   :errorp errorp
+                   :key #'command-menu-item-keystroke
+                   :test (lambda (keystroke menu-item)
+                           (and menu-item (funcall test keystroke menu-item)))))
 
 (defun lookup-keystroke-item (gesture table
                               &key (test #'event-matches-gesture-name-p))
