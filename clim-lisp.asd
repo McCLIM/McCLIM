@@ -1,5 +1,5 @@
 
-(defsystem #:clim-lisp
+(defsystem "clim-lisp"
   :serial t
   :depends-on ("alexandria"
                "trivial-gray-streams"

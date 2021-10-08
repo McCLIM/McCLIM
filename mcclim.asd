@@ -65,7 +65,7 @@ interface management system."
   :in-order-to ((test-op (test-op "mcclim/test"))))
 
 ;;; A system that loads the appropriate backend for the current platform.
-(defsystem #:mcclim/looks
+(defsystem "mcclim/looks"
   :depends-on ("clim"
                "mcclim-clx"                                          #| truetype clx backend |#
                (:feature :mcclim-ffi-freetype "mcclim-clx/freetype") #| adds freetype        |#
@@ -73,7 +73,7 @@ interface management system."
                ;; null backend
                "mcclim-null"))
 
-(defsystem #:mcclim/extensions
+(defsystem "mcclim/extensions"
   :depends-on ("mcclim-bitmaps"
                "conditional-commands"
                "mcclim-layouts/tab"

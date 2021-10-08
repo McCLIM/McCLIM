@@ -58,7 +58,7 @@ Writing a system that depends on McCLIM
 In an ASDF system that depends on a loaded CLIM, use the following
 code to declare a dependency on McCLIM:
 
-(defsystem :your-clim-using-system
+(defsystem "your-clim-using-system"
            :depends-on ("mcclim" #| other dependencies |#)
            :components (#| components |#)
            )
