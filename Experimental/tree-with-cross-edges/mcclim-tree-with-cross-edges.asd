@@ -33,8 +33,8 @@
 (defpackage :mcclim-tree-with-cross-edges-system (:use :cl :asdf))
 (in-package :mcclim-tree-with-cross-edges-system)
 
-(defsystem :mcclim-tree-with-cross-edges
-    :depends-on (:mcclim)
+(defsystem "mcclim-tree-with-cross-edges"
+    :depends-on ("mcclim")
     :serial t
     :components
     ((:file "tree-with-cross-edges")))

@@ -10,7 +10,7 @@
   :components ((:module src
                 :serial t
                 :components ((:file "package")
-                             (cffi-grovel:grovel-file "grovel")
+                             ("cffi-grovel:grovel-file" "grovel")
                              (:file "conditions")
                              (:file "functions")
                              (:file "fontconfig")))))

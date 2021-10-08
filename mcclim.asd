@@ -65,22 +65,22 @@ interface management system."
   :in-order-to ((test-op (test-op "mcclim/test"))))
 
 ;;; A system that loads the appropriate backend for the current platform.
-(defsystem #:mcclim/looks
-  :depends-on (#:clim
-               #:mcclim-clx                                #| truetype clx backend |#
-               #+mcclim-ffi-freetype #:mcclim-clx/freetype #| adds freetype        |#
-               #:mcclim-clx-fb                             #| experimental backend |#
+(defsystem "mcclim/looks"
+  :depends-on ("clim"
+               "mcclim-clx"                                          #| truetype clx backend |#
+               (:feature :mcclim-ffi-freetype "mcclim-clx/freetype") #| adds freetype        |#
+               "mcclim-clx-fb"                                       #| experimental backend |#
                ;; null backend
-               #:mcclim-null))
+               "mcclim-null"))
 
-(defsystem #:mcclim/extensions
-  :depends-on (#:mcclim-bitmaps
-               #:conditional-commands
-               #:mcclim-layouts/tab
-               #:mcclim-bezier
-               #:clim-pdf
-               #:clim-postscript
-               #:mcclim-franz))
+(defsystem "mcclim/extensions"
+  :depends-on ("mcclim-bitmaps"
+               "conditional-commands"
+               "mcclim-layouts/tab"
+               "mcclim-bezier"
+               "clim-pdf"
+               "clim-postscript"
+               "mcclim-franz"))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ; The fact that CLIM itself is available is true when all is loaded.

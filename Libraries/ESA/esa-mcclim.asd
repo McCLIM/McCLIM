@@ -5,8 +5,8 @@
 
 ;;; ASDF system definition for ESA.
 
-(defsystem #:esa-mcclim
-  :depends-on (#:clim-core #:alexandria)
+(defsystem "esa-mcclim"
+  :depends-on ("clim-core" "alexandria")
   :components ((:file "packages")
                (:file "utils" :depends-on ("packages"))
                (:file "esa" :depends-on ("packages" "utils"))

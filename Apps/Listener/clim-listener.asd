@@ -1,5 +1,5 @@
 
-(defsystem #:clim-listener
+(defsystem "clim-listener"
   :license "LGPL-2.1+"
   :description "CLIM Lisp listener."
   :long-description "CLIM Lisp listener
@@ -15,7 +15,7 @@ experimentation. Present features include:
 - Navigation of the filesystem, including a directory stack
 - Launching of external programs sensitive to file type (determined by mailcap
   and mime.types files)"
-  :depends-on (#:mcclim #:clim-debugger #:uiop #:cl-fad #+sbcl #:sb-posix)
+  :depends-on ("mcclim" "clim-debugger" "uiop" "cl-fad" (:feature :sbcl "sb-posix"))
   :serial t
   :build-operation asdf:program-op
   :build-pathname "clim-listener"
