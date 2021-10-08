@@ -2,5 +2,5 @@
 (defsystem #:mcclim-layouts)
 
 (defsystem #:mcclim-layouts/tab
-  :depends-on (#:clim)
+  :depends-on ("clim")
   :components ((:file "tab-layout")))

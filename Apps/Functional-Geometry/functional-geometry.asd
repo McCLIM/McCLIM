@@ -5,7 +5,7 @@
 (defsystem #:functional-geometry
   :name #:functional-geometry
   :license "LGPL-2.1+"
-  :depends-on (:clim-listener)
+  :depends-on ("clim-listener")
   :components ((:file "package")
 	       (:file "geometry" :depends-on ("package"))))
 

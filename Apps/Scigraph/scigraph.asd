@@ -1,6 +1,6 @@
 
 (defsystem #:scigraph
-    :depends-on (#:mcclim #:scigraph/dwim)
+    :depends-on ("mcclim" "scigraph/dwim")
     :serial t
     :components ((:file "scigraph/package")
                  (:file "scigraph/random")
@@ -28,7 +28,7 @@
                  (:file "scigraph/demo-frame")))
 
 (defsystem #:scigraph/dwim
-  :depends-on (#:mcclim)
+  :depends-on ("mcclim")
   :components ((:file "dwim/package")
                (:file "dwim/macros")
                (:file "dwim/tv")

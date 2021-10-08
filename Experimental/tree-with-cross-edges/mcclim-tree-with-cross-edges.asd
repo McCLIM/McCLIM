@@ -34,7 +34,7 @@
 (in-package :mcclim-tree-with-cross-edges-system)
 
 (defsystem :mcclim-tree-with-cross-edges
-    :depends-on (:mcclim)
+    :depends-on ("mcclim")
     :serial t
     :components
     ((:file "tree-with-cross-edges")))

@@ -66,21 +66,21 @@ interface management system."
 
 ;;; A system that loads the appropriate backend for the current platform.
 (defsystem #:mcclim/looks
-  :depends-on (#:clim
-               #:mcclim-clx                                          #| truetype clx backend |#
-               (:feature :mcclim-ffi-freetype #:mcclim-clx/freetype) #| adds freetype        |#
-               #:mcclim-clx-fb                                       #| experimental backend |#
+  :depends-on ("clim"
+               "mcclim-clx"                                          #| truetype clx backend |#
+               (:feature :mcclim-ffi-freetype "mcclim-clx/freetype") #| adds freetype        |#
+               "mcclim-clx-fb"                                       #| experimental backend |#
                ;; null backend
-               #:mcclim-null))
+               "mcclim-null"))
 
 (defsystem #:mcclim/extensions
-  :depends-on (#:mcclim-bitmaps
-               #:conditional-commands
-               #:mcclim-layouts/tab
-               #:mcclim-bezier
-               #:clim-pdf
-               #:clim-postscript
-               #:mcclim-franz))
+  :depends-on ("mcclim-bitmaps"
+               "conditional-commands"
+               "mcclim-layouts/tab"
+               "mcclim-bezier"
+               "clim-pdf"
+               "clim-postscript"
+               "mcclim-franz"))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :mcclim))))
   (pushnew :clim *features*)) ; The fact that CLIM itself is available is true when all is loaded.
