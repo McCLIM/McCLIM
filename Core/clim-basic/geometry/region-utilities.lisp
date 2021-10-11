@@ -61,6 +61,7 @@ a flag CLOSED is T then beginning and end of the list are consecutive too."
 
 (declaim (inline arc-contains-angle-p))
 (defun arc-contains-angle-p (start-angle end-angle delta)
+  (assert (<= 0 delta (* 2 pi)))
   (if (< start-angle end-angle)
       (coordinate-between* start-angle delta end-angle)
       (or (coordinate<= start-angle delta)
@@ -130,6 +131,16 @@ less than or equal to 2pi. Note that 4pi would be normalized to 0, not
           (> angle (* pi 2)))
       (mod angle (* pi 2))
       angle))
+
+(defun normalize-angle* (start end)
+  (let ((diff (- end start)))
+    (cond ((<= diff 0)
+           (values 0 0))
+          ((>= diff (* 2 pi))
+           (values 0 (* 2 pi)))
+          (t
+           (values (mod start (* 2 pi))
+                   (mod end (* 2 pi)))))))
 
 (defun find-angle* (x1 y1 x2 y2)
   "Returns the angle between two vectors described by x1, y1 and x2,
@@ -810,6 +821,8 @@ y2."
     (setf eta2 (untransform-angle tr eta2))
     (when (reflection-transformation-p tr)
       (rotatef eta1 eta2)))
+  (multiple-value-setq (eta1 eta2)
+    (normalize-angle* eta1 eta2))
   (multiple-value-bind (cx cy) (transform-position tr cx cy)
     (multiple-value-bind (rdx1 rdy1) (transform-distance tr rdx1 rdy1)
       (multiple-value-bind (rdx2 rdy2) (transform-distance tr rdx2 rdy2)

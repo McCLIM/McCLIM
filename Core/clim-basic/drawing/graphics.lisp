@@ -455,6 +455,8 @@
                        line-thickness line-unit line-dashes line-cap-shape)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
+  (multiple-value-setq (start-angle end-angle)
+    (normalize-angle* start-angle end-angle))
   (with-medium-options (sheet args)
     (multiple-value-bind (center-x center-y) (point-position center-point)
       (medium-draw-ellipse* medium

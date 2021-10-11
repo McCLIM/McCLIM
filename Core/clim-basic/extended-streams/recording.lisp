@@ -1533,15 +1533,15 @@ were added."
           (transform-distance transform radius-1-dx radius-1-dy))
     (setf (values radius-2-dx radius-2-dy)
           (transform-distance transform radius-2-dx radius-2-dy))
-    ;; I think this should be untransform-angle below, as the ellipse angles
-    ;; go counter-clockwise in screen coordinates, whereas our transformations
-    ;; rotate clockwise in the default coorinate system.. this is quite possibly
-    ;; wrong depending on how one reads the spec, but just reversing it here
-    ;; will break other things.  -Hefner
+    ;; We untransform-angle below, as the ellipse angles go counter-clockwise
+    ;; in screen coordinates, whereas our transformations rotate clockwise in
+    ;; the default coorinate system. -Hefner
     (setf start-angle (untransform-angle transform start-angle))
     (setf end-angle   (untransform-angle transform end-angle))
     (when (reflection-transformation-p transform)
       (rotatef start-angle end-angle))
+    (multiple-value-setq (start-angle end-angle)
+      (normalize-angle* start-angle end-angle))
     (multiple-value-bind (min-x min-y max-x max-y)
         (ellipse-bounding-rectangle*
          center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy
