@@ -89,8 +89,8 @@
                        :height height
                        :scroll-bars scroll-bars
                        (typecase input-buffer
-                         (event-queue (list :event-queue input-buffer))
-                         (vector      (list :input-buffer input-buffer))
+                         (event-queue (list :frame-event-queue input-buffer))
+                         (vector      (list :frame-input-buffer input-buffer))
                          (otherwise   nil)))))
     ;; Adopt and enable the pane
     (when (eq (frame-state frame) :disowned)
