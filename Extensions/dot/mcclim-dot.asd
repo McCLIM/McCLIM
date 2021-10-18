@@ -24,9 +24,11 @@
   :description "Test suite for mcclim-dot."
   :depends-on ("mcclim-dot/core"
                "mcclim-dot/graphviz"
-               "mcclim-raster-image")
+               "mcclim-raster-image"
+               "fiveam")
   :pathname "test"
   :components ((:file "package")
-               (:file "smoke" :depends-on ("package")))
+               (:file "smoke" :depends-on ("package"))
+               (:file "edge-labels" :depends-on ("package")))
   :perform (test-op (operation component)
              (uiop:symbol-call '#:mcclim-dot.test '#:run-tests)))

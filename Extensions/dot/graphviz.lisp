@@ -33,11 +33,13 @@ visualization tools."
              (tail (gethash tail-id gv-id-to-node-map))
              (head-id (jsown:val raw-edge "head"))
              (head (gethash head-id gv-id-to-node-map))
-             (pos (jsown:val raw-edge "pos")))
+             (pos (jsown:val raw-edge "pos"))
+             (label (jsown:val-safe raw-edge "label"))
+             (lp (jsown:val-safe raw-edge "lp")))
         (push (make-instance 'dot::edge
                              :source tail
                              :target head
-                             :attributes (list :pos pos))
+                             :attributes (list :pos pos :label label :lp lp))
               edges)))
     (make-instance 'dot::graph
                    :attributes (list :bb bb)
