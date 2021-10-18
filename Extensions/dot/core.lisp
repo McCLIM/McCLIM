@@ -55,6 +55,8 @@ return an instance of CL-DOT::GRAPH with the nodes and edges layed out.")
 (defvar *id* nil
   "Used to generate unique ids for every node in a graph.")
 
+(defconstant +pts-per-inch+ 72)
+
 (defclass dot-spline ()
   ((start
     :initarg :start
@@ -74,11 +76,11 @@ b-spline. START is either a POINT or NIL. If it is non-NIL, an arrow should be
 drawn from the first POINTS to START. END is either a POINT or NIL. If it is
 non-NIL, an arrow should be drawn from the last POINTS to END."))
 
-(defun points-to-inches (points)
-  (/ points 72))
+(defun pts-to-inches (points)
+  (/ points +pts-per-inch+))
 
-(defun inches-to-points (inches)
-  (* inches 72))
+(defun inches-to-pts (inches)
+  (* inches +pts-per-inch+))
 
 (defun coordinate-string-to-point (string)
   "Convert a string of two numbers, separated by a comma into a POINT."
@@ -121,8 +123,8 @@ DOT-ID-TO-RECORD map."
                               :attributes
                               `(:shape :rectangle
                                 :fixedsize "true"
-                                :width ,(float (points-to-inches (bounding-rectangle-width object)))
-                                :height ,(float (points-to-inches (bounding-rectangle-height object)))))))
+                                :width ,(float (pts-to-inches (bounding-rectangle-width object)))
+                                :height ,(float (pts-to-inches (bounding-rectangle-height object)))))))
     (with-slots (dot-id-to-record) record
       (setf (gethash id dot-id-to-record) object)
       node)))
