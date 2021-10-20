@@ -5,8 +5,6 @@
                 :when-let
                 :if-let)
   (:export #:*truetype-font-path*
-           #:*family-names*
-           #:*fontconfig-faces*
            #:*families/faces*
            #:*zpb-font-lock*
            #:truetype-device-font-name
