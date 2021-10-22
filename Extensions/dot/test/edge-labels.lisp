@@ -17,12 +17,14 @@
        (lambda (obj)
          (cdr (assoc obj '((a b) (b c)))))
        :stream s
-       :edge-attributes (lambda (from to)
-                          (declare (ignore to))
-                          (ecase from
-                            (a
-                             (list :label "A to B"))
-                            (b
-                             (list :label "B to C"))))
+       :arc-drawer (make-instance 'mcclim-dot::dot-arc-drawer
+                                  :edge-label-printer
+                                  (lambda (stream from to)
+                                    (declare (ignore to))
+                                    (ecase from
+                                      (a
+                                       (format stream "A to B~%A"))
+                                      (b
+                                       (format stream "B to C~%D")))))
        :orientation :vertical
        :graph-type :dot-digraph))))
