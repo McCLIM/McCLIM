@@ -7,7 +7,7 @@
 
 ;;; Graph clases
 
-(defclass dot-graph-output-record (standard-graph-output-record)
+(defclass dot-graph-output-record (clim:standard-graph-output-record)
   ((dot-layout
     :documentation
     "Holds an instance of CL-DOT::GRAPH with the results of the layout.")
@@ -47,7 +47,7 @@ return an instance of CL-DOT::GRAPH with the nodes and edges layed out.")
   (:documentation
    "A directed dot graph."))
 
-(define-graph-type :dot-digraph dot-digraph-output-record)
+(clim:define-graph-type :dot-digraph dot-digraph-output-record)
 
 
 ;;; Utilities
@@ -84,12 +84,12 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
 
 (defun coordinate-string-to-point (string)
   "Convert a string of two numbers, separated by a comma into a POINT."
-  (apply #'make-point
+  (apply #'clim:make-point
          (mapcar #'pn:parse-number (ss:split-sequence #\, string))))
 
 (defun coordinate-string-to-rectangle (string)
   "Convert a string of four numbers, separated by a comma into a RECTANGLE."
-  (apply #'make-rectangle*
+  (apply #'clim:make-rectangle*
          (mapcar #'pn:parse-number (ss:split-sequence #\, string))))
 
 (defun spline-string-to-spline (string)
@@ -126,8 +126,8 @@ DOT-ID-TO-RECORD map."
                               :attributes
                               `(:shape :rectangle
                                 :fixedsize "true"
-                                :width ,(float (pts-to-inches (bounding-rectangle-width object)))
-                                :height ,(float (pts-to-inches (bounding-rectangle-height object)))))))
+                                :width ,(float (pts-to-inches (clim:bounding-rectangle-width object)))
+                                :height ,(float (pts-to-inches (clim:bounding-rectangle-height object)))))))
     (with-slots (dot-id-to-record) record
       (setf (gethash id dot-id-to-record) object)
       node)))
@@ -135,7 +135,7 @@ DOT-ID-TO-RECORD map."
 (defmethod dot:graph-object-points-to ((record dot-graph-output-record) object)
   "Return a children that OBJECT points to."
   (loop
-    :for child :in (graph-node-children object)
+    :for child :in (clim:graph-node-children object)
     :for attributes := (when (typep (car *arc-drawer*) 'dot-arc-drawer)
                          (apply #'dot-edge-label-to-graphviz-attributes
                                 (car *arc-drawer*) *dot-stream* object child
@@ -150,7 +150,7 @@ DOT-ID-TO-RECORD map."
         (*dot-stream* stream)
         (*arc-drawer* (cons arc-drawer arc-drawing-options)))
     (with-slots (climi::orientation) record
-      (dot:generate-graph-from-roots record (graph-root-nodes record)
+      (dot:generate-graph-from-roots record (clim:graph-root-nodes record)
                                      (list :rankdir
                                            (ecase climi::orientation
                                              (:horizontal "LR")
@@ -173,10 +173,10 @@ results in the DOT-LAYOUT and DOT-BOUNDING-BOX slots."
 DOT coordinate system ((0,0) is lower left) to CLIM's coordinate system ((0, 0)
 is upper left)."
   (with-slots (dot-bounding-box) graph-record
-    (with-translation (medium (rectangle-min-x dot-bounding-box)
-                              (- (rectangle-max-y dot-bounding-box)
-                                 (rectangle-min-y dot-bounding-box)))
-      (with-scaling (medium 1 -1)
+    (clim:with-translation (medium (clim:rectangle-min-x dot-bounding-box)
+                                   (- (clim:rectangle-max-y dot-bounding-box)
+                                      (clim:rectangle-min-y dot-bounding-box)))
+      (clim:with-scaling (medium 1 -1)
         (funcall thunk)))))
 
 (defmacro with-dot-transformation ((medium graph-record) &body body)
@@ -192,15 +192,16 @@ is upper left)."
     (with-dot-transformation (stream graph-record)
       (dolist (dot-node (dot::nodes-of dot-layout))
         (let* ((node (gethash (dot::id-of dot-node) dot-id-to-record))
-               (bb-width (bounding-rectangle-width node))
-               (bb-height (bounding-rectangle-height node))
+               (bb-width (clim:bounding-rectangle-width node))
+               (bb-height (clim:bounding-rectangle-height node))
                (pos-attribute (getf (dot::attributes-of dot-node) :pos))
                (pos (coordinate-string-to-point pos-attribute)))
-          (setf (output-record-position node)
-                (transform-position (medium-transformation stream)
-                                    (- (point-x pos) (/ bb-width 2))
-                                    (+ (point-y pos) (/ bb-height 2))))
-          (add-output-record node graph-record))))))
+          (setf (clim:output-record-position node)
+                (clim:transform-position (clim:medium-transformation stream)
+                                         (- (clim:point-x pos) (/ bb-width 2))
+                                         (+ (clim:point-y pos) (/ bb-height 2))))
+          ;;(clim:add-output-record node graph-record)
+          )))))
 
 (defmethod layout-graph-edges :around ((graph-record dot-graph-output-record)
                                        stream arc-drawer arc-drawing-options)
@@ -225,8 +226,8 @@ is upper left)."
                             (a:last-elt (dot-spline-points (a:last-elt splines))))))
         (with-dot-transformation (stream graph-record)
           (apply arc-drawer stream from to
-                 (point-x start-point) (point-y start-point)
-                 (point-x end-point) (point-y end-point)
+                 (clim:point-x start-point) (clim:point-y start-point)
+                 (clim:point-x end-point) (clim:point-y end-point)
                  :splines splines
                  :label-center (unless (null lp) (coordinate-string-to-point lp))
                  arc-drawing-options))))))

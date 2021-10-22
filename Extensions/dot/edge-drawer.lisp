@@ -36,7 +36,7 @@ DOT-ARC-DRAWER to FORMAT-GRAPH-FROM-ROOTS."))
 
 (defmethod draw-dot-label ((drawer dot-arc-drawer) stream from to &rest args)
   (with-slots (edge-label-printer) drawer
-    (apply edge-label-printer stream (graph-node-object from) (graph-node-object to) args)))
+    (apply edge-label-printer stream (clim:graph-node-object from) (clim:graph-node-object to) args)))
 
 (defgeneric dot-label-record (drawer stream from to &key))
 
@@ -46,12 +46,12 @@ DOT-ARC-DRAWER to FORMAT-GRAPH-FROM-ROOTS."))
      (a:ensure-gethash
       (list from to) label-records
       (multiple-value-bind (cursor-x cursor-y)
-          (stream-cursor-position stream)
+          (clim:stream-cursor-position stream)
         (multiple-value-prog1
-            (with-new-output-record (stream)
-              (with-end-of-line-action (stream :allow)
+            (clim:with-new-output-record (stream)
+              (clim:with-end-of-line-action (stream :allow)
                 (apply #'draw-dot-label drawer stream from to args)))
-          (stream-set-cursor-position stream cursor-x cursor-y)))))))
+          (clim:stream-set-cursor-position stream cursor-x cursor-y)))))))
 
 (defmethod draw-dot-arc ((drawer dot-arc-drawer) stream from to from-x from-y to-x to-y
                          &rest args
@@ -61,14 +61,14 @@ DOT-ARC-DRAWER to FORMAT-GRAPH-FROM-ROOTS."))
   (apply #'draw-dot-edge drawer stream from to from-x from-y to-x to-y splines args)
   (unless (null label-center)
     (let* ((record (apply #'dot-label-record drawer stream from to args))
-           (bb-width (bounding-rectangle-width record))
-           (bb-height (bounding-rectangle-height record)))
+           (bb-width (clim:bounding-rectangle-width record))
+           (bb-height (clim:bounding-rectangle-height record)))
       ;; shift the record so that the center is at the point chosen by the layout
       ;; engine.
-      (setf (output-record-position record)
-            (transform-position (medium-transformation stream)
-                                (- (point-x label-center) (/ bb-width 2))
-                                (+ (point-y label-center) (/ bb-height 2)))))))
+      (setf (clim:output-record-position record)
+            (clim:transform-position (clim:medium-transformation stream)
+                                     (- (clim:point-x label-center) (/ bb-width 2))
+                                     (+ (clim:point-y label-center) (/ bb-height 2)))))))
 
 (defmethod draw-dot-edge ((drawer dot-arc-drawer) stream from to from-x from-y to-x to-y splines
                           &rest args)
@@ -96,8 +96,8 @@ DOT-ARC-DRAWER to FORMAT-GRAPH-FROM-ROOTS."))
 
 (defmethod dot-edge-label-to-graphviz-attributes ((drawer dot-arc-drawer) stream from to &rest args)
   (let* ((record (apply #'dot-label-record drawer stream from to args))
-         (bb-width (bounding-rectangle-width record))
-         (bb-height (bounding-rectangle-height record))
+         (bb-width (clim:bounding-rectangle-width record))
+         (bb-height (clim:bounding-rectangle-height record))
          (chars-wide (ceiling (/ bb-width (* *dot-edge-label-width-ratio* *dot-edge-label-fontsize*))))
          (chars-high (ceiling (/ bb-height *dot-edge-label-fontsize*)))
          (line (make-string chars-wide :initial-element #\m)))
