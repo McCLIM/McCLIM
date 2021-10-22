@@ -8,4 +8,5 @@
   (:local-nicknames (#:a #:alexandria)
                     (#:dot #:cl-dot)
                     (#:pn #:parse-number)
-                    (#:ss #:split-sequence)))
+                    (#:ss #:split-sequence))
+  (:export #:dot-arc-drawer))

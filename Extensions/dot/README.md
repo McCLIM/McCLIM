@@ -19,6 +19,23 @@ relevant attributes (like `pos`) populated.
 To use it, simply have Graphviz installed and specify the `:dot-digraph` graph
 type.
 
+## Other features
+
+It is possible, but not trivial, to put labels on edges with
+`format-graph-from-roots` (by specifying a custom `:arc-drawer`). Dot easily
+supports labels and layout engines can include them when reasoning about the
+layout. However, it is, in general, impossible to extract the label part from
+an arc-drawer function to add it to the dot file.
+
+Therefore, this extension provides the class `dot-arc-drawer`. This is a
+funcallable class, so instances of it can be passed directly as the
+`:arc-drawer` argument. This class creates a protocol for drawing edges and
+drawing labels. In the most common case, you need only provide a function to
+the `:edge-label-printer` initarg that accepts four required arguments (the
+`dot-arc-drawer` instance, a stream, the from object, and the to object) and
+any number of keyword arugments (the arguments to `:arc-drawing-options`). This
+function should draw the label to the provided stream.
+
 ## Demo
 
 Here is a graph layed out using McCLIM's default layout mechanisms:
