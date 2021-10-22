@@ -42,7 +42,8 @@ return an instance of CL-DOT::GRAPH with the nodes and edges layed out.")
                   'external-graphviz-dot-processor)
               (error "DOT-PROCESSOR not provided and no suitable default could be found.")))))
 
-(defclass dot-digraph-output-record (dot-graph-output-record)
+(defclass dot-digraph-output-record (dot-graph-output-record
+                                     climi::digraph-graph-output-record)
   ()
   (:documentation
    "A directed dot graph."))
@@ -50,10 +51,135 @@ return an instance of CL-DOT::GRAPH with the nodes and edges layed out.")
 (clim:define-graph-type :dot-digraph dot-digraph-output-record)
 
 
+;;; Arc drawing
+
+(defparameter *dot-edge-label-fontsize* 14)
+(defparameter *dot-edge-label-fontname* "Courier New")
+(defparameter *dot-edge-label-width-ratio* 6/10)
+
+(defclass dot-arc-drawer (c2mop:funcallable-standard-object)
+  ((label-records
+    :initform (make-hash-table :test 'equal))
+   (edge-label-printer
+    :initform (constantly nil)
+    :initarg :edge-label-printer
+    :documentation
+    "A convenience helper. This function is called by the default
+DRAW-DOT-LABEL with this DOT-ARC-DRAWER, the stream, the objects the arc is
+FROM and TO (not the GRAPH-NODE-RECORDs), and the ARC-DRAWING-OPTIONS."))
+  (:documentation
+   "A FUNCALLABLE-STANDARD-OBJECT, instances of which can be used as the
+:ARC-DRAWER for FORMAT-GRAPH-FROM-ROOTS. It adds an extensible procedure for
+drawing arcs, complete with labels.
+
+DRAW-DOT-ARC is the primary arc drawing function. It delegates much of the work
+to DRAW-DOT-EDGE and DRAW-DOT-LABEL.")
+  (:metaclass c2mop:funcallable-standard-class))
+
+(defmethod initialize-instance :after ((drawer dot-arc-drawer) &key)
+  (c2mop:set-funcallable-instance-function drawer (a:curry #'draw-dot-arc drawer)))
+
+(defgeneric draw-dot-arc (drawer stream from to from-x from-y to-x to-y
+                          &key splines label-center)
+  (:documentation
+   "The function that is called to draw arcs when passing an instance of
+DOT-ARC-DRAWER to FORMAT-GRAPH-FROM-ROOTS."))
+
+(defgeneric draw-dot-edge (drawer stream from to from-x from-y to-x to-y splines &key)
+  (:documentation
+   "Draw the line connecting FROM and TO nodes."))
+
+(defgeneric draw-dot-label (drawer stream from to &key)
+  (:documentation
+   "Draw the label for the arc between FROM and TO."))
+
+(defgeneric dot-label-record (drawer stream from to &key)
+  (:documentation
+   "Returns the output record for the label between FROM and TO."))
+
+(defmethod draw-dot-label ((drawer dot-arc-drawer) stream from to &rest args)
+  "Default method. Calls the :EDGE-LABEL-PRINTER provided to DOT-ARC-DRAWER."
+  (with-slots (edge-label-printer) drawer
+    (apply edge-label-printer drawer stream (clim:graph-node-object from) (clim:graph-node-object to) args)))
+
+(defmethod dot-label-record ((drawer dot-arc-drawer) stream from to &rest args)
+  "Default method, calls DRAW-DOT-LABEL, wraps it in an output record, and
+caches it."
+  (with-slots (label-records) drawer
+    (values
+     (a:ensure-gethash
+      (list from to) label-records
+      (multiple-value-bind (cursor-x cursor-y)
+          (clim:stream-cursor-position stream)
+        (multiple-value-prog1
+            (clim:with-new-output-record (stream)
+              (clim:with-end-of-line-action (stream :allow)
+                (apply #'draw-dot-label drawer stream from to args)))
+          (clim:stream-set-cursor-position stream cursor-x cursor-y)))))))
+
+(defmethod draw-dot-arc ((drawer dot-arc-drawer) stream from to from-x from-y to-x to-y
+                         &rest args
+                         &key splines label-center)
+  "Default method. Calls DRAW-DOT-EDGE and DRAW-DOT-LABEL."
+  (a:remove-from-plistf args :splines :label-center)
+  (apply #'draw-dot-edge drawer stream from to from-x from-y to-x to-y splines args)
+  (unless (null label-center)
+    (let* ((record (apply #'dot-label-record drawer stream from to args))
+           (bb-width (clim:bounding-rectangle-width record))
+           (bb-height (clim:bounding-rectangle-height record)))
+      ;; shift the record so that the center is at the point chosen by the layout
+      ;; engine.
+      (setf (clim:output-record-position record)
+            (clim:transform-position (clim:medium-transformation stream)
+                                     (- (clim:point-x label-center) (/ bb-width 2))
+                                     (+ (clim:point-y label-center) (/ bb-height 2)))))))
+
+(defmethod draw-dot-edge ((drawer dot-arc-drawer) stream from to from-x from-y to-x to-y splines
+                          &rest args)
+  "Default method. Draws the spline from SPLINES."
+  (declare (ignore from to from-x from-y to-x to-y))
+  (dolist (spline splines)
+    (let ((start (dot-spline-start spline))
+          (end (dot-spline-end spline))
+          (points (dot-spline-points spline)))
+      (apply #'mcclim-bezier:draw-bezier-design*
+             stream (mcclim-bezier:make-bezier-curve points) args)
+      (unless (null start)
+        (apply #'clim:draw-arrow stream (first points) start args))
+      (unless (null end)
+        (apply #'clim:draw-arrow stream (a:last-elt points) end args)))))
+
+(defgeneric dot-edge-label-to-dot-attributes (drawer stream from to &key)
+  (:documentation
+   "Return a list of dot attributes that represent the label between FROM and
+TO."))
+
+(defmethod dot-edge-label-to-dot-attributes ((drawer dot-arc-drawer) stream from to &rest args)
+  "Default method. The dot language unfortunately does not have any way to
+express a label in terms of its bounding box, only text. This method generates
+a string that has the same bounding box as the label."
+  (let* ((record (apply #'dot-label-record drawer stream from to args))
+         (bb-width (clim:bounding-rectangle-width record))
+         (bb-height (clim:bounding-rectangle-height record))
+         (chars-wide (ceiling (/ bb-width (* *dot-edge-label-width-ratio* *dot-edge-label-fontsize*))))
+         (chars-high (ceiling (/ bb-height *dot-edge-label-fontsize*)))
+         (line (make-string chars-wide :initial-element #\m)))
+    (list :label (with-output-to-string (s)
+                   (dotimes (j chars-high)
+                     (write-string line s)
+                     (terpri s))
+                   (write-string line s))
+          :labelfontsize *dot-edge-label-fontsize*
+          :labelfontname *dot-edge-label-fontname*)))
+
+
 ;;; Utilities
 
 (defvar *id* nil
   "Used to generate unique ids for every node in a graph.")
+
+(defvar *dot-stream*)
+(defvar *arc-drawer*)
 
 (defconstant +pts-per-inch+ 72)
 
@@ -113,9 +239,6 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
 
 ;; CLIM graph to CL-DOT::GRAPH
 
-(defvar *dot-stream*)
-(defvar *arc-drawer*)
-
 (defmethod dot:graph-object-node ((record dot-graph-output-record) object)
   "Create a CL-DOT::NODE for the OBJECT. Create a unique ID, set the attributes
 to match the OBJECT's bounding box, and save the ID in the RECORD's
@@ -137,7 +260,7 @@ DOT-ID-TO-RECORD map."
   (loop
     :for child :in (clim:graph-node-children object)
     :for attributes := (when (typep (car *arc-drawer*) 'dot-arc-drawer)
-                         (apply #'dot-edge-label-to-graphviz-attributes
+                         (apply #'dot-edge-label-to-dot-attributes
                                 (car *arc-drawer*) *dot-stream* object child
                                 (cdr *arc-drawer*)))
     :collect (make-instance 'dot:attributed
@@ -182,12 +305,12 @@ is upper left)."
 (defmacro with-dot-transformation ((medium graph-record) &body body)
   `(call-with-dot-transformation (lambda () ,@body) ,medium ,graph-record))
 
-(defmethod layout-graph-nodes :before ((graph-record dot-graph-output-record)
-                                       stream arc-drawer arc-drawing-options)
+(defmethod clim:layout-graph-nodes :before ((graph-record dot-graph-output-record)
+                                            stream arc-drawer arc-drawing-options)
   (perform-layout graph-record stream arc-drawer arc-drawing-options))
 
-(defmethod layout-graph-nodes ((graph-record dot-graph-output-record)
-                               stream arc-drawer arc-drawing-options)
+(defmethod clim:layout-graph-nodes ((graph-record dot-graph-output-record)
+                                    stream arc-drawer arc-drawing-options)
   (with-slots (dot-layout dot-id-to-record) graph-record
     (with-dot-transformation (stream graph-record)
       (dolist (dot-node (dot::nodes-of dot-layout))
@@ -200,16 +323,15 @@ is upper left)."
                 (clim:transform-position (clim:medium-transformation stream)
                                          (- (clim:point-x pos) (/ bb-width 2))
                                          (+ (clim:point-y pos) (/ bb-height 2))))
-          ;;(clim:add-output-record node graph-record)
-          )))))
+          (clim:add-output-record node graph-record))))))
 
-(defmethod layout-graph-edges :around ((graph-record dot-graph-output-record)
-                                       stream arc-drawer arc-drawing-options)
+(defmethod clim:layout-graph-edges :around ((graph-record dot-graph-output-record)
+                                            stream arc-drawer arc-drawing-options)
   (setf arc-drawer (or arc-drawer (make-instance 'dot-arc-drawer)))
   (call-next-method graph-record stream arc-drawer arc-drawing-options))
 
-(defmethod layout-graph-edges ((graph-record dot-graph-output-record)
-                               stream arc-drawer arc-drawing-options)
+(defmethod clim:layout-graph-edges ((graph-record dot-graph-output-record)
+                                    stream arc-drawer arc-drawing-options)
   (with-slots (dot-layout dot-id-to-record) graph-record
     (dolist (dot-edge (dot::edges-of dot-layout))
       (let* ((attributes (dot::attributes-of dot-edge))

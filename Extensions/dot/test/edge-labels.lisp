@@ -19,12 +19,13 @@
        :stream s
        :arc-drawer (make-instance 'mcclim-dot::dot-arc-drawer
                                   :edge-label-printer
-                                  (lambda (stream from to)
-                                    (declare (ignore to))
+                                  (lambda (drawer stream from to)
+                                    (declare (ignore drawer to))
                                     (ecase from
                                       (a
                                        (format stream "A to B~%A"))
                                       (b
                                        (format stream "B to C~%D")))))
        :orientation :vertical
-       :graph-type :dot-digraph))))
+       :graph-type :dot-digraph
+       :merge-duplicates t))))
