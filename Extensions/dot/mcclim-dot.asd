@@ -11,7 +11,8 @@
   :description "Core DOT routines."
   :depends-on ("mcclim" "mcclim-bezier" "cl-dot" "alexandria" "split-sequence" "parse-number")
   :components ((:file "package")
-               (:file "core" :depends-on ("package"))))
+               (:file "core" :depends-on ("package"))
+               (:file "edge-drawer" :depends-on ("package"))))
 
 (defsystem "mcclim-dot/graphviz"
   :license "MIT"
