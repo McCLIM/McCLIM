@@ -17,7 +17,7 @@
        (lambda (obj)
          (cdr (assoc obj '((a b) (b c)))))
        :stream s
-       :arc-drawer (make-instance 'mcclim-dot::dot-arc-drawer
+       :arc-drawer (make-instance 'mcclim-dot:dot-arc-drawer
                                   :edge-label-printer
                                   (lambda (drawer stream from to)
                                     (declare (ignore drawer to))
