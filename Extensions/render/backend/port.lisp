@@ -48,25 +48,11 @@
   (declare (ignore character-set))
   (labels
       ((find-and-make-truetype-font (family face size)
-         (let* ((font-path-maybe-relative
-                 (cdr (assoc (list family face) *families/faces*
-                             :test #'equal)))
-                (font-path
-                 (and font-path-maybe-relative
-                      (case (car (pathname-directory
-                                  font-path-maybe-relative))
-                        (:absolute font-path-maybe-relative)
-                        (otherwise (merge-pathnames
-                                    font-path-maybe-relative
-                                    (or *truetype-font-path* "")))))))
+         (let ((font-path
+                 (cdr (assoc (list family face) *families/faces* :test #'equal))))
            (if (and font-path (probe-file font-path))
                (make-truetype-font port font-path size)
-               ;; We could error here, but we want to fallback to
-               ;; fonts provided by CLX server. Its better to have
-               ;; ugly fonts than none at all.
-               (error 'missing-font
-                      :filename font-path
-                      :text-style text-style))))
+               (error 'missing-font :filename font-path :text-style text-style))))
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))

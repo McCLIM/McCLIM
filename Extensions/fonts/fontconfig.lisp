@@ -3,19 +3,17 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;;  (c) Copyright 2008 by Andy Hefner <ahefner@gmail.com>
-;;;  (c) Copyright 2016 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) Copyright 2016-2021 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; This file contains our attempts to configure TTF paths and map them to the
-;;; predefined text styles. First we check if some default paths can be used for
-;;; that purpose, otherwise we shell out to `fc-match'.
+;;; This file configures TTF paths and maps them to the standard text styles.
 ;;;
 
 (in-package #:mcclim-truetype)
 
-
-;;; fallback (path may be set in a restart by the user)
+;;; This path may be used by clime:port-all-font-familes by the
+;;; port-specific implementation to list "system" fonts.
 (defparameter *truetype-font-path*
   (find-if #'probe-file
            '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
@@ -33,83 +31,47 @@
              #p"/Library/Fonts/"
              #p"C:/Windows/Fonts/")))
 
-;;; Here are mappings for the DejaVu family of fonts, which are a
-;;; derivative of Vera with improved unicode coverage.
-;;;
-;;; Paths are relative so we are able to rely on value of a special
-;;; variable *truetype-font-path*, so if it is changed in
-;;; `invoke-with-truetype-path-restart' it will be used.
-(defvar *families/faces*
-  '(((:fix :roman) . "DejaVuSansMono.ttf")
-    ((:fix :italic) . "DejaVuSansMono-Oblique.ttf")
-    ((:fix (:bold :italic)) . "DejaVuSansMono-BoldOblique.ttf")
-    ((:fix (:italic :bold)) . "DejaVuSansMono-BoldOblique.ttf")
-    ((:fix :bold) . "DejaVuSansMono-Bold.ttf")
-    ((:serif :roman) . "DejaVuSerif.ttf")
-    ((:serif :italic) . "DejaVuSerif-Italic.ttf")
-    ((:serif (:bold :italic)) . "DejaVuSerif-BoldOblique.ttf")
-    ((:serif (:italic :bold)) . "DejaVuSerif-BoldOblique.ttf")
-    ((:serif :bold) . "DejaVuSerif-Bold.ttf")
-    ((:sans-serif :roman) . "DejaVuSans.ttf")
-    ((:sans-serif :italic) . "DejaVuSans-Oblique.ttf")
-    ((:sans-serif (:bold :italic)) . "DejaVuSans-BoldOblique.ttf")
-    ((:sans-serif (:italic :bold)) . "DejaVuSans-BoldOblique.ttf")
-    ((:sans-serif :bold) . "DejaVuSans-Bold.ttf")))
+(defvar *families/faces* nil)
 
 (defun invoke-with-truetype-path-restart (continuation)
   (restart-case (funcall continuation)
     (change-font-path (new-path)
-      :report (lambda (stream) (format stream "Retry with alternate truetype font path"))
+      :report (lambda (stream)
+                (format stream "Retry with alternate truetype font path"))
       :interactive (lambda ()
                      (format *query-io* "Enter new value: ")
                      (list (read-line)))
       (setf *truetype-font-path* new-path)
       (invoke-with-truetype-path-restart continuation))))
 
-
-;;; predefined paths (registers all found ttf fonts)
-
 (defun default-font/family-map ()
-  (when (null *truetype-font-path*)
-    (return-from default-font/family-map nil))
   (flet ((try-ttf (name)
-           ;; probe for files existance - if they do not exist our
-           ;; mapping is futile and we must try `fc-match'.
-           (if-let ((path (probe-file
-                           (merge-pathnames name *truetype-font-path*))))
-             path
-             (progn
-               (warn "~s doesn't exist" (merge-pathnames name *truetype-font-path*))
-               (return-from default-font/family-map)))))
-    `(((:fix :roman) .                 ,(try-ttf "DejaVuSansMono.ttf" ))
-      ((:fix :italic) .                ,(try-ttf "DejaVuSansMono-Oblique.ttf"))
-      ((:fix (:bold :italic)) .        ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
-      ((:fix (:italic :bold)) .        ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
-      ((:fix :bold) .                  ,(try-ttf "DejaVuSansMono-Bold.ttf"))
-      ((:serif :roman) .               ,(try-ttf "DejaVuSerif.ttf"))
-      ((:serif :italic) .              ,(try-ttf "DejaVuSerif-Italic.ttf"))
-      ((:serif (:bold :italic)) .      ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
-      ((:serif (:italic :bold)) .      ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
-      ((:serif :bold) .                ,(try-ttf "DejaVuSerif-Bold.ttf"))
-      ((:sans-serif :roman) .          ,(try-ttf "DejaVuSans.ttf"))
-      ((:sans-serif :italic) .         ,(try-ttf "DejaVuSans-Oblique.ttf"))
+           (or (cl-dejavu:font-pathname name)
+               (error "Can't find the pathname for the font ~s." name))))
+    `(((:fix :roman)                 . ,(try-ttf "DejaVuSansMono.ttf" ))
+      ((:fix :italic)                . ,(try-ttf "DejaVuSansMono-Oblique.ttf"))
+      ((:fix (:bold :italic))        . ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
+      ((:fix (:italic :bold))        . ,(try-ttf "DejaVuSansMono-BoldOblique.ttf"))
+      ((:fix :bold)                  . ,(try-ttf "DejaVuSansMono-Bold.ttf"))
+      ((:serif :roman)               . ,(try-ttf "DejaVuSerif.ttf"))
+      ((:serif :italic)              . ,(try-ttf "DejaVuSerif-Italic.ttf"))
+      ((:serif (:bold :italic))      . ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
+      ((:serif (:italic :bold))      . ,(try-ttf "DejaVuSerif-BoldItalic.ttf"))
+      ((:serif :bold)                . ,(try-ttf "DejaVuSerif-Bold.ttf"))
+      ((:sans-serif :roman)          . ,(try-ttf "DejaVuSans.ttf"))
+      ((:sans-serif :italic)         . ,(try-ttf "DejaVuSans-Oblique.ttf"))
       ((:sans-serif (:bold :italic)) . ,(try-ttf "DejaVuSans-BoldOblique.ttf"))
       ((:sans-serif (:italic :bold)) . ,(try-ttf "DejaVuSans-BoldOblique.ttf"))
-      ((:sans-serif :bold) .           ,(try-ttf "DejaVuSans-Bold.ttf")))))
+      ((:sans-serif :bold)           . ,(try-ttf "DejaVuSans-Bold.ttf")))))
+
+(defun autoconfigure-fonts ()
+  (setf *families/faces* (default-font/family-map)))
+
+(eval-when (:load-toplevel :execute)
+  (autoconfigure-fonts))
 
 
 ;;; `fc-match' implementation
-
-(defparameter *family-names*
-  '((:serif      . "Serif")
-    (:sans-serif . "Sans")
-    (:fix        . "Mono")))
-
-(defparameter *fontconfig-faces*
-  '((:roman . "")
-    (:bold  . "bold")
-    (:italic . "oblique")
-    ((:bold :italic) . "bold:oblique")))
 
 (defun parse-fontconfig-output (s)
   (let* ((match-string (concatenate 'string (string #\Tab) "file:"))
@@ -126,12 +88,6 @@
     (when filename
       (parse-namestring filename))))
 
-(defun warn-about-unset-font-path ()
-  (cerror "Proceed"
-          "~%~%NOTE:~%~
-* McCLIM was unable to configure itself automatically using
-  fontconfig. Therefore you must configure it manually.~%"))
-
 (defun find-fontconfig-font (font-fc-name)
   (multiple-value-bind (output errors code)
       (uiop:run-program (list "fc-match" "-v" font-fc-name)
@@ -142,34 +98,3 @@
         (warn "~&fc-match failed with code ~D.~%" code)
         (with-input-from-string (stream output)
           (parse-fontconfig-output stream)))))
-
-(defun fontconfig-name (family face)
-  (format nil "~A:~A" family face))
-
-(defun build-font/family-map (&optional (families *family-names*))
-  (loop for family in families nconcing
-    (loop for face in *fontconfig-faces*
-          as filename = (find-fontconfig-font (fontconfig-name (cdr family) (cdr face)))
-          when (null filename) do (return-from build-font/family-map nil)
-          collect
-          (cons (list (car family) (car face)) filename))))
-
-
-;;; configure fonts
-
-(defun autoconfigure-fonts ()
-  (invoke-with-truetype-path-restart
-   (lambda ()
-     (check-type *truetype-font-path* pathname)
-     (if-let ((map (or (support-map-p (default-font/family-map))
-                       (support-map-p (build-font/family-map)))))
-       (setf *families/faces* map)
-       (warn-about-unset-font-path)))))
-
-(defun support-map-p (font-map)
-  (handler-case
-      (when (every #'(lambda (font)
-                       (zpb-ttf:with-font-loader (ignored (cdr font)) t))
-                   font-map)
-        font-map)
-    (zpb-ttf::bad-magic () nil)))

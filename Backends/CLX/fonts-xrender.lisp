@@ -16,9 +16,6 @@
 
 ;;;; Notes
 
-;;; You might need to tweak mcclim-truetype:*families/faces* to point
-;;; to where ever there are suitable TTF fonts on your system.
-
 ;;; FIXME: Not particularly thread safe.
 
 
@@ -177,23 +174,12 @@ The following files should exist:~&~{  ~A~^~%~}"
   (declare (ignore character-set))
   (labels
       ((find-and-make-truetype-font (family face size)
-         (let* ((font-path-maybe-relative
-                  (cdr (assoc (list family face) mcclim-truetype:*families/faces*
-                              :test #'equal)))
-                (font-path
-                  (and font-path-maybe-relative
-                       (case (car (pathname-directory
-                                   font-path-maybe-relative))
-                         (:absolute font-path-maybe-relative)
-                         (otherwise
-                          (merge-pathnames
-                           font-path-maybe-relative
-                           (or mcclim-truetype:*truetype-font-path* "")))))))
+         (let* ((font-path
+                  (assoc-value mcclim-truetype:*families/faces*
+                               (list family face) :test #'equal)))
            (if (and font-path (probe-file font-path))
                (make-truetype-font port font-path size)
-               (error 'missing-font
-                      :filename font-path
-                      :text-style text-style))))
+               (error 'missing-font :filename font-path :text-style text-style))))
        (find-font ()
          (multiple-value-call #'find-and-make-truetype-font
            (clim:text-style-components text-style))))
