@@ -13,6 +13,12 @@
 
 (in-package #:clim-internals)
 
+(defvar *unsupplied-argument-marker*
+  '%unsupplied-argument-marker%)
+
+(defun unsupplied-argument-p (val)
+  (eq *unsupplied-argument-marker* val))
+
 (defclass command-parsers ()
   ((parser :accessor parser :initarg :parser)
    (partial-parser :accessor partial-parser :initarg :partial-parser)
@@ -23,11 +29,6 @@
 
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
-
-(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
-
-(defun unsupplied-argument-p (val)
-  (eq *unsupplied-argument-marker* val))
 
 (defun present-argument-value (value ptype stream)
   (if (unsupplied-argument-p value)
