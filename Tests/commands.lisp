@@ -147,6 +147,79 @@
       (add-keystroke-to-command-table ct :abort :command '(com-foo))
       (check-keystroke-not-menu ct))))
 
+;;; Test how add-command-to-command-table behaves when a menu item already
+;;; exists for either a menu name or a keystroke.
+(test commands.command-table.add-command-with-existing-menu
+  (with-command-table (ct nil)
+    (flet ((test-command-p (command-name expected)
+             (let ((result (command-present-in-command-table-p command-name ct)))
+               (if (null expected)
+                   (is (null result))
+                   (is (not (null result))))))
+           (test-menu-item (string expected)
+             (let ((item (find-menu-item string ct :errorp nil)))
+               (if (or (null item) (null expected))
+                   (is (eq expected item))
+                   (is (eq expected (command-menu-item-value item))))))
+           (test-keystroke (gesture expected)
+             (let ((item (find-keystroke-item gesture ct :errorp nil)))
+               (if (or (null item) (null expected))
+                   (is (eq expected item))
+                   (is (eq expected (command-menu-item-value item)))))))
+      (add-menu-item-to-command-table ct "HI!" :divider :xxx :keystroke #\x)
+      (test-menu-item "HI!" :xxx)
+      (test-keystroke #\x :xxx)
+      ;; 1. We can't add a command if the menu entry overlaps
+      (signals command-already-present
+        (add-command-to-command-table 'com-test1 ct :menu "HI!"))
+      ;; Ensure that error was signaled *before* command was nadded.
+      (test-command-p 'com-test1 nil)
+      ;; 2. If errorp is NIL then the menu name is replaced
+      (finishes
+        (add-command-to-command-table 'com-test1 ct :menu "HI!" :errorp nil))
+      (test-command-p 'com-test1 t)
+      (test-menu-item "HI!" 'com-test1)
+      ;; The keystroke is also removed with the whole menu item.
+      (test-keystroke #\x nil)
+      ;; 3. If errorp is NIL and menu is NIL and the menu item was introduced by
+      ;; the same operator, then the menu item is removed.
+      (test-menu-item "HI!" 'com-test1)
+      (add-command-to-command-table 'com-test1 ct :errorp nil)
+      (test-menu-item "HI!" nil)
+      (test-command-p 'com-test1 t)
+      ;; 4. Removing the command removes also a keystroke and a menu item
+      (add-command-to-command-table 'com-test1 ct :errorp nil :menu "HI!" :keystroke #\x)
+      (test-menu-item "HI!" 'com-test1)
+      (test-keystroke #\x 'com-test1)
+      ;;
+      (remove-command-from-command-table 'com-test1 ct)
+      (test-command-p 'com-test1 nil)
+      (test-menu-item "HI!" nil)
+      (test-keystroke #\x nil))))
+
+(test commands.command-table.add-menu-name-with-keystroke
+  (with-command-table (ct nil)
+    (flet ((test-menu-item (string expected)
+             (let ((item (find-menu-item string ct :errorp nil)))
+               (if (or (null item) (null expected))
+                   (is (eq expected item))
+                   (is (eq expected (command-menu-item-value item))))))
+           (test-keystroke (gesture expected)
+             (let ((item (find-keystroke-item gesture ct :errorp nil)))
+               (if (or (null item) (null expected))
+                   (is (eq expected item))
+                   (is (eq expected (command-menu-item-value item)))))))
+      (add-keystroke-to-command-table ct #\x :divider :xxx)
+      (test-keystroke #\x :xxx)
+      (signals command-already-present
+        (add-menu-item-to-command-table ct "foo" :divider :yyy :keystroke #\x))
+      (test-keystroke #\x :xxx)
+      (finishes
+        (add-menu-item-to-command-table ct "foo" :divider :yyy :keystroke #\x :errorp nil))
+      (test-keystroke #\x :yyy)
+      (remove-menu-item-from-command-table ct "foo")
+      (test-keystroke #\x nil))))
+
 
 ;;; command table inheritance
 
@@ -332,7 +405,7 @@
 (test commands.find-presentation-translator.smoke
   (with-command-table (table 'test)
     ;; Not present - should signal
-    (signals command-not-present
+    (signals command-not-accessible
       (find-presentation-translator 'dummy-translator 'test))
     ;; Not present, but with ERRORP being NIL - should not signal
     (is (eq nil (find-presentation-translator

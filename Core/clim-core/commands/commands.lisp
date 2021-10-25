@@ -88,10 +88,7 @@
                                        &allow-other-keys)
   (ecase type
     (:command
-     ;; This is specified to be a cons, but McCLIM is more permissive
-     ;; (and we don't want to break the backward compatibility).
-     (unless (consp value)
-       (setf value (list value))))
+     (check-type value (or symbol cons)))
     (:function
      ;; A function of two arguments (funcalled).
      (check-type value function-designator))
@@ -224,11 +221,7 @@
               `(add-command-to-command-table
                 ',command-name ',command-table
                 :name ,name :menu ',menu
-                :keystroke ',keystroke :errorp nil
-                ,@(when (or menu keystroke)
-                    `(:menu-command
-                      (list ',command-name ,@(make-unsupplied-arguments
-                                              (length required-args)))))))
+                :keystroke ',keystroke :errorp nil))
            ,(make-argument-accept-fun
              accept-fun-name required-args keyword-args)
            ,(make-partial-parser-fun partial-parser-fun-name required-args)
