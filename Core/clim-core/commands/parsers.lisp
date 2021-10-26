@@ -106,11 +106,7 @@
                                           &key (when t) &allow-other-keys)
                          key-arg
                        (declare (ignore ptype))
-                       (let ((key-arg-name (concatenate
-                                            'string
-                                            ":"
-                                            (keyword-arg-name-from-symbol
-                                             name))))
+                       (let ((key-arg-name (keyword-arg-name-from-symbol name)))
                          `(when ,when
                             (push `(,,key-arg-name ,,name)
                                   ,key-possibilities)))))
@@ -246,9 +242,9 @@
         for (arg ptype-form) in key-args
         for arg-key = (make-keyword arg)
         collect `(,arg-key
-                  (format ,stream "~C:~A~C"
+                  (format ,stream "~C~A~C"
                           ,seperator
-                          ,(keyword-arg-name-from-symbol arg)
+                          ,(keyword-name-from-symbol arg)
                           ,seperator)
                   (present-argument-value ,key-arg-val ,ptype-form ,stream))
           into key-clauses

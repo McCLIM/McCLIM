@@ -676,13 +676,11 @@ index being halfway between INDEX-1 and INDEX-2."
                        4
                        0))))))
 
-(defun keyword-arg-name-from-symbol (symbol)
-  (let ((name (symbol-name symbol)))
-    (string-capitalize (substitute #\Space #\- name))))
+(defun keyword-arg-name-from-symbol (item)
+  (format nil "~(:~a~)" item))
 
-;;; Taken from a stackoverflow thread[1] then extended per suggestion
-;;; in peer review[2]. Use with care (should work for "ordinary"
-;;; classes).
+;;; Taken from a stackoverflow thread[1] then extended per suggestion in peer
+;;; review[2]. Use with care (should work for "ordinary" classes).
 ;;;
 ;;; [1] https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536
 ;;; [2] https://github.com/McCLIM/McCLIM/pull/833#discussion_r322010160
