@@ -23,7 +23,7 @@
 ;;; accepting an expression returns immediately after typing the closing
 ;;; delimiter -- a la Genera et Mac Lisp -- or if an activation gesture is
 ;;; required.
-;;; PRESERVE-WHITESPACE controls whether the accept method uses read or
+;;; PRESERVE-WHITESPACE controls whether the accept method uses READ or
 ;;; READ-PRESERVING-WHITESPACE. This is used in our redefinitions of read and
 ;;; READ-PRESERVING-WHITESPACE that accept forms.
 
@@ -31,14 +31,13 @@
 ;;; builtin-commands.lisp
 
 (define-presentation-type expression ()
-  :options (auto-activate (preserve-whitespace t) (subform-read nil))
+  :options (auto-activate (preserve-whitespace t))
   :inherit-from t)
 
 (define-presentation-type form ()
-  :options (auto-activate (preserve-whitespace t) (subform-read nil))
+  :options (auto-activate (preserve-whitespace t))
   :inherit-from `((expression) :auto-activate ,auto-activate
-                  :preserve-whitespace ,preserve-whitespace
-                  :subform-read ,subform-read ))
+                               :preserve-whitespace ,preserve-whitespace))
 
 ;;; Standard presentation type `null'
 
