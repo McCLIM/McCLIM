@@ -255,12 +255,6 @@
   (object)
   (values object 'form))
 
-;;; Support for accepting subforms of a form.
-
-;;; Used to signal a read that ends a list
-(define-presentation-type list-terminator ()
-  :inherit-from 'form)
-
 (defvar *sys-read* #'read)
 (defvar *sys-read-preserving-whitespace* #'read-preserving-whitespace)
 
@@ -269,78 +263,33 @@
 (defvar *eof-value* nil)
 (defvar *recursivep* nil)
 
-;;; For passing arguments to the call to %read-list-expression.
-;;; Gross, but not as gross as using presentation type options.
-;;;
-;;; XXX But I am using a presentation type option to choice the
-;;; subform reader; what's the difference? Granted the presentation
-;;;type specifier is constant.... -- moore
-
-(defvar *dot-ok*)
-(defvar *termch*)
-
-(defun whitespacep (char)
-  (or (char= char #\Space)
-      (char= char #\Newline)
-      (char= char #\Return)
-      (char= char #\Tab)))
-
-#+openmcl
-(defvar *sys-%read-list-expression* #'ccl::%read-list-expression)
-
-#+openmcl
-(with-system-redefinition-allowed
-(defun ccl::%read-list-expression (stream *dot-ok* &optional (*termch* #\)))
-  (if (typep stream 'input-editing-stream)
-      (progn
-        ;; Eat "whitespace" so it is not deleted by presentation-replace-input
-        (let ((gesture (read-gesture :stream stream :timeout 0 :peek-p t)))
-          (when (and gesture
-                     (or (activation-gesture-p gesture)
-                         (delimiter-gesture-p gesture)
-                         (and (characterp gesture)
-                              (whitespacep gesture))))
-            (read-gesture :stream stream)))
-        (multiple-value-bind (object type)
-            (accept '((expression) :subform-read t) :stream stream :prompt nil)
-          (values object (if (presentation-subtypep type 'list-terminator)
-                             nil
-                             t))))
-      (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)))
-)                                       ; with-system-redefinition-allowed
-
-(define-presentation-method accept ((type expression) stream (view textual-view)
-                                    &key)
+(define-presentation-method accept ((type expression) stream (view textual-view) &key)
   (let* ((object nil)
          (ptype nil))
-    #.(funcall (if #+openmcl t #-openmcl nil #'identity #'fourth)
-               `(if subform-read
-                    (multiple-value-bind (val valid)
-                        (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
-                      (if valid
-                          (setq object val)
-                          (return-from accept (values nil 'list-terminator))))
-                    ;; We don't want activation gestures like :return causing an eof
-                    ;; while reading a form. Also, we don't want spaces within forms or
-                    ;; strings causing a premature return either!
-                    ;; XXX This loses when rescanning (possibly in other contexts too) an
-                    ;; activated input buffer (e.g., reading an expression from the accept
-                    ;; method for OR where the previous readers have already given
-                    ;; up). We should call *sys-read-preserving-whitespace* and handle the
-                    ;; munching of whitespace ourselves according to the
-                    ;; PRESERVE-WHITESPACE parameter. Fix after .9.2.2.
-                    (with-delimiter-gestures (nil :override t)
-                      (with-activation-gestures (nil :override t)
-                        (setq object (funcall
-                                      (if preserve-whitespace
-                                          *sys-read-preserving-whitespace*
-                                          *sys-read*)
-                                      stream
-                                      *eof-error-p* *eof-value* *recursivep*))))))
+    ;; We don't want activation gestures like :return causing an eof
+    ;; while reading a form. Also, we don't want spaces within forms or
+    ;; strings causing a premature return either!
+    ;;
+    ;; XXX This loses when rescanning (possibly in other contexts too)
+    ;; an activated input buffer (e.g., reading an expression from the
+    ;; accept method for OR where the previous readers have already
+    ;; given up). We should call *sys-read-preserving-whitespace* and
+    ;; handle the munching of whitespace ourselves according to the
+    ;; PRESERVE-WHITESPACE parameter. Fix after .9.2.2.
+    (with-delimiter-gestures (nil :override t)
+      (with-activation-gestures (nil :override t)
+        (flet ((read-object ()
+                 (funcall
+                  (if preserve-whitespace
+                      *sys-read-preserving-whitespace*
+                      *sys-read*)
+                  stream
+                  *eof-error-p* *eof-value* *recursivep*)))
+          (setq object (read-object)))))
     (setq ptype (presentation-type-of object))
-    (unless (presentation-subtypep ptype 'expression)
-      (setq ptype 'expression))
-    (if (or subform-read auto-activate)
+    (unless (presentation-subtypep ptype type)
+      (setq ptype type))
+    (if auto-activate
         (values object ptype)
         (loop
           for gesture = (read-gesture :stream stream)
@@ -354,50 +303,39 @@
                                     (stream input-editing-stream)
                                     (view textual-view)
                                     &key)
-  ;; This method is specialized to
-  ;; input-editing-streams and has thus been
-  ;; made slightly more tolerant of input
-  ;; errors. It is slightly hacky, but seems
-  ;; to work fine.
+  ;; This method is specialized to input-editing-streams and has thus
+  ;; been made slightly more tolerant of input errors. It is slightly
+  ;; hacky, but seems to work fine.
   (let* ((object nil)
          (ptype nil))
-    #.(funcall (if #+openmcl t #-openmcl nil #'identity #'fourth)
-               `(if (and #-openmcl nil subform-read)
-                    (multiple-value-bind (val valid)
-                        (funcall *sys-%read-list-expression* stream *dot-ok* *termch*)
-                      (if valid
-                          (setq object val)
-                          (return-from accept (values nil 'list-terminator))))
-                    ;; We don't want activation gestures like :return causing an
-                    ;; eof while reading a form. Also, we don't want spaces within
-                    ;; forms or strings causing a premature return either!
-                    (with-delimiter-gestures (nil :override t)
-                      (with-activation-gestures (nil :override t)
-                        (setq object
-                              ;; We loop in our accept of user input, if a reader
-                              ;; error is signalled, we merely ignore it and ask
-                              ;; for more input. This is so a single malplaced #\(
-                              ;; or #\, won't throw up a debugger with a
-                              ;; READER-ERROR and remove whatever the user wrote
-                              ;; to the stream.
-                              (loop for potential-object =
-                                   (handler-case (funcall
-                                                  (if preserve-whitespace
-                                                      *sys-read-preserving-whitespace*
-                                                      *sys-read*)
-                                                  stream
-                                                  *eof-error-p*
-                                                  *eof-value*
-                                                  *recursivep*)
-                                     ((and reader-error) (e)
-                                       (declare (ignore e))
-                                       nil))
-                                   unless (null potential-object)
-                                   return potential-object))))))
+    ;; We don't want activation gestures like :return causing an eof
+    ;; while reading a form. Also, we don't want spaces within forms or
+    ;; strings causing a premature return either!
+    (with-delimiter-gestures (nil :override t)
+      (with-activation-gestures (nil :override t)
+        (flet ((read-object ()
+                 ;; We loop in our accept of user input, if a reader
+                 ;; error is signalled, we merely ignore it and ask for
+                 ;; more input. This is so a single malplaced #\( or #\,
+                 ;; won't throw up a debugger with a READER-ERROR and
+                 ;; remove whatever the user wrote to the stream.
+                 (loop for potential-object
+                         = (handler-case (funcall
+                                          (if preserve-whitespace
+                                              *sys-read-preserving-whitespace*
+                                              *sys-read*)
+                                          stream
+                                          *eof-error-p* *eof-value* *recursivep*)
+                             (reader-error (e)
+                               (declare (ignore e))
+                               nil))
+                       unless (null potential-object)
+                         return potential-object)))
+          (setq object (read-object)))))
     (setq ptype (presentation-type-of object))
-    (unless (presentation-subtypep ptype 'expression)
-      (setq ptype 'expression))
-    (if (or subform-read auto-activate)
+    (unless (presentation-subtypep ptype type)
+      (setq ptype type))
+    (if auto-activate
         (values object ptype)
         (loop
           for gesture = (read-gesture :stream stream)

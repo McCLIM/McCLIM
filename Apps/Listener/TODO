@@ -5,7 +5,6 @@ for its intended purpose:
 McCLIM TODO:
  - Implement more of the emacs editing keys
  - Completion of pathnames and symbols
- - Subform accepting in places other than OpenMCL
  - Error checking during form reading
 
 Listener TODO:
