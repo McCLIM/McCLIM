@@ -287,8 +287,8 @@
                   *eof-error-p* *eof-value* *recursivep*)))
           (setq object (read-object)))))
     (setq ptype (presentation-type-of object))
-    (unless (presentation-subtypep ptype 'expression)
-      (setq ptype 'expression))
+    (unless (presentation-subtypep ptype type)
+      (setq ptype type))
     (if auto-activate
         (values object ptype)
         (loop
@@ -333,8 +333,8 @@
                          return potential-object)))
           (setq object (read-object)))))
     (setq ptype (presentation-type-of object))
-    (unless (presentation-subtypep ptype 'expression)
-      (setq ptype 'expression))
+    (unless (presentation-subtypep ptype type)
+      (setq ptype type))
     (if auto-activate
         (values object ptype)
         (loop

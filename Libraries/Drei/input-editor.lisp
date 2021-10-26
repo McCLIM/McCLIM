@@ -853,5 +853,5 @@ invoke the command, and the accumulated numeric argument."
                 (ptype (presentation-type-of object)))
            (return-from control-loop
              (values object
-                     (if (presentation-subtypep ptype 'expression)
-                         ptype 'expression))))))))
+                     (if (presentation-subtypep ptype type)
+                         ptype type))))))))
