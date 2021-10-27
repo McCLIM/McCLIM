@@ -356,6 +356,13 @@
   (declare (ignore acceptably for-context-type))
   (princ object stream))
 
+(define-presentation-method accept
+    ((type character) stream (view textual-view) &rest args)
+  (apply #'accept '(string 1) :stream stream
+                              :view view
+                              :prompt nil
+         args))
+
 ;;; Standard presentation type `string'
 
 (define-presentation-type string (&optional length)
@@ -385,12 +392,15 @@
 (define-presentation-method accept ((type string) stream (view textual-view)
                                     &key (default nil defaultp)
                                          (default-type type))
-  (let ((result (read-token stream)))
+  (let* ((result (read-token stream))
+         (result-length (length result)))
     (cond ((numberp length)
-           (if (eql length (length result))
+           (if (= length result-length)
                (values result type)
-               (input-not-of-required-type result type)))
-          ((and (zerop (length result)) defaultp)
+               (if (and (zerop result-length) defaultp)
+                   (values default default-type)
+                   (input-not-of-required-type result type))))
+          ((and (zerop result-length) defaultp)
            (values default default-type))
           (t (values result type)))))
 
