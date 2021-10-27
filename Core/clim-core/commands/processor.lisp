@@ -108,7 +108,7 @@
     (return-from ensure-complete-command))
   (unless (consp command)
     (setf command (list command)))
-  (let ((canonical (partial-command-from-name (car command) command-table)))
+  (let ((canonical (partial-command-from-name (car command))))
     ;; When the command has more arguments than its "canonical form", that is
     ;; the command with all required arguments filled, that means that it has
     ;; all required arguments *and* some optional arguments.
