@@ -222,12 +222,6 @@
                                            (declare (ignore ptype))
                                            `(,arg-name ,default)))
                                      keyword-args)))))
-            (accept-fun-name (make-command-function-name
-                              command-name '#:acceptor))
-            (partial-parser-fun-name (make-command-function-name
-                                      command-name '#:partial))
-            (arg-unparser-fun-name (make-command-function-name
-                                    command-name '#:unparse))
             (parser-name (make-command-function-name command-name '#:parser)))
         `(progn
            (defun ,command-name ,command-func-args
@@ -236,19 +230,11 @@
               `(add-command-to-command-table ',command-name ',command-table
                 :name ,name :menu ',menu :keystroke ',keystroke :errorp nil))
            ,(make-command-parser parser-name required-args keyword-args)
-           ,(make-argument-accept-fun
-             accept-fun-name required-args keyword-args)
-           ,(make-partial-parser-fun partial-parser-fun-name required-args)
-           ,(make-unprocessor-fun
-             arg-unparser-fun-name required-args keyword-args)
            ,@(when command-table
                (make-command-translators command-name command-table required-args))
            (setf (gethash ',command-name *command-parser-table*)
                  (make-instance 'command-parsers
-                  :the-parser        (function ,parser-name)
-                  :parser            (function ,accept-fun-name)
-                  :partial-parser    (function ,partial-parser-fun-name)
-                  :argument-unparser (function ,arg-unparser-fun-name)
+                  :the-parser    (function ,parser-name)
                   :required-args (quote ,required-args)
                   :keyword-args  (quote ,keyword-args)))
            ',command-name)))))
