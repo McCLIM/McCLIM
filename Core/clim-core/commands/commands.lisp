@@ -186,6 +186,11 @@
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
+(defun parse-command (command-name arg-parser del-parser stream)
+  (if-let ((parser (gethash command-name *command-parser-table*)))
+    (funcall (the-parser parser) arg-parser del-parser stream)
+    (error 'type-error :expected-type 'command-name :datum command-name)))
+
 (defun partial-command-from-name (command-name)
   (if-let ((parsers (gethash command-name *command-parser-table*)))
     (cons command-name
@@ -222,15 +227,15 @@
             (partial-parser-fun-name (make-command-function-name
                                       command-name '#:partial))
             (arg-unparser-fun-name (make-command-function-name
-                                    command-name '#:unparse)))
+                                    command-name '#:unparse))
+            (parser-name (make-command-function-name command-name '#:parser)))
         `(progn
            (defun ,command-name ,command-func-args
              ,@body)
            ,(when command-table
-              `(add-command-to-command-table
-                ',command-name ',command-table
-                :name ,name :menu ',menu
-                :keystroke ',keystroke :errorp nil))
+              `(add-command-to-command-table ',command-name ',command-table
+                :name ,name :menu ',menu :keystroke ',keystroke :errorp nil))
+           ,(make-command-parser parser-name required-args keyword-args)
            ,(make-argument-accept-fun
              accept-fun-name required-args keyword-args)
            ,(make-partial-parser-fun partial-parser-fun-name required-args)
@@ -240,11 +245,12 @@
                (make-command-translators command-name command-table required-args))
            (setf (gethash ',command-name *command-parser-table*)
                  (make-instance 'command-parsers
-                                :parser #',accept-fun-name
-                                :partial-parser #',partial-parser-fun-name
-                                :required-args ',required-args
-                                :keyword-args  ',keyword-args
-                                :argument-unparser #',arg-unparser-fun-name))
+                  :the-parser        (function ,parser-name)
+                  :parser            (function ,accept-fun-name)
+                  :partial-parser    (function ,partial-parser-fun-name)
+                  :argument-unparser (function ,arg-unparser-fun-name)
+                  :required-args (quote ,required-args)
+                  :keyword-args  (quote ,keyword-args)))
            ',command-name)))))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix
