@@ -20,18 +20,16 @@
 
 (defmacro with-command-table-keystrokes ((keystroke-var command-table)
                                          &body body)
-  (with-gensyms (table)
-    `(let* ((,table (find-command-table ,command-table))
-            (,keystroke-var
-              (let ((result '()))
-                (map-over-command-table-keystrokes*
-                 (lambda (item table)
-                   (declare (ignore table))
-                   (let ((keystroke (command-menu-item-keystroke item)))
-                     (setf result (adjoin keystroke result :test #'equal))))
-                 ,table)
-                result)))
-       ,@body)))
+  `(let ((,keystroke-var
+           (let ((result '()))
+             (map-over-command-table-keystrokes*
+              (lambda (item table)
+                (declare (ignore table))
+                (let ((keystroke (command-menu-item-keystroke item)))
+                  (setf result (adjoin keystroke result :test #'equal))))
+              (find-command-table ,command-table))
+             result)))
+     ,@body))
 
 (defun command-line-command-parser (command-table stream)
   (let ((command-name nil)
