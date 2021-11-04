@@ -35,6 +35,7 @@
 ;;; command tables
 
 (test commands.map-over-command-table-keystrokes.no-menu
+  (define-command com-test-command ())
   (with-command-table (ct nil)
     (let ((count 0))
       (add-command-to-command-table '(com-test-command) ct :keystroke '(#\t))
@@ -49,6 +50,7 @@
       (is (= 1 count)))))
 
 (test commands.map-over-command-table-keystrokes.menu
+  (define-command com-test-command ())
   (let ((count 0)
         (ct (make-command-table nil)))
     (add-command-to-command-table
