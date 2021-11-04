@@ -255,18 +255,6 @@ designator) inherits menu items."
                           :key #'command-menu-item-name
                           :test #'equal)))))))
 
-(defun partial-command-from-name
-    (command-name command-table &optional (errorp t))
-  (if-let ((parser (gethash command-name *command-parser-table*)))
-    (cons command-name
-          (mapcar #'(lambda (foo)
-                      (declare (ignore foo))
-                      *unsupplied-argument-marker*)
-                  (required-args parser)))
-    (when errorp
-      (error 'command-not-present :command-table-name
-             (command-table-designator-as-name command-table)))))
-
 
 ;;; Command table item accessors.
 
@@ -530,7 +518,7 @@ menu item to see if it is `:menu'."
       (return-from lookup-keystroke-command-item
         (substitute-numeric-argument-marker
          (if (symbolp command)
-             (partial-command-from-name command command-table)
+             (partial-command-from-name command)
              command)
          numeric-arg))))
   gesture)

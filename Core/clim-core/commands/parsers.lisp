@@ -13,6 +13,12 @@
 
 (in-package #:clim-internals)
 
+(defvar *unsupplied-argument-marker*
+  '%unsupplied-argument-marker%)
+
+(defun unsupplied-argument-p (val)
+  (eq *unsupplied-argument-marker* val))
+
 (defclass command-parsers ()
   ((parser :accessor parser :initarg :parser)
    (partial-parser :accessor partial-parser :initarg :partial-parser)
@@ -23,11 +29,6 @@
 
   (:documentation "A container for a command's parsing functions and
   data for unparsing"))
-
-(defvar *unsupplied-argument-marker* '%unsupplied-argument-marker%)
-
-(defun unsupplied-argument-p (val)
-  (eq *unsupplied-argument-marker* val))
 
 (defun present-argument-value (value ptype stream)
   (if (unsupplied-argument-p value)
@@ -92,52 +93,35 @@
   ;; keyword package.
   (when (null keyword-args)
     (return-from make-key-acceptors nil))
-  (setq keyword-args (mapcar #'(lambda (arg)
-                                 (cons (make-keyword (car arg)) (cdr arg)))
-                             keyword-args))
-  (let ((key-possibilities (gensym "KEY-POSSIBILITIES"))
-        (member-ptype (gensym "MEMBER-PTYPE"))
-        (key-result (gensym "KEY-RESULT"))
-        (val-result (gensym "VAL-RESULT")))
-    `(let ((,key-possibilities nil))
-       ,@(mapcar #'(lambda (key-arg)
-                     (destructuring-bind (name ptype
-                                          &key (when t) &allow-other-keys)
-                         key-arg
-                       (declare (ignore ptype))
-                       (let ((key-arg-name (concatenate
-                                            'string
-                                            ":"
-                                            (keyword-arg-name-from-symbol
-                                             name))))
-                         `(when ,when
-                            (push `(,,key-arg-name ,,name)
-                                  ,key-possibilities)))))
-                 keyword-args)
-       (setq ,key-possibilities (nreverse ,key-possibilities))
-       (when ,key-possibilities
-         (input-editor-format ,stream "(keywords) ")
-         (let ((,member-ptype `(token-or-type ,,key-possibilities empty)))
-           (loop
-             (let* ((,key-result (prog1 (accept ,member-ptype
-                                                :stream ,stream
-                                                :prompt nil
-                                                :default nil)
-                                   (eat-delimiter-or-activator)))
-                    (,val-result
-                      (case ,key-result
-                        ,@(mapcar
-                           #'(lambda (key-arg)
-                               `(,(car key-arg)
-                                 ,(accept-form-for-argument stream
-                                                            key-arg)))
-                           keyword-args))))
-               (setq ,key-results (list* ,key-result
-                                         ,val-result
-                                         ,key-results)))
-             (eat-delimiter-or-activator))))
-
-       ,key-results)))
+  (with-gensyms (key-possibilities member-ptype key-result val-result)
+    (multiple-value-bind (compute-keys clauses)
+        (loop for key-arg in keyword-args
+              for (name ptype . args) = key-arg
+              for key-name = (make-keyword name)
+              for key-arg-name = (keyword-arg-name-from-symbol key-name)
+              collect `(when ,(getf args :when t)
+                         (,key-possibilities `(,,key-arg-name ,,key-name)))
+                into compute-keys
+              collect `(,key-name
+                        ,(accept-form-for-argument stream key-arg))
+                into clauses
+              finally (return (values compute-keys clauses)))
+      `(collect (,key-possibilities)
+         ,@compute-keys
+         (when-let ((,key-possibilities (,key-possibilities)))
+           (input-editor-format ,stream "(keywords) ")
+           (loop with ,member-ptype = `(token-or-type ,,key-possibilities empty)
+                 for ,key-result = (prog1 (accept ,member-ptype
+                                                  :stream ,stream
+                                                  :prompt nil
+                                                  :default nil)
+                                     (eat-delimiter-or-activator))
+                 for ,val-result = (case ,key-result ,@clauses)
+                 do (setq ,key-results (list* ,key-result
+                                              ,val-result
+                                              ,key-results))
+                    (eat-delimiter-or-activator)))
+         ,key-results))))
 
 (defun make-argument-accept-fun (name required-args keyword-args)
   (let ((stream-var (gensym "STREAM"))
@@ -245,9 +229,9 @@
         for (arg ptype-form) in key-args
         for arg-key = (make-keyword arg)
         collect `(,arg-key
-                  (format ,stream "~C:~A~C"
+                  (format ,stream "~C~A~C"
                           ,seperator
-                          ,(keyword-arg-name-from-symbol arg)
+                          ,(keyword-name-from-symbol arg)
                           ,seperator)
                   (present-argument-value ,key-arg-val ,ptype-form ,stream))
           into key-clauses

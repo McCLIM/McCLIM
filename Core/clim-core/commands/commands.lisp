@@ -186,6 +186,15 @@
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
+(defun partial-command-from-name (command-name)
+  (if-let ((parsers (gethash command-name *command-parser-table*)))
+    (cons command-name
+          (mapcar #'(lambda (foo)
+                      (declare (ignore foo))
+                      *unsupplied-argument-marker*)
+                  (required-args parsers)))
+    (error 'type-error :expected-type 'command-name :datum command-name)))
+
 ;;; Vanilla define-command, as defined by the standard
 (defmacro %define-command (name-and-options args &body body)
   (unless (listp name-and-options)
