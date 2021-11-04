@@ -231,7 +231,7 @@
         collect `(,arg-key
                   (format ,stream "~C~A~C"
                           ,seperator
-                          ,(keyword-name-from-symbol arg)
+                          ,(keyword-arg-name-from-symbol arg)
                           ,seperator)
                   (present-argument-value ,key-arg-val ,ptype-form ,stream))
           into key-clauses
