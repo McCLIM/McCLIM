@@ -174,12 +174,34 @@
                 (loop-accepting-values interactor))))
           (loop-accepting-values stream)))))
 
-#+nyi
-(defun menu-command-parser (command-table stream))
+;;; Presentation translators (also for menu-item) will throw the command
+;;; presentation in the command input context so we need only to ensure that
+;;; the event queue progresses by reading gestures in a loop. -- jd 2021-11-05
+(defun menu-command-parser (command-table stream)
+  (declare (ignore command-table))
+  (loop (read-gesture :stream stream)))
 
-#+nyi
+;;; This never invokes accepting-values because there is no need for that,
+;;; there is no linear order for command arguments when there is no cli.
 (defun menu-read-remaining-arguments-for-partial-command
-  (command-table stream partial-command start-position))
+    (command-table stream partial-command start-position)
+  (declare (ignore command-table start-position))
+  (let* ((command-name (pop partial-command)))
+    (collect (command)
+      (command command-name)
+      (flet ((arg-parser (stream ptype &rest args)
+               (declare (ignore args))
+               (let ((arg (pop partial-command)))
+                 (when (unsupplied-argument-p arg)
+                   (setf arg
+                         (with-input-context (ptype :override t)
+                             (object)
+                             (loop (read-gesture :stream stream))
+                           (t object))))
+                 (prog1 arg
+                   (command arg)))))
+        (parse-command command-name #'arg-parser (constantly nil) stream)
+        (command)))))
 
 (defvar *command-parser* #'command-line-command-parser)
 (defvar *command-unparser* #'command-line-command-unparser)
@@ -214,14 +236,9 @@
         (*command-unparser* command-unparser)
         (*partial-command-parser* partial-command-parser))
     (cond (use-keystrokes
-           (let ((stroke-result
-                   (with-command-table-keystrokes (keystrokes command-table)
-                     (read-command-using-keystrokes command-table
-                                                    keystrokes
-                                                    :stream stream))))
-             (if (consp stroke-result)
-                 stroke-result
-                 nil)))
+           (with-command-table-keystrokes (keystrokes command-table)
+             (read-command-using-keystrokes command-table keystrokes
+                                            :stream stream)))
           ((or (typep stream 'interactor-pane)
                (typep stream 'input-editing-stream))
            (handler-case
@@ -240,10 +257,13 @@
                (princ c *query-io*)
                (terpri *query-io*)
                nil)))
+          ;; KLUDGE when there is no interactor we estabilish the input
+          ;; context manually and call the parser. This is to prevent
+          ;; opening an unnecessary input editor i.e for menu parsers.
           (t
            (with-input-context (`(command :command-table ,command-table))
                (object)
-               (loop (read-gesture :stream stream))
+               (funcall *command-parser* command-table stream)
              (t
               (ensure-complete-command object command-table stream)))))))
 

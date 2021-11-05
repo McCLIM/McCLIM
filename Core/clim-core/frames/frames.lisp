@@ -507,10 +507,7 @@
 
 (defmethod default-frame-top-level
     ((frame application-frame)
-     &key (command-parser 'command-line-command-parser)
-          (command-unparser 'command-line-command-unparser)
-          (partial-command-parser
-           'command-line-read-remaining-arguments-for-partial-command)
+     &key command-parser command-unparser partial-command-parser
           (prompt "Command: "))
   ;; Give each pane a fresh start first time through.
   (let ((needs-redisplay t))
@@ -528,10 +525,21 @@
              (*query-io* (or frame-query-io *query-io*))
              ;; during development, don't alter *error-output*
              ;; (*error-output* (frame-error-output frame))
-             (*pointer-documentation-output* (frame-pointer-documentation-output frame))
-             (*command-parser* command-parser)
-             (*command-unparser* command-unparser)
-             (*partial-command-parser* partial-command-parser))
+             (*pointer-documentation-output*
+               (frame-pointer-documentation-output frame))
+             (*command-parser*
+               (or command-parser
+                   (if interactorp
+                       #'command-line-command-parser
+                       #'menu-command-parser)))
+             (*command-unparser*
+               (or command-unparser
+                   #'command-line-command-unparser))
+             (*partial-command-parser*
+               (or partial-command-parser
+                   (if interactorp
+                       #'command-line-read-remaining-arguments-for-partial-command
+                       #'menu-read-remaining-arguments-for-partial-command))))
         (restart-case
             (flet ((execute-command ()
                      (when-let ((command (read-frame-command frame :stream frame-query-io)))
