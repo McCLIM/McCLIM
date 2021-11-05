@@ -99,10 +99,7 @@
 
 (define-presentation-method accept ((type symbol) stream (view textual-view)
                                     &key (default-type type) default)
-  (let ((read-result (accept-using-read stream type)))
-    (if (and (null read-result) default)
-        (values default default-type)
-        (values read-result type))))
+  (accept-using-read stream type :default default :default-type default-type))
 
 ;;; Standard presentation type `keyword'
 
@@ -337,7 +334,8 @@
 (define-presentation-method accept ((type real) stream (view textual-view)
                                     &key (default-type type) default)
   (let ((read-result (let ((*read-base* base))
-                       (accept-using-read stream type))))
+                       (accept-using-read stream type :default default
+                                                      :default-type default-type))))
     (if (and (null read-result) default)
         (values default default-type)
         (values read-result type))))

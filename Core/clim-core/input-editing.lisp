@@ -1287,10 +1287,11 @@ protocol retrieving gestures from a provided string."))
           (apply #'stream-accept stream type :history nil :view +textual-view+ args))
       (values val ptype (+ (stream-scan-pointer stream) start)))))
 
-(defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil))
+(defun accept-using-read (stream ptype &key ((:read-eval *read-eval*) nil)
+                                            default (default-type ptype))
   (let* ((token (read-token stream)))
     (if (string= "" token)
-        (values nil ptype)
+        (values default default-type)
         (let ((result (handler-case (read-from-string token)
                         (error (c)
                           (declare (ignore c))
@@ -1409,6 +1410,7 @@ protocol retrieving gestures from a provided string."))
 ;;; beep and warning that input must be clicked on.
 
 (define-default-presentation-method accept
-    (type stream (view textual-view) &key default default-type)
-  (declare (ignore default default-type))
-  (accept-using-read stream type :read-eval t))
+    (type stream view &key default (default-type type))
+  (accept-using-read stream type :read-eval t
+                                 :default default
+                                 :default-type default-type))
