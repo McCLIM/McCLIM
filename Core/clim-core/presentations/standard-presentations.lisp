@@ -97,9 +97,9 @@
       (prin1 object stream)
       (princ object stream)))
 
-(define-presentation-method accept ((type symbol) stream (view textual-view)
-                                    &key (default-type type) default)
-  (accept-using-read stream type :default default :default-type default-type))
+(define-presentation-method accept
+    ((type symbol) stream (view textual-view) &rest args)
+  (apply #'accept-using-read stream type args))
 
 ;;; Standard presentation type `keyword'
 
@@ -331,14 +331,10 @@
         (*print-radix* radix))
     (princ object stream)))
 
-(define-presentation-method accept ((type real) stream (view textual-view)
-                                    &key (default-type type) default)
-  (let ((read-result (let ((*read-base* base))
-                       (accept-using-read stream type :default default
-                                                      :default-type default-type))))
-    (if (and (null read-result) default)
-        (values default default-type)
-        (values read-result type))))
+(define-presentation-method accept
+    ((type real) stream (view textual-view) &rest args)
+  (let ((*read-base* base))
+    (apply #'accept-using-read stream type args)))
 
 ;;; Standard presentation type `character'
 
