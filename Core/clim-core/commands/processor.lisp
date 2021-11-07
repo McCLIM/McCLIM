@@ -80,11 +80,10 @@
               (parse-command command-name #'arg-parser #'del-parser stream))))
       (cons command-name (command-args)))))
 
-;;; XXX What do to about :acceptably? -- moore
-(defun command-line-command-unparser (command-table stream command)
+(defun command-line-command-unparser (command-table stream command &rest args)
   (let* ((command-name (command-name command))
          (command-name-ptype `(command-name :command-table ,command-table)))
-    (present command-name command-name-ptype :stream stream)
+    (apply #'present command-name command-name-ptype :stream stream args)
     (when-let ((command-args (command-arguments command)))
       (flet ((arg-parser (stream ptype &rest parser-args)
                (declare (ignore parser-args))
@@ -94,7 +93,7 @@
                  (if (unsupplied-argument-p value)
                      (with-text-face (stream :italic)
                        (write-string "<unsupplied>" stream))
-                     (present value ptype :stream stream))
+                     (apply #'present value ptype :stream stream args))
                  value))
              (del-parser (stream type)
                (case type
@@ -432,9 +431,9 @@
 
 (define-presentation-method present
     (object (type command) stream (view textual-view)
-     &key acceptably for-context-type)
+     &rest args &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (funcall *command-unparser* command-table stream object))
+  (apply *command-unparser* command-table stream object args))
 
 (define-presentation-method accept
     ((type command) stream (view textual-view) &key)
