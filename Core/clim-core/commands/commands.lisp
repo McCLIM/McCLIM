@@ -214,14 +214,12 @@
       (let ((command-func-args
               `(,@(mapcar #'car required-args)
                 ,@(when keyword-args
-                    `(&key ,@(mapcar #'(lambda (arg-clause)
-                                         (destructuring-bind (arg-name ptype
-                                                              &key default
-                                                              &allow-other-keys)
-                                             arg-clause
-                                           (declare (ignore ptype))
-                                           `(,arg-name ,default)))
-                                     keyword-args)))))
+                    `(&key ,@(mapcar
+                              (lambda (arg-clause)
+                                `(,(car arg-clause)
+                                  ,(getf (cddr arg-clause) :default
+                                         '*unsupplied-argument-marker*)))
+                              keyword-args)))))
             (parser-name (make-command-function-name command-name '#:parser)))
         `(progn
            (defun ,command-name ,command-func-args
