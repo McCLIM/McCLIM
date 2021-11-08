@@ -209,8 +209,9 @@
                             (make-menu-bar (frame-command-table frame)
                                            frame 'hmenu-pane))
                            ((consp menu)
-                            (make-menu-bar (make-command-table nil :menu menu)
-                                           frame 'hmenu-pane))
+                            (let ((ct (make-command-table nil :menu menu)))
+                              (setf (slot-value frame 'menu-bar) ct)
+                              (make-menu-bar ct frame 'hmenu-pane)))
                            (menu
                             (make-menu-bar menu frame 'hmenu-pane))))
                (setf menu (frame-menu-bar-pane frame)))
