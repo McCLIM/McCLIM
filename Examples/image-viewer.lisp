@@ -67,7 +67,7 @@ value of the gadget is the image being displayed."))
                  (default-frame-top-level frame)))))
 
 (define-image-viewer-command (com-display-image :name t :menu t)
-    ((image-pathname pathname
+    ((image-pathname 'pathname
       :default (user-homedir-pathname) :insert-default t))
   (if (probe-file image-pathname)
       (let* ((type (funcall (case (readtable-case *readtable*)

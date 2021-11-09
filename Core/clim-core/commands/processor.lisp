@@ -32,73 +32,176 @@
      ,@body))
 
 (defun command-line-command-parser (command-table stream)
-  (let ((command-name nil)
-        (command-args nil))
+  (let ((command-name nil))
     (with-delimiter-gestures (*command-name-delimiters* :override t)
       ;; While reading the command name we want use the history of the
       ;; (accept 'command ...) that's calling this function.
       (setq command-name (accept `(command-name :command-table ,command-table)
-                                 :stream stream :prompt nil :history nil))
-      (let ((delimiter (read-gesture :stream stream :peek-p t)))
-        ;; Let argument parsing function see activation gestures.
-        (when (and delimiter (delimiter-gesture-p delimiter))
-          (read-gesture :stream stream))))
-    (with-delimiter-gestures (*command-argument-delimiters* :override t)
-      ;; The NULL context is a barrier which prevents other commands from
-      ;; being selected during reading arguments and cancelling the current
-      ;; command composition. When the argument's type is COMMAND, then a new
-      ;; context will be estabilished by the parser and it will be possible to
-      ;; select commands. -- jd 2020-09-03
-      (with-input-context ('null :override t) ()
-          (setq command-args (funcall (parser (gethash command-name
-                                                       *command-parser-table*))
-                                      stream))))
-    (cons command-name command-args)))
+                                 :stream stream :prompt nil :history nil)))
+    (let ((gesture (read-gesture :stream stream :timeout 0 :peek-p t)))
+      (when (and gesture (activation-gesture-p gesture))
+        (return-from command-line-command-parser `(,command-name))))
+    (collect (command-args)
+      (with-delimiter-gestures (*command-argument-delimiters* :override t)
+        (flet ((arg-parser (stream ptype &rest args
+                            &key (mentioned-default nil md-p)
+                            &allow-other-keys)
+                 ;; :DOCUMENTATION is supposed to be used only in parsers
+                 ;; for the sake of providing hints for the operator.
+                 (with-keywords-removed (args (:documentation :mentioned-default))
+                   (let ((result
+                           (apply #'accept ptype :stream stream
+                                  (if (null md-p)
+                                      args
+                                      (list* :default mentioned-default args)))))
+                     (command-args result)
+                     result)))
+               (del-parser (stream type)
+                 ;; Eat the delimiter or the activator.
+                 (case type
+                   ((:arg :key :val)
+                    (let ((gesture (read-gesture :stream stream :peek-p t)))
+                      (when (or (null gesture)
+                                (activation-gesture-p gesture))
+                        (read-gesture :stream stream)
+                        (return-from command-line-command-parser
+                          (cons command-name (command-args))))
+                      (when (delimiter-gesture-p gesture)
+                        (read-gesture :stream stream))))
+                   (:opt
+                    (input-editor-format stream "(keywords) "))
+                   ((:pos :end)))))
+          ;; The NULL context is a barrier which prevents other commands from
+          ;; being selected during reading arguments and cancelling the current
+          ;; command composition. When the argument's type is COMMAND, then a new
+          ;; context will be estabilished by the parser and it will be possible to
+          ;; select commands. -- jd 2020-09-03
+          (with-input-context ('null :override t) ()
+              (parse-command command-name #'arg-parser #'del-parser stream))))
+      (cons command-name (command-args)))))
 
-(defun command-line-command-unparser (command-table stream command)
-  (let ((name (command-name command))
-        (args (command-arguments command)))
-    (write-string
-     (command-line-name-for-command name command-table :errorp :create)
-     stream)
-    (when args
-      (if-let ((parser-obj (gethash name *command-parser-table*)))
-        (funcall (argument-unparser parser-obj) command stream)
-        (with-delimiter-gestures (*command-argument-delimiters* :override t)
-          (loop for arg in args
-                do (let* ((ptype (presentation-type-of arg))
-                          (token (present-to-string arg ptype)))
-                     (write-char #\space stream)
-                     (write-token token stream))))))))
+(defun command-line-command-unparser (command-table stream command &rest args)
+  (let* ((command-name (command-name command))
+         (command-name-ptype `(command-name :command-table ,command-table)))
+    (apply #'present command-name command-name-ptype :stream stream args)
+    (when-let ((command-args (command-arguments command)))
+      (flet ((arg-parser (stream ptype &rest parser-args)
+               (declare (ignore parser-args))
+               (unless command-args
+                 (return-from command-line-command-unparser))
+               (let ((value (pop command-args)))
+                 (if (unsupplied-argument-p value)
+                     (with-text-face (stream :italic)
+                       (write-string "<unsupplied>" stream))
+                     (apply #'present value ptype :stream stream args))
+                 value))
+             (del-parser (stream type)
+               (case type
+                 ((:arg :key :val)
+                  (write-char #\space stream))
+                 ((:pos :opt :end)))))
+        (parse-command command-name #'arg-parser #'del-parser stream)))))
+
+(defun accept-partial-command-1 (stream label partial-command)
+  (fresh-line stream)
+  (let* ((command-name (command-name partial-command))
+         (command-arguments (command-arguments partial-command))
+         (initial-query
+           (block nil
+             (parse-command command-name
+                      (let ((args command-arguments))
+                        (lambda (stream ptype &key query-identifier
+                                 &allow-other-keys)
+                          (declare (ignore stream ptype))
+                          (when (or (null args)
+                                    (unsupplied-argument-p (pop args)))
+                            (return query-identifier))))
+                      (constantly nil) stream))))
+    ;; KLUDGE the macro ACCEPTING-VALUES is not yet defined so we directly
+    ;; invoke the function that it expands to.
+    (flet ((accepting-body (stream)
+             (let ((command-args command-arguments))
+               (collect (all-args)
+                 (block nil
+                   (flet ((arg-parser (stream ptype &rest args)
+                            (let* ((arg-p (consp command-args))
+                                   (arg (pop command-args))
+                                   (missingp (or (null arg-p)
+                                                 (unsupplied-argument-p arg))))
+                              (multiple-value-bind (value ptype changedp)
+                                  (if missingp
+                                      (apply #'accept ptype :stream stream args)
+                                      (apply #'accept ptype :stream stream :default arg args))
+                                (declare (ignore ptype))
+                                (when (and missingp (not changedp))
+                                  (setf value *unsupplied-argument-marker*))
+                                (all-args value)
+                                value)))
+                          (del-parser (stream type)
+                            (declare (ignore stream))
+                            (when (eq type :opt)
+                              (return))))
+                     (parse-command command-name #'arg-parser #'del-parser stream)))
+                 (setf command-arguments (all-args))
+                 `(,command-name ,@(all-args))))))
+      (invoke-accepting-values stream #'accepting-body
+                               :align-prompts t :label label
+                               :initially-select-query-identifier initial-query))))
 
 ;;; In order for this to work, the input-editing-stream must implement a
 ;;; method for the nonstandard function `input-editing-stream-output-record'.
 (defun command-line-read-remaining-arguments-for-partial-command
     (command-table stream partial-command start-position)
   (declare (ignore start-position))
-  (let ((partial-parser (partial-parser (gethash (command-name partial-command)
-                                                 *command-parser-table*))))
-    (if (encapsulating-stream-p stream)
-        (let ((interactor (encapsulating-stream-stream stream)))
-          (with-bounding-rectangle* (:x1 x1 :y2 y2)
-              (input-editing-stream-output-record stream)
-            ;; Start the dialog below the editor area
-            (letf (((stream-cursor-position interactor) (values x1 y2)))
-              (fresh-line interactor)
-              ;; FIXME error checking needed here? -- moore
-              (funcall partial-parser
-                       command-table interactor partial-command))))
-        (progn
-          (fresh-line stream)
-          (funcall partial-parser
-                   command-table stream  partial-command)))))
+  (let* ((name (command-name partial-command))
+         (cli (command-line-name-for-command name command-table :errorp nil))
+         (label (format nil "You are being prompted for arguments to ~S." cli))
+         (label* (format nil "~a~%Please supply all arguments." label)))
+    (flet ((loop-accepting-values (stream)
+             (loop for title = label then label*
+                   do (setf partial-command
+                            (accept-partial-command-1
+                             stream title partial-command))
+                   while (partial-command-p partial-command)
+                   finally (return partial-command))))
+      (if (encapsulating-stream-p stream)
+          (let ((interactor (encapsulating-stream-stream stream)))
+            (with-bounding-rectangle* (:x1 x1 :y2 y2)
+                (input-editing-stream-output-record stream)
+              ;; Start the dialog below the editor area
+              (letf (((stream-cursor-position interactor) (values x1 y2)))
+                ;; FIXME error checking needed here? -- moore
+                (loop-accepting-values interactor))))
+          (loop-accepting-values stream)))))
 
-#+nyi
-(defun menu-command-parser (command-table stream))
+;;; Presentation translators (also for menu-item) will throw the command
+;;; presentation in the command input context so we need only to ensure that
+;;; the event queue progresses by reading gestures in a loop. -- jd 2021-11-05
+(defun menu-command-parser (command-table stream)
+  (declare (ignore command-table))
+  (loop (read-gesture :stream stream)))
 
-#+nyi
+;;; This never invokes accepting-values because there is no need for that,
+;;; there is no linear order for command arguments when there is no cli.
 (defun menu-read-remaining-arguments-for-partial-command
-  (command-table stream partial-command start-position))
+    (command-table stream partial-command start-position)
+  (declare (ignore command-table start-position))
+  (let* ((command-name (pop partial-command)))
+    (collect (command)
+      (command command-name)
+      (flet ((arg-parser (stream ptype &rest args)
+               (declare (ignore args))
+               (let ((arg (pop partial-command)))
+                 (when (unsupplied-argument-p arg)
+                   (setf arg
+                         (with-input-context (ptype :override t)
+                             (object)
+                             (loop (read-gesture :stream stream))
+                           (t object))))
+                 (prog1 arg
+                   (command arg)))))
+        (parse-command command-name #'arg-parser (constantly nil) stream)
+        (command)))))
 
 (defvar *command-parser* #'command-line-command-parser)
 (defvar *command-unparser* #'command-line-command-unparser)
@@ -133,14 +236,9 @@
         (*command-unparser* command-unparser)
         (*partial-command-parser* partial-command-parser))
     (cond (use-keystrokes
-           (let ((stroke-result
-                   (with-command-table-keystrokes (keystrokes command-table)
-                     (read-command-using-keystrokes command-table
-                                                    keystrokes
-                                                    :stream stream))))
-             (if (consp stroke-result)
-                 stroke-result
-                 nil)))
+           (with-command-table-keystrokes (keystrokes command-table)
+             (read-command-using-keystrokes command-table keystrokes
+                                            :stream stream)))
           ((or (typep stream 'interactor-pane)
                (typep stream 'input-editing-stream))
            (handler-case
@@ -159,10 +257,13 @@
                (princ c *query-io*)
                (terpri *query-io*)
                nil)))
+          ;; KLUDGE when there is no interactor we estabilish the input
+          ;; context manually and call the parser. This is to prevent
+          ;; opening an unnecessary input editor i.e for menu parsers.
           (t
            (with-input-context (`(command :command-table ,command-table))
                (object)
-               (loop (read-gesture :stream stream))
+               (funcall *command-parser* command-table stream)
              (t
               (ensure-complete-command object command-table stream)))))))
 
@@ -350,9 +451,9 @@
 
 (define-presentation-method present
     (object (type command) stream (view textual-view)
-     &key acceptably for-context-type)
+     &rest args &key acceptably for-context-type)
   (declare (ignore acceptably for-context-type))
-  (funcall *command-unparser* command-table stream object))
+  (apply *command-unparser* command-table stream object args))
 
 (define-presentation-method accept
     ((type command) stream (view textual-view) &key)

@@ -153,6 +153,6 @@
 ;;; the argument is to click on a line of the members view.  In
 ;;; more elaborate application, you might be able to type a
 ;;; textual representation (using completion) of the person.
-(define-views-command (com-show-person :name t) ((person person))
+(define-views-command (com-show-person :name t) ((person 'person))
   (setf (stream-default-view *standard-output*)
         (make-instance 'person-view :person person)))

@@ -32,7 +32,7 @@
          pointer-doc))))
 
 (define-tabdemo-command (com-remove-tabdemo-page :name t)
-    ((page tab-page :prompt "Tab page" :gesture :delete))
+    ((page 'tab-page :prompt "Tab page" :gesture :delete))
   (remove-page page))
 
 (make-command-table 'tabdemo-pages-menu

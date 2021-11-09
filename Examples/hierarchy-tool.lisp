@@ -347,30 +347,30 @@ new application."
                (make-instance 'refresh-event :sheet *application-frame*)))
 
 (define-hierarchy-command (com-move-sheet :name t)
-    ((sheet pane) (x integer) (y integer))
+    ((sheet 'pane) (x 'integer) (y 'integer))
   (move-sheet sheet x y))
 
 (define-hierarchy-command (com-dx-sheet :name t)
-    ((sheet pane) (x integer) (y integer))
+    ((sheet 'pane) (x 'integer) (y 'integer))
   (let ((transform (sheet-transformation sheet)))
     (setf (sheet-transformation sheet)
           (compose-transformation-with-translation
            transform x y))))
 
 (define-hierarchy-command (com-resize-sheet :name t)
-    ((sheet pane) (x integer) (y integer))
+    ((sheet 'pane) (x 'integer) (y 'integer))
   (resize-sheet sheet x y))
 
 (define-hierarchy-command (com-move-and-resize-sheet :name t)
-    ((sheet pane) (x integer) (y integer) (width integer) (height integer))
+    ((sheet 'pane) (x 'integer) (y 'integer) (width 'integer) (height 'integer))
   (move-and-resize-sheet sheet x y width height))
 
 (define-hierarchy-command (com-disable-sheet :name t)
-    ((sheet pane))
+    ((sheet 'pane))
   (setf (sheet-enabled-p sheet) nil))
 
 (define-hierarchy-command (com-enable-sheet :name t)
-    ((sheet pane))
+    ((sheet 'pane))
   (setf (sheet-enabled-p sheet) t))
 
 ;;; Drag&Drop is buggy as hell
@@ -380,7 +380,7 @@ new application."
   (list object))
 
 (define-hierarchy-command (com-resize-sheet*)
-    ((original resize-handler))
+    ((original 'resize-handler))
   (let ((pane (get-frame-pane *application-frame* 'app)))
     (multiple-value-bind (init-x init-y) (stream-pointer-position pane)
       (multiple-value-bind (x y)
@@ -397,7 +397,7 @@ new application."
   (list object))
 
 (define-hierarchy-command (com-move-sheet*)
-    ((original move-handler))
+    ((original 'move-handler))
   (let ((pane (get-frame-pane *application-frame* 'app)))
     (multiple-value-bind (init-x init-y) (stream-pointer-position pane)
       (multiple-value-bind (x y)

@@ -142,7 +142,7 @@
 
 (define-command (com-eval-inspect :command-table inspector-pane-command-table
                                   :name          t)
-    ((form clim:form))
+    ((form 'clim:form))
   (let ((state (inspector-state)))
     (with-command-error-handling ("Error evaluating and inspecting")
         (let ((object (eval-with-bindings form :root-place (root-place state))))

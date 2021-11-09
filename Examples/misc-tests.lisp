@@ -182,7 +182,7 @@
                                                      :outline-ink +gray40+)))))))
 
 (define-misc-tests-command (com-do-nothing)
-    ((style border-style :gesture :select))
+    ((style 'border-style :gesture :select))
   (declare (ignore style)))
 
 (define-misc-test "Underlining" (stream)

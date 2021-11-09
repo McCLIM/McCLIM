@@ -186,6 +186,11 @@
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")
 
+(defun parse-command (command-name arg-parser del-parser stream)
+  (if-let ((parser (gethash command-name *command-parser-table*)))
+    (funcall (the-parser parser) arg-parser del-parser stream)
+    (error 'type-error :expected-type 'command-name :datum command-name)))
+
 (defun partial-command-from-name (command-name)
   (if-let ((parsers (gethash command-name *command-parser-table*)))
     (cons command-name
@@ -209,42 +214,27 @@
       (let ((command-func-args
               `(,@(mapcar #'car required-args)
                 ,@(when keyword-args
-                    `(&key ,@(mapcar #'(lambda (arg-clause)
-                                         (destructuring-bind (arg-name ptype
-                                                              &key default
-                                                              &allow-other-keys)
-                                             arg-clause
-                                           (declare (ignore ptype))
-                                           `(,arg-name ,default)))
-                                     keyword-args)))))
-            (accept-fun-name (make-command-function-name
-                              command-name '#:acceptor))
-            (partial-parser-fun-name (make-command-function-name
-                                      command-name '#:partial))
-            (arg-unparser-fun-name (make-command-function-name
-                                    command-name '#:unparse)))
+                    `(&key ,@(mapcar
+                              (lambda (arg-clause)
+                                `(,(car arg-clause)
+                                  ,(getf (cddr arg-clause) :default
+                                         '*unsupplied-argument-marker*)))
+                              keyword-args)))))
+            (parser-name (make-command-function-name command-name '#:parser)))
         `(progn
            (defun ,command-name ,command-func-args
              ,@body)
            ,(when command-table
-              `(add-command-to-command-table
-                ',command-name ',command-table
-                :name ,name :menu ',menu
-                :keystroke ',keystroke :errorp nil))
-           ,(make-argument-accept-fun
-             accept-fun-name required-args keyword-args)
-           ,(make-partial-parser-fun partial-parser-fun-name required-args)
-           ,(make-unprocessor-fun
-             arg-unparser-fun-name required-args keyword-args)
+              `(add-command-to-command-table ',command-name ',command-table
+                :name ,name :menu ',menu :keystroke ',keystroke :errorp nil))
+           ,(make-command-parser parser-name required-args keyword-args)
            ,@(when command-table
                (make-command-translators command-name command-table required-args))
            (setf (gethash ',command-name *command-parser-table*)
                  (make-instance 'command-parsers
-                                :parser #',accept-fun-name
-                                :partial-parser #',partial-parser-fun-name
-                                :required-args ',required-args
-                                :keyword-args  ',keyword-args
-                                :argument-unparser #',arg-unparser-fun-name))
+                  :the-parser    (function ,parser-name)
+                  :required-args (quote ,required-args)
+                  :keyword-args  (quote ,keyword-args)))
            ',command-name)))))
 
 ;;; The default for :provide-output-destination-keyword is nil until we fix
@@ -276,8 +266,12 @@
                (declare (ignore parameter default default-type display-default
                                 mentioned-default prompt documentation when
                                 gesture prompt-mode insert-default))
-               ;; Quote atomic types to reassemble defmethod more.
-               (when (atom type)
+               ;; Autoquoting is an ugly (and non-conforming) hack that should
+               ;; be removed. Signal a warning for now. -- jd 2021-11-09
+               (when (and (atom type) (not (constantp type)))
+                 (alexandria:simple-style-warning
+                  "Presentation type specifiers are evaluated.~@
+                   Autoquoting is deprected and will be removed soon.")
                  (setf (second argument-description) `(quote ,type)))))
   (destructuring-bind (func &rest options
                        &key (provide-output-destination-keyword nil)

@@ -181,7 +181,8 @@ any presentation in tracking-pointer and check type as we go.")))
     (custom (setf (frame-current-layout *application-frame*) 'default))))
 
 ;;; Dummy command printing a string in the interactor.
-(define-dnd-commented-command (com-print-string :name t) ((a string))
+(define-dnd-commented-command (com-print-string :name t)
+    ((a 'string))
   (format (find-pane-named *application-frame* 'int) a))
 
 
@@ -288,13 +289,11 @@ any presentation in tracking-pointer and check type as we go.")))
               (window-clear *pointer-documentation-output*)
               (return-from com-pointer-tracking-internal)))))))))
 
-(define-dnd-commented-command
-    (com-pointer-tracking :menu t)
+(define-dnd-commented-command (com-pointer-tracking :menu t)
     ()
   (com-pointer-tracking-internal t))
 
-(define-dnd-commented-command
-    (com-pointer-tracking* :menu t)
+(define-dnd-commented-command (com-pointer-tracking* :menu t)
     ()
   (com-pointer-tracking-internal nil))
 
@@ -369,7 +368,8 @@ any presentation in tracking-pointer and check type as we go.")))
   (multiple-value-bind (x y) (stream-pointer-position pane)
     (make-point x y)))
 
-(define-dnd-commented-command (com-drag-cross) ((original cross))
+(define-dnd-commented-command (com-drag-cross)
+    ((original 'cross))
   (declare (ignore original))
   (let ((stream (find-pane-named *application-frame* 'scr)))
     (dragging-output (stream :multiple-window t)

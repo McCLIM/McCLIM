@@ -396,7 +396,7 @@
     t))
 
 (define-command (com-select-checker :name t :command-table clim-checkers)
-    ((checker checker :gesture nil))
+    ((checker 'checker :gesture nil))
   (let ((frame *application-frame*)
         (field (field checker)))
     (setf (active-field frame) (if (eql field (active-field frame))
@@ -404,14 +404,14 @@
                                    field))))
 
 (define-command (com-select-field :name t :command-table clim-checkers)
-    ((dst-field field :gesture (:select :tester test-field)))
+    ((dst-field 'field :gesture (:select :tester test-field)))
   (let* ((frame *application-frame*)
          (src-field (active-field frame))
          (checker (checker src-field)))
     (move-checker frame checker dst-field)))
 
 (define-command (com-move-checker :name t :command-table clim-checkers)
-    ((checker checker) (field field))
+    ((checker 'checker) (field 'field))
   (move-checker *application-frame* checker field))
 
 (define-command (com-new-game :name t :command-table clim-checkers) ()

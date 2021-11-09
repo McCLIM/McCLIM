@@ -220,7 +220,7 @@ Factor to reduce the size of the circles")
 
 (define-town-example-command (com-show-town-info :name t :menu t
                                                  :keystroke (#\i :meta))
-    ((town town :prompt "Which town?"))
+    ((town 'town :prompt "Which town?"))
   ;; (present town 'town :view +textual-view+)
   (notify-user *application-frame*
                (format nil "~A has ~:d inhabitants."
@@ -246,10 +246,10 @@ Factor to reduce the size of the circles")
 
 (define-town-example-command (com-get-distance :name t :menu t
                                                :keystroke (#\d :meta))
-    ((town-a town :prompt "Town a"
-                  :gesture (:describe
-                            :documentation "Get distance from this town to another."))
-     (town-b town :prompt "Town b"))
+    ((town-a 'town :prompt "Town a"
+                   :gesture (:describe
+                             :documentation "Get distance from this town to another."))
+     (town-b 'town :prompt "Town b"))
   (notify-user *application-frame*
                (format nil "It's ~d pixels from ~a to ~a."
                        (distance-between-points (town-coordinates town-a)
