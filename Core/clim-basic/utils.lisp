@@ -109,6 +109,12 @@
 (deftype function-designator ()
   `(or function symbol (cons (eql setf) (cons symbol null))))
 
+;;; The command object is specified to be a list where the first argument is
+;;; the command name (a symbol). However we allow symbols to be put in menus
+;;; and drei inserts sometimes a literal function instead of a symbol.
+(deftype command-designator ()
+  `(or (cons function-designator) function-designator))
+
 (defun 2+ (x)
   (+ x 2))
 

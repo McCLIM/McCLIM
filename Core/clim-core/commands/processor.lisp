@@ -56,18 +56,20 @@
     (cons command-name command-args)))
 
 (defun command-line-command-unparser (command-table stream command)
-  (write-string (command-line-name-for-command (car command) command-table
-                                               :errorp :create)
-                stream)
-  (when (rest command)
-    (if-let ((parser-obj (gethash (car command) *command-parser-table*)))
-      (funcall (argument-unparser parser-obj) command stream)
-      (with-delimiter-gestures (*command-argument-delimiters* :override t)
-        (loop for arg in (rest command)
-              do (let* ((ptype (presentation-type-of arg))
-                        (token (present-to-string arg ptype)))
-                   (write-char #\space stream)
-                   (write-token token stream)))))))
+  (let ((name (command-name command))
+        (args (command-arguments command)))
+    (write-string
+     (command-line-name-for-command name command-table :errorp :create)
+     stream)
+    (when args
+      (if-let ((parser-obj (gethash name *command-parser-table*)))
+        (funcall (argument-unparser parser-obj) command stream)
+        (with-delimiter-gestures (*command-argument-delimiters* :override t)
+          (loop for arg in args
+                do (let* ((ptype (presentation-type-of arg))
+                          (token (present-to-string arg ptype)))
+                     (write-char #\space stream)
+                     (write-token token stream))))))))
 
 ;;; In order for this to work, the input-editing-stream must implement a
 ;;; method for the nonstandard function `input-editing-stream-output-record'.
@@ -335,9 +337,9 @@
   :inherit-from t)
 
 (define-presentation-method presentation-typep (object (type command))
-  (and (consp object)
-       (command-accessible-in-command-table-p (car object) command-table)
-       (command-enabled (car object) *application-frame*)))
+  (let ((name (command-name object)))
+    (and (command-accessible-in-command-table-p name command-table)
+         (command-enabled name *application-frame*))))
 
 (define-presentation-method presentation-subtypep
     ((type command) maybe-supertype)
@@ -384,7 +386,7 @@
   :inherit-from '(command :command-table global-command-table))
 
 (define-presentation-method presentation-typep (object (type null-command))
-  (and (consp object) (eq (car object) 'com-null-command)))
+  (eq (command-name object) 'com-null-command))
 
 (define-presentation-method present
     (object (type null-command) stream (view textual-view) &key)

@@ -88,7 +88,7 @@
                                        &allow-other-keys)
   (ecase type
     (:command
-     (check-type value (or symbol cons)))
+     (check-type value command-designator))
     (:function
      ;; A function of two arguments (funcalled).
      (check-type value function-designator))
