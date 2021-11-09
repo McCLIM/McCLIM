@@ -266,8 +266,12 @@
                (declare (ignore parameter default default-type display-default
                                 mentioned-default prompt documentation when
                                 gesture prompt-mode insert-default))
-               ;; Quote atomic types to reassemble defmethod more.
-               (when (atom type)
+               ;; Autoquoting is an ugly (and non-conforming) hack that should
+               ;; be removed. Signal a warning for now. -- jd 2021-11-09
+               (when (and (atom type) (not (constantp type)))
+                 (alexandria:simple-style-warning
+                  "Presentation type specifiers are evaluated.~@
+                   Autoquoting is deprected and will be removed soon.")
                  (setf (second argument-description) `(quote ,type)))))
   (destructuring-bind (func &rest options
                        &key (provide-output-destination-keyword nil)
