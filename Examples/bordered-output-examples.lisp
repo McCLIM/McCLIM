@@ -159,6 +159,6 @@
 
 ;;; Define a dummy command, just to get highlighting of the border styles.
 (define-bordered-output-command (com-do-nothing)
-    ((style border-style :gesture :select))
+    ((style 'border-style :gesture :select))
   (declare (ignore style))
   #+NIL (clouseau:inspector (stream-output-history *standard-output*)))

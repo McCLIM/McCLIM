@@ -61,11 +61,11 @@
   (draw stream (shape2 frame)))
 
 (define-drag-test-command (com-set-color :name t)
-    ((shape rect) &key (color named-color :default +cyan+ ))
+    ((shape 'rect) &key (color 'named-color :default +cyan+ ))
   (setf (color shape) color))
 
 (define-drag-test-command (com-set-random-color :name t)
-    ((shape rect))
+    ((shape 'rect))
   (let ((elt (random (length *color-alist*))))
     (setf (color shape) (cdr (nth elt *color-alist*)))))
 

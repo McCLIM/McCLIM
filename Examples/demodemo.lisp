@@ -305,7 +305,7 @@ name."))
 (define-presentation-type list-test-symbol ())
 
 (define-list-test-command com-describe-symbol
-    ((sym list-test-symbol :gesture :select))
+    ((sym 'list-test-symbol :gesture :select))
   ;; Let's print only three lines, we don't have space for more.
   (with-input-from-string (s (with-output-to-string (s) (describe sym s)))
     (dotimes (x 3)

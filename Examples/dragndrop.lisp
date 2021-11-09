@@ -34,8 +34,8 @@
     (make-point x y)))
 
 (define-dragndrop-command (com-add-circle)
-    ((center point :prompt "point")
-     (radius real :prompt "radius"))
+    ((center 'point :prompt "point")
+     (radius 'real :prompt "radius"))
   (let ((pane (get-frame-pane *application-frame* 'scratchpad)))
     (with-output-as-presentation
         (pane (make-instance 'circle :center center
@@ -61,7 +61,7 @@
         50))
 
 (define-dragndrop-command (com-clone-circle)
-    ((original circle))
+    ((original 'circle))
   (let ((pane (get-frame-pane *application-frame* 'scratchpad)))
     (multiple-value-bind (x y)
         (dragging-output (pane :finish-on-release t)

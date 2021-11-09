@@ -89,7 +89,7 @@
    :pretty-name "Frame and Sheet Name Test"))
 
 (define-command (com-set-icon :command-table frame-sheet-name-test)
-    ((icon icon :gesture :select))
+    ((icon 'icon :gesture :select))
   (setf (clime:frame-icon *application-frame*) icon))
 
 (defmethod clime:note-frame-pretty-name-changed ((frame-manager t)

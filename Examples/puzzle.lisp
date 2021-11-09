@@ -93,7 +93,7 @@
         (return (encode-puzzle-cell row c))))))
 
 (define-puzzle-command com-move-cell
-    ((cell puzzle-cell))
+    ((cell 'puzzle-cell))
   (with-slots (puzzle) *application-frame*
     (multiple-value-bind (this-row this-column) (decode-puzzle-cell cell)
       (let ((open-cell (cell-adjacent-to-open-cell puzzle this-row this-column)))

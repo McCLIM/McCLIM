@@ -136,7 +136,7 @@
 
 (define-command (com-clear-hash-table :command-table inspector-command-table
                                       :name          "Clear Hash-table")
-    ((object inspected-hash-table))
+    ((object 'inspected-hash-table))
   (clrhash (object object)))
 
 (define-presentation-to-command-translator inspected-hash-table->com-clear-hash-table

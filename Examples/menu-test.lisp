@@ -20,9 +20,10 @@
   (:panes
    (screen :application
            :display-time t
-           :text-style (make-text-style :sans-serif :roman :normal)))
+           :text-style (make-text-style :sans-serif :roman :normal))
+   (interactor :interactor))
   (:layouts
-   (defaults (vertically () screen))))
+   (defaults (vertically () screen interactor))))
 
 (define-menu-test-command com-file ()
   (format *standard-output* "You pressed the File button.~%")

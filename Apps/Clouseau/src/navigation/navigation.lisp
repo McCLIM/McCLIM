@@ -156,13 +156,13 @@
 
   (define-command (com-select :command-table navigation-command-table
                               :name          "Inspect object")
-      ((object inspected-object :gesture :describe))
+      ((object 'inspected-object :gesture :describe))
     (with-history (state)
       (setf (root-object state :run-hook-p t) (object object)))) ; TODO getting the object can fail
 
   (define-command (com-visit :command-table navigation-command-table
                              :name          t)
-      ((object element :gesture :select))
+      ((object 'element :gesture :select))
     (with-history (state)
       (setf (root-place state :run-hook-p t) object)))
 

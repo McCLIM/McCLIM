@@ -115,7 +115,7 @@
   (:command-table (test))
   (:command-definer nil))
 
-(define-command (com-sel :command-table test) ((object t))
+(define-command (com-sel :command-table test) ((object 't))
   (setf (sel *application-frame*) object))
 
 (define-presentation-to-command-translator normal-translator

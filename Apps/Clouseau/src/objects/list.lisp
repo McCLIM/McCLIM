@@ -366,7 +366,7 @@
 
 (define-command (com-cons-style-as-list :command-table inspector-command-table
                                         :name          t)
-    ((object inspected-list))
+    ((object 'inspected-list))
   (setf (cell-style object) :element-list))
 
 (define-presentation-to-command-translator
@@ -388,7 +388,7 @@
 
 (define-command (com-cons-style-as-graph :command-table inspector-command-table
                                          :name          t)
-    ((object inspected-list))
+    ((object 'inspected-list))
   (setf (cell-style object) :graph))
 
 (define-presentation-to-command-translator

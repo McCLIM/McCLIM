@@ -147,7 +147,7 @@
  (frame-exit *application-frame*))
 
 (define-address-book-command com-select-address
-    ((address address :gesture :select))
+    ((address 'address :gesture :select))
    (setf (slot-value *application-frame* 'current-address) address))
 
 (define-address-book-command (com-new-address :menu "New")
@@ -179,24 +179,24 @@
       (add-address (make-address :name name :address address :number number)))))
 
 (define-address-book-command com-delete-address
-    ((address address :gesture :delete))
+    ((address 'address :gesture :delete))
    (setf *addresses* (delete address *addresses*)))
 
 (define-address-book-command com-change-address-name
-    ((address address-name :gesture :select))
+    ((address 'address-name :gesture :select))
   (let ((new-name (accept 'string :stream (frame-standard-input *application-frame*)
                           :prompt "New name" :default (address-name address))))
     (setf (address-name address) new-name)
     (setq *addresses* (sort *addresses* #'string-lessp :key #'address-last-name))))
 
 (define-address-book-command com-change-address-address
-    ((address address-address :gesture :select))
+    ((address 'address-address :gesture :select))
   (let ((new-address (accept 'string :stream (frame-standard-input *application-frame*)
                              :prompt "New address" :default (address-address address))))
     (setf (address-address address) new-address)))
 
 (define-address-book-command com-change-address-number
-    ((address address-number :gesture :select))
+    ((address 'address-number :gesture :select))
   (let ((new-number (accept 'string :stream (frame-standard-input *application-frame*)
                             :prompt "New number" :default (address-number address))))
     (setf (address-number address) new-number)))

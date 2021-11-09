@@ -80,7 +80,7 @@
 
 (define-command (com-expand :command-table inspector-command-table
                             :name          t)
-    ((object inspected-object))
+    ((object 'inspected-object))
   (setf (style object) :expanded))
 
 (define-presentation-to-command-translator object->expand
@@ -95,7 +95,7 @@
 
 (define-command (com-collapse :command-table inspector-command-table
                               :name          t)
-    ((object inspected-object))
+    ((object 'inspected-object))
   (setf (style object) :collapsed))
 
 (define-presentation-to-command-translator object->collapse

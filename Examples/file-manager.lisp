@@ -191,8 +191,8 @@
 ;;; Commands
 
 (define-command (com-new-file :name t :command-table file-manager)
-    ((directory directory)
-     (name      string))
+    ((directory 'directory)
+     (name      'string))
   (adopt directory (make-file name)))
 
 (define-presentation-to-command-translator directory->com-new-file
@@ -204,8 +204,8 @@
   `(,directory ,(accept 'string :prompt "name")))
 
 (define-command (com-new-directory :name t :command-table file-manager)
-    ((directory directory)
-     (name      string))
+    ((directory 'directory)
+     (name      'string))
   (adopt directory (make-directory name)))
 
 (define-presentation-to-command-translator directory->com-new-directory
@@ -294,7 +294,7 @@
   nil)
 
 (define-command (com-copy-file :command-table file-manager)
-    ((from file) (to directory))
+    ((from 'file) (to 'directory))
   (format t "Copying ~A to ~A~%" (name from) (name to))
   (copy from to))
 
@@ -318,7 +318,7 @@
   `(com-copy-file ,object ,destination-object))
 
 (define-command (com-move-file :command-table file-manager)
-    ((from file) (to directory))
+    ((from 'file) (to 'directory))
   (format t "Moving ~A to ~A~%" (name from) (name to))
   (move from to))
 

@@ -13,11 +13,11 @@
 (define-presentation-type table-coordinates ())
 (define-presentation-type table-coordinates2 ())
 
-(define-table-demo-command (com-select-cell) ((object t))
+(define-table-demo-command (com-select-cell) ((object 't))
   (setf (active-row1 *application-frame*) (car object)
         (active-cell1 *application-frame*) (cdr object)))
 
-(define-table-demo-command (com-select-cell2) ((object t))
+(define-table-demo-command (com-select-cell2) ((object 't))
   (setf (active-col2 *application-frame*) (car object)
         (active-cell2 *application-frame*) (cdr object)))
 

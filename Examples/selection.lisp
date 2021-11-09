@@ -187,7 +187,7 @@
         (request-selection *standard-output* (selection-box *application-frame*) t)))
 
 (define-selection-demo-command (com-print-integer :name t)
-    ((a integer))
+    ((a 'integer))
   (format *standard-input* "integer: ~a" a))
 
 ;; (defun cl-user::run ()

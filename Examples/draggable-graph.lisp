@@ -65,7 +65,9 @@
     (make-rectangle* (floor x0) (floor y0) (ceiling x1) (ceiling y1))))
 
 (define-draggable-graph-demo-command (com-drag-node)
-    ((record t) (offset-x real :default 0) (offset-y real :default 0))
+    ((record t)
+     (offset-x 'real :default 0)
+     (offset-y 'real :default 0))
   (let* ((stream *standard-output*)
          (node-record (find-graph-node record))
          (edge-records (node-edges node-record))

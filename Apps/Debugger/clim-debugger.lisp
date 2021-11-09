@@ -178,9 +178,9 @@
           (min (+ #1# 10) (length (backtrace (condition-info pane)))))))
 
 (define-clim-debugger-command (com-invoke-inspector :name "Inspect in new frame")
-    ((obj inspectable :gesture (:select
-                                :documentation "Inspect in new frame"
-                                :pointer-documentation "Inspect in new frame")))
+    ((obj 'inspectable :gesture (:select
+                                 :documentation "Inspect in new frame"
+                                 :pointer-documentation "Inspect in new frame")))
   (clouseau:inspect obj :new-process t))
 
 (define-clim-debugger-command (com-refresh :name "Refresh" :menu t
@@ -205,7 +205,7 @@
 
 (define-clim-debugger-command (com-eval :name "Eval in frame" :menu t
                                         :keystroke :eval)
-    ((form clim:string))
+    ((form 'clim:string))
   (let* ((dbg-pane (find-pane-named *application-frame* 'debugger-pane))
          (active-frame (active-frame dbg-pane)))
     (format *pointer-documentation-output*
