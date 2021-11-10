@@ -669,3 +669,12 @@ if there is one, or STREAM"
 
 (def-stream-method (setf stream-default-view)
     (view (stream standard-encapsulating-stream)))
+
+;;; Incremental redisplay
+(def-stream-method invoke-updating-output
+    ((stream standard-encapsulating-stream)
+     continuation
+     record-type
+     unique-id id-test cache-value cache-test
+     &key (fixed-position nil) (all-new nil)
+     (parent-cache nil)))
