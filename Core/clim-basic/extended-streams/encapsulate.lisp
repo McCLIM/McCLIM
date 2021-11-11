@@ -250,6 +250,9 @@ if there is one, or STREAM"
 (def-stream-method move-and-resize-sheet
     ((stream standard-encapsulating-stream) x y width height))
 
+(def-stream-method pane-viewport-region
+    ((stream standard-encapsulating-stream)))
+
 (def-stream-method map-sheet-position-to-parent
     ((stream standard-encapsulating-stream) x y))
 
@@ -586,6 +589,9 @@ if there is one, or STREAM"
                            delimiter-gestures additional-delimiter-gestures))
 ;;; Output recording
 
+(def-stream-method output-recording-stream-p
+    ((stream standard-encapsulating-stream)))
+
 (def-stream-method stream-recording-p
     ((stream standard-encapsulating-stream)))
 
@@ -670,11 +676,6 @@ if there is one, or STREAM"
 (def-stream-method (setf stream-default-view)
     (view (stream standard-encapsulating-stream)))
 
-;;; Incremental redisplay
-(def-stream-method invoke-updating-output
-    ((stream standard-encapsulating-stream)
-     continuation
-     record-type
-     unique-id id-test cache-value cache-test
-     &key (fixed-position nil) (all-new nil)
-     (parent-cache nil)))
+;;; Input editing
+(def-stream-method invoke-with-input-editor-typeout
+    ((stream standard-encapsulating-stream) continuation &key erase))
