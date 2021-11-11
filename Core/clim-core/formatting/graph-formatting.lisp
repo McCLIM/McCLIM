@@ -151,9 +151,7 @@
                        graph-options))))
         (setf (output-record-position graph-output-record)
               (values cursor-old-x cursor-old-y))
-        (when (and (stream-drawing-p stream)
-                   (output-record-ancestor-p (stream-output-history stream)
-                                             graph-output-record))
+        (when (stream-drawing-p stream)
           (with-output-recording-options (stream :draw t :record nil)
             (replay graph-output-record stream)))
         (when move-cursor
