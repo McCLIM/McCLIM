@@ -140,6 +140,9 @@
               :documentation "The editing substrate used for this text field."))
   (:documentation "A mixin class for creating gadgets using editor substrates."))
 
+(defmethod stream-set-input-focus ((gadget editor-substrate-user-mixin))
+  (stream-set-input-focus (substrate gadget)))
+
 (defmethod gadget-value ((gadget editor-substrate-user-mixin))
   (gadget-value (substrate gadget)))
 
