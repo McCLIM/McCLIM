@@ -158,8 +158,7 @@
    (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
    (view :initarg :default-view :accessor stream-default-view)
    (baseline :initform 0 :reader stream-baseline)
-   ;; the max char height of the current line
-   (char-height :initform 0 :accessor %stream-char-height))
+   (char-height :accessor %stream-char-height))
   (:default-initargs
    :foreground +black+ :background +white+ :text-style *default-text-style*
    :vertical-spacing 2 :end-of-page-action :scroll :end-of-line-action :wrap
@@ -178,6 +177,8 @@
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest initargs)
   (declare (ignore initargs))
+  (setf (slot-value stream 'char-height)
+        (text-style-height (stream-text-style stream) stream))
   (multiple-value-bind (x-start y-start)
       (stream-cursor-initial-position stream)
     (setf (stream-text-cursor stream)
@@ -282,7 +283,7 @@
       (let* ((medium       (sheet-medium stream))
              (text-style   (medium-text-style medium))
              (new-baseline (text-style-ascent text-style medium))
-             (new-height   0))
+             (new-height   (text-style-height text-style medium)))
         ;; For new lines we reset the char height to 0 in case of the text
         ;; style change after the line break. -- jd 2020-08-07
         (maybe-end-of-page-action stream (+ updated-cy new-height))
