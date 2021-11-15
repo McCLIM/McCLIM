@@ -22,9 +22,12 @@
 (defmethod stream-drawing-p ((stream output-stream)) t)
 
 ;;; Cursor-Mixin class
+;;;
+;;; FIXME why a mixin? The only subclass is the standard-text-cursor. Also
+;;; instead of storing the character height in the output stream the height
+;;; should be stored in the cursor instead. -- jd 2021-11-15
 (defclass cursor-mixin ()
-  ((sheet :initarg :sheet
-          :reader cursor-sheet)
+  ((sheet :initarg :sheet :reader cursor-sheet)
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
    (width :initform 8)
@@ -35,10 +38,8 @@
    ;; It means that the sheet (stream) updates the cursor, though
    ;; currently the cursor appears to be always updated after stream
    ;; text operations. -- moore
-   (cursor-active :initform nil
-                  :accessor cursor-active)
-   (cursor-state :initform nil
-                 :accessor cursor-state)))
+   (cursor-active :initform nil :accessor cursor-active)
+   (cursor-state :initform nil :accessor cursor-state)))
 
 (defgeneric cursor-height (cursor))
 
@@ -137,9 +138,9 @@
   ())
 
 (defmethod cursor-height ((cursor standard-text-cursor))
-  (%stream-char-height (cursor-sheet cursor)))
+  (stream-cursor-height (cursor-sheet cursor)))
 
-(defmethod %stream-char-height ((sheet sheet))
+(defmethod stream-cursor-height ((sheet sheet))
   (text-style-height (medium-text-style sheet) sheet))
 
 
@@ -158,7 +159,7 @@
    (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
    (view :initarg :default-view :accessor stream-default-view)
    (baseline :initform 0 :reader stream-baseline)
-   (char-height :accessor %stream-char-height))
+   (height :accessor stream-cursor-height))
   (:default-initargs
    :foreground +black+ :background +white+ :text-style *default-text-style*
    :vertical-spacing 2 :end-of-page-action :scroll :end-of-line-action :wrap
@@ -177,7 +178,7 @@
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest initargs)
   (declare (ignore initargs))
-  (setf (slot-value stream 'char-height)
+  (setf (stream-cursor-height stream)
         (text-style-height (stream-text-style stream) stream))
   (multiple-value-bind (x-start y-start)
       (stream-cursor-initial-position stream)
@@ -272,7 +273,7 @@
     (let* ((current-cy       (nth-value 1 (stream-cursor-position stream)))
            (vertical-spacing (stream-vertical-spacing stream))
            (updated-cy       (+ current-cy
-                                (%stream-char-height stream)
+                                (stream-cursor-height stream)
                                 vertical-spacing)))
       (setf (cursor-position (stream-text-cursor stream))
             (values (stream-cursor-initial-position stream)
@@ -288,7 +289,7 @@
         ;; style change after the line break. -- jd 2020-08-07
         (maybe-end-of-page-action stream (+ updated-cy new-height))
         (setf (slot-value stream 'baseline) new-baseline
-              (%stream-char-height stream)  new-height)))))
+              (stream-cursor-height stream)  new-height)))))
 
 (defun seos-write-string (stream string &optional (start 0) end)
   (setq end (or end (length string)))
@@ -301,9 +302,9 @@
          (right-margin (stream-cursor-final-position stream))
          (text-style-height (text-style-height text-style medium)))
     (maxf (slot-value stream 'baseline) (text-style-ascent text-style medium))
-    (maxf (%stream-char-height stream) text-style-height)
+    (maxf (stream-cursor-height stream) text-style-height)
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-      (maybe-end-of-page-action stream (+ cy (%stream-char-height stream)))
+      (maybe-end-of-page-action stream (+ cy (stream-cursor-height stream)))
       (let* ((width (stream-string-width stream string
                                          :start start :end end
                                          :text-style text-style))
@@ -345,7 +346,7 @@
                                              :margin margin
                                              :break-strategy break
                                              :start start :end end))
-              do (maxf (%stream-char-height stream) text-style-height)
+              do (maxf (stream-cursor-height stream) text-style-height)
                  (stream-write-output stream string start split)
                  (when (= split end)
                    (setf (cursor-position cursor)

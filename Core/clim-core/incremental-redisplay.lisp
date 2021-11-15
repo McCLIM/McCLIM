@@ -302,6 +302,9 @@ spatially organized data structure.
 ;;; but with the reworking of REPLAY-OUTPUT-RECORD
 ;;; (STANDARD-DISPLAYED-OUTPUT-RECORD) to use around methods and
 ;;; WITH-DRAWING-OPTIONS, they are no longer necessary.
+;;;
+;;; FIXME shouldn't we maintain a complete-cursor-state here? The cursor has
+;;; width, height, appearance and position. -- jd 2021-11-15
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
    (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)
@@ -313,7 +316,7 @@ spatially organized data structure.
     (setf (values (slot-value obj 'cursor-x) (slot-value obj 'cursor-y))
           (stream-cursor-position stream))
     (setf (slot-value obj 'cursor-height)
-          (%stream-char-height stream))))
+          (stream-cursor-height stream))))
 
 (defmethod match-output-records-1 and ((state updating-stream-state)
                                        &key (cursor-x 0 x-supplied-p)
@@ -330,7 +333,8 @@ spatially organized data structure.
   (:method ((state updating-stream-state) (stream updating-output-stream-mixin))
     (setf (stream-cursor-position stream)
           (values (cursor-x state) (cursor-y state)))
-    (setf (%stream-char-height stream) (cursor-height state))))
+    (setf (stream-cursor-height stream)
+          (cursor-height state))))
 
 (defmethod medium-graphics-state ((stream updating-output-stream-mixin)
                                   &optional state)
