@@ -304,26 +304,33 @@ spatially organized data structure.
 ;;; WITH-DRAWING-OPTIONS, they are no longer necessary.
 (defclass updating-stream-state (complete-medium-state)
   ((cursor-x :accessor cursor-x :initarg :cursor-x :initform 0)
-   (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)))
+   (cursor-y :accessor cursor-y :initarg :cursor-y :initform 0)
+   (cursor-height :accessor cursor-height :initarg :cursor-height :initform 0)))
 
 (defmethod initialize-instance :after ((obj updating-stream-state)
                                        &key (stream nil))
   (when stream
     (setf (values (slot-value obj 'cursor-x) (slot-value obj 'cursor-y))
-          (stream-cursor-position stream))))
+          (stream-cursor-position stream))
+    (setf (slot-value obj 'cursor-height)
+          (%stream-char-height stream))))
 
 (defmethod match-output-records-1 and ((state updating-stream-state)
                                        &key (cursor-x 0 x-supplied-p)
-                                       (cursor-y 0 y-supplied-p))
+                                            (cursor-y 0 y-supplied-p)
+                                            (cursor-height 0 h-supplied-p))
   (and (or (not x-supplied-p)
            (coordinate= (slot-value state 'cursor-x) cursor-x))
        (or (not y-supplied-p)
-           (coordinate= (slot-value state 'cursor-y) cursor-y))))
+           (coordinate= (slot-value state 'cursor-y) cursor-y))
+       (or (not h-supplied-p)
+           (coordinate= (slot-value state 'cursor-height) cursor-height))))
 
 (defgeneric set-medium-cursor-position (state stream)
   (:method ((state updating-stream-state) (stream updating-output-stream-mixin))
     (setf (stream-cursor-position stream)
-          (values (cursor-x state) (cursor-y state)))))
+          (values (cursor-x state) (cursor-y state)))
+    (setf (%stream-char-height stream) (cursor-height state))))
 
 (defmethod medium-graphics-state ((stream updating-output-stream-mixin)
                                   &optional state)
