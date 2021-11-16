@@ -137,7 +137,15 @@
 (define-presentation-generic-function %accept-present-default
   accept-present-default
   (type-key parameters options type
-   stream view default default-supplied-p present-p query-identifier))
+            stream view default default-supplied-p present-p query-identifier))
+
+;;; A convenience trampoline. This function is not specified.
+(defun accept-present-default (ptype stream view
+                               default default-supplied-p
+                               present-p query-identifier)
+  (funcall-presentation-generic-function
+   accept-present-default ptype stream view
+   default default-supplied-p present-p query-identifier))
 
 (defvar *recursive-accept-p* nil)
 (defvar *recursive-accept-1-p* nil)

@@ -4,128 +4,111 @@
 ;;;
 ;;;  (c) Copyright 2003 by Tim Moore <moore@bricoworks.com>
 ;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2021 by Daniel Kochmański <daniel.turtlewareeu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 
-#| Random notes:
-                                        ; ; ;
-An accepting-values stream diverts the calls to accept into calling ; ; ;
-accept-present-default, as described in the spec.  The output record ; ; ;
-produced by accept-present-default, as well as the current value of ; ; ;
-that query, arguments that were passed to accept, etc. are stored in a ; ; ;
-query object. The stream stores all the query objects for this ; ; ;
-invocation of accepting-values. The record created and returned by ; ; ;
-accept-present-default must be a subclass of updating-output-record. ; ; ;
-                                        ; ; ;
-After the initial output records are drawn, invoke-accepting-values ; ; ;
-blocks accepting commands. The state of the dialog state machine is changed ; ; ;
-via these commands. The commands currently are: ; ; ;
-                                        ; ; ;
-COM-SELECT-QUERY query-id -- calls the method select-query with the ; ; ;
-corresponding query object and output record object. When select-query returns ; ; ;
-the "next" field, if any, is selected so the user can move from field to field ; ; ;
-easily.                                 ; ; ;
-                                        ; ; ;
-COM-CHANGE-QUERY query-id value -- This command is used to directly change the ; ; ;
-value of a query field that does not need to be selected first for input. For ; ; ;
-example, a user would click directly on a radio button without selecting the ; ; ;
-gadget first.                           ; ; ;
-                                        ; ; ;
-COM-DESELECT-QUERY -- deselects the currently selected query. ; ; ;
-                                        ; ; ;
-COM-QUERY-EXIT -- Exits accepting-values ; ; ;
-                                        ; ; ;
-COM-QUERY-ABORT -- Aborts accepting-values ; ; ;
-                                        ; ; ;
-COM-DO-COMMAND-BUTTON -- Execute the body of a command-button after a push ; ; ;
-                                        ; ; ;
-These commands are generated in two ways. For query fields that are entirely ; ; ;
-based on CLIM drawing commands and presentations, these are emitted by ; ; ;
-presentation translators. There is a presentation type selectable-query that ; ; ;
-throws com-select-query for the :select gesture. Fields that are based on ; ; ;
-gadgets have to throw presentations from their callbacks. This can be done ; ; ;
-using  the method on p. 305 of the Franz CLIM user guide, or by using  the ; ; ;
-McCLIM function throw-object-ptype.     ; ; ;
-                                        ; ; ;
-After a command is executed the body of accepting-values is rerun, calling ; ; ;
-accept-present-default again to update the fields' graphic appearance. [This ; ; ;
-may be calling these methods too often and may change in the future]. The ; ; ;
-values returned by the user's calls to accept come from the query objects. ; ; ;
-                                        ; ; ;
-                                        ; ; ;
-If a query field is selectable than it should implement the method ; ; ;
-select-query:                           ; ; ;
-                                        ; ; ;
-SELECT-QUERY stream query record -- Make a query field active and do any ; ; ;
-input. This should change the query object and setf (changedp query). This ; ; ;
-method might be interrupted at any time if the user selects another field. ; ; ;
-                                        ; ; ;
-|#
-
+;;; An accepting-values stream diverts the calls to accept into calling
+;;; accept-present-default, as described in the spec.  The output record
+;;; produced by accept-present-default, as well as the current value of that
+;;; query, arguments that were passed to accept, etc. are stored in a query
+;;; object. The stream stores all the query objects for this invocation of
+;;; accepting-values. The record created and returned by accept-present-default
+;;; must be a subclass of updating-output-record.
+;;;
+;;; After the initial output records are drawn, invoke-accepting-values blocks
+;;; accepting commands. The state of the dialog state machine is changed via
+;;; these commands. The commands currently are:
+;;;
+;;;
+;;;   COM-SELECT-QUERY query-id -- calls the method select-query with the
+;;;   corresponding query object and output record object. When select-query
+;;;   returns the "next" field, if any, is selected so the user can move from
+;;;   field to field easily.
+;;;
+;;;   COM-CHANGE-QUERY query-id value -- This command is used to directly change
+;;;   the value of a query field that does not need to be selected first for
+;;;   input. For example, a user would click directly on a radio button without
+;;;   selecting the gadget first.
+;;;
+;;;   COM-DESELECT-QUERY -- deselects the currently selected query.
+;;;
+;;;   COM-QUERY-EXIT -- Exits accepting-values.
+;;;
+;;;   COM-QUERY-ABORT -- Aborts accepting-values.
+;;;
+;;;   COM-DO-COMMAND-BUTTON -- Execute a body of a command-button after a push.
+;;;
+;;; These commands are generated in two ways. For query fields that are entirely
+;;; based on CLIM drawing commands and presentations, these are emitted by
+;;; presentation translators. There is a presentation type selectable-query that
+;;; throws com-select-query for the :select gesture. Fields that are based on
+;;; gadgets have to throw presentations from their callbacks. This can be done
+;;; using the method on p. 305 of the Franz CLIM user guide, or by using the
+;;; McCLIM function throw-object-ptype.
+;;;
+;;; After a command is executed the body of accepting-values is rerun, calling
+;;; accept-present-default again to update the fields' graphic appearance. [This
+;;; may be calling these methods too often and may change in the future]. The
+;;; values returned by the user's calls to accept come from the query objects.
+;;;
+;;; If a query field is selectable than it should implement the method
+;;; select-query:
+;;;
+;;;   SELECT-QUERY stream query record -- Make a query field active and do any
+;;;   input. This should change the query object and setf (changedp query). This
+;;;   method might be interrupted at any time if the user selects another field.
+;;;
 (in-package #:clim-internals)
 
 (defclass query ()
   ((query-identifier :accessor query-identifier :initarg :query-identifier)
    (ptype :accessor ptype :initarg :ptype)
    (view :accessor view :initarg :view)
-   (default :accessor default :initarg :default :initform nil)
-   (default-supplied-p :accessor default-supplied-p
-     :initarg :default-supplied-p :initform nil)
+   (default :accessor default :initarg :default)
+   (default-supplied-p :accessor default-supplied-p :initarg :default-supplied-p)
    (value :accessor value :initarg :value :initform nil)
    (changedp :accessor changedp :initform nil)
    (record :accessor record :initarg :record)
-   (activation-gestures :accessor activation-gestures
-                        :initform *activation-gestures*
-                        :documentation "Binding of *activation-gestures* on
-entry to this accept")
-   (delimeter-gestures :accessor delimiter-gestures
-                       :initform *delimiter-gestures*
-                       :documentation "Binding of *delimeter-gestures* on entry
-to this accept")
+   ;; Binding of *activation-gestures* on entry to this accept.
+   (activation-gestures :accessor activation-gestures :initform *activation-gestures*)
+   ;; Binding of *delimeter-gestures* on entry to this accept
+   (delimeter-gestures :accessor delimiter-gestures :initform *delimiter-gestures*)
    (accept-arguments :accessor accept-arguments :initarg :accept-arguments)
-   (accept-condition :accessor accept-condition :initarg :accept-condition
-                     :initform nil
-                     :documentation "Condition signalled, if any, during
-accept of this query")))
+   ;; Condition signalled, if any, during accept of this query
+   (accept-condition :accessor accept-condition :initform nil)))
 
+;;; Does whatever is needed for input (e.g., calls accept) when a query is
+;;; selected for input. It is responsible for updating the query object when a
+;;; new value is entered in the query field.
 (defgeneric select-query (stream query record)
-  (:documentation "Does whatever is needed for input (e.g., calls accept) when
-a query is selected for input. It is responsible for updating the
-  query object when a new value is entered in the query field." ))
+  (:method (stream query record)
+    (declare (ignore stream query record))))
 
+;;; Deselect a query field: turn the cursor off, turn off highlighting, etc.
 (defgeneric deselect-query (stream query record)
-  (:documentation "Deselect a query field: turn the cursor off, turn off
-highlighting, etc." ))
+  (:method (stream query record)
+    (declare (ignore stream query record))))
 
-(defmethod select-query (stream query record)
-  (declare (ignore stream query record))
-  nil)
-
-(defmethod deselect-query (stream query record)
-  (declare (ignore stream query record))
-  nil)
-
+;;; Record class for an entire dialog and its elements.
 (defclass accepting-values-record (standard-updating-output-record)
-  ()
-  (:documentation "Record class for an entire dialog and its elements."))
+  ())
 
+;;; Reader for getting the editing stream, if any, from an accepting-values
+;;; record.
 (defgeneric editing-stream (record)
-  (:documentation "Reader for getting the editing stream, if any, from an
-  accepting-values record."))
-
-(defmethod editing-stream ((record accepting-values-record))
-  nil)
+  (:method ((record accepting-values-record))
+    nil))
 
 (defclass accepting-values-stream (standard-encapsulating-stream)
   ((queries :accessor queries :initform nil)
    (selected-query :accessor selected-query :initform nil)
-   (align-prompts :accessor align-prompts :initarg :align-prompts
-                  :initform nil)
-   (last-pass :accessor last-pass :initform nil
-              :documentation "Flag that indicates the last pass through the
-  body of ACCEPTING-VALUES, after the user has chosen to exit. This controls
-  when conditions will be signalled from calls to ACCEPT.")))
+   (align-prompts :accessor align-prompts :initarg :align-prompts)
+   ;; Flag that indicates the last pass through the body of ACCEPTING-VALUES,
+   ;; after the user has chosen to exit. This controls when conditions will be
+   ;; signalled from calls to ACCEPT.
+   (last-pass :accessor last-pass :initform nil)))
 
 (defmethod stream-default-view ((stream accepting-values-stream))
   +textual-dialog-view+)
@@ -133,24 +116,21 @@ highlighting, etc." ))
 (define-condition av-exit (condition)
   ())
 
-;;; The accepting-values state machine is controlled by commands. Each
-;;; action (e.g., "select a text field") terminates
+;;; The accepting-values state machine is controlled by commands. Each action
+;;; (e.g., "select a text field") terminates
 
 (define-command-table accept-values)    ; :inherit-from nil???
 
 (defvar *default-command* '(accepting-values-default-command))
 
-;;; The fields of the query have presentation type QUERY-IDENTIFIER.
-;;; Fields that are "selectable", like the default text editor field,
-;;; have type SELECTABLE-QUERY. The presentation object is the query
-;;; identifier.
+;;; The fields of the query have presentation type QUERY-IDENTIFIER.  Fields
+;;; that are "selectable", like the default text editor field, have type
+;;; SELECTABLE-QUERY. The presentation object is the query identifier.
 
 (define-presentation-type query-identifier () :inherit-from t)
 (define-presentation-type selectable-query () :inherit-from 'query-identifier)
-
-(define-presentation-type exit-button () :inherit-from t)
-
-(define-presentation-type abort-button () :inherit-from t)
+(define-presentation-type exit-button      () :inherit-from t)
+(define-presentation-type abort-button     () :inherit-from t)
 
 (defvar *accepting-values-stream* nil)
 
@@ -421,18 +401,15 @@ highlighting, etc." ))
           (setf (ptype query) type)
           #+nil (setf (changedp query) nil))))))
 
-
 (defmethod prompt-for-accept ((stream accepting-values-stream)
-                              type view
-                              &rest args)
+                              type view &rest args)
   (declare (ignore view))
   (apply #'prompt-for-accept-1 stream type :display-default nil args))
 
-(add-menu-item-to-command-table
- 'accept-values "Accepting Values"
- :divider nil
- :text-style (make-text-style nil :italic :normal)
- :errorp nil)
+(add-menu-item-to-command-table 'accept-values "Accepting Values"
+                                :divider nil
+                                :text-style (make-text-style nil :italic :normal)
+                                :errorp nil)
 
 (define-command (com-query-exit :command-table accept-values
                                 :keystroke (#\[ :control)
@@ -441,7 +418,8 @@ highlighting, etc." ))
     ()
   (signal 'av-exit))
 
-(add-keystroke-to-command-table 'accept-values '(#\Return :meta) :command 'com-query-exit :errorp nil)
+(add-keystroke-to-command-table 'accept-values '(#\Return :meta)
+                                :command 'com-query-exit :errorp nil)
 
 (define-command (com-query-abort :command-table accept-values
                                  :keystroke (#\] :control)
@@ -451,7 +429,8 @@ highlighting, etc." ))
   (and (find-restart 'abort)
        (invoke-restart 'abort)))
 
-(add-keystroke-to-command-table 'accept-values '(#\g :control) :command 'com-query-abort :errorp nil)
+(add-keystroke-to-command-table 'accept-values '(#\g :control)
+                                :command 'com-query-abort :errorp nil)
 
 (define-command (com-change-query :command-table accept-values
                                   :name nil
@@ -545,8 +524,6 @@ highlighting, etc." ))
              :documentation "A copy of the stream buffer before accept
 is called. Used to determine if any editing has been done by user")))
 
-(defparameter *no-default-cache-value* (cons nil nil))
-
 (define-default-presentation-method accept-present-default
     (type stream (view textual-dialog-view) default default-supplied-p
      present-p query-identifier)
@@ -555,21 +532,23 @@ is called. Used to determine if any editing has been done by user")))
          (record (updating-output (stream :unique-id query-identifier
                                           :cache-value (if default-supplied-p
                                                            default
-                                                           *no-default-cache-value*)
+                                                           (cons nil nil))
                                           :record-type 'av-text-record)
                    (with-output-as-presentation
                        (stream query-identifier 'selectable-query
                                :single-box t)
                      (surrounding-output-with-border
                          (stream :shape :rounded
-                                 :radius 3 :background clim:+background-ink+
+                                 :radius 3
+                                 :background clim:+background-ink+
                                  :foreground clim:+foreground-ink+
                                  :move-cursor t)
-                       ;;; FIXME: In this instance we really want borders that
-                       ;;; react to the growth of their children. This should
-                       ;;; be straightforward unless there is some involvement
-                       ;;; of incremental redisplay.
-                       ;;; KLUDGE: Arbitrary min-width.
+                       ;; FIXME: In this instance we really want borders that
+                       ;; react to the growth of their children. This should
+                       ;; be straightforward unless there is some involvement
+                       ;; of incremental redisplay.
+                       ;;
+                       ;; KLUDGE: Arbitrary min-width.
                        (setq editing-stream
                              (make-instance 'standard-input-editing-stream
                                             :stream stream
@@ -641,9 +620,6 @@ is called. Used to determine if any editing has been done by user")))
                        (accept ptype :stream s :view view :prompt nil))))))
       (setf (changedp query) t))))
 
-
-
-
 ;;; The desired
 (defmethod select-query (stream query (record av-text-record))
   (declare (ignore stream))
@@ -657,7 +633,6 @@ is called. Used to determine if any editing has been done by user")))
       (setf (snapshot record) (copy-seq stream-input-buffer))
       (av-do-accept query record t))))
 
-
 ;;; If the query has not been changed (i.e., ACCEPT didn't return) and there is
 ;;; no error, act as if the user activated the query.
 (defmethod deselect-query (stream query (record av-text-record))
@@ -666,20 +641,18 @@ is called. Used to determine if any editing has been done by user")))
     (when (not (or (changedp query) (accept-condition query)))
       (finalize-query-record query record))))
 
-
+;; Do any cleanup on a query before the accepting-values body is run for the
+;; last time.
 (defgeneric finalize-query-record (query record)
-  (:documentation "Do any cleanup on a query before the accepting-values body
-is run for the last time"))
+  (:method (query record)
+    (declare (ignore query record))))
 
-(defmethod finalize-query-record (query record)
-  nil)
-
-;;; If the user edits a text field, selects another text field and
-;;; then exits from accepting-values without activating the first
-;;; field, the values returned would be some previous value or default
-;;; for the field, not what's on the screen.  That would be completely
-;;; bogus.  So, if a field has been edited but not activated, activate
-;;; it now.  Unfortunately that's a bit hairy.
+;;; If the user edits a text field, selects another text field and then exits
+;;; from accepting-values without activating the first field, the values
+;;; returned would be some previous value or default for the field, not what's
+;;; on the screen.  That would be completely bogus.  So, if a field has been
+;;; edited but not activated, activate it now.  Unfortunately that's a bit
+;;; hairy.
 
 (defmethod finalize-query-record (query (record av-text-record))
   (let ((estream (editing-stream record)))
@@ -701,7 +674,6 @@ is run for the last time"))
 (defun finalize-query-records (av-stream)
   (loop for query in (queries av-stream)
         do (finalize-query-record query (record query))))
-
 
 (define-presentation-to-command-translator com-select-field
     (selectable-query com-select-query accept-values
@@ -737,101 +709,6 @@ is run for the last time"))
 (defun accepting-values-default-command ()
   (loop
    (read-gesture :stream *accepting-values-stream*)))
-
-
-;;;; notify-user
-
-;;; See http://openmap.bbn.com/hypermail/clim/0028.html for example usage.
-
-;;; TODO:
-;;;   - associated-window argument?
-;;;   - What is the correct return value from notify-user? We currently return
-;;;     the name of the action given in the :exit-boxes argument.
-;;;   - Invoke abort restart? Not necessary as it is with accepting-values,
-;;;     but probably what "Classic CLIM" does.
-;;;   - What are the default exit boxes? Just "Okay"? Okay and cancel?
-;;;   - Reimplement using accepting-values, if accepting-values is ever
-;;;     improved to produce comparable dialogs.
-;;;   - Should the user really be able to close the window from the WM?
-
-(defmethod notify-user (frame message &rest args)
-  (apply #'frame-manager-notify-user
-         (if frame (frame-manager frame) (find-frame-manager))
-         message
-         :frame frame
-         args))
-
-(define-application-frame generic-notify-user-frame ()
-  ((message-string :initarg :message-string)
-   (exit-boxes :initarg :exit-boxes)
-   (title :initarg :title)
-   (style :initarg :style)
-   (text-style :initarg :text-style)
-   (return-value :initarg nil :initform :abort))
-  (:pane (generate-notify-user-dialog *application-frame*)))
-
-(defun generate-notify-user-dialog (frame)
-  (with-slots (message-string exit-boxes text-style) frame
-  (vertically ()
-    (spacing (:thickness 6)
-      (make-pane 'label-pane :label (or message-string "I'm speechless.") :text-style text-style))
-    (spacing (:thickness 4)
-      (make-pane 'hbox-pane :contents (cons '+fill+ (generate-exit-box-buttons exit-boxes)))))))
-
-(defun generate-exit-box-buttons (specs)
-  (mapcar
-   (lambda (spec)
-     (destructuring-bind (action string &rest args) spec
-       (spacing (:thickness 2)
-         (apply #'make-pane
-                'push-button
-                :label string
-                :text-style (make-text-style :sans-serif :roman :small) ; XXX
-                :activate-callback
-                (lambda (gadget)
-                  (declare (ignore gadget))
-                  ;; This is fboundp business is weird, and only implied by a
-                  ;; random message on the old CLIM list. Does the user function
-                  ;; take arguments?
-                  (when (or (typep action 'function) (fboundp action))
-                    (funcall action))
-                  (setf (slot-value *application-frame* 'return-value) action)
-                  ;; This doesn't work:
-                  #+NIL
-                  (when (eql action :abort)
-                    (and (find-restart 'abort)
-                         (invoke-restart 'abort)))
-                  (frame-exit *application-frame*))
-                args))))
-   specs))
-
-
-(defmethod frame-manager-notify-user
-    (frame-manager message-string &key frame associated-window
-                   (title "")
-                   documentation
-                   (exit-boxes '((:exit "OK")))
-                   ; The 'name' arg is in the spec but absent from the Lispworks
-                   ; manual, and I can't imagine what it would do differently
-                   ; than 'title'.
-                   name
-                   style
-                   (text-style (make-text-style :sans-serif :roman :small)))
-  (declare (ignore associated-window documentation))
-  ;; Keywords from notify-user:
-  ;; associated-window title documentation exit-boxes name style text-style
-  (let ((frame (make-application-frame 'generic-notify-user-frame
-                                       :calling-frame frame
-                                       :pretty-name title
-                                       :message-string message-string
-                                       :frame-manager frame-manager
-                                       :exit-boxes exit-boxes
-                                       :title (or name title)
-                                       :style style
-                                       :text-style text-style)))
-    (run-frame-top-level frame)
-    (slot-value frame 'return-value)))
-
 
 ;;; An accept-values button sort of behaves like an accepting-values query with
 ;;; no value.

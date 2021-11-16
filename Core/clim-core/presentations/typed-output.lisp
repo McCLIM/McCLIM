@@ -13,13 +13,12 @@
 
 (in-package #:clim-internals)
 
+;;; FIXME impelment invoke-with-output-as-presentation and expand to it.
 (defmacro with-output-as-presentation ((stream object type
                                         &rest key-args
-                                        &key modifier single-box
-                                          (allow-sensitive-inferiors t)
-                                          parent
-                                          (record-type
-                                           ''standard-presentation)
+                                        &key modifier single-box parent
+                                             (allow-sensitive-inferiors t)
+                                             (record-type ''standard-presentation)
                                         &allow-other-keys)
                                        &body body)
   (declare (ignore parent single-box modifier))
@@ -28,9 +27,7 @@
       (get-body-declarations body)
     (with-gensyms (record-arg continuation)
       (with-keywords-removed (key-args (:record-type :allow-sensitive-inferiors))
-        `(flet ((,continuation ()
-                  ,@decls
-                  ,@with-body))
+        `(flet ((,continuation () ,@decls ,@with-body))
            (declare (dynamic-extent #',continuation))
            (if (and (output-recording-stream-p ,stream)
                     *allow-sensitive-inferiors*)
@@ -39,8 +36,7 @@
                             :object ,object
                             :type (expand-presentation-type-abbreviation ,type)
                             ,@key-args)
-                 (let ((*allow-sensitive-inferiors*
-                         ,allow-sensitive-inferiors))
+                 (let ((*allow-sensitive-inferiors* ,allow-sensitive-inferiors))
                    (,continuation)))
                (,continuation)))))))
 

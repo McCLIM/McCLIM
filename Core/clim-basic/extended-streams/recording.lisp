@@ -1684,32 +1684,45 @@ were added."
        (string= (slot-value record 'string)
                 (slot-value record2 'string))))
 
+;;; The STANDARD-TEXT-DISPLAYED-OUTPUT-RECORD represents a single line of text
+;;; composed of styled strings that may have different text styles. There are
+;;; two metrics that need to be accounted for with each added string:
+;;;
+;;; The text line metrics, that is the record initial position, the line width,
+;;; height and baseline. Slots: START-X, START-Y, WIDTH, HEIGHT, BASELINE.
+;;; Redundantly slots END-X and END-Y are stored for conveniance.
+;;;
+;;; The glyph metrics (see TEXT-BOUNDING-RECTANGLE*). Glyph may have left and
+;;; right bearings and they may reach that reach outside of the line bounding
+;;; rectangle. Slots LEFT and RIGHT have the extreme bounds of the record.
+;;;
+;;; -- jd 2021-11-14
 (defclass standard-text-displayed-output-record
     (text-displayed-output-record standard-displayed-output-record)
-  ((initial-x1 :initarg :start-x)
-   (initial-y1 :initarg :start-y)
+  (;; All strings making the output record.
    (strings :initform nil)
-   (baseline :initform 0)
+   ;; The initial position of the output record.
+   (initial-x1 :initarg :start-x)
+   (initial-y1 :initarg :start-y)
+   ;; The text line dimensions.
    (width :initform 0)
-   (max-height :initform 0)
-   ;; FIXME (or rework this comment):
-   ;; CLIM does not separate the notions of the text width and the bounding box;
-   ;; however, we need to, because some fonts will render outside the logical
-   ;; coordinates defined by the start position and the width. LEFT and RIGHT
-   ;; here (and below) deal with this in a manner completely hidden from the
-   ;; user. Should we export TEXT-BOUNDING-RECTANGLE*?
+   (height :initform nil)
+   (baseline :initform 0)
+   ;; Bounding box left and right including the glyph bearings.
    (left :initarg :start-x)
    (right :initarg :start-x)
+   ;; The current position of the output record.
    (start-x :initarg :start-x)
    (start-y :initarg :start-y)
    (end-x :initarg :start-x)
    (end-y :initarg :start-y)
-   (medium :initarg :medium :initform nil)))
+   (medium :initform nil)))
 
 (defmethod initialize-instance :after
     ((obj standard-text-displayed-output-record) &key stream)
-  (when stream
-    (setf (slot-value obj 'medium) (sheet-medium stream))))
+  (with-slots (medium height) obj
+    (setf medium (sheet-medium stream)
+          height (text-style-height (stream-text-style stream) stream))))
 
 ;;; Forget match-output-records-1 for standard-text-displayed-output-record; it
 ;;; doesn't make much sense because these records have state that is not
@@ -1762,7 +1775,7 @@ were added."
                                  stream
                                  &optional region (x-offset 0) (y-offset 0))
   (declare (ignore region x-offset y-offset))
-  (with-slots (strings baseline max-height start-y) record
+  (with-slots (strings baseline start-y) record
     (with-sheet-medium (medium stream) ;is sheet a sheet-with-medium-mixin? --GB
       ;; FIXME:
       ;; 1. SLOT-VALUE...
@@ -1799,29 +1812,31 @@ were added."
 (defmethod tree-recompute-extent
     ((text-record standard-text-displayed-output-record))
   (with-standard-rectangle* (nil y1) text-record
-    (with-slots (max-height left right) text-record
+    (with-slots (height left right) text-record
       (setf (rectangle-edges* text-record)
             (values (coordinate left)
                     y1
                     (coordinate right)
-                    (coordinate (+ y1 max-height))))))
+                    (coordinate (+ y1 height))))))
   text-record)
 
 (defmethod add-character-output-to-text-record
     ((text-record standard-text-displayed-output-record)
-     character text-style char-width height new-baseline
+     character text-style char-width line-height new-baseline
      &aux (start 0) (end 1))
   (add-string-output-to-text-record text-record character
                                     start end text-style
-                                    char-width height new-baseline))
+                                    char-width line-height new-baseline))
 
-(defmethod add-string-output-to-text-record ((text-record standard-text-displayed-output-record)
-                                             string start end text-style string-width height new-baseline)
+(defmethod add-string-output-to-text-record
+    ((text-record standard-text-displayed-output-record)
+     string start end text-style string-width line-height new-baseline)
   (setf end (or end (etypecase string
                       (character 1)
                       (string (length string)))))
   (let ((length (max 0 (- end start))))
-    (with-slots (strings baseline width max-height left right start-y end-x end-y medium)
+    (with-slots (strings baseline width height
+                 left right start-y end-x end-y medium)
         text-record
       (let* ((strings-last-cons (last strings))
              (last-string (first strings-last-cons)))
@@ -1868,8 +1883,8 @@ were added."
               left (min left (+ end-x minx))
               end-x (+ end-x string-width)
               right (+ end-x (max 0 (- maxx string-width)))
-              max-height (max max-height height)
-              end-y (max end-y (+ start-y max-height))
+              height (max height line-height)
+              end-y (max end-y (+ start-y height))
               width (+ width string-width))))
     (tree-recompute-extent text-record)))
 
