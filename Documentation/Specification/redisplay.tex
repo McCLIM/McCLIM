@@ -267,13 +267,8 @@ This function simply calls \cl{redisplay-output-record} on the arguments
 \arg{record} and \arg{stream}.
 
 \Defgeneric {redisplay-output-record} {record stream
-                                       \optional (check-overlapping \cl{t}) 
-                                                 x y parent-x parent-y}  
-
-\issue {SWM} {The coordinate system stuff affected by the x/y and parent-x/y
-arguments is entirely bogus.  The proposal to make ``stream relative''
-coordinates for output records instead of ``parent relative'' coordinates will
-eliminate this completely.}
+                                       \optional (check-overlapping \cl{t})
+                                                 x y parent-x parent-y}
 
 \cl{(redisplay-output-record \arg{record} \arg{stream})} causes the output of
 \arg{record} to be recomputed.
@@ -292,22 +287,11 @@ binding \cl{stream-redisplaying-p} of the stream to \term{true}, then creating
 the new output records by invoking \cl{compute-new-output-records}.  Once the
 new output records have been computed, \cl{compute-difference-set} is called to
 compute the difference set, which is then passed to
-\cl{note-child-output-record-changed}.
+\cl{note-output-record-child-changed}.
 
-The other optional arguments can be used to specify where on the \arg{stream}
-the output record should be redisplayed.  \arg{x} and \arg{y} represent where
-the cursor should be, relative to (\cl{output-record-parent} record), before we
-start redisplaying \arg{record}.  \arg{parent-x} and \arg{parent-y} can be
-supplied to say: do the output as if the parent started at positions
-\arg{parent-x} and \arg{parent-y} (which are in absolute coordinates).  The
-default values for \arg{x} and \arg{y} are \cl{(output-record-start-position
-\arg{record})}.  The default values for \arg{parent-x} and \arg{parent-y} are
-
-\begin{verbatim}
-(convert-from-relative-to-absolute-coordinates 
-    stream
-    (output-record-parent record))
-\end{verbatim}
+The output record is redisplayed under the current stream cursor position
+(unless it is in the fixed position, in that case it is redisplayed at the
+same position as it was initially displayed).
 
 \arg{record} will usually be an output record created by \cl{updating-output}.
 If it is not, then \cl{redisplay-output-record} will be equivalent to
@@ -388,8 +372,7 @@ by comparing it to the old output history.
 
 
 \Defgeneric {compute-difference-set} {record \optional (check-overlapping \cl{t})
-                                      (offset-x \cl{0}) (offset-y \cl{0})
-                                      (old-offset-x \cl{0}) (old-offset-y \cl{0})} 
+                                      x y old-x old-y}
 
 \cl{compute-difference-set} compares the current state of the \term{output
 record} \arg{record} with its previous state, and returns a ``difference set''
@@ -423,8 +406,7 @@ that no sibling output records overlap each other at any level.  Supplying a
 
 \issue {SWM} {To be supplied.}
 
-
-\Defgeneric {note-output-record-child-changed}
+\Defgeneric {note-output-record-child-changed} \
             {record child mode old-position old-bounding-rectangle stream
              \optional erases moves draws erase-overlapping move-overlapping
              \key check-overlapping}
