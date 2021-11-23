@@ -65,7 +65,7 @@ slot \cl{output-pane}, he could write the following method:
 
 \begin{verbatim}
 (defmethod activate-callback
-           ((button push-button) (client button-test) gadget-id) 
+           ((button push-button) (client button-test) gadget-id)
   (with-slots (output-pane) client
     (format output-pane "The button ~S was pressed, client ~S, id ~S."
        button client gadget-id)))
@@ -199,7 +199,7 @@ The following shows how a push button gadget might be implemented.
       (disarmed-callback pane (gadget-client pane) (gadget-id pane)))))
 
 ;; When the user presses a pointer button, ensure that the button
-;; is armed, and highlight it. 
+;; is armed, and highlight it.
 (defmethod handle-event ((pane push-button-pane) (event pointer-button-press-event))
   (with-slots (armed) pane
     (when armed
@@ -820,7 +820,7 @@ The instantiable class that implements a portable check box; a subclass of
 \cl{check-box}.
 
 
-\Defmacro {with-radio-box} {(\rest options \key (type \cl{:one-of}) \allow) \body body} 
+\Defmacro {with-radio-box} {(\rest options \key (type \cl{:one-of}) \allow) \body body}
 
 Creates a radio box whose buttons are created by the forms in \arg{body}.  The
 macro \cl{radio-box-current-selection} can be wrapped around one of forms in
@@ -874,7 +874,7 @@ list pane.  The name of the item is extracted by the function that is the value
 of the \cl{:name-key} initarg, which defaults to \cl{princ-to-string}.  The
 value of the item is extracted by the function that is the value of the
 \cl{:value-key} initarg, which defaults to \cl{identity}.  The \cl{:test}
-initarg specifies a function of two arguments that is used to compare items; it
+initarg specifies a function of two arguments that is used to compare values; it
 defaults to \cl{eql}.
 
 For example,
@@ -889,8 +889,10 @@ For example,
 
 \Defmethod {gadget-value} {(button \cl{list-pane})}
 
-Returns the single selected item when the mode is \cl{:exclusive}, or a sequence
-of selected items when the mode is \cl{:nonexclusive}.
+Returns the value of the single selected item when the mode is
+\cl{:exclusive}, or a sequence of the values of the selected items
+when the mode is \cl{:nonexclusive} where the value of an item is the
+result of calling the value key function with the item as its argument.
 
 \Defclass {generic-list-pane}
 
@@ -921,7 +923,7 @@ option pane.  The name of the item is extracted by the function that is the valu
 of the \cl{:name-key} initarg, which defaults to \cl{princ-to-string}.  The
 value of the item is extracted by the function that is the value of the
 \cl{:value-key} initarg, which defaults to \cl{identity}.  The \cl{:test}
-initarg specifies a function of two arguments that is used to compare items; it
+initarg specifies a function of two arguments that is used to compare values; it
 defaults to \cl{eql}.
 
 For example,
@@ -936,8 +938,11 @@ For example,
 
 \Defmethod {gadget-value} {(button \cl{option-pane})}
 
-Returns the single selected item when the mode is \cl{:exclusive}, or a sequence
-of selected items when the mode is \cl{:nonexclusive}.
+Returns the value of the single selected item when the mode is
+\cl{:exclusive}, or a sequence of the values of the selected items
+when the mode is \cl{:nonexclusive}.  where the value of an item the
+result of calling the value key function with the item as its
+argument.
 
 \Defclass {generic-option-pane}
 
@@ -954,7 +959,7 @@ The \cl{text-field} gadget corresponds to a small field containing text.
 The instantiable class that implements an abstract text field.  This is a subclass of
 \cl{value-gadget} and \cl{action-gadget}.
 
-The value of a text field is the text string.  
+The value of a text field is the text string.
 
 \Definitarg {:editable-p}
 
@@ -980,7 +985,7 @@ lines of text.
 The instantiable class that implements an abstract large text field.  This is a
 subclass of \cl{text-field}.
 
-The value of a text editor is the text string.  
+The value of a text editor is the text string.
 
 \definitarg {:ncolumns}
 \Definitarg {:nlines}
@@ -1014,7 +1019,7 @@ system that the toolkit object representing the gadget has moved,
 The instantiable class the represents an output record class that contains a
 gadget.  This is a subclass of \cl{output-record}.
 
-\Defmacro {with-output-as-gadget} {(stream \rest options) \body body} 
+\Defmacro {with-output-as-gadget} {(stream \rest options) \body body}
 
 Invokes \arg{body} to create a gadget, and then creates a gadget output record
 that contains the gadget and install's it into the output history of the output
@@ -1035,10 +1040,10 @@ radio box that itself contains several toggle buttons:
 \begin{verbatim}
 (with-output-as-gadget (stream)
   (let* ((radio-box
-           (make-pane 'radio-box 
+           (make-pane 'radio-box
              :client stream :id 'radio-box)))
     (dolist (item sequence)
-      (make-pane 'toggle-button 
+      (make-pane 'toggle-button
         :label (princ-to-string (item-name item))
         :value (item-value item)
         :id item :parent radio-box))
