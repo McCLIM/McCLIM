@@ -1004,7 +1004,10 @@ suitable for SUPER-NAME"))
   'pathname)
 
 (defmethod presentation-type-of ((object cons))
-  '(sequence t))
+  (handler-case (if (null (list-length object))
+                    'expression
+                    '(sequence t))
+    (type-error () 'expression)))
 
 ;;; Do something interesting with the array-element-type
 (defmethod presentation-type-of ((object vector))
