@@ -242,7 +242,7 @@ spatially organized data structure.
   from the screen."
   (clear-map pane))
 
-;;; INCREMENTAL-DISPLAY takes as input the difference set computed by
+;;; INCREMENTAL-REDISPLAY takes as input the difference set computed by
 ;;; COMPUTE-DIFFERENCE-SET and updates the screen. The 5 kinds of updates are
 ;;; not very well defined in the spec. I understand their semantics thus:
 ;;;
@@ -415,9 +415,7 @@ updating-output-parent above this one in the tree.")
           (aref children 0)))))
 
 (defmethod shared-initialize :after
-    ((obj updating-output-record-mixin) slot-names
-     &key (x-position 0.0d0) (y-position 0.0d0))
-  (declare (ignore x-position y-position))
+    ((obj updating-output-record-mixin) slot-names &key)
   (declare (ignore slot-names))
   (setf (explicit-moves obj) nil))
 
@@ -518,17 +516,14 @@ updating-output-parent above this one in the tree.")
 (defun compute-new-output-records-1 (record stream displayer)
   "Like compute-new-output-records with an explicit displayer function."
   (check-type record standard-updating-output-record)
-  (multiple-value-bind (x y)
-      (output-record-position record)
-    (let ((sub-record (sub-record record)))
-      (when sub-record
-        (delete-output-record sub-record record)))
-    ;; Don't add this record repeatedly to a parent updating-output-record.
-    (unless (eq (output-record-parent record)
-                (stream-current-output-record stream))
-      (setf (output-record-parent record) nil)
-      (add-output-record record (stream-current-output-record stream)))
-    (reinitialize-instance record :x-position x :y-position y))
+  (when-let ((sub-record (sub-record record)))
+    (delete-output-record sub-record record))
+  ;; Don't add this record repeatedly to a parent updating-output-record.
+  (unless (eq (output-record-parent record)
+              (stream-current-output-record stream))
+    (setf (output-record-parent record) nil)
+    (add-output-record record (stream-current-output-record stream)))
+  (reinitialize-instance record)
   (%invoke-updating record stream displayer)
   (setf (output-record-dirty record) :updated))
 
@@ -536,143 +531,6 @@ updating-output-parent above this one in the tree.")
 (defgeneric find-child-output-record (record use-old-elements record-type
                                       &rest initargs
                                       &key unique-id unique-id-test))
-
-(defgeneric map-over-displayed-output-records
-    (function root use-old-elements clean clip-region)
-  (:documentation "Call function on all displayed-output-records in ROOT's
- tree. If USE-OLD-ELEMENTS is true, descend the old branch of
-updating output records. If CLEAN is true, descend into clean updating output
-records. ")
-  (:method :around (function root use-old-elements clean
-                    (clip-rectangle bounding-rectangle))
-    (declare (ignore function use-old-elements clean))
-    (when (region-intersects-region-p root clip-rectangle)
-      (call-next-method)))
-  (:method (function (root standard-updating-output-record)
-            use-old-elements clean clip-rectangle)
-    (cond ((and (not clean) (eq (output-record-dirty root) :clean))
-           nil)
-          ((and use-old-elements (slot-boundp root 'old-children))
-           (map-over-displayed-output-records function
-                                              (old-children root)
-                                              use-old-elements
-                                              clean
-                                              clip-rectangle))
-          ((not use-old-elements)
-           (map-over-displayed-output-records function
-                                              (sub-record root)
-                                              use-old-elements
-                                              clean
-                                              clip-rectangle))
-          (t nil)))
-  (:method (function (root compound-output-record) use-old-elements clean
-            clip-rectangle)
-    (flet ((mapper (record)
-             (map-over-displayed-output-records
-              function record use-old-elements clean clip-rectangle)))
-      (declare (dynamic-extent #'mapper))
-      (map-over-output-records #'mapper root)))
-  (:method (function (root displayed-output-record) use-old-elements clean
-            clip-rectangle)
-    (declare (ignore clean use-old-elements clip-rectangle))
-    (funcall function root)))
-
-(defgeneric compute-difference-set (record &optional check-overlapping
-                                           offset-x offset-y
-                                           old-offset-x old-offset-y))
-
-;;; Helper functions for visiting only the highest level updating
-;;; output records in a tree and only those display records that are
-;;; not under updating output records. Do not pass these the parent
-;;; updating output record; pass sub-record or old-children
-
-(defgeneric map-over-child-updating-output (function record clip-rectangle)
-  (:documentation "Apply FUNCTION to updating-output records that are
-  children of record, but don't recurse into them.")
-  (:method (function (record standard-updating-output-record) clip-rectangle)
-    (declare (ignore clip-rectangle))
-    (funcall function record))
-  (:method (function (record compound-output-record) clip-rectangle)
-    (flet ((mapper (r)
-             (map-over-child-updating-output function r clip-rectangle)))
-      (declare (dynamic-extent #'mapper))
-      (map-over-output-records #'mapper record)))
-  (:method (function record clip-rectangle)
-    (declare (ignore function record clip-rectangle))
-    nil)
-  (:method :around (function record (clip-rectangle bounding-rectangle))
-    (declare (ignore function))
-    (when (region-intersects-region-p record clip-rectangle)
-      (call-next-method))))
-
-(defgeneric map-over-child-display (function record clip-rectangle)
-  (:documentation "Apply function to display records in RECORD's tree that are
-  not under updating-output records")
-  (:method (function (record displayed-output-record) clip-rectangle)
-    (declare (ignore clip-rectangle))
-    (funcall function record))
-  (:method (function (record compound-output-record) clip-rectangle)
-    (flet ((mapper (r)
-             (map-over-child-display function r clip-rectangle)))
-      (declare (dynamic-extent #'mapper))
-      (map-over-output-records #'mapper record)))
-  (:method (function (record standard-updating-output-record) clip-rectangle)
-    (declare (ignore function record clip-rectangle))
-    nil)
-  (:method (function record clip-rectangle)
-    (declare (ignore function record clip-rectangle))
-    nil)
-  (:method :around (function record (clip-rectangle bounding-rectangle))
-    (declare (ignore function))
-    (when (region-intersects-region-p record clip-rectangle)
-      (call-next-method))))
-
-;;; Variation on a theme. Refactor, refactor...
-
-(defgeneric map-over-obsolete-display (function record clip-rectangle)
-  (:method (function (record displayed-output-record) clip-rectangle)
-    (declare (ignore clip-rectangle))
-    (funcall function record))
-  (:method (function (record compound-output-record) clip-rectangle)
-    (flet ((mapper (r)
-             (map-over-obsolete-display function r clip-rectangle)))
-      (declare (dynamic-extent #'mapper))
-      (map-over-output-records #'mapper record)))
-  (:method (function (record standard-updating-output-record) clip-rectangle)
-    (when (eq (output-record-dirty record) :updating)
-      (map-over-obsolete-display function (sub-record record) clip-rectangle)))
-  (:method (function record clip-rectangle)
-    (declare (ignore function record clip-rectangle))
-    nil)
-  (:method :around (function record (clip-rectangle bounding-rectangle))
-    (declare (ignore function))
-    (when (region-intersects-region-p record clip-rectangle)
-      (call-next-method))))
-
-(defun find-existing-record (display-record root visible-region)
-  "Returns a display record that is output-record-equal to display-record
-  within visible-region and not under an updating-output record"
-  (map-over-child-display #'(lambda (r)
-                              (when (output-record-equal display-record r)
-                                (return-from find-existing-record r)))
-                          root
-                          visible-region)
-  nil)
-
-(defun copy-bounding-rectange (rect)
-  (with-bounding-rectangle* (min-x min-y max-x max-y) rect
-    (make-bounding-rectangle min-x min-y max-x max-y)))
-
-;;; work in progress
-(defvar *existing-output-records* nil)
-
-;;;
-(defgeneric output-record-hash (record)
-  (:documentation "Produce a value that can be used to hash the output record
-in an equalp hash table"))
-
-(defmethod output-record-hash ((record standard-bounding-rectangle))
-  (slot-value record 'coordinates))
 
 (defconstant +fixnum-bits+ (integer-length most-positive-fixnum))
 
@@ -698,115 +556,124 @@ in an equalp hash table"))
         (mix-it-in y2)
         hash-val)))
 
-(defmethod output-record-hash ((record output-record))
-  (with-bounding-rectangle* (x1 y1 x2 y2) record
-    (hash-coords x1 y1 x2 y2)))
+(defgeneric output-record-hash (record)
+  (:documentation "Produce a value that can be used to hash the output record
+in an equalp hash table")
+  (:method  ((record standard-bounding-rectangle))
+    (slot-value record 'coordinates))
+  (:method ((record output-record))
+    (with-bounding-rectangle* (x1 y1 x2 y2) record
+      (hash-coords x1 y1 x2 y2))))
 
-(defmethod compute-difference-set ((record standard-updating-output-record)
-                                   &optional (check-overlapping t)
-                                   offset-x offset-y
-                                   old-offset-x old-offset-y)
-  (declare (ignore offset-x offset-y old-offset-x old-offset-y))
-  ;; (declare (values erases moves draws erase-overlapping move-overlapping))
-  (let (was
-        is
-        stay
-        come
-        (everywhere (or +everywhere+
-                        (pane-viewport-region (updating-output-stream record))))
-        (was-table (make-hash-table :test #'equalp))
-        (is-table (make-hash-table :test #'equalp)))
+(defgeneric compute-difference-set (record &optional check-overlapping
+                                             offset-x offset-y
+                                             old-offset-x old-offset-y)
+  (:method ((record standard-updating-output-record)
+            &optional (check-overlapping t)
+              offset-x offset-y
+              old-offset-x old-offset-y)
+    (declare (ignore offset-x offset-y old-offset-x old-offset-y))
+    ;; (declare (values erases moves draws erase-overlapping move-overlapping))
+    (let (was
+          is
+          stay
+          come
+          (everywhere (or +everywhere+
+                          (pane-viewport-region (updating-output-stream record))))
+          (was-table (make-hash-table :test #'equalp))
+          (is-table (make-hash-table :test #'equalp)))
 
-    (labels ((collect-1-was (record)
-               (push record was)
-               (push record (gethash (output-record-hash record) was-table)))
-             (collect-1-is (record)
-               (push record is)
-               (push record (gethash (output-record-hash record) is-table))
-               ;; come = is \ was
-               ;; stay = is ^ was
-               (cond ((updating-output-record-p record)
-                      (if (eq :clean (output-record-dirty record))
-                          (push record stay)
-                          (push record come)))
-                     (t
-                      (let ((q (gethash (output-record-hash record) was-table)))
-                        (if (some #'(lambda (x) (output-record-equal record x)) q)
+      (labels ((collect-1-was (record)
+                 (push record was)
+                 (push record (gethash (output-record-hash record) was-table)))
+               (collect-1-is (record)
+                 (push record is)
+                 (push record (gethash (output-record-hash record) is-table))
+                 ;; come = is \ was
+                 ;; stay = is ^ was
+                 (cond ((updating-output-record-p record)
+                        (if (eq :clean (output-record-dirty record))
                             (push record stay)
-                            (push record come)))))))
-      ;; Collect what was there
-      (labels ((gather-was (record)
-                 (cond ((displayed-output-record-p record)
-                        (collect-1-was record))
-                       ((updating-output-record-p record)
-                        (cond ((eq :clean (output-record-dirty record))
-                               (collect-1-was record))
-                              ((eq :moved (output-record-dirty record))
-                               (collect-1-was (slot-value record 'old-bounds)))
-                              (t
-                               (map-over-output-records-overlapping-region #'gather-was
-                                                                           (old-children record)
-                                                                           everywhere))))
+                            (push record come)))
                        (t
-                        (map-over-output-records-overlapping-region #'gather-was record everywhere)))))
-        (gather-was record))
-      ;; Collect what still is there
-      (labels ((gather-is (record)
-                 (cond ((displayed-output-record-p record)
-                        (collect-1-is record))
-                       ((updating-output-record-p record)
-                        (cond ((eq :clean (output-record-dirty record))
-                               (collect-1-is record))
-                              ((eq :moved (output-record-dirty record))
-                               (collect-1-is record))
-                              (t
-                               (map-over-output-records-overlapping-region #'gather-is
-                                                                           (sub-record record)
-                                                                           everywhere))))
-                       (t
-                        (map-over-output-records-overlapping-region #'gather-is record everywhere) ))))
-        (gather-is record)))
-    ;;
-    (let (gone)
-      ;; gone = was \ is
-      (loop for w in was do
-        (cond ((updating-output-record-p w)
-               (unless (eq :clean (output-record-dirty w))
-                 (push (old-children w) gone)))
-              (t
-               (let ((q (gethash (output-record-hash w) is-table)))
-                 (unless (some #'(lambda (x) (output-record-equal w x)) q)
-                   (push w gone))))))
-      ;; Now we essentially want 'gone', 'stay', 'come'
-      (let ((gone-overlap nil)
-            (come-overlap nil))
-        (when check-overlapping
-          (setf (values gone gone-overlap)
-                (loop for k in gone
-                      if (some (lambda (x) (region-intersects-region-p k x))
-                               stay)
-                        collect (list k k) into gone-overlap*
-                      else collect (list k k) into gone*
-                      finally (return (values gone* gone-overlap*))))
-          (setf (values come come-overlap)
-                (loop for k in come
-                      if (some (lambda (x) (region-intersects-region-p k x))
-                               stay)
-                        collect (list k k) into come-overlap*
-                      else collect (list k k) into come*
-                      finally (return (values come* come-overlap*)))))
-        ;; Hmm, we somehow miss come-overlap ...
-        (values
-         ;; erases
-         gone
-         ;; moves
-         nil
-         ;; draws
-         (nreverse come)
-         ;; erase overlapping
-         (append gone-overlap come-overlap)
-         ;; move overlapping
-         nil)))))
+                        (let ((q (gethash (output-record-hash record) was-table)))
+                          (if (some #'(lambda (x) (output-record-equal record x)) q)
+                              (push record stay)
+                              (push record come)))))))
+        ;; Collect what was there
+        (labels ((gather-was (record)
+                   (cond ((displayed-output-record-p record)
+                          (collect-1-was record))
+                         ((updating-output-record-p record)
+                          (cond ((eq :clean (output-record-dirty record))
+                                 (collect-1-was record))
+                                ((eq :moved (output-record-dirty record))
+                                 (collect-1-was (slot-value record 'old-bounds)))
+                                (t
+                                 (map-over-output-records-overlapping-region
+                                  #'gather-was (old-children record) everywhere))))
+                         (t
+                          (map-over-output-records-overlapping-region
+                           #'gather-was record everywhere)))))
+          (gather-was record))
+        ;; Collect what still is there
+        (labels ((gather-is (record)
+                   (cond ((displayed-output-record-p record)
+                          (collect-1-is record))
+                         ((updating-output-record-p record)
+                          (cond ((eq :clean (output-record-dirty record))
+                                 (collect-1-is record))
+                                ((eq :moved (output-record-dirty record))
+                                 (collect-1-is record))
+                                (t
+                                 (map-over-output-records-overlapping-region
+                                  #'gather-is (sub-record record) everywhere))))
+                         (t
+                          (map-over-output-records-overlapping-region
+                           #'gather-is record everywhere)))))
+          (gather-is record)))
+      ;;
+      (let (gone)
+        ;; gone = was \ is
+        (loop for w in was do
+          (cond ((updating-output-record-p w)
+                 (unless (eq :clean (output-record-dirty w))
+                   (push (old-children w) gone)))
+                (t
+                 (let ((q (gethash (output-record-hash w) is-table)))
+                   (unless (some #'(lambda (x) (output-record-equal w x)) q)
+                     (push w gone))))))
+        ;; Now we essentially want 'gone', 'stay', 'come'
+        (let ((gone-overlap nil)
+              (come-overlap nil))
+          (when check-overlapping
+            (setf (values gone gone-overlap)
+                  (loop for k in gone
+                        if (some (lambda (x) (region-intersects-region-p k x))
+                                 stay)
+                          collect (list k k) into gone-overlap*
+                        else collect (list k k) into gone*
+                        finally (return (values gone* gone-overlap*))))
+            (setf (values come come-overlap)
+                  (loop for k in come
+                        if (some (lambda (x) (region-intersects-region-p k x))
+                                 stay)
+                          collect (list k k) into come-overlap*
+                        else
+                          collect (list k k) into come*
+                        finally (return (values come* come-overlap*)))))
+          ;; Hmm, we somehow miss come-overlap ...
+          (values
+           ;; erases
+           gone
+           ;; moves
+           nil
+           ;; draws
+           (nreverse come)
+           ;; erase overlapping
+           (append gone-overlap come-overlap)
+           ;; move overlapping
+           nil))))))
 
 (defvar *trace-updating-output* nil)
 
@@ -837,9 +704,7 @@ in an equalp hash table"))
   (setf parent-cache (or parent-cache *current-updating-output* stream))
   (when (eq unique-id *no-unique-id*)
     (setq unique-id (incf (id-counter parent-cache))))
-  (let ((record (get-from-map parent-cache unique-id id-test))
-        ;; For debugging
-        state-mismatch)
+  (let ((record (get-from-map parent-cache unique-id id-test)))
     (cond ((or all-new (null record))
            ;; This case covers the outermost updating-output too.
            (with-new-output-record
@@ -856,17 +721,16 @@ in an equalp hash table"))
              (setq record *current-updating-output*)
              (when *trace-updating-output*
                (format *trace-output* "Creating ~S~%" record))
-             (setf (start-graphics-state record)
-                   (medium-graphics-state stream))
+             (setf (start-graphics-state record) (medium-graphics-state stream))
              (%invoke-updating record stream continuation)
-             (setf (end-graphics-state record)
-                   (medium-graphics-state stream))
+             (setf (end-graphics-state record) (medium-graphics-state stream))
              (add-to-map parent-cache record  unique-id id-test all-new)))
-          ((or (setq state-mismatch (not (state-matches-stream-p (start-graphics-state record) stream)))
+          ((or (not (state-matches-stream-p (start-graphics-state record) stream))
                (not (funcall cache-test cache-value (output-record-cache-value record))))
            (when *trace-updating-output*
              (format *trace-output* "~:[cache test~;stream state~] ~S~%"
-                     state-mismatch record))
+                     (state-matches-stream-p (start-graphics-state record) stream)
+                     record))
            (let ((*current-updating-output* record))
              (setf (start-graphics-state record) (medium-graphics-state stream))
              (compute-new-output-records-1 record stream continuation)
@@ -897,7 +761,8 @@ in an equalp hash table"))
                         (incf (slot-value (end-graphics-state r) 'cursor-x) dx)
                         (incf (slot-value (end-graphics-state r) 'cursor-y) dy))
                       (setf (output-record-dirty r) tag))
-                    record nil)
+                    record
+                    nil)
                    (add-output-record record (stream-current-output-record stream))
                    (set-medium-cursor-position (end-graphics-state record) stream)
                    (setf (parent-cache record) parent-cache)))))))
@@ -929,7 +794,7 @@ in an equalp hash table"))
     `(flet ((,func (,stream)
               (declare (ignorable ,stream))
               ,@body))
-       (invoke-updating-output ,stream #',func ,record-type ,unique-id
+       (invoke-updating-output ,stream (function ,func) ,record-type ,unique-id
                                ,id-test ,cache-value ,cache-test
                                ,@ (and fixed-position-p
                                        `(:fixed-position ,fixed-position))
@@ -1028,19 +893,15 @@ in an equalp hash table"))
 
 (defgeneric propagate-to-updating-output
     (record child mode old-bounding-rectangle)
-  (:method
-      ((record updating-output-record-mixin) child mode old-bounding-rectangle)
+  (:method ((record updating-output-record-mixin) child mode old-bbox)
     (when (eq (output-record-dirty record) :clean)
       (case mode
         (:move
-         (push (list child old-bounding-rectangle nil) (explicit-moves record))
+         (push (list child old-bbox nil) (explicit-moves record))
          (mark-updating-output-changed record)))))
-  (:method
-      ((record output-record) child mode old-bounding-rectangle)
-    (let ((parent (output-record-parent record)))
-      (when parent
-        (propagate-to-updating-output
-         parent child mode old-bounding-rectangle)))))
+  (:method ((record output-record) child mode old-bbox)
+    (when-let ((parent (output-record-parent record)))
+      (propagate-to-updating-output parent child mode old-bbox))))
 
 (defgeneric note-output-record-child-changed
     (record child mode old-position old-bounding-rectangle stream
@@ -1067,19 +928,18 @@ in an equalp hash table"))
 
 (defmethod* (setf output-record-position) :around
     (nx ny (record displayed-output-record))
-  (with-bounding-rectangle* (x y max-x max-y) record
+  (with-bounding-rectangle* (x1 y1 x2 y2) record
     (multiple-value-prog1
         (call-next-method)
       ;; coordinate= here instead?
-      (unless (and (= x nx) (= y ny))
-        (let ((stream (and (slot-exists-p record 'stream)
-                           (slot-value  record 'stream)))
-              (parent (output-record-parent record)))
-          (when (and stream parent)
-            (note-output-record-child-changed
-             parent record :move
-             (make-point x y) (make-bounding-rectangle x y max-x max-y)
-             stream)))))))
+      (unless (and (= x1 nx) (= y1 ny))
+        (when-let* ((stream (and (slot-exists-p record 'stream)
+                                 (slot-value  record 'stream)))
+                    (parent (output-record-parent record)))
+          (note-output-record-child-changed parent record :move
+                                            (make-point x1 y1)
+                                            (make-bounding-rectangle x1 y1 x2 y2)
+                                            stream))))))
 
 ;;; Debugging hacks
 (defun dump-updating (record old-records &optional (stream *standard-output*))
