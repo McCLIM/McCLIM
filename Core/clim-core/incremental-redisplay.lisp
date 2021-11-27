@@ -875,6 +875,19 @@ in an equalp hash table")
    record
    t))
 
+(defgeneric note-output-record-child-changed
+    (record child mode old-position old-bounding-rectangle stream
+     &optional erases moves draws erase-overlapping move-overlapping
+     &key check-overlapping)
+  ;; The default - do nothing
+  (:method (record child mode old-position old-bounding-rectangle stream
+            &optional erases moves draws erase-overlapping move-overlapping
+            &key check-overlapping)
+    (declare (ignore record child mode
+                     old-position old-bounding-rectangle erases moves draws
+                     erase-overlapping move-overlapping check-overlapping))
+    nil))
+
 ;;; Support for explicitly changing output records
 
 (defun mark-updating-output-changed (record)
@@ -903,43 +916,17 @@ in an equalp hash table")
     (when-let ((parent (output-record-parent record)))
       (propagate-to-updating-output parent child mode old-bbox))))
 
-(defgeneric note-output-record-child-changed
-    (record child mode old-position old-bounding-rectangle stream
-     &optional erases moves draws erase-overlapping move-overlapping
-     &key check-overlapping)
-  ;;; The default - do nothing
-  (:method (record child mode old-position old-bounding-rectangle stream
-            &optional erases moves draws erase-overlapping move-overlapping
-            &key check-overlapping)
-    (declare (ignore record child mode old-position old-bounding-rectangle stream
-                     erases moves draws erase-overlapping move-overlapping
-                     check-overlapping))
-    nil)
-  (:method (record (child displayed-output-record) (mode (eql :move))
-            old-position old-bounding-rectangle
-            (stream updating-output-stream-mixin)
-            &optional erases moves draws erase-overlapping move-overlapping
-            &key (check-overlapping t))
-    (declare (ignore old-position erases moves draws erase-overlapping
-                     move-overlapping
-                     check-overlapping))
-    (when (stream-redisplaying-p stream)
-      (propagate-to-updating-output record child  mode old-bounding-rectangle))))
-
 (defmethod* (setf output-record-position) :around
-    (nx ny (record displayed-output-record))
+  (nx ny (record displayed-output-record))
   (with-bounding-rectangle* (x1 y1 x2 y2) record
-    (multiple-value-prog1
-        (call-next-method)
-      ;; coordinate= here instead?
-      (unless (and (= x1 nx) (= y1 ny))
+    (multiple-value-prog1 (call-next-method)
+      (unless (and (coordinate= x1 nx) (coordinate= y1 ny))
         (when-let* ((stream (and (slot-exists-p record 'stream)
                                  (slot-value  record 'stream)))
                     (parent (output-record-parent record)))
-          (note-output-record-child-changed parent record :move
-                                            (make-point x1 y1)
-                                            (make-bounding-rectangle x1 y1 x2 y2)
-                                            stream))))))
+          (when (stream-redisplaying-p stream)
+            (propagate-to-updating-output
+             parent record :move (make-bounding-rectangle x1 y1 x2 y2))))))))
 
 ;;; Debugging hacks
 (defun dump-updating (record old-records &optional (stream *standard-output*))
