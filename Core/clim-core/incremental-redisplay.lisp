@@ -68,9 +68,6 @@ are direct descendents (i.e., no intervening UPDATING-OUTPUT record) of an
 updating output record; Compute-difference-set is called recursively on any
 children updating output records.
 
-As an optimization, COMPUTE-DIFFERENCE-SET ignores records that are outside of
-the pane's visible regin.
-
 Finally, the old tree is walked. All updating output records in state
 :UPDATING were not visited at all and thus are deleted from their parent
 caches.
@@ -586,11 +583,8 @@ in an equalp hash table")
           is
           stay
           come
-          (everywhere (or +everywhere+
-                          (pane-viewport-region (updating-output-stream record))))
           (was-table (make-hash-table :test #'equalp))
           (is-table (make-hash-table :test #'equalp)))
-
       (labels ((collect-1-was (record)
                  (push record was)
                  (push record (gethash (output-record-hash record) was-table)))
@@ -618,11 +612,10 @@ in an equalp hash table")
                                 ((eq :moved (output-record-dirty record))
                                  (collect-1-was (slot-value record 'old-bounds)))
                                 (t
-                                 (map-over-output-records-overlapping-region
-                                  #'gather-was (old-children record) everywhere))))
+                                 (map-over-output-records
+                                  #'gather-was (old-children record)))))
                          (t
-                          (map-over-output-records-overlapping-region
-                           #'gather-was record everywhere)))))
+                          (map-over-output-records #'gather-was record)))))
           (gather-was record))
         ;; Collect what still is there
         (labels ((gather-is (record)
@@ -634,11 +627,10 @@ in an equalp hash table")
                                 ((eq :moved (output-record-dirty record))
                                  (collect-1-is record))
                                 (t
-                                 (map-over-output-records-overlapping-region
-                                  #'gather-is (sub-record record) everywhere))))
+                                 (map-over-output-records
+                                  #'gather-is (sub-record record)))))
                          (t
-                          (map-over-output-records-overlapping-region
-                           #'gather-is record everywhere)))))
+                          (map-over-output-records #'gather-is record)))))
           (gather-is record)))
       ;;
       (let (gone)
