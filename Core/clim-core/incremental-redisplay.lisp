@@ -216,15 +216,21 @@ spatially organized data structure.
 ;;; medium for graphics state?
 (defclass updating-output-stream-mixin (updating-output-map-mixin
                                         extended-output-stream)
-  ((redisplaying-p :reader stream-redisplaying-p :initform nil)
-   (do-note-output-record :accessor do-note-output-record :initform t)
-   (incremental-redisplay :initform nil
-                          :initarg :incremental-redisplay
-                          :accessor pane-incremental-redisplay)
-   (updating-record :accessor updating-record
-                    :initarg :updating-record :initform nil
-                    :documentation "For incremental output, holds the
-   top level updating-output-record.")))
+  ((redisplaying-p
+    :initform nil
+    :reader stream-redisplaying-p)
+   (incremental-redisplay
+    :initform nil
+    :initarg :incremental-redisplay
+    :accessor pane-incremental-redisplay)
+   ;; For incremental output, holds the top level updating-output-record.
+   (updating-record
+    :initform nil
+    :initarg :updating-record
+    :accessor updating-record)))
+
+(defmacro with-stream-redisplaying ((stream) &body body)
+  `(letf (((slot-value ,stream 'redisplaying-p) t)) ,@body))
 
 (defgeneric redisplayable-stream-p (stream)
   (:method ((stream t))
@@ -274,8 +280,9 @@ spatially organized data structure.
     (let ((history (stream-output-history stream)))
       (with-output-recording-options (stream :record nil :draw t)
         (loop
-          for (nil br) in erases
-          do (erase-rectangle stream br))
+          for (record br) in erases
+          do (note-output-record-lost-sheet record stream)
+             (erase-rectangle stream br))
         (loop
           for (nil old-bounding) in moves
           do (erase-rectangle stream old-bounding))
@@ -290,7 +297,8 @@ spatially organized data structure.
         do (replay r stream))
       (loop
         for (r) in draws
-        do (replay r stream))
+        do (note-output-record-got-sheet r stream)
+           (replay r stream))
       (let ((res +nowhere+))
         (loop for (r) in erase-overlapping do (setf res (region-union res r)))
         (loop for (r) in move-overlapping do (setf res (region-union res r)))
@@ -814,33 +822,32 @@ in an equalp hash table")
   (:method ((record updating-output-record)
             (stream updating-output-stream-mixin)
             &optional (check-overlapping t))
-    (letf (((slot-value stream 'redisplaying-p) t))
-      (let ((*current-updating-output* record)
-            (current-graphics-state (medium-graphics-state stream)))
-        (unwind-protect
-             (progn
-               (letf (((do-note-output-record stream) nil))
-                 (set-medium-cursor-position (start-graphics-state record) stream)
-                 (compute-new-output-records record stream)
-                 (when *dump-updating-output*
-                   (dump-updating record :both *trace-output*)))
-               (multiple-value-bind
-                     (erases moves draws erase-overlapping move-overlapping)
-                   (compute-difference-set record check-overlapping)
-                 (when *trace-updating-output*
-                   (let ((*print-pretty* t))
-                     (format *trace-output*
-                             "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
+    (let ((*current-updating-output* record)
+          (current-graphics-state (medium-graphics-state stream)))
+      (unwind-protect
+           (progn
+             (set-medium-cursor-position (start-graphics-state record) stream)
+             (with-stream-redisplaying (stream)
+               (compute-new-output-records record stream))
+             (when *dump-updating-output*
+               (dump-updating record :both *trace-output*))
+             (multiple-value-bind
+                   (erases moves draws erase-overlapping move-overlapping)
+                 (compute-difference-set record check-overlapping)
+               (when *trace-updating-output*
+                 (let ((*print-pretty* t))
+                   (format *trace-output*
+                           "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
                                     overlapping: ~S~%move overlapping: ~S~%"
-                             erases moves draws
-                             erase-overlapping move-overlapping)))
-                 (note-output-record-child-changed
-                  (output-record-parent record) record :change
-                  nil nil stream
-                  erases moves draws erase-overlapping move-overlapping
-                  :check-overlapping check-overlapping))
-               (delete-stale-updating-output record))
-          (set-medium-cursor-position current-graphics-state stream))))))
+                           erases moves draws
+                           erase-overlapping move-overlapping)))
+               (note-output-record-child-changed
+                (output-record-parent record) record :change
+                nil nil stream
+                erases moves draws erase-overlapping move-overlapping
+                :check-overlapping check-overlapping))
+             (delete-stale-updating-output record))
+        (set-medium-cursor-position current-graphics-state stream)))))
 
 (defun erase-rectangle (stream bounding)
   (with-bounding-rectangle* (x1 y1 x2 y2) bounding
@@ -859,13 +866,13 @@ in an equalp hash table")
 (defmethod note-output-record-lost-sheet :around
     (record (sheet updating-output-stream-mixin))
   (declare (ignore record))
-  (when (do-note-output-record sheet)
+  (unless (stream-redisplaying-p sheet)
     (call-next-method)))
 
 (defmethod note-output-record-got-sheet :around
     (record (sheet updating-output-stream-mixin))
   (declare (ignore record))
-  (when (do-note-output-record sheet)
+  (unless (stream-redisplaying-p sheet)
     (call-next-method)))
 
 (defun delete-stale-updating-output (record)
