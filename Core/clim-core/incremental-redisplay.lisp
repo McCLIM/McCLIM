@@ -378,7 +378,7 @@ spatially organized data structure.
                :initform #'eql)
    (fixed-position :reader output-record-fixed-position
                    :initarg :fixed-position :initform nil)
-   (displayer :reader output-record-displayer :initarg :displayer)
+   (displayer :accessor output-record-displayer :initarg :displayer)
    ;; Start and end cursor
    (start-graphics-state :accessor start-graphics-state
                          :initarg :start-graphics-state
@@ -744,7 +744,8 @@ in an equalp hash table")
              (compute-new-output-records-1 record stream continuation)
              (setf (slot-value record 'cache-value) cache-value)
              (setf (end-graphics-state record) (medium-graphics-state stream))
-             (setf (parent-cache record) parent-cache)))
+             (setf (parent-cache record) parent-cache)
+             (setf (output-record-displayer record) continuation)))
           (t
            ;; It doesn't need to be updated, but it does go into the
            ;; parent's sequence of records
@@ -773,7 +774,8 @@ in an equalp hash table")
                     nil)
                    (add-output-record record (stream-current-output-record stream))
                    (set-medium-cursor-position (end-graphics-state record) stream)
-                   (setf (parent-cache record) parent-cache)))))))
+                   (setf (parent-cache record) parent-cache)
+                   (setf (output-record-displayer record) continuation)))))))
     record))
 
 ;;; The Franz user guide says that updating-output does
