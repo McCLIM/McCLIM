@@ -274,32 +274,29 @@ spatially organized data structure.
   (:method ((stream updating-output-stream-mixin) position
             erases moves draws erase-overlapping move-overlapping)
     (declare (ignore position))
-    (let ((history (stream-output-history stream)))
+    (flet ((clear-bbox (bbox)
+             (with-bounding-rectangle* (x1 y1 x2 y2) bbox
+               (medium-clear-area stream x1 y1 x2 y2))))
       (with-output-recording-options (stream :record nil :draw t)
-        (loop
-          for (record br) in erases
-          do (note-output-record-lost-sheet record stream)
-             (erase-rectangle stream br))
-        (loop
-          for (nil old-bounding) in moves
-          do (erase-rectangle stream old-bounding))
-        (loop
-          for (nil br) in erase-overlapping
-          do (erase-rectangle stream br))
-        (loop
-          for (nil old-bounding) in move-overlapping
-          do (erase-rectangle stream old-bounding)))
-      (loop
-        for (r) in moves
-        do (replay r stream))
-      (loop
-        for (r) in draws
-        do (note-output-record-got-sheet r stream)
-           (replay r stream))
-      (let ((res +nowhere+))
-        (loop for (r) in erase-overlapping do (setf res (region-union res r)))
-        (loop for (r) in move-overlapping do (setf res (region-union res r)))
-        (replay history stream res)))))
+        (loop for (record bbox) in erases
+              do (note-output-record-lost-sheet record stream)
+                 (clear-bbox bbox))
+        (loop for (record old-bbox) in moves
+              do (clear-bbox old-bbox)
+                 (replay-output-record record stream))
+        (loop for (record bbox) in draws
+              do (note-output-record-got-sheet record stream)
+                 (replay-output-record record stream bbox))
+        (when (or erase-overlapping move-overlapping)
+          (let ((history (stream-output-history stream))
+                (regions +nowhere+))
+            (loop for (record bbox) in erase-overlapping
+                  do (note-output-record-lost-sheet record stream)
+                     (setf regions (region-union regions bbox)))
+            (loop for (record bbox) in move-overlapping
+                  do (setf regions (region-union regions bbox)))
+            (map-over-region-set-regions #'clear-bbox regions)
+            (replay history stream regions)))))))
 
 ;;; FIXME: although this inherits from COMPLETE-MEDIUM-STATE, in fact
 ;;; it needn't, as we only ever call SET-MEDIUM-CURSOR-POSITION on it.
@@ -811,18 +808,6 @@ in an equalp hash table")
                 :check-overlapping check-overlapping))
              (delete-stale-updating-output record))
         (set-medium-cursor-position current-graphics-state stream)))))
-
-(defun erase-rectangle (stream bounding)
-  (with-bounding-rectangle* (x1 y1 x2 y2) bounding
-    (draw-rectangle* stream x1 y1 x2 y2 :ink +background-ink+)))
-
-(defun clear-moved-record (stream new-bounding old-bounding)
-  (with-bounding-rectangle* (x1 y1 x2 y2) new-bounding
-    (draw-rectangle* stream x1 y1 x2 y2
-                     :ink +background-ink+))
-  (with-bounding-rectangle* (x1 y1 x2 y2) old-bounding
-    (draw-rectangle* stream x1 y1 x2 y2
-                     :ink +background-ink+)))
 
 ;;; Suppress the got-sheet/lost-sheet notices during redisplay.
 
