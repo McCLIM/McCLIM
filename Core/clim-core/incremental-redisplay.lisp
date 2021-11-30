@@ -577,103 +577,72 @@ in an equalp hash table")
             &optional (check-overlapping t)
               offset-x offset-y
               old-offset-x old-offset-y)
-    (declare (ignore offset-x offset-y old-offset-x old-offset-y))
-    ;; (declare (values erases moves draws erase-overlapping move-overlapping))
-    (let (was
-          is
-          stay
-          come
-          (was-table (make-hash-table :test #'equalp))
-          (is-table (make-hash-table :test #'equalp)))
-      (labels ((collect-1-was (record)
-                 (push record was)
-                 (push record (gethash (output-record-hash record) was-table)))
-               (collect-1-is (record)
-                 (push record is)
-                 (push record (gethash (output-record-hash record) is-table))
-                 ;; come = is \ was
-                 ;; stay = is ^ was
-                 (cond ((updating-output-record-p record)
-                        (if (eq :clean (output-record-dirty record))
-                            (push record stay)
-                            (push record come)))
-                       (t
-                        (let ((q (gethash (output-record-hash record) was-table)))
-                          (if (some #'(lambda (x) (output-record-equal record x)) q)
-                              (push record stay)
-                              (push record come)))))))
-        ;; Collect what was there
-        (labels ((gather-was (record)
-                   (cond ((displayed-output-record-p record)
-                          (collect-1-was record))
-                         ((updating-output-record-p record)
-                          (cond ((eq :clean (output-record-dirty record))
-                                 (collect-1-was record))
-                                ((eq :moved (output-record-dirty record))
-                                 (collect-1-was (slot-value record 'old-bounds)))
-                                (t
-                                 (map-over-output-records
-                                  #'gather-was (old-children record)))))
-                         (t
-                          (map-over-output-records #'gather-was record)))))
-          (gather-was record))
-        ;; Collect what still is there
-        (labels ((gather-is (record)
-                   (cond ((displayed-output-record-p record)
-                          (collect-1-is record))
-                         ((updating-output-record-p record)
-                          (cond ((eq :clean (output-record-dirty record))
-                                 (collect-1-is record))
-                                ((eq :moved (output-record-dirty record))
-                                 (collect-1-is record))
-                                (t
-                                 (map-over-output-records
-                                  #'gather-is (sub-record record)))))
-                         (t
-                          (map-over-output-records #'gather-is record)))))
-          (gather-is record)))
-      ;;
-      (let (gone)
-        ;; gone = was \ is
-        (loop for w in was do
-          (cond ((updating-output-record-p w)
-                 (unless (eq :clean (output-record-dirty w))
-                   (push (old-children w) gone)))
-                (t
-                 (let ((q (gethash (output-record-hash w) is-table)))
-                   (unless (some #'(lambda (x) (output-record-equal w x)) q)
-                     (push w gone))))))
-        ;; Now we essentially want 'gone', 'stay', 'come'
-        (let ((gone-overlap nil)
-              (come-overlap nil))
-          (when check-overlapping
-            (setf (values gone gone-overlap)
-                  (loop for k in gone
-                        if (some (lambda (x) (region-intersects-region-p k x))
-                                 stay)
-                          collect (list k k) into gone-overlap*
-                        else collect (list k k) into gone*
-                        finally (return (values gone* gone-overlap*))))
-            (setf (values come come-overlap)
-                  (loop for k in come
-                        if (some (lambda (x) (region-intersects-region-p k x))
-                                 stay)
-                          collect (list k k) into come-overlap*
-                        else
-                          collect (list k k) into come*
-                        finally (return (values come* come-overlap*)))))
-          ;; Hmm, we somehow miss come-overlap ...
-          (values
-           ;; erases
-           gone
-           ;; moves
-           nil
-           ;; draws
-           (nreverse come)
-           ;; erase overlapping
-           (append gone-overlap come-overlap)
-           ;; move overlapping
-           nil))))))
+    (declare (ignore offset-x offset-y old-offset-x old-offset-y)
+             (values list list list list list))
+    ;; (declare (values erases moves draws #|erase-overlapping move-overlapping|#))
+    (let ((old-table (make-hash-table :test #'equalp))
+          (new-table (make-hash-table :test #'equalp))
+          (all-table (make-hash-table)))
+      (collect (old-records new-records)
+        (flet ((collect-1 (record set)
+                 (setf (gethash record all-table) t)
+                 (ecase set
+                   (:old
+                    (old-records record)
+                    (push record (gethash (output-record-hash record) old-table)))
+                   (:new
+                    (new-records record)
+                    (push record (gethash (output-record-hash record) new-table))))))
+          (labels ((gather-records (record set)
+                     (typecase record
+                       (displayed-output-record
+                        (collect-1 record set))
+                       (updating-output-record
+                        (ecase (output-record-dirty record)
+                          ((:clean :moved)
+                           (collect-1 record set))
+                          ((:updating :updated)
+                           (let ((sub (ecase set
+                                        (:old (old-children record))
+                                        (:new (sub-record record)))))
+                             (map-over-output-records #'gather-records sub
+                                                      nil nil set)))))
+                       (otherwise
+                        (map-over-output-records #'gather-records record
+                                                 nil nil set)))))
+            (gather-records record :old)
+            (gather-records record :new)))
+        (collect (erases moves draws)
+          (flet ((add-record (rec)
+                   (if (updating-output-record-p rec)
+                       (ecase (output-record-dirty rec)
+                         (:moved
+                          ;; If we ever use the new position for something
+                          ;; then the specification says it stick it here.
+                          (moves (list rec (old-bounds rec) #|new-position|#)))
+                         (:clean
+                          ;; no need to redraw clean records.
+                          nil)
+                         #+ (or)
+                         ((:updating :updated)
+                          ;; UPDATING-OUTPUT-RECORDs with the state :UPDATED
+                          ;; are not collected (their children are collected).
+                          (error "Updated recoreds are not collected!")))
+                       (flet ((match-record (r) (output-record-equal rec r)))
+                         (let* ((hash (output-record-hash rec))
+                                ;; The bounding rectangle is always the same.
+                                (entry (list rec (bounding-rectangle rec)))
+                                (old-p (some #'match-record (gethash hash old-table)))
+                                (new-p (some #'match-record (gethash hash new-table))))
+                           (cond ((null new-p) (erases entry))
+                                 ((null old-p) (draws entry))
+                                 ;; Record siblings might have been reordered
+                                 ;; so we need to "move it" in place.
+                                 (t (moves entry))))))))
+            (alexandria:maphash-keys #'add-record all-table))
+          (if (null check-overlapping)
+              (values (erases) (moves) (draws)      nil     nil)
+              (values      nil     nil (draws) (erases) (moves))))))))
 
 (defvar *trace-updating-output* nil)
 
