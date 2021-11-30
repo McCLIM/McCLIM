@@ -401,7 +401,6 @@ record is stored.")
                            :documentation "A backlink to the
 updating-output-parent above this one in the tree.")
    ;; Results of (setf output-record-position) while updating
-   (explicit-moves :accessor explicit-moves)
    (old-bounds :accessor old-bounds
                :initform (make-bounding-rectangle 0.0d0 0.0d0 0.0d0 0.0d0)
                :documentation "Holds the old bounds of an updating output
@@ -415,11 +414,6 @@ updating-output-parent above this one in the tree.")
       (if (zerop (length children))
           nil
           (aref children 0)))))
-
-(defmethod shared-initialize :after
-    ((obj updating-output-record-mixin) slot-names &key)
-  (declare (ignore slot-names))
-  (setf (explicit-moves obj) nil))
 
 (defmethod output-record-start-cursor-position
     ((record updating-output-record-mixin))
@@ -888,7 +882,6 @@ in an equalp hash table")
     (when (eq (output-record-dirty record) :clean)
       (case mode
         (:move
-         (push (list child old-bbox nil) (explicit-moves record))
          (mark-updating-output-changed record)))))
   (:method ((record output-record) child mode old-bbox)
     (when-let ((parent (output-record-parent record)))
