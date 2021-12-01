@@ -350,12 +350,12 @@ spatially organized data structure.
 ;;; like a different foreground color -- should probably be handled by the
 ;;; programmer forcing all new output.
 
-(defun state-matches-stream-p (state stream)
-  (multiple-value-bind (cx cy) (stream-cursor-position stream)
-    (declare (ignore cy))
-    (with-sheet-medium (medium stream)
-      ;; Note: We don't match the y coordinate.
-      (match-output-records state :cursor-x cx))))
+(defun state-matches-stream-p (record stream)
+  (or (output-record-fixed-position record)
+      (let ((state (start-graphics-state record))
+            (cx (stream-cursor-position stream)))
+        ;; Note: We don't match the y coordinate.
+        (match-output-records state :cursor-x cx))))
 
 (defclass updating-output-record-mixin (updating-output-map-mixin
                                         standard-sequence-output-record)
@@ -635,6 +635,7 @@ in an equalp hash table")
 (defvar *no-unique-id* (cons nil nil))
 
 (defun move-output-record (record dx dy)
+  (assert (not (output-record-fixed-position record)))
   (multiple-value-bind (x y) (output-record-position record)
     (setf (output-record-position record)
           (values (+ x dx) (+ y dy))))
@@ -680,7 +681,7 @@ in an equalp hash table")
              (%invoke-updating record stream continuation)
              (setf (end-graphics-state record) (medium-graphics-state stream))
              (add-to-map parent-cache record  unique-id id-test all-new)))
-          ((or (not (state-matches-stream-p (start-graphics-state record) stream))
+          ((or (not (state-matches-stream-p record stream))
                (not (funcall cache-test cache-value (output-record-cache-value record))))
            (when *trace-updating-output*
              (format *trace-output* "~:[cache test~;stream state~] ~S~%"
@@ -693,9 +694,20 @@ in an equalp hash table")
              (setf (end-graphics-state record) (medium-graphics-state stream))
              (setf (parent-cache record) parent-cache)
              (setf (output-record-displayer record) continuation)))
+          ;; It doesn't need to be updated, but it does go into the parent's
+          ;; sequence of records.
+          ((output-record-fixed-position record)
+           (setf (output-record-parent record) nil)
+           (map-over-updating-output (lambda (r)
+                                       (setf (output-record-dirty r) :clean))
+                                     record
+                                     nil)
+           (add-output-record record (stream-current-output-record stream))
+           (setf (parent-cache record) parent-cache)
+           (setf (output-record-displayer record) continuation))
+          ;; It doesn't need to be updated, but it does go into the parent's
+          ;; sequence of records. The record also needs to be moved.
           (t
-           ;; It doesn't need to be updated, but it does go into the
-           ;; parent's sequence of records
            (multiple-value-bind (cx cy)
                (stream-cursor-position stream)
              (multiple-value-bind (sx sy)
@@ -707,8 +719,6 @@ in an equalp hash table")
                  (let ((tag (if (= dx dy 0) :clean :moved)))
                    (when *trace-updating-output*
                      (format *trace-output* "~a ~s~%" tag record))
-                   (setf (output-record-dirty record) tag)
-                   (setf (output-record-parent record) nil)
                    (map-over-updating-output
                     (lambda (r)
                       (unless (eq r record)
@@ -719,6 +729,7 @@ in an equalp hash table")
                       (setf (output-record-dirty r) tag))
                     record
                     nil)
+                   (setf (output-record-parent record) nil)
                    (add-output-record record (stream-current-output-record stream))
                    (set-medium-cursor-position (end-graphics-state record) stream)
                    (setf (parent-cache record) parent-cache)
@@ -866,26 +877,19 @@ in an equalp hash table")
       (draw-rectangle* stream 0 0 30 30 :ink +red+))))
 
 (defun mark-updating-output-changed (record)
-  (let ((state (output-record-dirty record)))
-    (cond ((or (eq record *current-updating-output*)
-               (eq state :updated)
-               (eq state :updating))
-           nil)
-          ((eq state :clean)
-           (setf (output-record-dirty record) :updated)
-           (let ((parent (parent-updating-output record)))
-             (if (null parent)
-                 (error "parent of ~S null" record)
-                 (mark-updating-output-changed parent))))
-          (t nil))))
+  (when (and (not (eq record *current-updating-output*))
+             (eq (output-record-dirty record) :clean))
+    (setf (output-record-dirty record) :updated)
+    (let ((parent (parent-updating-output record)))
+      (assert (not (null parent)) () "parent of ~S null." record)
+      (mark-updating-output-changed parent))))
 
 (defgeneric propagate-to-updating-output
     (record child mode old-bounding-rectangle)
   (:method ((record updating-output-record-mixin) child mode old-bbox)
-    (when (eq (output-record-dirty record) :clean)
-      (case mode
-        (:move
-         (mark-updating-output-changed record)))))
+    (when (and (eq mode :move)
+               (eq (output-record-dirty record) :clean))
+      (mark-updating-output-changed record)))
   (:method ((record output-record) child mode old-bbox)
     (when-let ((parent (output-record-parent record)))
       (propagate-to-updating-output parent child mode old-bbox))))
