@@ -5,6 +5,7 @@
 ;;;  (c) Copyright 2002 by Michael McDonald <mikemac@mikemac.com>
 ;;;  (c) Copyright 2002-2004 by Tim Moore <moore@bricoworks.com>
 ;;;  (c) Copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2021 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -59,14 +60,10 @@ record in its closest parent UPDATING-OUTPUT record (if any). If that parent
 is :CLEAN then it and any other clean parent updating output records are
 marked as :UPDATED.
 
-
-Next, COMPUTE-DIFFERENCE-SET compares the old and new trees. New output
-records that aren't in the old tree need to be drawn. Old records not in the
-new tree need to be erased. Display records that were moved need are erased
-and redrawn. COMPUTE-DIFFERENCE-SET only compares display output records that
-are direct descendents (i.e., no intervening UPDATING-OUTPUT record) of an
-updating output record; Compute-difference-set is called recursively on any
-children updating output records.
+Next, COMPUTE-DIFFERENCE-SET compares the old and new trees. Output records
+may be removed, added or moved. Their region union must be erased and then
+replayed from the history to ensure the correctness. COMPUTE-DIFFERENCE-SET
+compares all display output records that are the record descendants.
 
 Finally, the old tree is walked. All updating output records in state
 :UPDATING were not visited at all and thus are deleted from their parent
@@ -249,26 +246,25 @@ spatially organized data structure.
 ;;; COMPUTE-DIFFERENCE-SET and updates the screen. The 5 kinds of updates are
 ;;; not very well defined in the spec. I understand their semantics thus:
 ;;;
-;;; Erases, moves, and draws refer to records that don't overlap *with other
+;;; ERASES, MOVES, and DRAWS refer to records that don't overlap *with other
 ;;; records that survive in the current rendering*. In other words, they don't
 ;;; overlap with records that were not considered by COMPUTE-DIFFRENCE-SET,
 ;;; either because they are children of a clean updating output node or they
-;;; are in another part of the output history that is not being
-;;; redisplayed. Also, moves and draws can not overlap each other. It is fine
-;;; for erases and draws to overlap. Another way to think about erases, moves
-;;; and draws is in terms of a possible implementation: they could be handled
-;;; using only operations on the screen itself. First all the erase regions
-;;; would be erased, the moves would be blitted, and then the individual draws
-;;; records would be redisplayed.
+;;; are in another part of the output history that is not being redisplayed.
 ;;;
-;;; Records in erase-overlapping and move-overlapping might overlap with any
+;;; Another way to think about erases, moves and draws is in terms of a
+;;; possible implementation:
+;;;
+;;; - ERASES regions would be erased
+;;; - MOVES regions would be blitted
+;;; - DRAWS records would be replayed
+;;;
+;;; Records in ERASE-OVERLAPPING and MOVE-OVERLAPPING might overlap with any
 ;;; other record. They need to be implemented by erasing their region on the
 ;;; screen and then replaying the output history for that region. Thus, any
 ;;; ordering issues implied by overlapping records is handled correctly. Note
-;;; that draw records that overlap are included in erase-overlapping; the draw
-;;; operation itself occurs when the screen is refreshed from the output
-;;; history. -- moore
-
+;;; that DRAWS records may be drawn without concern for the history because
+;;; they additive. -- jd 2021-12-01
 (defgeneric incremental-redisplay
     (stream position erases moves draws erase-overlapping move-overlapping)
   (:method ((stream updating-output-stream-mixin) position
@@ -298,12 +294,11 @@ spatially organized data structure.
             (map-over-region-set-regions #'clear-bbox regions)
             (replay history stream regions)))))))
 
-;;; FIXME: although this inherits from COMPLETE-MEDIUM-STATE, in fact
-;;; it needn't, as we only ever call SET-MEDIUM-CURSOR-POSITION on it.
-;;; Until 2006-05-28, we did also use the various medium attributes,
-;;; but with the reworking of REPLAY-OUTPUT-RECORD
-;;; (STANDARD-DISPLAYED-OUTPUT-RECORD) to use around methods and
-;;; WITH-DRAWING-OPTIONS, they are no longer necessary.
+;;; FIXME: although this inherits from COMPLETE-MEDIUM-STATE, in fact it
+;;; needn't, as we only ever call SET-MEDIUM-CURSOR-POSITION on it.  Until
+;;; 2006-05-28, we did also use the various medium attributes, but with the
+;;; reworking of REPLAY-OUTPUT-RECORD (STANDARD-DISPLAYED-OUTPUT-RECORD) to
+;;; use around methods and WITH-DRAWING-OPTIONS, they are no longer necessary.
 ;;;
 ;;; FIXME shouldn't we maintain a complete-cursor-state here? The cursor has
 ;;; width, height, appearance and position. -- jd 2021-11-15
@@ -730,9 +725,9 @@ in an equalp hash table")
                    (setf (output-record-displayer record) continuation)))))))
     record))
 
-;;; The Franz user guide says that updating-output does
-;;; &allow-other-keys, and some code I've encountered does mention
-;;; other magical arguments, so we'll do the same. -- moore
+;;; The Franz user guide says that updating-output does &allow-other-keys, and
+;;; some code I've encountered does mention other magical arguments, so we'll
+;;; do the same. -- moore
 (defun force-update-cache-test (a b)
   (declare (ignore a b))
   nil)
@@ -860,7 +855,15 @@ in an equalp hash table")
         (incremental-redisplay
          stream nil erases moves draws erase-overlapping move-overlapping))))
 
-;;; Support for explicitly changing output records
+;;; Support for explicitly changing output records.
+;;; Example where the child of a :CLEAN output record may be moved:
+#+ (or)
+(formatting-item-list (stream)
+  (formatting-cell (stream)
+    (draw-rectangle* stream 0 0 *size* *size*))
+  (updating-output (stream :cache-value t)
+    (formatting-cell (stream)
+      (draw-rectangle* stream 0 0 30 30 :ink +red+))))
 
 (defun mark-updating-output-changed (record)
   (let ((state (output-record-dirty record)))
