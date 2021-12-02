@@ -641,7 +641,7 @@ the associated sheet can be determined."
           (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2))
           (when-let ((parent (output-record-parent record)))
             (unless (and (= nx1 ox1) (= ny1 oy1)
-                         (= nx2 ox2) (= nx2 oy2))
+                         (= nx2 ox2) (= ny2 oy2))
               (recompute-extent-for-changed-child parent record
                                                   ox1 oy1 ox2 oy2)))))))
   record)
