@@ -803,7 +803,7 @@ in an equalp hash table")
                            erase-overlapping move-overlapping)))
                (note-output-record-child-changed
                 (output-record-parent record) record :change
-                nil nil stream
+                nil (old-bounds record) stream
                 erases moves draws erase-overlapping move-overlapping
                 :check-overlapping check-overlapping))
              (delete-stale-updating-output record))
@@ -836,7 +836,7 @@ in an equalp hash table")
 (defgeneric propagate-output-record-changes-p
     (record child mode old-position old-bounding-rectangle)
   (:method (record child mode old-position old-bounding-rectangle)
-    nil))
+    (not (null record))))
 
 (defgeneric propagate-output-record-changes
     (record child mode
@@ -845,10 +845,9 @@ in an equalp hash table")
   (:method (record child mode
             &optional old-position old-bounding-rectangle erases moves draws
               erase-overlapping move-overlapping check-overlapping)
-    (declare (ignore record child mode
-                     old-position old-bounding-rectangle erases moves draws
-                     erase-overlapping move-overlapping check-overlapping))
-    (error "This is a stub!")))
+    (declare (ignore record child mode old-position old-bounding-rectangle))
+    (values erases moves draws erase-overlapping move-overlapping
+            check-overlapping)))
 
 (defgeneric note-output-record-child-changed
     (record child mode old-position old-bounding-rectangle stream
@@ -859,12 +858,19 @@ in an equalp hash table")
             &key check-overlapping)
     (if (propagate-output-record-changes-p
          record child mode old-position old-bounding-rectangle)
-        (propagate-output-record-changes
-         record child mode old-position old-bounding-rectangle
-         erases moves draws erase-overlapping move-overlapping
-         check-overlapping)
-        (incremental-redisplay
-         stream nil erases moves draws erase-overlapping move-overlapping))))
+        (let ((old-bbox (copy-bounding-rectangle record)))
+          (multiple-value-bind (erases moves draws erase-overlapping move-overlapping
+                                check-overlapping)
+              (propagate-output-record-changes
+               record child mode old-position old-bounding-rectangle
+               erases moves draws erase-overlapping move-overlapping
+               check-overlapping)
+            (note-output-record-child-changed
+             (output-record-parent record) record mode nil old-bbox stream
+             erases moves draws erase-overlapping move-overlapping
+             :check-overlapping check-overlapping)))
+        (incremental-redisplay stream nil erases moves draws
+                               erase-overlapping move-overlapping))))
 
 ;;; Support for explicitly changing output records.
 ;;; Example where the child of a :CLEAN output record may be moved:
