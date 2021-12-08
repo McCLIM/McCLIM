@@ -618,8 +618,6 @@ in an equalp hash table")
             (values (erases) (moves) (draws)      nil     nil)
             (values      nil     nil (draws) (erases) (moves)))))))
 
-(defvar *trace-updating-output* nil)
-
 (defvar *no-unique-id* (cons nil nil))
 
 (defun move-output-record (record dx dy)
@@ -663,18 +661,12 @@ in an equalp hash table")
                        :stream stream
                        :parent-updating-output *current-updating-output*)
              (setq record *current-updating-output*)
-             (when *trace-updating-output*
-               (format *trace-output* "Creating ~S~%" record))
              (setf (start-graphics-state record) (medium-graphics-state stream))
              (%invoke-updating record stream continuation)
              (setf (end-graphics-state record) (medium-graphics-state stream))
              (add-to-map parent-cache record  unique-id id-test all-new)))
           ((or (not (state-matches-stream-p record stream))
                (not (funcall cache-test cache-value (output-record-cache-value record))))
-           (when *trace-updating-output*
-             (format *trace-output* "~:[cache test~;stream state~] ~S~%"
-                     (state-matches-stream-p (start-graphics-state record) stream)
-                     record))
            (let ((*current-updating-output* record))
              (setf (start-graphics-state record) (medium-graphics-state stream))
              (compute-new-output-records-1 record stream continuation)
@@ -705,8 +697,6 @@ in an equalp hash table")
                  (unless (zerop dy)
                    (move-output-record record dx dy))
                  (let ((tag (if (= dx dy 0) :clean :moved)))
-                   (when *trace-updating-output*
-                     (format *trace-output* "~a ~s~%" tag record))
                    (map-over-updating-output
                     (lambda (r)
                       (unless (eq r record)
@@ -761,8 +751,6 @@ in an equalp hash table")
 (defun redisplay (record stream &key (check-overlapping t))
   (redisplay-output-record record stream check-overlapping))
 
-(defvar *dump-updating-output* nil)
-
 (defmethod redisplay-output-record ((record updating-output-record)
                                     (stream updating-output-stream-mixin)
                                     &optional (check-overlapping t))
@@ -773,18 +761,9 @@ in an equalp hash table")
            (set-medium-cursor-position (start-graphics-state record) stream)
            (with-stream-redisplaying (stream)
              (compute-new-output-records record stream))
-           (when *dump-updating-output*
-             (dump-updating record :both *trace-output*))
            (multiple-value-bind
                  (erases moves draws erase-overlapping move-overlapping)
                (compute-difference-set record check-overlapping)
-             (when *trace-updating-output*
-               (let ((*print-pretty* t))
-                 (format *trace-output*
-                         "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
-                                    overlapping: ~S~%move overlapping: ~S~%"
-                         erases moves draws
-                         erase-overlapping move-overlapping)))
              (note-output-record-child-changed
               (output-record-parent record) record :change
               nil (old-bounds record) stream
@@ -888,58 +867,6 @@ in an equalp hash table")
           (when (stream-redisplaying-p stream)
             (propagate-to-updating-output
              parent record :move (make-bounding-rectangle x1 y1 x2 y2))))))))
-
-;;; Debugging hacks
-(defun dump-updating (record old-records &optional (stream *standard-output*))
-  (let ((*print-circle* t)
-        (*print-pretty* t))
-    (fresh-line stream)
-    (dump-updating-aux record old-records stream)))
-
-(defgeneric dump-updating-aux (record old-records stream)
-  (:method ((record standard-updating-output-record) old-records stream)
-    (pprint-logical-block (stream nil)
-      (print-unreadable-object (record stream :type t)
-        (let ((old-printed nil))
-          (format stream "~S " (output-record-dirty record))
-          (pprint-indent :block 2 stream)
-          (pprint-newline :linear stream)
-          (when (and (or (eq old-records :old)
-                         (eq old-records :both))
-                     (slot-boundp record 'old-children))
-            (format stream ":old ~@_")
-            (dump-updating-aux (old-children record) old-records stream)
-            (setq old-printed t))
-          (when (or (eq old-records :new)
-                    (eq old-records :both)
-                    (not old-records))
-            (when old-printed
-              (pprint-newline :linear stream))
-            (format stream ":new ~@_")
-            (dump-updating-aux (sub-record record) old-records stream))))))
-  (:method ((record compound-output-record) old-records stream)
-    (pprint-logical-block (stream nil)
-      (print-unreadable-object (record stream :type t)
-        (write-char #\Space stream)
-        (pprint-newline :linear stream)
-        (pprint-indent :block 2 stream)
-        (pprint-logical-block (stream nil :prefix "#(" :suffix ")")
-          (loop with children = (output-record-children record)
-                for i from 1 below (length children)
-                for child across children
-                do (progn
-                     (pprint-pop)
-                     (dump-updating-aux child old-records stream)
-                     (write-char #\Space stream)
-                     (pprint-newline :fill stream))
-                finally (when (> (length children) 0)
-                          (pprint-pop)
-                          (dump-updating-aux (elt children (1- i))
-                                             old-records
-                                             stream)))))))
-  (:method (record old-records stream)
-    (declare (ignore old-records))
-    (write record :stream stream)))
 
 (defmethod redisplay-frame-pane
     ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
