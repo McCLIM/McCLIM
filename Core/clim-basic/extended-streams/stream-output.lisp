@@ -435,7 +435,7 @@ produces no more than one line of output i.e., doesn't wrap."))
                        (stream-cursor-initial-position stream))))
     (if (minusp line-width)
         nil
-        (floor line-width (stream-string-width stream "m")))))
+        (/ line-width (stream-character-width stream #\M)))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
