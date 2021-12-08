@@ -571,7 +571,7 @@ in an equalp hash table")
           (all-table (make-hash-table)))
       (collect (old-records new-records)
         (flet ((collect-1 (record set)
-                 (setf (gethash record all-table) t)
+                 (setf (gethash record all-table) set)
                  (ecase set
                    (:old
                     (old-records record)
@@ -599,7 +599,7 @@ in an equalp hash table")
             (gather-records record :old)
             (gather-records record :new)))
         (collect (erases moves draws)
-          (flet ((add-record (rec)
+          (flet ((add-record (rec set)
                    (if (updating-output-record-p rec)
                        (ecase (output-record-dirty rec)
                          (:moved
@@ -622,10 +622,12 @@ in an equalp hash table")
                                 (new-p (some #'match-record (gethash hash new-table))))
                            (cond ((null new-p) (erases entry))
                                  ((null old-p) (draws entry))
-                                 ;; Record siblings might have been reordered
-                                 ;; so we need to "move it" in place.
-                                 (t (moves entry))))))))
-            (alexandria:maphash-keys #'add-record all-table))
+                                 ;; Siblings might have been reordered so we
+                                 ;; need to "move it" in place.
+                                 ;; Don't add the same output record twice  v
+                                 (t (when (and check-overlapping (eq set :new))
+                                      (moves entry)))))))))
+            (maphash #'add-record all-table))
           (if (null check-overlapping)
               (values (erases) (moves) (draws)      nil     nil)
               (values      nil     nil (draws) (erases) (moves))))))))
