@@ -226,11 +226,9 @@ spatially organized data structure.
 (defmacro with-stream-redisplaying ((stream) &body body)
   `(letf (((slot-value ,stream 'redisplaying-p) t)) ,@body))
 
-(defgeneric redisplayable-stream-p (stream)
-  (:method ((stream t))
-    nil)
-  (:method ((stream updating-output-stream-mixin))
-    t))
+(defmethod redisplayable-stream-p ((stream updating-output-stream-mixin))
+  (declare (ignore stream))
+  t)
 
 (defmethod pane-needs-redisplay :around ((pane updating-output-stream-mixin))
   (let ((redisplayp (call-next-method)))
@@ -265,34 +263,32 @@ spatially organized data structure.
 ;;; ordering issues implied by overlapping records is handled correctly. Note
 ;;; that DRAWS records may be drawn without concern for the history because
 ;;; they additive. -- jd 2021-12-01
-(defgeneric incremental-redisplay
-    (stream position erases moves draws erase-overlapping move-overlapping)
-  (:method ((stream updating-output-stream-mixin) position
-            erases moves draws erase-overlapping move-overlapping)
-    (declare (ignore position))
-    (flet ((clear-bbox (bbox)
-             (with-bounding-rectangle* (x1 y1 x2 y2) bbox
-               (medium-clear-area stream x1 y1 x2 y2))))
-      (with-output-recording-options (stream :record nil :draw t)
-        (loop for (record bbox) in erases
-              do (note-output-record-lost-sheet record stream)
-                 (clear-bbox bbox))
-        (loop for (record old-bbox) in moves
-              do (clear-bbox old-bbox)
-                 (replay-output-record record stream))
-        (loop for (record bbox) in draws
-              do (note-output-record-got-sheet record stream)
-                 (replay-output-record record stream bbox))
-        (when (or erase-overlapping move-overlapping)
-          (let ((history (stream-output-history stream))
-                (regions +nowhere+))
-            (loop for (record bbox) in erase-overlapping
-                  do (note-output-record-lost-sheet record stream)
-                     (setf regions (region-union regions bbox)))
-            (loop for (record bbox) in move-overlapping
-                  do (setf regions (region-union regions bbox)))
-            (map-over-region-set-regions #'clear-bbox regions)
-            (replay history stream regions)))))))
+(defmethod incremental-redisplay ((stream updating-output-stream-mixin) position
+                                  erases moves draws erase-overlapping move-overlapping)
+  (declare (ignore position))
+  (flet ((clear-bbox (bbox)
+           (with-bounding-rectangle* (x1 y1 x2 y2) bbox
+             (medium-clear-area stream x1 y1 x2 y2))))
+    (with-output-recording-options (stream :record nil :draw t)
+      (loop for (record bbox) in erases
+            do (note-output-record-lost-sheet record stream)
+               (clear-bbox bbox))
+      (loop for (record old-bbox) in moves
+            do (clear-bbox old-bbox)
+               (replay-output-record record stream))
+      (loop for (record bbox) in draws
+            do (note-output-record-got-sheet record stream)
+               (replay-output-record record stream bbox))
+      (when (or erase-overlapping move-overlapping)
+        (let ((history (stream-output-history stream))
+              (regions +nowhere+))
+          (loop for (record bbox) in erase-overlapping
+                do (note-output-record-lost-sheet record stream)
+                   (setf regions (region-union regions bbox)))
+          (loop for (record bbox) in move-overlapping
+                do (setf regions (region-union regions bbox)))
+          (map-over-region-set-regions #'clear-bbox regions)
+          (replay history stream regions))))))
 
 ;;; FIXME: although this inherits from COMPLETE-MEDIUM-STATE, in fact it
 ;;; needn't, as we only ever call SET-MEDIUM-CURSOR-POSITION on it.  Until
@@ -474,28 +470,27 @@ updating-output-parent above this one in the tree.")
 
 (defvar *current-updating-output* nil)
 
-(defgeneric compute-new-output-records (record stream)
-  (:method ((record standard-updating-output-record) stream)
-    (with-output-recording-options (stream :record t :draw nil)
-      (map-over-updating-output
-       #'(lambda (r)
-           (let ((sub-record (sub-record r)))
-             (when sub-record
-               (setf (old-children r) sub-record)
-               (setf (output-record-dirty r) :updating)
-               (setf (rectangle-edges* (old-bounds r))
-                     (rectangle-edges* sub-record)))))
-       record
-       nil)
-      (force-output stream)
-      ;; Why is this binding here? We need the "environment" in this call that
-      ;; computes the new records of an outer updating output record to resemble
-      ;; that when a record's contents are computed in invoke-updating-output.
-      (letf (((stream-current-output-record stream)
-              (output-record-parent record)))
-        (compute-new-output-records-1 record
-                                      stream
-                                      (output-record-displayer record))))))
+(defmethod compute-new-output-records ((record standard-updating-output-record) stream)
+  (with-output-recording-options (stream :record t :draw nil)
+    (map-over-updating-output
+     #'(lambda (r)
+         (let ((sub-record (sub-record r)))
+           (when sub-record
+             (setf (old-children r) sub-record)
+             (setf (output-record-dirty r) :updating)
+             (setf (rectangle-edges* (old-bounds r))
+                   (rectangle-edges* sub-record)))))
+     record
+     nil)
+    (force-output stream)
+    ;; Why is this binding here? We need the "environment" in this call that
+    ;; computes the new records of an outer updating output record to resemble
+    ;; that when a record's contents are computed in invoke-updating-output.
+    (letf (((stream-current-output-record stream)
+            (output-record-parent record)))
+      (compute-new-output-records-1 record
+                                    stream
+                                    (output-record-displayer record)))))
 
 ;;; Create the sub-record that holds the new contents of the updating output
 ;;; record.
@@ -517,11 +512,6 @@ updating-output-parent above this one in the tree.")
   (reinitialize-instance record)
   (%invoke-updating record stream displayer)
   (setf (output-record-dirty record) :updated))
-
-#+nyi
-(defgeneric find-child-output-record (record use-old-elements record-type
-                                      &rest initargs
-                                      &key unique-id unique-id-test))
 
 (defconstant +fixnum-bits+ (integer-length most-positive-fixnum))
 
@@ -556,81 +546,77 @@ in an equalp hash table")
     (with-bounding-rectangle* (x1 y1 x2 y2) record
       (hash-coords x1 y1 x2 y2))))
 
-(defgeneric compute-difference-set (record &optional check-overlapping
-                                             offset-x offset-y
-                                             old-offset-x old-offset-y)
-  (:method ((record standard-updating-output-record)
-            &optional (check-overlapping t)
-              offset-x offset-y
-              old-offset-x old-offset-y)
-    (declare (ignore offset-x offset-y old-offset-x old-offset-y)
-             (values list list list list list))
-    ;; (declare (values erases moves draws #|erase-overlapping move-overlapping|#))
-    (let ((old-table (make-hash-table :test #'equalp))
-          (new-table (make-hash-table :test #'equalp))
-          (all-table (make-hash-table)))
-      (collect (old-records new-records)
-        (flet ((collect-1 (record set)
-                 (setf (gethash record all-table) set)
-                 (ecase set
-                   (:old
-                    (old-records record)
-                    (push record (gethash (output-record-hash record) old-table)))
-                   (:new
-                    (new-records record)
-                    (push record (gethash (output-record-hash record) new-table))))))
-          (labels ((gather-records (record set)
-                     (typecase record
-                       (displayed-output-record
-                        (collect-1 record set))
-                       (updating-output-record
-                        (ecase (output-record-dirty record)
-                          ((:clean :moved)
-                           (collect-1 record set))
-                          ((:updating :updated)
-                           (let ((sub (ecase set
-                                        (:old (old-children record))
-                                        (:new (sub-record record)))))
-                             (map-over-output-records #'gather-records sub
-                                                      nil nil set)))))
-                       (otherwise
-                        (map-over-output-records #'gather-records record
-                                                 nil nil set)))))
-            (gather-records record :old)
-            (gather-records record :new)))
-        (collect (erases moves draws)
-          (flet ((add-record (rec set)
-                   (if (updating-output-record-p rec)
-                       (ecase (output-record-dirty rec)
-                         (:moved
-                          ;; If we ever use the new position for something
-                          ;; then the specification says it stick it here.
-                          (moves (list rec (old-bounds rec) #|new-position|#)))
-                         (:clean
-                          ;; no need to redraw clean records.
-                          nil)
-                         #+ (or)
-                         ((:updating :updated)
-                          ;; UPDATING-OUTPUT-RECORDs with the state :UPDATED
-                          ;; are not collected (their children are collected).
-                          (error "Updated recoreds are not collected!")))
-                       (flet ((match-record (r) (output-record-equal rec r)))
-                         (let* ((hash (output-record-hash rec))
-                                ;; The bounding rectangle is always the same.
-                                (entry (list rec (bounding-rectangle rec)))
-                                (old-p (some #'match-record (gethash hash old-table)))
-                                (new-p (some #'match-record (gethash hash new-table))))
-                           (cond ((null new-p) (erases entry))
-                                 ((null old-p) (draws entry))
-                                 ;; Siblings might have been reordered so we
-                                 ;; need to "move it" in place.
-                                 ;; Don't add the same output record twice  v
-                                 (t (when (and check-overlapping (eq set :new))
-                                      (moves entry)))))))))
-            (maphash #'add-record all-table))
-          (if (null check-overlapping)
-              (values (erases) (moves) (draws)      nil     nil)
-              (values      nil     nil (draws) (erases) (moves))))))))
+(defmethod compute-difference-set ((record standard-updating-output-record)
+                                   &optional (check-overlapping t)
+                                     offset-x offset-y old-offset-x old-offset-y)
+  (declare (ignore offset-x offset-y old-offset-x old-offset-y)
+           (values list list list list list))
+  ;; (declare (values erases moves draws #|erase-overlapping move-overlapping|#))
+  (let ((old-table (make-hash-table :test #'equalp))
+        (new-table (make-hash-table :test #'equalp))
+        (all-table (make-hash-table)))
+    (collect (old-records new-records)
+      (flet ((collect-1 (record set)
+               (setf (gethash record all-table) set)
+               (ecase set
+                 (:old
+                  (old-records record)
+                  (push record (gethash (output-record-hash record) old-table)))
+                 (:new
+                  (new-records record)
+                  (push record (gethash (output-record-hash record) new-table))))))
+        (labels ((gather-records (record set)
+                   (typecase record
+                     (displayed-output-record
+                      (collect-1 record set))
+                     (updating-output-record
+                      (ecase (output-record-dirty record)
+                        ((:clean :moved)
+                         (collect-1 record set))
+                        ((:updating :updated)
+                         (let ((sub (ecase set
+                                      (:old (old-children record))
+                                      (:new (sub-record record)))))
+                           (map-over-output-records #'gather-records sub
+                                                    nil nil set)))))
+                     (otherwise
+                      (map-over-output-records #'gather-records record
+                                               nil nil set)))))
+          (gather-records record :old)
+          (gather-records record :new)))
+      (collect (erases moves draws)
+        (flet ((add-record (rec set)
+                 (if (updating-output-record-p rec)
+                     (ecase (output-record-dirty rec)
+                       (:moved
+                        ;; If we ever use the new position for something
+                        ;; then the specification says it stick it here.
+                        (moves (list rec (old-bounds rec) #|new-position|#)))
+                       (:clean
+                        ;; no need to redraw clean records.
+                        nil)
+                       #+ (or)
+                       ((:updating :updated)
+                        ;; UPDATING-OUTPUT-RECORDs with the state :UPDATED
+                        ;; are not collected (their children are collected).
+                        (error "Updated recoreds are not collected!")))
+                     (flet ((match-record (r) (output-record-equal rec r)))
+                       (let* ((hash (output-record-hash rec))
+                              ;; The bounding rectangle is always the same.
+                              (entry (list rec (bounding-rectangle rec)))
+                              (old-p (some #'match-record (gethash hash old-table)))
+                              (new-p (some #'match-record (gethash hash new-table))))
+                         (cond ((null new-p) (erases entry))
+                               ((null old-p) (draws entry))
+                               ;; Siblings might have been reordered so we
+                               ;; need to "move it" in place.
+                               ;; Don't add the same output record twice  v
+                               (t (when (and check-overlapping (eq set :new))
+                                    (moves entry)))))))))
+          (maphash #'add-record all-table))
+        (if (null check-overlapping)
+            (values (erases) (moves) (draws)      nil     nil)
+            (values      nil     nil (draws) (erases) (moves)))))))
 
 (defvar *trace-updating-output* nil)
 
@@ -775,41 +761,37 @@ in an equalp hash table")
 (defun redisplay (record stream &key (check-overlapping t))
   (redisplay-output-record record stream check-overlapping))
 
-;;; Take the spec at its word that the x/y and parent-x/parent-y arguments are
-;;; "entirely bogus."
-
 (defvar *dump-updating-output* nil)
 
-(defgeneric redisplay-output-record (record stream &optional check-overlapping)
-  (:method ((record updating-output-record)
-            (stream updating-output-stream-mixin)
-            &optional (check-overlapping t))
-    (let ((*current-updating-output* record)
-          (current-graphics-state (medium-graphics-state stream)))
-      (unwind-protect
-           (progn
-             (set-medium-cursor-position (start-graphics-state record) stream)
-             (with-stream-redisplaying (stream)
-               (compute-new-output-records record stream))
-             (when *dump-updating-output*
-               (dump-updating record :both *trace-output*))
-             (multiple-value-bind
-                   (erases moves draws erase-overlapping move-overlapping)
-                 (compute-difference-set record check-overlapping)
-               (when *trace-updating-output*
-                 (let ((*print-pretty* t))
-                   (format *trace-output*
-                           "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
+(defmethod redisplay-output-record ((record updating-output-record)
+                                    (stream updating-output-stream-mixin)
+                                    &optional (check-overlapping t))
+  (let ((*current-updating-output* record)
+        (current-graphics-state (medium-graphics-state stream)))
+    (unwind-protect
+         (progn
+           (set-medium-cursor-position (start-graphics-state record) stream)
+           (with-stream-redisplaying (stream)
+             (compute-new-output-records record stream))
+           (when *dump-updating-output*
+             (dump-updating record :both *trace-output*))
+           (multiple-value-bind
+                 (erases moves draws erase-overlapping move-overlapping)
+               (compute-difference-set record check-overlapping)
+             (when *trace-updating-output*
+               (let ((*print-pretty* t))
+                 (format *trace-output*
+                         "erases: ~S~%moves: ~S~%draws: ~S~%erase ~
                                     overlapping: ~S~%move overlapping: ~S~%"
-                           erases moves draws
-                           erase-overlapping move-overlapping)))
-               (note-output-record-child-changed
-                (output-record-parent record) record :change
-                nil (old-bounds record) stream
-                erases moves draws erase-overlapping move-overlapping
-                :check-overlapping check-overlapping))
-             (delete-stale-updating-output record))
-        (set-medium-cursor-position current-graphics-state stream)))))
+                         erases moves draws
+                         erase-overlapping move-overlapping)))
+             (note-output-record-child-changed
+              (output-record-parent record) record :change
+              nil (old-bounds record) stream
+              erases moves draws erase-overlapping move-overlapping
+              :check-overlapping check-overlapping))
+           (delete-stale-updating-output record))
+      (set-medium-cursor-position current-graphics-state stream))))
 
 ;;; Suppress the got-sheet/lost-sheet notices during redisplay.
 
@@ -835,44 +817,37 @@ in an equalp hash table")
    record
    t))
 
-(defgeneric propagate-output-record-changes-p
+(defmethod propagate-output-record-changes-p
     (record child mode old-position old-bounding-rectangle)
-  (:method (record child mode old-position old-bounding-rectangle)
-    (not (null record))))
+  (not (null record)))
 
-(defgeneric propagate-output-record-changes
+(defmethod propagate-output-record-changes
     (record child mode
      &optional old-position old-bounding-rectangle erases moves draws
        erase-overlapping move-overlapping check-overlapping)
-  (:method (record child mode
-            &optional old-position old-bounding-rectangle erases moves draws
-              erase-overlapping move-overlapping check-overlapping)
-    (declare (ignore record child mode old-position old-bounding-rectangle))
-    (values erases moves draws erase-overlapping move-overlapping
-            check-overlapping)))
+  (declare (ignore record child mode old-position old-bounding-rectangle))
+  (values erases moves draws erase-overlapping move-overlapping
+          check-overlapping))
 
-(defgeneric note-output-record-child-changed
+(defmethod note-output-record-child-changed
     (record child mode old-position old-bounding-rectangle stream
      &optional erases moves draws erase-overlapping move-overlapping
      &key check-overlapping)
-  (:method (record child mode old-position old-bounding-rectangle stream
-            &optional erases moves draws erase-overlapping move-overlapping
-            &key check-overlapping)
-    (if (propagate-output-record-changes-p
-         record child mode old-position old-bounding-rectangle)
-        (let ((old-bbox (copy-bounding-rectangle record)))
-          (multiple-value-bind (erases moves draws erase-overlapping move-overlapping
-                                check-overlapping)
-              (propagate-output-record-changes
-               record child mode old-position old-bounding-rectangle
-               erases moves draws erase-overlapping move-overlapping
-               check-overlapping)
-            (note-output-record-child-changed
-             (output-record-parent record) record mode nil old-bbox stream
+  (if (propagate-output-record-changes-p
+       record child mode old-position old-bounding-rectangle)
+      (let ((old-bbox (copy-bounding-rectangle record)))
+        (multiple-value-bind (erases moves draws erase-overlapping move-overlapping
+                              check-overlapping)
+            (propagate-output-record-changes
+             record child mode old-position old-bounding-rectangle
              erases moves draws erase-overlapping move-overlapping
-             :check-overlapping check-overlapping)))
-        (incremental-redisplay stream nil erases moves draws
-                               erase-overlapping move-overlapping))))
+             check-overlapping)
+          (note-output-record-child-changed
+           (output-record-parent record) record mode nil old-bbox stream
+           erases moves draws erase-overlapping move-overlapping
+           :check-overlapping check-overlapping)))
+      (incremental-redisplay stream nil erases moves draws
+                             erase-overlapping move-overlapping)))
 
 ;;; Support for explicitly changing output records.
 ;;; Example where the child of a :CLEAN output record may be moved:
