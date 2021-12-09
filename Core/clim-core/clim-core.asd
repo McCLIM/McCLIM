@@ -5,6 +5,12 @@
   :components
   ((:file "defresource")
    (:file "theming")
+   (:module "incremental-redisplay"
+    :serial t
+    :components ((:file "cache")
+                 (:file "updating-stream")
+                 (:file "updating-record")
+                 (:file "redisplay")))
    (:module "presentations"
     :serial t
     :components ((:file "presentation-types")
@@ -24,7 +30,6 @@
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
     :depends-on ("input-editing" "presentations"))
-   (:file "incremental-redisplay" :depends-on ("standard-presentations"))
    (:file "describe" :depends-on ("presentations" "standard-presentations" "formatting"))
    (:module "commands"
     :depends-on ("input-editing" "presentations" "standard-presentations")

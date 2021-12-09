@@ -239,6 +239,12 @@
   ;; Default: do nothing
   (declare (ignore client gadget)))
 
+(defmethod note-sheet-degrafted :after ((gadget basic-gadget))
+  (deactivate-gadget gadget))
+
+(defmethod note-sheet-grafted :after ((gadget basic-gadget))
+  (activate-gadget gadget))
+
 ;;;
 ;;; Value-gadget
 ;;;

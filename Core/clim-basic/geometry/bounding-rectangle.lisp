@@ -35,12 +35,15 @@
 
 ;;; 4.1.1 The Bounding Rectangle Protocol
 
+(defun copy-bounding-rectangle (region)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
+    (make-bounding-rectangle x1 y1 x2 y2)))
+
 (defmethod bounding-rectangle ((region rectangle))
   region)
 
 (defmethod bounding-rectangle ((region region))
-  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* region)
-    (make-bounding-rectangle x1 y1 x2 y2)))
+  (copy-bounding-rectangle region))
 
 ;;; 4.1.2 Bounding Rectangle Convenience Functions
 

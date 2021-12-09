@@ -797,9 +797,57 @@ corresponding to a table cell within the column."))
     (stream continuation record-type unique-id id-test cache-value cache-test
      &key fixed-position all-new parent-cache))
 
+(declfun redisplay (record stream &key (check-overlapping t)))
+
+(defgeneric redisplay-output-record (record stream &optional check-overlapping))
+
 ;;; 21.3 Incremental Redisplay Protocol.
 
+(defgeneric output-record-unique-id (record))
+(defgeneric output-record-cache-value (record))
+(defgeneric output-record-fixed-position (record))
+(defgeneric output-record-displayer (record))
+(defgeneric compute-new-output-records (record stream))
+(defgeneric compute-difference-set
+    (record &optional check-overlapping
+              offset-x offset-y old-offset-x old-offset-y))
+(defgeneric augment-draw-set
+    (record erases moves draws erase-overlapping move-overlapping
+     &optional x-offset y-offset old-x-offset old-y-offset))
+(defgeneric note-output-record-child-changed
+    (record child mode old-position old-bounding-rectangle stream
+     &optional erases moves draws erase-overlapping move-overlapping
+     &key check-overlapping))
+
+(defgeneric propagate-output-record-changes-p
+    (record child mode old-position old-bounding-rectangle))
+
+(defgeneric propagate-output-record-changes
+    (record child mode
+     &optional old-position old-bounding-rectangle erases moves draws
+       erase-overlapping move-overlapping check-overlapping))
+
 (defgeneric match-output-records (record &rest args))
+
+;;; The following operators are not implemented. -- jd 2021-12-08
+(defgeneric find-child-output-record
+    (record use-old-elements record-type &key unique-id unique-id-test))
+(defgeneric output-record-contents-ok (record))
+(defgeneric recompute-contents-ok (record))
+(defgeneric cache-output-record (record child unique-id))
+(defgeneric decache-output-record (record child use-old-elements))
+(defgeneric find-cached-output-record (record use-old-elements record-type
+                                       &key unique-id unique-id-test &allow-other-keys ))
+
+;;; 21.4 Incremental Redisplay Stream Protocol
+(defgeneric redisplayable-stream-p (stream)
+  (:method (stream) nil))
+
+(defgeneric stream-redisplaying-p (stream)
+  (:method (stream) nil))
+
+(defgeneric incremental-redisplay
+    (stream position erases moves draws erase-overlapping move-overlapping))
 
 
 ;;; 22.2.1 The Extended Stream Input Protocol

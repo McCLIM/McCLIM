@@ -197,7 +197,7 @@ and must never be nil.")
            (,initial-selection nil))
        (declare (special ,selected-p))
        (flet ((make-pane (type &rest options)
-                (cond ((eq type 'toggle-button)
+                (cond ((member type '(toggle-button :toggle-button))
                        (let ((pane (apply #'make-pane type
                                           :value ,selected-p
                                           :indicator-type ',type
