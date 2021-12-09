@@ -5,7 +5,12 @@
   :components
   ((:file "defresource")
    (:file "theming")
-   (:file "incremental-redisplay")
+   (:module "incremental-redisplay"
+    :serial t
+    :components ((:file "cache")
+                 (:file "updating-stream")
+                 (:file "updating-record")
+                 (:file "redisplay")))
    (:module "presentations"
     :serial t
     :components ((:file "presentation-types")
