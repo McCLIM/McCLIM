@@ -371,18 +371,18 @@ which gives the behavior of incremental redisplay.  That is, it reruns the code
 by comparing it to the old output history.
 
 
-\Defgeneric {compute-difference-set} {record \optional (check-overlapping \cl{t})
-                                      x y old-x old-y}
+\Defgeneric {compute-difference-set} {record \optional (check-overlapping \cl{t})}
 
 \cl{compute-difference-set} compares the current state of the \term{output
 record} \arg{record} with its previous state, and returns a ``difference set''
 as five values.  The difference set controls what needs to be done to the
 display device in order to accomplish the incremental redisplay.
 
-The values returned are \arg{erases} (what areas of the display device need to
-be erased), \arg{moves} (what output records need to be moved), \arg{draws}
-(what output records need to be freshly replayed), \arg{erase-overlapping}, and
-\arg{move-overlapping}.  Each is a list whose elements are lists of the form:
+\cl{compute-difference-set} returns an list of lists \arg{erases} (what areas
+of the display device need to be erased), \arg{moves} (what output records
+need to be moved), \arg{draws} (what output records need to be freshly
+replayed), \arg{erase-overlapping}, and \arg{move-overlapping}.  Each is a
+list whose elements are lists of the form:
 
 \begin{itemize}
 \item \arg{erases} are lists of \cl{(\arg{record} \arg{old-box})}
@@ -401,15 +401,13 @@ that no sibling output records overlap each other at any level.  Supplying a
 \term{false} value for this argument can improve performance of redisplay.
 
 
-\Defgeneric {augment-draw-set} {record erases moves draws erase-overlapping move-overlapping
-                                \optional x-offset y-offset old-x-offset old-y-offset}
+\Defgeneric {augment-draw-set} {record erases moves draws erase-overlapping move-overlapping}
 
 \issue {SWM} {To be supplied.}
 
 \Defgeneric {note-output-record-child-changed} \
             {record child mode old-position old-bounding-rectangle stream
-             \optional erases moves draws erase-overlapping move-overlapping
-             \key check-overlapping}
+             \key difference-set check-overlapping}
 
 \cl{note-output-record-child-changed} is called after an output history has had
 changes made to it, but before any of the new output has been displayed.  It
@@ -426,6 +424,8 @@ order to display the difference set.
 \arg{old-position} and \arg{old-bounding-rectangle} describe where \arg{child}
 was before it was moved.
 
+\arg{difference-set} is as returned from \cl{compute-difference-set}.
+
 \arg{check-overlapping} is as for \cl{compute-difference-set}.
 
 
@@ -440,11 +440,13 @@ way.  Otherwise, it returns \term{false}.  \arg{mode} is one of \cl{:delete},
 \Defgeneric {propagate-output-record-changes} 
             {record child mode 
              \optional old-position old-bounding-rectangle
-                       erases moves draws erase-overlapping move-overlapping check-overlapping}
+                       difference-set check-overlapping}
 
 Called when the changed \arg{child} output record requires that its parent,
 \arg{record}, be redisplayed as well.  \cl{propagate-output-record-changes}
 will update the difference set to reflect the additional changes.
+
+\arg{difference-set} is as returned from \cl{compute-difference-set}.
 
 \arg{check-overlapping} is as for \cl{compute-difference-set}.
 

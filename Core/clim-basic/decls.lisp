@@ -809,23 +809,19 @@ corresponding to a table cell within the column."))
 (defgeneric output-record-displayer (record))
 (defgeneric compute-new-output-records (record stream))
 (defgeneric compute-difference-set
-    (record &optional check-overlapping
-              offset-x offset-y old-offset-x old-offset-y))
-(defgeneric augment-draw-set
-    (record erases moves draws erase-overlapping move-overlapping
-     &optional x-offset y-offset old-x-offset old-y-offset))
+    (record &optional check-overlapping))
+(defgeneric augment-draw-set (record difference-set))
 (defgeneric note-output-record-child-changed
     (record child mode old-position old-bounding-rectangle stream
-     &optional erases moves draws erase-overlapping move-overlapping
-     &key check-overlapping))
+     &key difference-set check-overlapping))
 
 (defgeneric propagate-output-record-changes-p
     (record child mode old-position old-bounding-rectangle))
 
 (defgeneric propagate-output-record-changes
     (record child mode
-     &optional old-position old-bounding-rectangle erases moves draws
-       erase-overlapping move-overlapping check-overlapping))
+     &optional old-position old-bounding-rectangle
+       difference-set check-overlapping))
 
 (defgeneric match-output-records (record &rest args))
 
