@@ -435,7 +435,9 @@ produces no more than one line of output i.e., doesn't wrap."))
                        (stream-cursor-initial-position stream))))
     (if (minusp line-width)
         nil
-        (/ line-width (stream-character-width stream #\M)))))
+        ;; Some PPRINT implemenations require STREAM-LINE-COLUMN to return an
+        ;; integer here. May be worth revising in the future. -- jd 2021-12-18
+        (floor (/ line-width (stream-character-width stream #\M))))))
 
 (defmethod stream-start-line-p ((stream standard-extended-output-stream))
   (multiple-value-bind (x y) (stream-cursor-position stream)
