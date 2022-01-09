@@ -231,8 +231,13 @@
                                (if default-item-p
                                    default-item
                                    (first items))
-                               :item-printer (or printer
-                                                 #'print-menu-item)
+                               :item-printer
+                               (cond
+                                 (presentation-type
+                                  (lambda (menu-item stream)
+                                    (present menu-item presentation-type :stream stream)))
+                                 (printer printer)
+                                 (t #'print-menu-item))
                                :max-width max-width
                                :max-height max-height
                                :n-rows n-rows
