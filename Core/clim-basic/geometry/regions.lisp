@@ -219,15 +219,14 @@
          (standard-region-set-regions region)))
 
 (defmethod bounding-rectangle* ((region standard-region-intersection))
-  ;; kill+yank alert
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions
      (lambda (r)
        (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
-         (setf bx1 (min (or bx1 x1) x1)
-               bx2 (max (or bx2 x2) x2)
-               by1 (min (or by1 y1) y1)
-               by2 (max (or by2 y2) y2))))
+         (setf bx1 (max (or bx1 x1) x1)
+               bx2 (min (or bx2 x2) x2)
+               by1 (max (or by1 y1) y1)
+               by2 (min (or by2 y2) y2))))
      region)
     (values bx1 by1 bx2 by2)))
 
@@ -260,14 +259,13 @@
          (not (region-contains-position-p region-b x y)))))
 
 (defmethod bounding-rectangle* ((region standard-region-difference))
-  (with-slots (a b) region
-    (cond ((eq a +everywhere+)
-           (bounding-rectangle* b))
-          (t
-           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
-             (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
-               (values (min x1 u1) (min y1 v1)
-                       (max x2 u2) (min y2 v2))))))))
+  ;; We construct a STANDARD-REGION-DIFFERENCE when we can't represent the
+  ;; result using unitary regions (i.e for a difference between ellipses).
+  ;; While we could sometimes compute a more precise bounding rectangle (i.e
+  ;; by converting regions to bezigons first), it is probably not worth the
+  ;; effort. Returning the bournding rectangle of the first region guarantees
+  ;; that the result region "fits", although a bbox may be noticeably bigger.
+  (bounding-rectangle* (slot-value region 'a)))
 
 (defmethod transform-region (tr (region standard-region-difference))
   (with-slots (a b) region
