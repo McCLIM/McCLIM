@@ -13,13 +13,6 @@
 
 (in-package #:climi)
 
-;;; utilities
-
-(defun rectangle-set->polygon-union (rs)
-  (let ((res nil))
-    (map-over-region-set-regions (lambda (r) (push r res)) rs)
-    (make-instance 'standard-region-union :regions res)))
-
 ;;; REGION-UNION
 
 ;;; STANDARD-REGION-UNION
@@ -30,70 +23,59 @@
                  :regions (append (standard-region-set-regions a)
                                   (standard-region-set-regions b))))
 
-(defmethod region-union ((a standard-region-union) (b bounding-rectangle))
-  (make-instance 'standard-region-union
-                 :regions (cons b (standard-region-set-regions a))))
-
-(defmethod region-union ((b bounding-rectangle) (a standard-region-union))
+(define-commutative-method region-union
+    ((a standard-region-union) (b bounding-rectangle))
   (make-instance 'standard-region-union
                  :regions (cons b (standard-region-set-regions a))))
 
 ;;; STANDARD-RECTANGLE-SET
-(defmethod region-union ((a standard-rectangle-set) (b path)) a)
-(defmethod region-union ((b path) (a standard-rectangle-set)) a)
-(defmethod region-union ((a standard-rectangle-set) (b point)) a)
-(defmethod region-union ((b point) (a standard-rectangle-set)) a)
+(define-commutative-method region-union ((a standard-rectangle-set) (b path)) a)
+(define-commutative-method region-union ((a standard-rectangle-set) (b point)) a)
 
 (defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle-set))
   (make-standard-rectangle-set
    (bands-union (standard-rectangle-set-bands xs)
                 (standard-rectangle-set-bands ys))))
 
-(defmethod region-union ((xs standard-rectangle-set) (ys standard-rectangle))
+(define-commutative-method region-union
+    ((xs standard-rectangle-set) (ys standard-rectangle))
   (region-union xs (rectangle->standard-rectangle-set ys)))
 
-(defmethod region-union ((xs standard-rectangle) (ys standard-rectangle-set))
-  (region-union (rectangle->standard-rectangle-set xs) ys))
-
-(defmethod region-union ((a standard-rectangle-set) (b polygon))
+(define-commutative-method region-union ((a standard-rectangle-set) (b polygon))
   (region-union (rectangle-set->polygon-union a) b))
-
-(defmethod region-union ((a polygon) (b standard-rectangle-set))
-  (region-union a (rectangle-set->polygon-union b)))
 
 ;;; STANDARD-REGION-INTERSECTION
 ;;; STANDARD-REGION-DIFFERENCE
-(defmethod region-union ((a standard-region-difference) (b bounding-rectangle))
-  (make-instance 'standard-region-union :regions (list a b)))
-
-(defmethod region-union ((a bounding-rectangle) (b standard-region-difference))
+(define-commutative-method region-union
+    ((a standard-region-difference) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
 ;;; REGION-INTERSECTION
 
 ;;; STANDARD-REGION-UNION
-(defmethod region-intersection ((a standard-region-union) (b bounding-rectangle))
+(define-commutative-method region-intersection
+    ((a standard-region-union) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions
      (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
     res))
 
-(defmethod region-intersection ((a bounding-rectangle) (b standard-region-union))
-  (region-intersection b a))
-
 ;;; STANDARD-RECTANGLE-SET
-(defmethod region-intersection ((xs standard-rectangle-set) (ys standard-rectangle-set))
+(defmethod region-intersection
+    ((xs standard-rectangle-set) (ys standard-rectangle-set))
   (make-standard-rectangle-set
    (bands-intersection (standard-rectangle-set-bands xs)
                        (standard-rectangle-set-bands ys))))
 
-(defmethod region-intersection ((xs standard-rectangle-set) (ys standard-rectangle))
-  (region-intersection xs (rectangle->standard-rectangle-set ys)))
+(define-commutative-method region-intersection
+    ((xs standard-rectangle-set) (ys standard-rectangle))
+  (make-standard-rectangle-set
+   (bands-intersection (standard-rectangle-set-bands xs)
+                       (standard-rectangle-set-bands
+                        (rectangle->standard-rectangle-set ys)))))
 
-(defmethod region-intersection ((xs standard-rectangle) (ys standard-rectangle-set))
-  (region-intersection (rectangle->standard-rectangle-set xs) ys))
-
-(defmethod region-intersection ((a standard-rectangle-set) (b bounding-rectangle))
+(define-commutative-method region-intersection
+    ((a standard-rectangle-set) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions
      (lambda (r)
@@ -101,18 +83,17 @@
      a)
     res))
 
-(defmethod region-intersection ((a bounding-rectangle) (b standard-rectangle-set))
-  (region-intersection b a))
-
 ;;; standard-region-intersection
-(defmethod region-intersection ((a standard-region-intersection) (b standard-region-intersection))
+(defmethod region-intersection
+    ((a standard-region-intersection) (b standard-region-intersection))
   (make-instance 'standard-region-intersection
                  :regions (remove-duplicates
                            (append (standard-region-set-regions a)
                                    (standard-region-set-regions b))
                            :test #'region-equal)))
 
-(defmethod region-intersection ((a bounding-rectangle) (b standard-region-intersection))
+(define-commutative-method region-intersection
+    ((a bounding-rectangle) (b standard-region-intersection))
   (collect (results)
     (loop for region in (standard-region-set-regions b)
           when (or (region-equal a +nowhere+)
@@ -128,17 +109,10 @@
                   (results intersection)))))
     (make-instance 'standard-region-intersection :regions (results))))
 
-(defmethod region-intersection ((a standard-region-intersection) (b bounding-rectangle))
-  (region-intersection b a))
-
 ;;; STANDARD-REGION-DIFFERENCE
-(defmethod region-intersection
+(define-commutative-method region-intersection
     ((bbox bounding-rectangle) (rdif standard-region-difference))
   (make-instance 'standard-region-intersection :regions (list bbox rdif)))
-
-(defmethod region-intersection
-    ((rdif standard-region-difference) (bbox bounding-rectangle))
-  (region-intersection bbox (region-complement rdif)))
 
 ;;; REGION-DIFFERENCE
 

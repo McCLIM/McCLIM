@@ -793,7 +793,12 @@ y2."
 (defun rectangle->standard-rectangle-set (rect)
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* rect)
     (make-instance 'standard-rectangle-set
-      :bands (rectangle->xy-bands* x1 y1 x2 y2))))
+                   :bands (rectangle->xy-bands* x1 y1 x2 y2))))
+
+(defun rectangle-set->polygon-union (rs)
+  (let ((res nil))
+    (map-over-region-set-regions (lambda (r) (push r res)) rs)
+    (make-instance 'standard-region-union :regions res)))
 
 ;;; ELLIPSE
 
@@ -1468,3 +1473,10 @@ and RADIUS2-DY"
           while p3
           appending (%polygonalize p0 p1 p2 p3) into result
           finally (return (expand-point-seq (list* start result))))))
+
+(defmacro define-commutative-method (name (region-a region-b) &body body)
+  `(progn (defmethod ,name (,region-a ,region-b) ,@body)
+          (defmethod ,name (,region-b ,region-a) ,@body)))
+
+(defun region-exclusive-or (a b)
+  (region-union (region-difference a b) (region-difference b a)))
