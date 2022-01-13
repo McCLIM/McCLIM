@@ -268,7 +268,8 @@
   (polygon-op a b #'logand))
 
 (defmethod region-difference ((x bounding-rectangle) (y bounding-rectangle))
-  (make-instance 'standard-region-difference :a x :b y))
+  (let ((cy (make-instance 'standard-region-difference :complement y)))
+    (make-instance 'standard-region-intersection :regions (list x cy))))
 
 ;;; Dimensionality rule
 

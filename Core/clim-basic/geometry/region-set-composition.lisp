@@ -4,7 +4,7 @@
 ;;;
 ;;;  (c) copyright 1998 Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  (c) copyright 1998-2000 Michael McDonald <mikemac@mikemac.com>
-;;;  (c) copyright 2019 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2019-2022 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -132,23 +132,24 @@
   (region-intersection b a))
 
 ;;; STANDARD-REGION-DIFFERENCE
-(defmethod region-intersection ((x bounding-rectangle) (y standard-region-difference))
-  (with-slots (a b) y
-    (region-difference (region-intersection x a) b)))
+(defmethod region-intersection
+    ((bbox bounding-rectangle) (rdif standard-region-difference))
+  (make-instance 'standard-region-intersection :regions (list bbox rdif)))
 
-(defmethod region-intersection ((x standard-region-difference) (y bounding-rectangle))
-  (with-slots (a b) x
-    (region-difference (region-intersection y a) b)))
+(defmethod region-intersection
+    ((rdif standard-region-difference) (bbox bounding-rectangle))
+  (region-intersection bbox (region-complement rdif)))
 
 ;;; REGION-DIFFERENCE
 
 ;;; STANDARD-REGION-UNION
 (defmethod region-difference ((x bounding-rectangle) (y standard-region-union))
-  ;; A \ (B1 u B2 .. u Bn) = ((((A \ B1) \ B2) ... ) \ Bn)
-  (let ((res x))
-    (map-over-region-set-regions (lambda (a)
-                                   (setf res (region-difference res a)))
-                                 y)
+  ;; A \ (B1 u B2) = (A\B1 ^ A\B2)
+  (let ((res +everywhere+))
+    (map-over-region-set-regions
+     (lambda (a)
+       (setf res (region-intersection res (region-difference x a))))
+     y)
     res))
 
 (defmethod region-difference ((x standard-region-union) (y bounding-rectangle))
@@ -162,10 +163,10 @@
 
 ;;; STANDARD-RECTANGLE-SET
 (defmethod region-difference ((x bounding-rectangle) (y standard-rectangle-set))
-  (let ((res x))
+  (let ((res +everywhere+))
     (map-over-region-set-regions
      (lambda (a)
-       (setf res (region-difference res a)))
+       (setf res (region-intersection res (region-difference x a))))
      y)
     res))
 
@@ -199,10 +200,9 @@
 
 ;;; STANDARD-REGION-DIFFERENCE
 (defmethod region-difference ((x bounding-rectangle) (y standard-region-difference))
-  (with-slots (a b) y
-    (region-union (region-difference x a) (region-intersection x b))))
+  (region-intersection x (region-complement y)))
 
 (defmethod region-difference ((x standard-region-difference) (y bounding-rectangle))
-  ;; (A\B)\C = A \ (B u C)
-  (with-slots (a b) x
-    (region-difference a (region-union b y))))
+  ;; (A\B)\C = A \ (B u C), but A = everywhere (because we've made it so).
+  (make-instance 'standard-region-difference
+                 :complement (region-union (region-complement x) y)))

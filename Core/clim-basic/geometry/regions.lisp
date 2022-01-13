@@ -74,8 +74,8 @@
 ;;; regions. For instance the following would supersede
 ;;; implementation for an unbounded region:
 ;;;
-;;;    (defmethod region-difference ((a rectangle) (b region))
-;;;      (make-instance 'standard-region-difference a b))
+;;;    (defmethod region-intersection ((a rectangle) (b region))
+;;;      (make-instance 'standard-region-intersection a b))
 ;;;
 (macrolet
     ((def-method (name e-vs-e e-vs-n e-vs-r
@@ -97,11 +97,8 @@
   (def-method region-equal               t nil nil nil t   nil nil nil)
   (def-method region-union               a a   a   b   b   b   b   a)
   (def-method region-intersection        b b   b   a   a   a   a   b)
-  ;; We don't support unbounded regions which are not +everywhere+ or
-  ;; +nowhere+ (that would complicate the geometry module). If we
-  ;; decide otherwise don't use standard-region-difference because it
-  ;; is a subclass of a bounded-rectangle so it can't represent
-  ;; unbounded region.  -- jd 2019-09-10
+  ;; We don't support unbounded regions which are not +EVERYWHERE+ or
+  ;; +NOWHERE+ (that would complicate the geometry module). -- jd 2019-09-10
   (def-method region-difference
     +nowhere+ a (error "Unsupported unbounded region operation.")
     a a a
@@ -222,11 +219,15 @@
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions
      (lambda (r)
-       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
-         (setf bx1 (max (or bx1 x1) x1)
-               bx2 (min (or bx2 x2) x2)
-               by1 (max (or by1 y1) y1)
-               by2 (min (or by2 y2) y2))))
+       ;; Region complements are not bound and BOUNDING-RECTANGLE* would cause
+       ;; a runtime error. Not accounting for it will make our result
+       ;; mathematically imprecise, but not incorrect. -- 2022-01-13
+       (unless (typep r 'standard-region-difference)
+         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
+           (setf bx1 (max (or bx1 x1) x1)
+                 bx2 (min (or bx2 x2) x2)
+                 by1 (max (or by1 y1) y1)
+                 by2 (min (or by2 y2) y2)))))
      region)
     (values bx1 by1 bx2 by2)))
 
@@ -237,40 +238,28 @@
 
 
 
-(defclass standard-region-difference (cached-bbox-mixin region-set)
-  ((a :initarg :a :reader standard-region-difference-a)
-   (b :initarg :b :reader standard-region-difference-b)))
+(defclass standard-region-difference (region-set)
+  ((complement :initarg :complement :reader region-complement)))
 
 (defmethod region-set-regions ((region standard-region-difference) &key normalize)
   (declare (ignorable normalize))
-  (list (standard-region-difference-a region)
-        (standard-region-difference-b region)))
+  (list +everywhere+ (region-complement region)))
 
 (defmethod map-over-region-set-regions
     (fun (region standard-region-difference) &key normalize)
   (declare (ignorable normalize))
-  (funcall fun (standard-region-difference-a region))
-  (funcall fun (standard-region-difference-b region)))
+  (funcall fun +everywhere+)
+  (funcall fun (region-complement region)))
 
 (defmethod region-contains-position-p ((region standard-region-difference) x y)
-  (let ((region-a (standard-region-difference-a region))
-        (region-b (standard-region-difference-b region)))
-    (and (region-contains-position-p region-a x y)
-         (not (region-contains-position-p region-b x y)))))
+  (not (region-contains-position-p (region-complement region) x y)))
 
 (defmethod bounding-rectangle* ((region standard-region-difference))
-  ;; We construct a STANDARD-REGION-DIFFERENCE when we can't represent the
-  ;; result using unitary regions (i.e for a difference between ellipses).
-  ;; While we could sometimes compute a more precise bounding rectangle (i.e
-  ;; by converting regions to bezigons first), it is probably not worth the
-  ;; effort. Returning the bournding rectangle of the first region guarantees
-  ;; that the result region "fits", although a bbox may be noticeably bigger.
-  (bounding-rectangle* (slot-value region 'a)))
+  (error "Unsupported unbounded region operation."))
 
 (defmethod transform-region (tr (region standard-region-difference))
-  (with-slots (a b) region
-    (make-instance 'standard-region-difference :a (transform-region tr a)
-                                               :b (transform-region tr b))))
+  (make-instance 'standard-region-difference
+                 :complement (transform-region tr (region-complement region))))
 
 
 
