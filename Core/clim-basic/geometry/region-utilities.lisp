@@ -39,26 +39,6 @@
       (multiple-value-bind (x y) (point-position point)
         (coords-seq x y)))))
 
-(defun remove-duplicated-points (point-sequence &optional closed)
-  "Given points A B C ... Z removes consecutive points which are duplicated. If
-a flag CLOSED is T then beginning and end of the list are consecutive too."
-  (when (alexandria:emptyp point-sequence)
-    (return-from remove-duplicated-points point-sequence))
-  (collect (collect-point)
-    (let* ((first-point (elt point-sequence 0))
-           (last-point first-point))
-      (collect-point first-point)
-      (mapc (lambda (current-point)
-              (unless (region-equal current-point last-point)
-                (setf last-point current-point)
-                (collect-point last-point)))
-            point-sequence)
-      (if (and closed
-               (region-equal first-point last-point)
-               (null (alexandria:length= 1 (collect-point))))
-          (butlast (collect-point))
-          (collect-point)))))
-
 (declaim (inline arc-contains-angle-p))
 (defun arc-contains-angle-p (start-angle end-angle delta)
   (assert (<= 0 delta (* 2 pi)))
@@ -356,9 +336,9 @@ y2."
     (labels ((sort-points (left right)
                (sort
                 (append (mapcar (lambda (p) (list p :l))
-                                (clean-up-point-sequence left))
+                                (clean-up-polygon-points left))
                         (mapcar (lambda (p) (list p :r))
-                                (clean-up-point-sequence right)))
+                                (clean-up-polygon-points right)))
                 #'point-lessp :key #'car))
              (valid-triangle-p (chain n n-1 n-2)
                (multiple-value-bind (x y) (point-position n)
@@ -503,21 +483,73 @@ y2."
             (+ (* (- ry1 y1) (/ dx dy)) x1) ry1)))
 
 (defun pg-splitter->polygon (s)
-  (make-polygon (clean-up-point-sequence
-                 (nconc (pg-splitter-left s)
-                        (reverse (pg-splitter-right s))))))
+  (make-polygon (nconc (pg-splitter-left s)
+                       (reverse (pg-splitter-right s)))))
 
-(defun clean-up-point-sequence (pts)
-  (do ((points pts)) ((null (rest points)) pts)
-    (destructuring-bind (p1 p2 &rest tail) points
-      (cond ((region-equal p1 p2)
-             (rplacd points tail))
-            ((null tail)
-             (setf points nil))
-            ((colinear-p p1 p2 (first tail))
-             (rplacd points tail))
-            (t
-             (pop points))))))
+(defun clean-up-polygon-points (pts)
+  ;; "Ears" with no area are the reason why we must repeat the operation until
+  ;; there are no further chagnes. It sometimes happens that after clipping an
+  ;; empty ear remaining points are colinear and should be removed.
+  (flet ((exclude-point-p (pprev point pnext)
+           ;; When P1=P2 then the point is duplicated.
+           ;; When points are colinear then
+           ;;   P2 c |P1 P3| - redundant point
+           ;;   P3 c |P1 P2| - "ear" with no area
+           (or (region-equal pprev point)
+               (colinear-p pprev point pnext))))
+    (loop for changedp = nil
+          do (do ((points pts)
+                  (p0 (first pts))
+                  (pn nil))
+                 ((null (rest points))
+                  (unless (and pn (rest pts))
+                    (return-from clean-up-polygon-points nil))
+                  (let ((p1 (second pts)))
+                    (when (exclude-point-p pn p0 p1)
+                      (setf pts (rest pts)
+                            changedp t)))
+                  pts)
+               (destructuring-bind (p1 p2 &rest tail) points
+                 (if (exclude-point-p p1 p2 (or (first tail) p0))
+                     (setf changedp t
+                           pn p1
+                           (cdr points) tail)
+                     (setf pn p2
+                           points (cdr points)))))
+          while changedp
+          finally (return pts))))
+
+(defun clean-up-polyline-points (pts closed)
+  ;; Unlike for polygons we can't remove "ears" - they are lines that are
+  ;; valid part of the polyline. Thanks to that one pass is sufficient.
+  (flet ((exclude-point-p (pprev point pnext)
+           ;; When P1=P2 then the point is duplicated.
+           ;; When points are colinear then
+           ;;   P2 c |P1 P3| - redundant point (remove)
+           ;;   P3 c |P1 P2| - "ear" (don't remove)
+           (or (region-equal pprev point)
+               (multiple-value-bind (x1 y1) (point-position pprev)
+                 (multiple-value-bind (x2 y2) (point-position point)
+                   (multiple-value-bind (x3 y3) (point-position pnext)
+                     (segment-contains-point-p x1 y1 x3 y3 x2 y2)))))))
+    ;; Only one pass required.
+    (do ((points pts)
+         (p0 (first pts))
+         (pn nil))
+        ((null (rest points))
+         (unless (and pn (rest pts))
+           (return-from clean-up-polyline-points nil))
+         (when closed
+           (let ((p1 (second pts)))
+             (when (exclude-point-p pn p0 p1)
+               (setf pts (rest pts)))))
+         pts)
+      (destructuring-bind (p1 p2 &rest tail) points
+        (if (exclude-point-p p1 p2 (or (first tail) p0))
+            (setf pn p1
+                  (cdr points) tail)
+            (setf pn p2
+                  points (cdr points)))))))
 
 ;;; Intersection Line/Polygon
 

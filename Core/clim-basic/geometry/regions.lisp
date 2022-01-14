@@ -40,11 +40,6 @@
 ;;; - while you are are at it; provide a reasonable fast vertical scan
 ;;;   routine.  polygons should make use of the sweep line algorithm.
 ;;;
-;;; - MAKE-POLY{LINE,GON} should canonise its arguments; no edges of
-;;;   length 0 and no co-linear vertexes. Maybe: canonise rectangles?
-;;;   Also a polygon of less than three vertexes is to be considered
-;;;   empty aka +nowhere+.
-;;;
 
 (in-package #:clim-internals)
 

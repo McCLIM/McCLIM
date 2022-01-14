@@ -37,7 +37,7 @@
 
 (defun make-polyline (point-seq &key closed)
   (assert (every #'pointp point-seq))
-  (setq point-seq (remove-duplicated-points point-seq closed))
+  (setf point-seq (clean-up-polyline-points point-seq closed))
   (if (< (length point-seq) 2)
       +nowhere+
       (make-instance 'standard-polyline :points point-seq :closed closed)))
@@ -47,7 +47,7 @@
 
 (defun make-polygon (point-seq)
   (assert (every #'pointp point-seq))
-  (setq point-seq (remove-duplicated-points point-seq t))
+  (setf point-seq (clean-up-polygon-points point-seq))
   (if (< (length point-seq) 3)
       +nowhere+
       (make-instance 'standard-polygon :points point-seq)))
