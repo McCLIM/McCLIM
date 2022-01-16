@@ -176,8 +176,8 @@
                 (%draw-lines (region-intersection
                               clipping-region
                               (make-line* x1 y (+ x1 width) y)))))))
-    (clim:standard-region-difference
-     (let ((complement (climi::region-complement clipping-region)))
+    (clime:standard-region-complement
+     (let ((complement (clime:region-complement clipping-region)))
        (xlib:draw-rectangle mask mask-gc x1 y1 width height t)
        (rotatef (xlib:gcontext-foreground mask-gc)
                 (xlib:gcontext-background mask-gc))

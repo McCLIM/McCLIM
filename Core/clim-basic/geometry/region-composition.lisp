@@ -17,6 +17,17 @@
 (defmethod region-union ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-union :regions (list a b)))
 
+(defmethod region-union
+    ((a standard-region-complement) (b standard-region-complement))
+  (region-complement (region-intersection (region-complement a)
+                                          (region-complement b))))
+
+(define-commutative-method region-union
+    ((a standard-region-complement) (b bounding-rectangle))
+  (if (region-equal (region-complement a) b)
+      +everywhere+
+      (region-complement (region-intersection a (region-complement b)))))
+
 ;;; Dimensionality rule
 
 (define-commutative-method region-union ((a area) (b path)) a)
@@ -112,6 +123,18 @@
 
 (defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
   (make-instance 'standard-region-intersection :regions (list a b)))
+
+(define-commutative-method region-intersection
+    ((bbox bounding-rectangle) (rdif standard-region-complement))
+  (if (region-equal bbox (region-complement rdif))
+      +nowhere+
+      (make-instance 'standard-region-intersection :regions (list bbox rdif))))
+
+(defmethod region-intersection
+    ((x standard-region-complement) (y standard-region-complement))
+  (make-instance 'standard-region-complement
+                 :complement (region-union (region-complement x)
+                                           (region-complement y))))
 
 ;;; Points
 
@@ -241,8 +264,20 @@
   (polygon-op a b #'logand))
 
 (defmethod region-difference ((x bounding-rectangle) (y bounding-rectangle))
-  (let ((cy (make-instance 'standard-region-difference :complement y)))
+  (let ((cy (make-instance 'standard-region-complement :complement y)))
     (make-instance 'standard-region-intersection :regions (list x cy))))
+
+(defmethod region-difference
+    ((x standard-region-complement) (y standard-region-complement))
+  (region-intersection x (region-complement y)))
+
+(defmethod region-difference ((x bounding-rectangle) (y standard-region-complement))
+  (region-intersection x (region-complement y)))
+
+(defmethod region-difference ((x standard-region-complement) (y bounding-rectangle))
+  ;; (U\A)\C = U\(AuC)
+  (make-instance 'standard-region-complement
+                 :complement (region-union (region-complement x) y)))
 
 ;;; Dimensionality rule
 

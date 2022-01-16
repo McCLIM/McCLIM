@@ -810,7 +810,7 @@
   )
 
 #+nyi
-(defmethod draw-design (medium (design standard-region-difference)
+(defmethod draw-design (medium (design standard-region-complement)
                         &rest options &key &allow-other-keys)
   )
 

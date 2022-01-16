@@ -46,7 +46,16 @@
 (defmethod region-intersects-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (not (region-equal +nowhere+ (region-intersection a b))))
 
-(defmethod region-intersects-region-p :around ((a bounding-rectangle) (b bounding-rectangle))
+(defmethod region-intersects-region-p
+    ((a standard-region-complement) (b standard-region-complement))
+  (not (region-equal (region-complement a) (region-complement b))))
+
+(define-commutative-method region-intersects-region-p
+    ((a bounding-rectangle) (b standard-region-complement))
+  (not (region-contains-region-p a (region-complement b))))
+
+(defmethod region-intersects-region-p :around
+    ((a bounding-rectangle) (b bounding-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
     (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
       (cond ((and (<= u1 x2) (<= x1 u2)
@@ -73,6 +82,18 @@
 (defmethod region-contains-region-p ((a bounding-rectangle) (b bounding-rectangle))
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
+
+(defmethod region-contains-region-p ((a bounding-rectangle) (b standard-region-complement))
+  nil)
+
+(defmethod region-contains-region-p ((a standard-region-complement) (b bounding-rectangle))
+  (not (region-intersects-region-p a (region-complement b))))
+
+(defmethod region-contains-region-p
+    ((a standard-region-complement) (b standard-region-complement))
+  (or (eq a b)
+      (region-contains-region-p (region-complement b)
+                                (region-complement a))))
 
 (defmethod region-contains-region-p ((a standard-ellipse) (b standard-ellipse))
   (multiple-value-bind (bcx bcy) (ellipse-center-point* b)
@@ -122,6 +143,13 @@
 ;;; "generic" version
 (defmethod region-equal ((a bounding-rectangle) (b bounding-rectangle))
   (region-equal +nowhere+ (region-exclusive-or a b)))
+
+(defmethod region-equal ((a standard-region-complement) (b standard-region-complement))
+  (region-equal (region-complement a) (region-complement b)))
+
+(define-commutative-method region-equal
+    ((a bounding-rectangle) (b standard-region-complement))
+  nil)
 
 ;;; Dimensionality rule
 

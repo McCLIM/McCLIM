@@ -44,12 +44,6 @@
 (define-commutative-method region-union ((a standard-rectangle-set) (b polygon))
   (region-union (rectangle-set->polygon-union a) b))
 
-;;; STANDARD-REGION-INTERSECTION
-;;; STANDARD-REGION-DIFFERENCE
-(define-commutative-method region-union
-    ((a standard-region-difference) (b bounding-rectangle))
-  (make-instance 'standard-region-union :regions (list a b)))
-
 ;;; REGION-INTERSECTION
 
 ;;; STANDARD-REGION-UNION
@@ -109,11 +103,6 @@
                   (results intersection)))))
     (make-instance 'standard-region-intersection :regions (results))))
 
-;;; STANDARD-REGION-DIFFERENCE
-(define-commutative-method region-intersection
-    ((bbox bounding-rectangle) (rdif standard-region-difference))
-  (make-instance 'standard-region-intersection :regions (list bbox rdif)))
-
 ;;; REGION-DIFFERENCE
 
 ;;; STANDARD-REGION-UNION
@@ -171,12 +160,3 @@
        (setf res (region-union res (region-difference x b))))
      y)
     res))
-
-;;; STANDARD-REGION-DIFFERENCE
-(defmethod region-difference ((x bounding-rectangle) (y standard-region-difference))
-  (region-intersection x (region-complement y)))
-
-(defmethod region-difference ((x standard-region-difference) (y bounding-rectangle))
-  ;; (A\B)\C = A \ (B u C), but A = everywhere (because we've made it so).
-  (make-instance 'standard-region-difference
-                 :complement (region-union (region-complement x) y)))

@@ -92,10 +92,8 @@
   (def-method region-equal               t nil nil nil t   nil nil nil)
   (def-method region-union               a a   a   b   b   b   b   a)
   (def-method region-intersection        b b   b   a   a   a   a   b)
-  ;; We don't support unbounded regions which are not +EVERYWHERE+ or
-  ;; +NOWHERE+ (that would complicate the geometry module). -- jd 2019-09-10
   (def-method region-difference
-    +nowhere+ a (error "Unsupported unbounded region operation.")
+    +nowhere+ a (region-complement b)
     a a a
     +nowhere+ a))
 
@@ -217,7 +215,7 @@
        ;; Region complements are not bound and BOUNDING-RECTANGLE* would cause
        ;; a runtime error. Not accounting for it will make our result
        ;; mathematically imprecise, but not incorrect. -- 2022-01-13
-       (unless (typep r 'standard-region-difference)
+       (unless (typep r 'standard-region-complement)
          (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
            (setf bx1 (max (or bx1 x1) x1)
                  bx2 (min (or bx2 x2) x2)
@@ -233,27 +231,31 @@
 
 
 
-(defclass standard-region-difference (region-set)
+;;; Instances of the STANDARD-REGION-DIFFERENCE are never created and CLIM
+;;; doesn't provide a direct constructor. This class is mentioned only for
+;;; conformance. Region differences are implemented by other means.
+(defclass standard-region-difference (region-set) ())
+
+(defmethod region-complement ((region everywhere-mixin))
+  +nowhere+)
+
+(defmethod region-complement ((region nowhere-mixin))
+  +everywhere+)
+
+(defmethod region-complement ((region bounding-rectangle))
+  (make-instance 'standard-region-complement :complement region))
+
+(defclass standard-region-complement (region)
   ((complement :initarg :complement :reader region-complement)))
 
-(defmethod region-set-regions ((region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (list +everywhere+ (region-complement region)))
-
-(defmethod map-over-region-set-regions
-    (fun (region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (funcall fun +everywhere+)
-  (funcall fun (region-complement region)))
-
-(defmethod region-contains-position-p ((region standard-region-difference) x y)
+(defmethod region-contains-position-p ((region standard-region-complement) x y)
   (not (region-contains-position-p (region-complement region) x y)))
 
-(defmethod bounding-rectangle* ((region standard-region-difference))
+(defmethod bounding-rectangle* ((region standard-region-complement))
   (error "Unsupported unbounded region operation."))
 
-(defmethod transform-region (tr (region standard-region-difference))
-  (make-instance 'standard-region-difference
+(defmethod transform-region (tr (region standard-region-complement))
+  (make-instance 'standard-region-complement
                  :complement (transform-region tr (region-complement region))))
 
 

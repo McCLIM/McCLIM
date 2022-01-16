@@ -1887,6 +1887,8 @@
   (:nicknames :clime)
   (:export
    ;; regions
+   #:standard-region-complement
+   #:region-complement
    #:standard-polybezier
    #:standard-bezigon
    #:make-polybezier
