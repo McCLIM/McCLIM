@@ -194,14 +194,14 @@ y2."
                     (cond ((> (abs dx) (abs dy))
                            (let* ((sx1 (max (min x1 x2) (min u1 u2)))
                                   (sx2 (min (max x1 x2) (max u1 u2)))
-                                  (sy1 (+ (* (- sx1 x1) (/ dy dx)) x1))
-                                  (sy2 (+ (* (- sx2 x1) (/ dy dx)) x1)))
+                                  (sy1 (+ (* (- sx1 x1) (/ dy dx)) y1))
+                                  (sy2 (+ (* (- sx2 x1) (/ dy dx)) y1)))
                              (values :coincident sx1 sy1 sx2 sy2)))
                           (t
                            (let* ((sy1 (max (min y1 y2) (min v1 v2)))
                                   (sy2 (min (max y1 y2) (max v1 v2)))
-                                  (sx1 (+ (* (- sy1 y1) (/ dx dy)) y1))
-                                  (sx2 (+ (* (- sy2 y1) (/ dx dy)) y1)))
+                                  (sx1 (+ (* (- sy1 y1) (/ dx dy)) x1))
+                                  (sx2 (+ (* (- sy2 y1) (/ dx dy)) x1)))
                              (values :coincident sx1 sy1 sx2 sy2)))))
                    (t
                     ;;paralell -- kein Schnitt
