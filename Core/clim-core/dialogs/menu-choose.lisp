@@ -101,8 +101,7 @@
     (stream presentation-type items default-item
      &key item-printer
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
-     cell-align-x cell-align-y)
-  (declare (ignore default-item))
+     cell-align-x cell-align-y &aux presentations default-presentation)
   (orf item-printer #'print-menu-item)
   (format-items items
                 :stream stream
@@ -111,22 +110,26 @@
                   (ecase (menu-item-option item :type :item)
                     (:item
                      ;; This is a normal item, just output.
-                     (let ((activep (menu-item-option item :active t)))
-                       (with-presentation-type-decoded (name params options)
-                           presentation-type
-                         (let ((*allow-sensitive-inferiors* activep))
-                           (with-text-style
-                               (stream (menu-item-option
-                                        item :style
-                                        '(:sans-serif nil nil)))
-                             (with-output-as-presentation
-                                 (stream
-                                  item
-                                  `((,name ,@params)
-                                    :description ,(getf (menu-item-options item) :documentation)
-                                    ,@options)
-                                  :single-box t)
-                               (funcall item-printer item stream)))))))
+                     (push
+                      (let ((activep (menu-item-option item :active t)))
+                        (with-presentation-type-decoded (name params options)
+                            presentation-type
+                          (let ((*allow-sensitive-inferiors* activep))
+                            (with-text-style
+                                (stream (menu-item-option
+                                         item :style
+                                         '(:sans-serif nil nil)))
+                              (with-output-as-presentation
+                                  (stream
+                                   item
+                                   `((,name ,@params)
+                                     :description ,(getf (menu-item-options item) :documentation)
+                                     ,@options)
+                                   :single-box t)
+                                (funcall item-printer item stream))))))
+                      presentations)
+                     (when (eql default-item item)
+                       (setf default-presentation (first presentations))))
                     (:label
                      ;; This is a static label, it should not be
                      ;; mouse-sensitive, but not grayed out either.
@@ -149,7 +152,8 @@
                 :max-height max-height
                 :cell-align-x cell-align-x
                 :cell-align-y (or cell-align-y :top)
-                :row-wise row-wise))
+                :row-wise row-wise)
+  (values (nreverse presentations) default-presentation :kbd-nav))
 
 (defclass menu-pane (clim-stream-pane)
   ((menu-frame))
