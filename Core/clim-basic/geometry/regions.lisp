@@ -155,6 +155,13 @@
   (declare (ignorable normalize))
   (funcall fun region))
 
+(defmethod slots-for-pprint-object append ((object region-set))
+  '(regions))
+
+(defmethod print-object ((region region-set) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity t :type t))))
+
 
 
 (defclass standard-region-union (cached-bbox-mixin region-set)

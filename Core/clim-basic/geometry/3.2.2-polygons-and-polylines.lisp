@@ -31,7 +31,14 @@
 (defmethod slots-for-pprint-object append ((object standard-polyline))
   '(points closed))
 
+(defmethod slots-for-pprint-object append ((object standard-polygon))
+  '(points))
+
 (defmethod print-object ((region standard-polyline) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity t :type t))))
+
+(defmethod print-object ((region standard-polygon) sink)
   (maybe-print-readably (region sink)
     (print-unreadable-object (region sink :identity t :type t))))
 
