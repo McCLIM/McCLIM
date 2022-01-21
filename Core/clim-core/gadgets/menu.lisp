@@ -74,13 +74,13 @@
                             (map-leaf-buttons (rack child)))))))
     (map-leaf-buttons (frame-menu-bar-pane frame))))
 
-(define-gesture-name :menu-exit  :keyboard :escape)
-(define-gesture-name :menu-left  :keyboard :left)
-(define-gesture-name :menu-right :keyboard :right)
-(define-gesture-name :menu-up    :keyboard :up)
-(define-gesture-name :menu-down  :keyboard :down)
-(define-gesture-name :menu-enter :keyboard #\return)
-(define-gesture-name :menu-enter :keyboard #\space :unique nil)
+(define-gesture-name :menu-exit  :keyboard (:escape))
+(define-gesture-name :menu-left  :keyboard (:left))
+(define-gesture-name :menu-right :keyboard (:right))
+(define-gesture-name :menu-up    :keyboard (:up))
+(define-gesture-name :menu-down  :keyboard (:down))
+(define-gesture-name :menu-enter :keyboard (#\return))
+(define-gesture-name :menu-enter :keyboard (#\space) :unique nil)
 
 (defun start-menu-bar (menu-bar active-button
                        &aux (first-release t) (frame (pane-frame menu-bar)))
