@@ -74,13 +74,13 @@
                             (map-leaf-buttons (rack child)))))))
     (map-leaf-buttons (frame-menu-bar-pane frame))))
 
-(define-gesture-name :menu-exit  :keyboard :escape)
-(define-gesture-name :menu-left  :keyboard :left)
-(define-gesture-name :menu-right :keyboard :right)
-(define-gesture-name :menu-up    :keyboard :up)
-(define-gesture-name :menu-down  :keyboard :down)
-(define-gesture-name :menu-enter :keyboard #\return)
-(define-gesture-name :menu-enter :keyboard #\space :unique nil)
+(define-gesture-name :menu-exit  :keyboard (:escape))
+(define-gesture-name :menu-left  :keyboard (:left))
+(define-gesture-name :menu-right :keyboard (:right))
+(define-gesture-name :menu-up    :keyboard (:up))
+(define-gesture-name :menu-down  :keyboard (:down))
+(define-gesture-name :menu-enter :keyboard (#\return))
+(define-gesture-name :menu-enter :keyboard (#\space) :unique nil)
 
 (defun start-menu-bar (menu-bar active-button
                        &aux (first-release t) (frame (pane-frame menu-bar)))
@@ -171,28 +171,29 @@
                                    (when-let ((child (first (menu-children active-button))))
                                      (arm-gadget child)
                                      (setf active-button child))))))
-                       (gesture-case event
-                         (:menu-exit
-                          (return-from start-menu-bar))
-                         (:menu-enter
-                          (enter))
-                         (:menu-left
-                          ;; sheet parent is the layout
-                          (ecase (box-layout-orientation (sheet-parent active-button))
-                            (:horizontal (go-previous))
-                            (:vertical (go-parent))))
-                         (:menu-right
-                          (ecase (box-layout-orientation (sheet-parent active-button))
-                            (:horizontal (go-next))
-                            (:vertical (go-child))))
-                         (:menu-up
-                          (ecase (box-layout-orientation (sheet-parent active-button))
-                            (:horizontal (go-parent))
-                            (:vertical (go-previous))))
-                         (:menu-down
-                          (ecase (box-layout-orientation (sheet-parent active-button))
-                            (:horizontal (go-child))
-                            (:vertical (go-next))))))))
+                       (when (typep event 'key-press-event)
+                         (gesture-case event
+                           (:menu-exit
+                            (return-from start-menu-bar))
+                           (:menu-enter
+                            (enter))
+                           (:menu-left
+                            ;; sheet parent is the layout
+                            (ecase (box-layout-orientation (sheet-parent active-button))
+                              (:horizontal (go-previous))
+                              (:vertical (go-parent))))
+                           (:menu-right
+                            (ecase (box-layout-orientation (sheet-parent active-button))
+                              (:horizontal (go-next))
+                              (:vertical (go-child))))
+                           (:menu-up
+                            (ecase (box-layout-orientation (sheet-parent active-button))
+                              (:horizontal (go-parent))
+                              (:vertical (go-previous))))
+                           (:menu-down
+                            (ecase (box-layout-orientation (sheet-parent active-button))
+                              (:horizontal (go-child))
+                              (:vertical (go-next)))))))))
     (loop for child in (sheet-children menu-bar)
           do (disarm-gadget child))))
 
