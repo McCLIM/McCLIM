@@ -293,8 +293,7 @@
          (e3 (make-ellipse pc xdr1 ydr1 xdr2 ydr2)))
     (is (typep e1 'standard-ellipse))
     (is-true (ellipsep e1))
-    ;; this test fails
-    (fails (is (region-equal e1 e2)))
+    (is (region-equal e1 e2))
     (multiple-value-bind (x y) (ellipse-center-point* e1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))
@@ -393,7 +392,7 @@
          (ea3 (make-elliptical-arc pc xdr1 ydr1 xdr2 ydr2)))
     (is (typep ea1 'standard-elliptical-arc))
     (is-true (elliptical-arc-p ea1))
-    (fails (is (region-equal ea1 ea2)))
+    (is (region-equal ea1 ea2))
     (multiple-value-bind (x y) (ellipse-center-point* ea1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))

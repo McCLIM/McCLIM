@@ -104,7 +104,8 @@ interface management system."
                               :serial t
                               :components ((:file "transforms")
                                            (:file "regions")
-                                           (:file "bounding-rectangles")))
+                                           (:file "bounding-rectangles")
+                                           (:file "algebra")))
                              (:module "drawing"
                               :depends-on ("package")
                               :components ((:file "medium")
