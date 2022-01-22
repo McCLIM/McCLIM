@@ -17,16 +17,21 @@
 
 ;;; STANDARD-REGION-UNION
 (defmethod region-union ((a standard-region-union) (b standard-region-union))
-  (assert (not (eq b +nowhere+)))
-  (assert (not (eq a +nowhere+)))
-  (make-instance 'standard-region-union
-                 :regions (append (standard-region-set-regions a)
-                                  (standard-region-set-regions b))))
+  (reduce #'region-union (region-set-regions b) :initial-value a))
 
 (define-commutative-method region-union
     ((a standard-region-union) (b bounding-rectangle))
-  (make-instance 'standard-region-union
-                 :regions (cons b (standard-region-set-regions a))))
+  (let* ((mergedp nil)
+         (regions (loop
+                    for r in (region-set-regions a)
+                    collect (let ((region (region-union r b)))
+                              (if (typep region 'standard-region-union)
+                                  (setf region r)
+                                  (setf mergedp t))
+                              region))))
+    (unless mergedp
+      (push b regions))
+    (make-instance 'standard-region-union :regions regions)))
 
 ;;; STANDARD-RECTANGLE-SET
 (define-commutative-method region-union ((a standard-rectangle-set) (b path)) a)
@@ -51,7 +56,9 @@
     ((a standard-region-union) (b bounding-rectangle))
   (let ((res +nowhere+))
     (map-over-region-set-regions
-     (lambda (r) (setf res (region-union res (region-intersection r b)))) a)
+     (lambda (r)
+       (setf res (region-union res (region-intersection r b))))
+     a)
     res))
 
 ;;; STANDARD-RECTANGLE-SET
@@ -80,28 +87,27 @@
 ;;; standard-region-intersection
 (defmethod region-intersection
     ((a standard-region-intersection) (b standard-region-intersection))
-  (make-instance 'standard-region-intersection
-                 :regions (remove-duplicates
-                           (append (standard-region-set-regions a)
-                                   (standard-region-set-regions b))
-                           :test #'region-equal)))
+  (reduce #'region-intersection (region-set-regions b) :initial-value a))
 
 (define-commutative-method region-intersection
-    ((a bounding-rectangle) (b standard-region-intersection))
-  (collect (results)
-    (loop for region in (standard-region-set-regions b)
-          when (or (region-equal a +nowhere+)
-                   (region-equal a region))
-            do (return-from region-intersection a)
-          do (let ((intersection (region-intersection a region)))
-               (typecase intersection
-                 (nowhere-region
-                  (return-from region-intersection +nowhere+))
-                 (standard-region-intersection
-                  (results region))
-                 (otherwise
-                  (results intersection)))))
-    (make-instance 'standard-region-intersection :regions (results))))
+    ((a standard-region-intersection) (b bounding-rectangle))
+  (when (region-equal b +nowhere+)
+    (return-from region-intersection +nowhere+))
+  (let* ((mergedp nil)
+         (regions (loop
+                    for r in (standard-region-set-regions a)
+                    when (region-equal b r)
+                      do (return-from region-intersection b)
+                    collect (let ((region (region-intersection r a)))
+                              (when (region-equal region +nowhere+)
+                                (return-from region-intersection +nowhere+))
+                              (if (typep region 'standard-region-intersection)
+                                  (setf region r)
+                                  (setf mergedp t))
+                              region))))
+    (unless mergedp
+      (push b regions))
+    (make-instance 'standard-region-intersection :regions regions)))
 
 ;;; REGION-DIFFERENCE
 
