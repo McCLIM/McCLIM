@@ -10,7 +10,8 @@
     :components ((:file "cache")
                  (:file "updating-stream")
                  (:file "updating-record")
-                 (:file "redisplay")))
+                 (:file "redisplay")
+                 (:file "propagate")))
    (:module "presentations"
     :serial t
     :components ((:file "presentation-types")

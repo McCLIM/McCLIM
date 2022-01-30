@@ -9,8 +9,8 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; This file contains implementation of the redisplay including computation
-;;; of the difference set and the macro UPDATING-OUTPUT.
+;;; This file contains the implementation of the redisplay including
+;;; computation of the difference set and the macro UPDATING-OUTPUT.
 ;;;
 (in-package #:clim-internals)
 
@@ -417,33 +417,6 @@ in an equalp hash table")
                           (output-record-id-test r))))
    record
    t))
-
-(defmethod propagate-output-record-changes-p
-    (record child mode old-position old-bounding-rectangle)
-  (not (null record)))
-
-(defmethod propagate-output-record-changes
-    (record child mode &optional old-position old-bounding-rectangle
-                                 difference-set check-overlapping)
-  (declare (ignore record child mode old-position old-bounding-rectangle))
-  (values difference-set check-overlapping))
-
-(defmethod note-output-record-child-changed
-    (record child mode old-position old-bounding-rectangle stream
-     &key difference-set check-overlapping)
-  (if (propagate-output-record-changes-p
-       record child mode old-position old-bounding-rectangle)
-      (let ((old-bbox (copy-bounding-rectangle record)))
-        (multiple-value-bind (difference-set check-overlapping)
-            (propagate-output-record-changes
-             record child mode old-position old-bounding-rectangle
-             difference-set check-overlapping)
-          (note-output-record-child-changed
-           (output-record-parent record) record mode nil old-bbox stream
-           :difference-set difference-set
-           :check-overlapping check-overlapping)))
-      (destructuring-bind (erases moves draws erases* moves*) difference-set
-        (incremental-redisplay stream nil erases moves draws erases* moves*))))
 
 ;;; Support for explicitly changing output records.
 ;;; Example where the child of a :CLEAN output record may be moved:
