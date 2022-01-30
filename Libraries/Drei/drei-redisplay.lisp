@@ -1093,14 +1093,8 @@ calculated by `drei-bounding-rectangle*'."
 
 (defun display-drei-area (drei)
   (with-accessors ((stream editor-pane) (view view)) drei
-    (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) drei
-      (replay drei stream)
-      (with-bounding-rectangle* (new-x1 new-y1 new-x2 new-y2) drei
-        (unless (or (and (= new-x1 old-x1) (= new-y1 old-y2)
-                         (= new-x2 old-x2) (= new-y2 old-y2))
-                    (null (output-record-parent drei)))
-          (recompute-extent-for-changed-child (output-record-parent drei) drei
-                                              old-x1 old-y1 old-x2 old-y2))))
+    (climi::changing-output-record ((output-record-parent drei) drei :change)
+      (replay drei stream))
     (when (and (point-cursor drei) (active drei))
       (with-bounding-rectangle* (x1 y1 x2 y2) (point-cursor drei)
         (alexandria:when-let ((viewport (pane-viewport stream)))
