@@ -164,7 +164,7 @@
       ;;  Address: a string
       ;;  Number: a string
       ;; is produced, where each "a string" is sensitive and can be edited.
-      (accepting-values (stream)
+      (accepting-values (stream :resynchronize-every-pass t)
         (setq name (apply #'accept 'string :stream stream :prompt
                           "Name" (and name (list :default name))))
         (terpri stream)
