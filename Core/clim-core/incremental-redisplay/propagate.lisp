@@ -16,12 +16,26 @@
 
 (defmethod propagate-output-record-changes-p
     (record child mode old-position old-bounding-rectangle)
-  (not (null record)))
+  (declare (ignore old-position))
+  (and record
+       (or (null old-bounding-rectangle)
+           (not (region-equal child old-bounding-rectangle)))))
 
 (defmethod propagate-output-record-changes
     (record child mode &optional old-position old-bounding-rectangle
                                  difference-set check-overlapping)
-  (declare (ignore record child mode old-position old-bounding-rectangle))
+  (declare (ignore old-position))
+  (ecase mode
+    (:none
+     nil)
+    (:add
+     (recompute-extent-for-new-child record child))
+    (:delete
+     (with-bounding-rectangle* (x1 y1 x2 y2) child
+       (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
+    ((:change :move :clear)
+     (with-bounding-rectangle* (x1 y1 x2 y2) old-bounding-rectangle
+       (recompute-extent-for-changed-child record child x1 y1 x2 y2))))
   (values difference-set check-overlapping))
 
 (defmethod note-output-record-child-changed
@@ -35,7 +49,7 @@
              record child mode old-position old-bounding-rectangle
              difference-set check-overlapping)
           (note-output-record-child-changed
-           (output-record-parent record) record mode nil old-bbox stream
+           (output-record-parent record) record :change nil old-bbox stream
            :difference-set difference-set
            :check-overlapping check-overlapping)))
       (destructuring-bind (erases moves draws erases* moves*) difference-set
