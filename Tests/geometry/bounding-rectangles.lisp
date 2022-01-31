@@ -24,6 +24,17 @@
     (is (= x2 rx2))
     (is (= y2 ry2))))
 
+;;; This test is a variation of the above where we ensure that the bounding
+;;; rectangle is at least big enough to contain the region. It is used for
+;;; mathematically imprecise results.
+(defun has-valid-bounding-rectangle* (region x1 y1 x2 y2)
+  (is (bounding-rectangle-p (bounding-rectangle region)))
+  (with-bounding-rectangle* (rx1 ry1 rx2 ry2) region
+    (is (>= x1 rx1))
+    (is (>= y1 ry1))
+    (is (<= x2 rx2))
+    (is (<= y2 ry2))))
+
 (test bounding-rectangle.point
   (let ((point (make-point 0 0)))
     (has-valid-bounding-rectangle point 0 0 0 0)))
@@ -61,3 +72,22 @@
                                  :end-angle (/ pi 2))))
     (has-valid-bounding-rectangle ellipse1 -10 -15 10 15)
     (has-valid-bounding-rectangle ellipse2 0 -15 10 0)))
+
+(test bounding-rectangle.region-sets
+  ;; For region set tests we take a set of an ellipse and a polygon. Such sets
+  ;; are never canonicalised to a non-set region. The polygon is a square with
+  ;; the edge length the same as the ellipse and rotated under (/ pi 4). This
+  ;; test case is constructed to make evident some issues with how we compute
+  ;; the bounding rectangle for the standard sets intersection and difference.
+  (let* ((region1 (make-ellipse* 0 0 50 0 0 50))
+         (region2 (make-polygon* '(0 0 50 50 100 0 50 -50)))
+         (intersection (region-intersection region1 region2))
+         (difference (region-difference region1 region2))
+         (union (region-union region1 region2))
+         (ray-to-xy (/ 50 (sqrt 2))))
+    (flet ((test-imprecise (region x1 y1 x2 y2)
+             (fails (has-valid-bounding-rectangle region x1 y1 x2 y2))
+             (has-valid-bounding-rectangle* region x1 y1 x2 y2)))
+      (test-imprecise intersection 0 (- ray-to-xy) 50 ray-to-xy)
+      (test-imprecise difference -50 -50 ray-to-xy 50)
+      (has-valid-bounding-rectangle union -50 -50 100 50))))

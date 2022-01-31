@@ -150,6 +150,22 @@
     (is-false (region-contains-position-p ru 1/2 3/2))
     (is-false (region-contains-position-p ru 5/2 -1/2))))
 
+(test regions.region-difference/regression-1
+  (finishes
+    ;; This computation may cause infinite recursion.
+    (region-difference
+     (make-rectangle* 0 0 10 10)
+     (region-union (make-ellipse* 5 10 3 0 0 3)
+                   (make-ellipse* 5 5 3 0 0 3)))))
+
+(test regions.region-difference/regression-2
+  (let* ((coords '(31.0 65.0 94.0 39.0 20.0 47.0 29.0 86.0))
+         (polygon-1 (make-polygon* coords))
+         (polygon-2 (make-polygon* (mapcar 'rationalize coords))))
+    ;; As constructors suggest, this fails due to the fp arithmetic.
+    (is (region-equal +nowhere+ (region-difference polygon-1 polygon-1)))
+    (is (region-equal +nowhere+ (region-difference polygon-2 polygon-2)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; polyline
@@ -197,7 +213,9 @@
   (is (subtypep 'standard-polygon 'polygon))
 
   (let* ((x1 10) (y1 22) (x2 30) (y2 30) (x3 50) (y3 5)
-         (p1 (make-point x1 y1)) (p2 (make-point x2 y2)) (p3 (make-point x3 y3))
+         (p1 (make-point x1 y1))
+         (p2 (make-point x2 y2))
+         (p3 (make-point x3 y3))
          (pg1 (make-polygon (list p1 p2 p3)))
          (pg2 (make-polygon* (list x1 y1 x2 y2 x3 y3)))
          (points '()))
@@ -275,8 +293,7 @@
          (e3 (make-ellipse pc xdr1 ydr1 xdr2 ydr2)))
     (is (typep e1 'standard-ellipse))
     (is-true (ellipsep e1))
-    ;; this test fails
-    (fails (is (region-equal e1 e2)))
+    (is (region-equal e1 e2))
     (multiple-value-bind (x y) (ellipse-center-point* e1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))
@@ -375,7 +392,7 @@
          (ea3 (make-elliptical-arc pc xdr1 ydr1 xdr2 ydr2)))
     (is (typep ea1 'standard-elliptical-arc))
     (is-true (elliptical-arc-p ea1))
-    (fails (is (region-equal ea1 ea2)))
+    (is (region-equal ea1 ea2))
     (multiple-value-bind (x y) (ellipse-center-point* ea1)
       (is (= (coordinate xc) x))
       (is (= (coordinate yc) y))

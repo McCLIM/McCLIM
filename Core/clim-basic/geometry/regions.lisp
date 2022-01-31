@@ -40,11 +40,6 @@
 ;;; - while you are are at it; provide a reasonable fast vertical scan
 ;;;   routine.  polygons should make use of the sweep line algorithm.
 ;;;
-;;; - MAKE-POLY{LINE,GON} should canonise its arguments; no edges of
-;;;   length 0 and no co-linear vertexes. Maybe: canonise rectangles?
-;;;   Also a polygon of less than three vertexes is to be considered
-;;;   empty aka +nowhere+.
-;;;
 
 (in-package #:clim-internals)
 
@@ -74,8 +69,8 @@
 ;;; regions. For instance the following would supersede
 ;;; implementation for an unbounded region:
 ;;;
-;;;    (defmethod region-difference ((a rectangle) (b region))
-;;;      (make-instance 'standard-region-difference a b))
+;;;    (defmethod region-intersection ((a rectangle) (b region))
+;;;      (make-instance 'standard-region-intersection a b))
 ;;;
 (macrolet
     ((def-method (name e-vs-e e-vs-n e-vs-r
@@ -97,13 +92,8 @@
   (def-method region-equal               t nil nil nil t   nil nil nil)
   (def-method region-union               a a   a   b   b   b   b   a)
   (def-method region-intersection        b b   b   a   a   a   a   b)
-  ;; We don't support unbounded regions which are not +everywhere+ or
-  ;; +nowhere+ (that would complicate the geometry module). If we
-  ;; decide otherwise don't use standard-region-difference because it
-  ;; is a subclass of a bounded-rectangle so it can't represent
-  ;; unbounded region.  -- jd 2019-09-10
   (def-method region-difference
-    +nowhere+ a (error "Unsupported unbounded region operation.")
+    +nowhere+ a (region-complement b)
     a a a
     +nowhere+ a))
 
@@ -165,6 +155,13 @@
   (declare (ignorable normalize))
   (funcall fun region))
 
+(defmethod slots-for-pprint-object append ((object region-set))
+  '(regions))
+
+(defmethod print-object ((region region-set) sink)
+  (maybe-print-readably (region sink)
+    (print-unreadable-object (region sink :identity t :type t))))
+
 
 
 (defclass standard-region-union (cached-bbox-mixin region-set)
@@ -219,15 +216,18 @@
          (standard-region-set-regions region)))
 
 (defmethod bounding-rectangle* ((region standard-region-intersection))
-  ;; kill+yank alert
   (let (bx1 by1 bx2 by2)
     (map-over-region-set-regions
      (lambda (r)
-       (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
-         (setf bx1 (min (or bx1 x1) x1)
-               bx2 (max (or bx2 x2) x2)
-               by1 (min (or by1 y1) y1)
-               by2 (max (or by2 y2) y2))))
+       ;; Region complements are not bound and BOUNDING-RECTANGLE* would cause
+       ;; a runtime error. Not accounting for it will make our result
+       ;; mathematically imprecise, but not incorrect. -- 2022-01-13
+       (unless (typep r 'standard-region-complement)
+         (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* r)
+           (setf bx1 (max (or bx1 x1) x1)
+                 bx2 (min (or bx2 x2) x2)
+                 by1 (max (or by1 y1) y1)
+                 by2 (min (or by2 y2) y2)))))
      region)
     (values bx1 by1 bx2 by2)))
 
@@ -238,41 +238,32 @@
 
 
 
-(defclass standard-region-difference (cached-bbox-mixin region-set)
-  ((a :initarg :a :reader standard-region-difference-a)
-   (b :initarg :b :reader standard-region-difference-b)))
+;;; Instances of the STANDARD-REGION-DIFFERENCE are never created and CLIM
+;;; doesn't provide a direct constructor. This class is mentioned only for
+;;; conformance. Region differences are implemented by other means.
+(defclass standard-region-difference (region-set) ())
 
-(defmethod region-set-regions ((region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (list (standard-region-difference-a region)
-        (standard-region-difference-b region)))
+(defmethod region-complement ((region everywhere-mixin))
+  +nowhere+)
 
-(defmethod map-over-region-set-regions
-    (fun (region standard-region-difference) &key normalize)
-  (declare (ignorable normalize))
-  (funcall fun (standard-region-difference-a region))
-  (funcall fun (standard-region-difference-b region)))
+(defmethod region-complement ((region nowhere-mixin))
+  +everywhere+)
 
-(defmethod region-contains-position-p ((region standard-region-difference) x y)
-  (let ((region-a (standard-region-difference-a region))
-        (region-b (standard-region-difference-b region)))
-    (and (region-contains-position-p region-a x y)
-         (not (region-contains-position-p region-b x y)))))
+(defmethod region-complement ((region bounding-rectangle))
+  (make-instance 'standard-region-complement :complement region))
 
-(defmethod bounding-rectangle* ((region standard-region-difference))
-  (with-slots (a b) region
-    (cond ((eq a +everywhere+)
-           (bounding-rectangle* b))
-          (t
-           (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* a)
-             (multiple-value-bind (u1 v1 u2 v2) (bounding-rectangle* b)
-               (values (min x1 u1) (min y1 v1)
-                       (max x2 u2) (min y2 v2))))))))
+(defclass standard-region-complement (region)
+  ((complement :initarg :complement :reader region-complement)))
 
-(defmethod transform-region (tr (region standard-region-difference))
-  (with-slots (a b) region
-    (make-instance 'standard-region-difference :a (transform-region tr a)
-                                               :b (transform-region tr b))))
+(defmethod region-contains-position-p ((region standard-region-complement) x y)
+  (not (region-contains-position-p (region-complement region) x y)))
+
+(defmethod bounding-rectangle* ((region standard-region-complement))
+  (error "Unsupported unbounded region operation."))
+
+(defmethod transform-region (tr (region standard-region-complement))
+  (make-instance 'standard-region-complement
+                 :complement (transform-region tr (region-complement region))))
 
 
 

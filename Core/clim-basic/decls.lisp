@@ -129,6 +129,12 @@
 (defgeneric ellipse-start-angle (elliptical-object))
 (defgeneric ellipse-end-angle (elliptical-object))
 
+;;; 3.2.6.1 The Bezigon and Bezier Curve Protocol (McCLIM extension)
+
+(defgeneric bezigon-points (object))
+(defgeneric bezigon-order (object))
+(defgeneric map-over-bezigon-segments (function object))
+
 
 ;;; 4.1.1 The Bounding Rectangle Protocol
 

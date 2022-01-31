@@ -176,17 +176,14 @@
                 (%draw-lines (region-intersection
                               clipping-region
                               (make-line* x1 y (+ x1 width) y)))))))
-    (clim:standard-region-difference
-     (let ((region-a (climi::standard-region-difference-a clipping-region))
-           (region-b (climi::standard-region-difference-b clipping-region)))
-       (multiple-value-bind (x1* y1* width* height*)
-           (region->clipping-values region-a)
-         (%clip-region-pixmap medium mask mask-gc region-a x1* y1* width* height*))
+    (clime:standard-region-complement
+     (let ((complement (clime:region-complement clipping-region)))
+       (xlib:draw-rectangle mask mask-gc x1 y1 width height t)
        (rotatef (xlib:gcontext-foreground mask-gc)
                 (xlib:gcontext-background mask-gc))
        (multiple-value-bind (x1* y1* width* height*)
-           (region->clipping-values region-b)
-         (%clip-region-pixmap medium mask mask-gc region-b x1* y1* width* height*))
+           (region->clipping-values complement)
+         (%clip-region-pixmap medium mask mask-gc complement x1* y1* width* height*))
        (rotatef (xlib:gcontext-foreground mask-gc)
                 (xlib:gcontext-background mask-gc))))
     (clim:standard-region-union

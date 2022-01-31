@@ -1886,6 +1886,18 @@
   (:use)
   (:nicknames :clime)
   (:export
+   ;; regions
+   #:standard-region-complement
+   #:region-complement
+   #:standard-polybezier
+   #:standard-bezigon
+   #:make-polybezier
+   #:make-polybezier*
+   #:make-bezigon
+   #:make-bezigon*
+   #:bezigon-points
+   #:bezigon-order
+   #:map-over-bezigon-segments
    ;; events
    #:event-read-with-timeout
    #:event-listen-or-wait

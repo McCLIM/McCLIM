@@ -68,11 +68,13 @@
 (define-protocol-class area (region bounding-rectangle))
 (define-protocol-class region-set (region bounding-rectangle))
 
-(define-protocol-class polyline (path))
+(define-protocol-class polybezier (path) ()) ; McCLIM extension
+(define-protocol-class polyline (polybezier))
 (define-protocol-class line (polyline))
 (define-protocol-class elliptical-arc (path))
 
-(define-protocol-class polygon (area))
+(define-protocol-class bezigon (area) ()) ; McCLIM extension
+(define-protocol-class polygon (bezigon))
 (define-protocol-class rectangle (polygon))
 (define-protocol-class ellipse (area))
 
