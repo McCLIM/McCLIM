@@ -9,8 +9,8 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; This file contains implementation of the redisplay including computation
-;;; of the difference set and the macro UPDATING-OUTPUT.
+;;; This file contains the implementation of the redisplay including
+;;; computation of the difference set and the macro UPDATING-OUTPUT.
 ;;;
 (in-package #:clim-internals)
 
@@ -157,9 +157,7 @@ in an equalp hash table")
       (hash-coords x1 y1 x2 y2))))
 
 (defmethod compute-difference-set ((record standard-updating-output-record)
-                                   &optional (check-overlapping t)
-                                     offset-x offset-y old-offset-x old-offset-y)
-  (declare (ignore offset-x offset-y old-offset-x old-offset-y))
+                                   &optional (check-overlapping t))
   (let ((old-table (make-hash-table :test #'equalp))
         (new-table (make-hash-table :test #'equalp))
         (all-table (make-hash-table)))
@@ -223,8 +221,8 @@ in an equalp hash table")
                                     (moves entry)))))))))
           (maphash #'add-record all-table))
         (if (null check-overlapping)
-            (values (erases) (moves) (draws)      nil     nil)
-            (values      nil     nil (draws) (erases) (moves)))))))
+            (list (erases) (moves) (draws)      nil    nil)
+            (list      nil     nil (draws) (erases) (moves)))))))
 
 (defvar *no-unique-id* (cons nil nil))
 
@@ -387,13 +385,11 @@ in an equalp hash table")
            (set-medium-cursor-position (start-graphics-state record) stream)
            (with-stream-redisplaying (stream)
              (compute-new-output-records record stream))
-           (multiple-value-bind
-                 (erases moves draws erase-overlapping move-overlapping)
-               (compute-difference-set record check-overlapping)
+           (let ((difference-set (compute-difference-set record check-overlapping)))
              (note-output-record-child-changed
               (output-record-parent record) record :change
               nil (old-bounds record) stream
-              erases moves draws erase-overlapping move-overlapping
+              :difference-set difference-set
               :check-overlapping check-overlapping))
            (delete-stale-updating-output record))
       (set-medium-cursor-position current-graphics-state stream))))
@@ -421,38 +417,6 @@ in an equalp hash table")
                           (output-record-id-test r))))
    record
    t))
-
-(defmethod propagate-output-record-changes-p
-    (record child mode old-position old-bounding-rectangle)
-  (not (null record)))
-
-(defmethod propagate-output-record-changes
-    (record child mode
-     &optional old-position old-bounding-rectangle erases moves draws
-       erase-overlapping move-overlapping check-overlapping)
-  (declare (ignore record child mode old-position old-bounding-rectangle))
-  (values erases moves draws erase-overlapping move-overlapping
-          check-overlapping))
-
-(defmethod note-output-record-child-changed
-    (record child mode old-position old-bounding-rectangle stream
-     &optional erases moves draws erase-overlapping move-overlapping
-     &key check-overlapping)
-  (if (propagate-output-record-changes-p
-       record child mode old-position old-bounding-rectangle)
-      (let ((old-bbox (copy-bounding-rectangle record)))
-        (multiple-value-bind (erases moves draws erase-overlapping move-overlapping
-                              check-overlapping)
-            (propagate-output-record-changes
-             record child mode old-position old-bounding-rectangle
-             erases moves draws erase-overlapping move-overlapping
-             check-overlapping)
-          (note-output-record-child-changed
-           (output-record-parent record) record mode nil old-bbox stream
-           erases moves draws erase-overlapping move-overlapping
-           :check-overlapping check-overlapping)))
-      (incremental-redisplay stream nil erases moves draws
-                             erase-overlapping move-overlapping)))
 
 ;;; Support for explicitly changing output records.
 ;;; Example where the child of a :CLEAN output record may be moved:
