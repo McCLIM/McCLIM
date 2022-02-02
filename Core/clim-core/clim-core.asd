@@ -67,8 +67,8 @@
                  (:file "menu")))
    (:module "dialogs"
     :depends-on ("panes" "frames" "input-editing" "commands" "presentations" "incremental-redisplay" "formatting" "standard-presentations" "gadgets")
-    :components ((:file "dialog")
-                 (:file "dialog-views" :depends-on ("dialog"))
+    :components ((:file "new-dialog")
+                 ;(:file "dialog-views" :depends-on ("dialog"))
                  (:file "notify-user")
                  (:file "menu-choose")))
    (:file "builtin-commands" :depends-on ("formatting" "commands" "presentations" "standard-presentations" "input-editing"))))
