@@ -43,13 +43,24 @@
 
 (defvar *accepting-values-stream* nil)
 
+;;; FIXME shouldn't we redisplay the parent output record?
 (define-accept-values-command (com-edit-query :keystroke :return)
     ()
   (when-let* ((av *accepting-values-stream*)
               (query (selected-query av)))
     (let ((stream (encapsulating-stream-stream av)))
       (letf (((accepting-query av) query))
-        (redisplay-output-record (query-record query) stream)))))
+        (redisplay-output-record (query-record query) stream)
+        (handler-case
+            (progn
+              (accept (query-ptype query) :stream (accepting-query av) :prompt nil)
+              (setf (query-invalid-p query) nil))
+          (error (c)
+            (format *debug-io* "error is ~a~%" c)
+            (setf (query-invalid-p query) c)))
+        (format *debug-io* "~s" (coerce (stream-input-buffer (accepting-query av))
+                                         'string)))
+      (redisplay-output-record (query-record query) stream))))
 
 (define-accept-values-command (com-select-query)
     ((arg 'accepting-values-query :gesture :select))
@@ -150,7 +161,8 @@
            (real-stream (encapsulating-stream-stream stream)))
       (setf (query-record query)
             (updating-output (real-stream :unique-id query-identifier
-                                          :cache-value selected)
+                                          :cache-value selectedp ;foo
+                                          :cache-test #'eql)
               (format stream "[~s] " (counter query))
               (let ((accepting (accepting-query stream)))
                 (with-output-as-presentation
@@ -161,10 +173,13 @@
                                                 :text-face (if selectedp
                                                                :bold
                                                                :roman))
-                    (format *debug-io* "args are ~s~%" args)
                     (apply #'prompt-for-accept stream ptype view :display-default nil args)
                     (if accepting
-                        (princ "..." stream)
+                        (setf (accepting-query stream)
+                              (make-instance 'standard-input-editing-stream
+                                             :stream real-stream
+                                             :single-line t))
+                        ;; (princ "..." stream)
                         (accept-present-default* ptype stream view
                                                  (query-current-value query)
                                                  (query-current-ptype query) ;not null
