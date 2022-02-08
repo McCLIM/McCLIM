@@ -1,0 +1,104 @@
+#+title: Accepting Values
+#+author: Daniel Kochmański
+
+* Overview
+
+  The macro ~accepting-values~ is a macro for prompting data from the user in
+  a single dialog interface. Inside its body it intercepts calls to the
+  function ~accept~ and builds an interactive form for the user. For example
+  it may be invoked like this:
+
+  #+begin_src common-lisp
+    (accepting-values (stream)
+      (values (accept 'string  :prompt "Who are you?"     :query-identifier 'name)
+              (accept 'integer :prompt "How old are you?" :query-identifier 'age)))
+  #+end_src
+
+  Calls to ~accept~ are intercepted to call ~accept-present-default~ instead,
+  thanks to that invocation is not blocking and a full dialog may be created.
+  The body may be executed multiple times to update values and changed value
+  may impact other values. ~accept~ in body returns three values (instead of
+  two) and the third value is a boolean ~changedp~ telling whether the value
+  has been edited. For example:
+
+  #+begin_src common-lisp
+    (accepting-values (stream)
+      (multiple-value-bind (value ptype changedp)
+          (if (accept 'boolean :prompt "Are you a robot?")
+              (accept 'string :prompt "Please insert your ID code")
+              (accept 'string :prompt "Please tell me your name"))
+        (if changedp
+            (format stream "The last edit updated the value!~%")
+            (format stream "The last edit didn't update the value!~%"))
+        value))
+  #+end_src
+
+  Sometimes earlier forms are expected to depend on values accepted later in
+  the body. The option ~resynchronize-every-pass~ causes the body to be
+  executed twice when the value changes - first to propagate values in the
+  body and then to estabilish a "stable" body.
+
+  This means that in the example above the user will never see the message
+  ~The last edit updated the value!~ because when the value changes and the
+  body is executed (printing this message), the body is executed once more and
+  now ~changedp~ will be ~nil~ and ~The last edit didn't update the value!~
+  will be printed.
+
+  Each query must have unique identifier that may be explicilty passed as the
+  ~:query-identifier~ (it defaults to a value of the prompt). Identifiers must
+  be unique ~equal~-wise. Duplicated queries yield an undefined behavior.
+
+* Implementation
+
+  McCLIM defines an encapsulating stream ~accepting-values-stream~ and adds a
+  specialization for the generic function ~stream-accept~ to intercept calls
+  to ~accept~. The specialized method:
+
+  - ensures a query record with a key ~query-identifier~
+  - invokes the function ~prompt-for-accept~ to show the prompt
+  - invokes the function ~accept-present-default~ to show the value
+
+  When the query record is selected it is updated:
+
+  - invokes the function ~prompt-for-accept~ to show the /active/ prompt
+  - invokes the function ~accept-1~ to start the editing context (blocking)
+    
+  After ~accept-1~ returns (either due to the abort gesture, or the activation
+  gesture, or the query is deselected for other reason) it is important to see
+  whether returned values conform to the presentation type.
+
+  
+
+  - issue :: what to do when the value and its ptype doesn't conform?
+
+    | value           | ptype           | changedp  |
+    |-----------------+-----------------+-----------|
+    | /last-value/    | /last-ptype/    | nil       |
+    | /default-value/ | /default-ptype/ | /depends/ |
+    | /last-value/    | nil             | nil       |
+    | nil             | nil             | /depends/ |
+
+    First two options are fine for appropriately abort and reset gestures but
+    they are not suitable for invalid the input - the user will get confused
+    that what they have typed has been removed.
+
+    We may expect from the programmer to handle this manally by estabilishing
+    handler case for ~simple-parse-error~ or ~input-not-of-required-type~ or
+    indicate the invalid input (i.e with a red color) and return something.
+    Since accept forms may depend on each other then returning the last value
+    makes sense, because invalid input doesn't impact the rest of the form.
+
+    Because we validate the input the ~last-value~ (like the ~default-value~)
+    is guaranteed to be of the expected presentation type. Programmer may
+    still learn that the input was invalid by probing the presentation type
+    from accept (~nil~ is an universal subtype), but no action is requried.
+
+    When there is no default value then we still need to return anything.
+    Since it is the programmer who decided to not supply the default value
+    then they are responsible for handling ~nil~ when it is returned by
+    ~accept~ (on initial pass and after resetting the field). To indicate that
+    there is no default value the ptype is also ~nil~.
+
+* Extending ACCEPTING-VALUES
+
+  
