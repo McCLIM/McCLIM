@@ -2165,4 +2165,4 @@
   (:intern #:letf))
 
 (defpackage :clim-user
-  (:use :clim :clim-lisp))
+  (:use :clim :clime :clim-lisp))
