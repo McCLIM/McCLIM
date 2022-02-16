@@ -219,20 +219,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 ;;;; Implementation
 
-(defmacro changing-output-record
-    ((parent record mode &key difference-set check-overlapping) &body body)
-  (check-type mode (member :none :add :delete :change :move :clear))
-  (once-only (parent record)
-    (with-gensyms (old-bbox)
-      `(let ((,old-bbox ,(case mode
-                           (:add nil)
-                           ((:none :delete) record)
-                           (otherwise `(copy-bounding-rectangle ,record)))))
-         (multiple-value-prog1 (progn ,@body)
-           (when (propagate-output-record-changes-p ,parent ,record ,mode nil ,old-bbox)
-             (propagate-output-record-changes ,parent ,record ,mode nil ,old-bbox
-                                              ,difference-set ,check-overlapping)))))))
-
 (defclass basic-output-record (standard-bounding-rectangle output-record)
   ((parent :initform nil
            :accessor output-record-parent)) ; XXX
@@ -275,15 +261,16 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
             (values nx ny (+ x2 dx) (+ y2 dy)))))
   (values nx ny))
 
-(defmethod propagate-output-record-changes-p
-    ((record compound-output-record) child (mode (eql :move)) old-pos old-box)
-  (and (not (slot-value record 'in-moving-p))
-       (call-next-method)))
-
 (defmethod* (setf output-record-position) :around
-  (nx ny (record basic-output-record))
-  (changing-output-record ((output-record-parent record) record :move)
-    (call-next-method)))
+            (nx ny (record basic-output-record))
+  (with-bounding-rectangle* (min-x min-y max-x max-y) record
+    (call-next-method)
+    (when-let ((parent (output-record-parent record)))
+      (unless (and (typep parent 'compound-output-record)
+                   (slot-value parent 'in-moving-p)) ; XXX
+        (recompute-extent-for-changed-child parent record
+                                            min-x min-y max-x max-y)))
+    (values nx ny)))
 
 (defmethod* (setf output-record-position)
   :before (nx ny (record compound-output-record))
@@ -440,7 +427,7 @@ the associated sheet can be determined."
                   child record)))))
 
 (defmethod add-output-record :after (child (record compound-output-record))
-  (changing-output-record (record child :add))
+  (recompute-extent-for-new-child record child)
   (when (eq record (output-record-parent child))
     (when-let ((sheet (find-output-record-sheet record)))
       (note-output-record-got-sheet child sheet))))
@@ -459,7 +446,8 @@ the associated sheet can be determined."
 (defmethod delete-output-record :after (child (record compound-output-record)
                                         &optional (errorp t))
   (declare (ignore errorp))
-  (changing-output-record (record child :delete)))
+  (with-bounding-rectangle* (x1 y1 x2 y2) child
+    (recompute-extent-for-changed-child record child x1 y1 x2 y2)))
 
 (defmethod clear-output-record ((record basic-output-record))
   (error "Cannot clear ~S." record))
@@ -469,9 +457,11 @@ the associated sheet can be determined."
     (map-over-output-records #'note-output-record-lost-sheet record 0 0 sheet)))
 
 (defmethod clear-output-record :around ((record compound-output-record))
-  (changing-output-record ((output-record-parent record) record :clear)
+  (multiple-value-bind (x1 y1 x2 y2) (bounding-rectangle* record)
     (call-next-method)
-    (assert (null-bounding-rectangle-p record))))
+    (assert (null-bounding-rectangle-p record))
+    (when-let ((parent (output-record-parent record)))
+      (recompute-extent-for-changed-child parent record x1 y1 x2 y2))))
 
 (defmethod clear-output-record :after ((record compound-output-record))
   (with-slots (x y) record
@@ -556,17 +546,20 @@ the associated sheet can be determined."
 (defmethod recompute-extent-for-new-child
     ((record compound-output-record) child)
   (unless (null-bounding-rectangle-p child)
-    (changing-output-record ((output-record-parent record) record :change)
+    (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
       (cond
         ((null-bounding-rectangle-p record)
          (setf (rectangle-edges* record) (bounding-rectangle* child)))
         ((not (null-bounding-rectangle-p child))
          (assert (not (null-bounding-rectangle-p record))) ; important.
-         (with-bounding-rectangle* (x1 y1 x2 y2) record
-           (with-bounding-rectangle* (x1* y1* x2* y2*) child
-             (setf (rectangle-edges* record)
-                   (values (min x1 x1*) (min y1 y1*)
-                           (max x2 x2*) (max y2 y2*)))))))))
+         (with-bounding-rectangle* (x1-child y1-child x2-child y2-child)
+             child
+           (setf (rectangle-edges* record)
+                 (values (min old-x1 x1-child) (min old-y1 y1-child)
+                         (max old-x2 x2-child) (max old-y2 y2-child))))))
+      (when-let ((parent (output-record-parent record)))
+        (recompute-extent-for-changed-child
+         parent record old-x1 old-y1 old-x2 old-y2))))
   record)
 
 (defun %tree-recompute-extent* (record)
@@ -643,10 +636,14 @@ the associated sheet can be determined."
             ;; to the bounding rectangle calculation.
             (t
              (%tree-recompute-extent* record)))
-        (changing-output-record ((output-record-parent record) record :change)
-          (with-slots (x y) record
-            (setf x nx1 y ny1)
-            (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2)))))))
+        (with-slots (x y) record
+          (setf x nx1 y ny1)
+          (setf (rectangle-edges* record) (values nx1 ny1 nx2 ny2))
+          (when-let ((parent (output-record-parent record)))
+            (unless (and (= nx1 ox1) (= ny1 oy1)
+                         (= nx2 ox2) (= ny2 oy2))
+              (recompute-extent-for-changed-child parent record
+                                                  ox1 oy1 ox2 oy2)))))))
   record)
 
 (defun tree-recompute-extent-aux (record &aux new-x1 new-y1 new-x2 new-y2 changedp)
@@ -676,8 +673,15 @@ the associated sheet can be determined."
   record)
 
 (defmethod tree-recompute-extent :around ((record compound-output-record))
-  (changing-output-record ((output-record-parent record) record :change)
-    (call-next-method))
+  (with-bounding-rectangle* (old-x1 old-y1 old-x2 old-y2) record
+    (call-next-method)
+    (with-bounding-rectangle* (x1 y1 x2 y2) record
+      (when-let ((parent (output-record-parent record)))
+        (unless (and (= old-x1 x1) (= old-y1 y1)
+                     (= old-x2 x2) (= old-y2 y2))
+          (recompute-extent-for-changed-child parent record
+                                              old-x1 old-y1
+                                              old-x2 old-y2)))))
   record)
 
 ;;; 16.3.1. Standard output record classes

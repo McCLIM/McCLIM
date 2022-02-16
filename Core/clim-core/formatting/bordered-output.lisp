@@ -113,9 +113,13 @@
 (defmethod recompute-extent-for-changed-child
     ((record bordered-output-record) child x1 y1 x2 y2)
   (declare (ignore x1 y1 x2 y2))
-  (changing-output-record ((output-record-parent record) record :change)
+  (with-bounding-rectangle* (ox1 oy1 ox2 oy2) record
     (clear-output-record record)
-    (%prepare-bordered-output-record record)))
+    (%prepare-bordered-output-record record)
+    (when-let ((parent (output-record-parent record)))
+      (with-bounding-rectangle* (nx1 ny1 nx2 ny2) record
+        (when (or (/= ox1 nx1) (/= oy1 ny1) (/= ox2 nx2) (/= oy2 ny2))
+          (recompute-extent-for-changed-child parent record ox1 oy1 ox2 oy2))))))
 
 (defun %prepare-bordered-output-record (border)
   (with-slots (under record over stream shape drawing-options) border
