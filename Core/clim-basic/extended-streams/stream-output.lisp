@@ -178,8 +178,6 @@
 (defmethod initialize-instance :after
     ((stream standard-extended-output-stream) &rest initargs)
   (declare (ignore initargs))
-  (setf (stream-cursor-height stream)
-        (text-style-height (stream-text-style stream) stream))
   (multiple-value-bind (x-start y-start)
       (stream-cursor-initial-position stream)
     (setf (stream-text-cursor stream)
@@ -188,6 +186,11 @@
                          :x-position x-start
                          :y-position y-start)))
   (setf (cursor-active (stream-text-cursor stream)) t))
+
+(defmethod slot-unbound (class (stream standard-extended-output-stream) (slot (eql 'height)))
+  (declare (ignore class))
+  (setf (stream-cursor-height stream)
+        (text-style-height (stream-text-style stream) stream)))
 
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
