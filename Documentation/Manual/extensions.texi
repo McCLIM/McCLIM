@@ -13,6 +13,7 @@
 * Tab Layout::
 * Fonts and Extended Text Styles::
 * Raster Images::
+* Drawing backends::
 * Additional arguments to drawing functions::
 @end menu
 
@@ -422,50 +423,114 @@ the same image without copying it.
 To draw an image use @code{draw-pattern*} or @code{draw-design}. Image
 may be also used as an ink in other drawing functions.
 
-@section Raster image as a medium
+@node Drawing backends
+@section Drawing backends
 
-Raster image backend includes a medium that implements:
+@clim{} specification defines a macro
+@code{with-output-to-postscript-stream} that is used to create a
+backend including a medium that implements:
+
 @itemize @bullet
-@item @clim's medium protocol,
-@item @clim's output stream protocol, and
-@item @clim's Pixmap protocol.
+@item @clim's medium protocol, and
+@item @clim's output stream protocol.
 @end itemize
 
-@anchor{Macro clime:with-output-to-image-stream}
-@deffn {Macro} {@symbol{with-output-to-image-stream,clime}} (stream-var file-stream format &rest options) &body body
+@mcclim{} generalizes this operator by defining a macro and a
+specializable generic function:
+
+@anchor{Macro clime:with-output-to-drawing-stream}
+@anchor{Generic Function clime:invoke-with-output-to-drawing-stream}
+@deffn {Macro} {@symbol{with-output-to-drawing-stream,clime}}
+        (stream-var backend destination &rest options) &body body
+@deffnx {Generic Function} {@symbol{invoke-with-output-to-drawing-stream,clime}}
+        (continuation backend destination &rest options)
+
+Within @code{body}, @code{stream-var} is bound to a stream that implements the
+output protocols so it is suitable as a stream or medium argument to any @clim{}
+output utility, such as @code{draw-line*} or @code{write-string}.
+
+The value of @code{backend} must be a server path that is a suitable argument to
+the function @code{find-port}, for example @code{:ps} or @code{niL}.
+
+The value of @code{options} depends on the actual backend and allows to specify
+the backend-specific options (for example @code{:width} and @code{:height}).
+
 @end deffn
 
-@anchor{Macro clime:with-output-to-rgba-pattern}
-@deffn {Macro} {@symbol{with-output-to-rgba-pattern,clime}} (stream-var image &rest options) &body body
-@end deffn
+@subsection Interactive backend as a medium
 
-Within @code{body}, @code{stream-var} is bound to a stream that produces
-a raster image.  This stream is suitable as a stream or medium argument
-to any @clim{} output utility, such as @code{draw-line*} or
-@code{write-string}.
+When the macro is used with an interactive backend then the default method opens
+a window stream with @code{open-window-stream}. @code{options} are as for this
+function except for that the @code{:port} keyword parameter is supplied by the
+default method.
 
-The value of @code{options} is a list consisting of alternating keyword and value
-pairs.  These are the supported keywords:
+The only valid value of @code{destination} in this default method is @code{nil}.
+
+@subsection PostScript
+
+This backend symbol designator is @code{:ps}.
+
+Valid values of @code{destination} are:
+
 @itemize @bullet
-@item
-  @code{:width} --- specifies the width of the image. Its default value is 1000.
-@item
-  @code{:height} --- specifies the height of the image. Its default value is 1000.
+@item a string or a pathname denoting the file to create
+@item a character or a binary output stream the file contents will be written to
 @end itemize
 
-@defmac {@symbol{with-output-to-raster-image-stream,clime}}
-An image describing the output to the @code{stream-var} stream will be
-written to the stream @code{file-stream} using the format
-@code{format}. @code{format} is a symbol that names the type of the
-image. Valid values are @code{:png}, @code{:jpg}, @code{:jpeg},
-@code{tiff}, @code{tif}, @code{gif}, @code{pbm}, @code{pgm}, and
-@code{ppm}. Its default value is @code{:png}.
-@end defmac
+This backend accepts the following @code{options}:
 
-@defmac {@symbol{with-output-to-rgba-pattern,clime}}
-An image describing the output to the @code{stream-var} stream will be
-returned as an rgba pattern (of class @code{clime:image-pattern}).
-@end defmac
+@itemize @bullet
+@item device-type
+@item orientation
+@item multi-page
+@item scale-to-fit
+@item header-comments
+@c @item paper-size -- mentioned in the comment as ``missing''
+@end itemize
+
+@subsection PDF
+
+This backend symbol designator is @code{:pdf}.
+
+Valid values of @code{destination} are:
+
+@itemize @bullet
+@item a string or a pathname denoting the file to create
+@item a binary output stream the file contents will be written to
+@end itemize
+
+This backends accepts the same set of options as the PostScript backend.
+
+@subsection RasterImage
+
+This backend symbol designator is @code{:raster}.
+
+Valid values of @code{destination} are:
+
+@itemize @bullet
+@item a string or a pathname
+@item a binary output stream
+@item a keyword :pattern
+@end itemize
+
+This backend accepts the following @code{options}:
+
+@itemize @bullet
+@item border-width  - a frame around the image (defaults to 0)
+@item width  - defaults to :compute - added to 2*border-width
+@item height - defaults to :compute - added to 2*border-width
+@item format - output format unless implicit from the destination
+@item target - when the destination is :pattern then try to reuse the target
+@item recording-p - when true the second returned value is the output record history
+@end itemize
+
+@code{format} is a symbol that names the type of the image. Valid values are
+@code{:png}, @code{:jpg}, @code{:jpeg}, @code{tiff}, @code{tif}, @code{gif},
+@code{pbm}, @code{pgm}, and @code{ppm}. Its default value is @code{:png}.
+
+@subsection Adding new backends
+
+Describe here howe to specialize @code{invoke-with-output-to-drawing-stream}.
 
 @node Additional arguments to drawing functions
 @section Additional arguments to drawing functions
