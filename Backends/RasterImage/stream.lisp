@@ -7,17 +7,14 @@
 (defclass raster-image-stream (basic-pane
                                sheet-leaf-mixin
                                sheet-mute-input-mixin
-                               permanent-medium-sheet-output-mixin
                                sheet-mute-repainting-mixin
                                updating-output-stream-mixin
                                standard-extended-output-stream
-                               standard-output-recording-stream)
+                               standard-output-recording-stream
+                               permanent-medium-sheet-output-mixin)
   ())
 
-;;; make
-(defgeneric make-raster-image-stream (port))
-
-(defmethod make-raster-image-stream (port)
+(defun make-raster-image-stream (port)
   (make-instance 'raster-image-stream :port port))
 
 ;;; ?

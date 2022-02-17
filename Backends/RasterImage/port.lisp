@@ -25,8 +25,10 @@
 
 (defun %destroy-all-mirrors (port)
   (maphash (lambda (key val)
-             (destroy-mirror port key))
-           (slot-value port 'climi::sheet->mirror)))
+             (declare (ignore key))
+             (when (sheetp val)
+               (destroy-mirror port val)))
+           (slot-value port 'mirror->%image)))
 
 (defmethod destroy-port :before ((port raster-image-port))
   (%destroy-all-mirrors port))

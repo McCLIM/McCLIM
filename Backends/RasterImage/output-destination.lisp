@@ -36,9 +36,9 @@
 (defmethod invoke-with-standard-output
     (continuation (destination raster-image-destination))
   (call-next-method (lambda ()
-                      (with-output-to-raster-image-stream
-                          (*standard-output* *standard-output*
-                                             (file-format destination)
+                      (with-output-to-drawing-stream
+                          (*standard-output* :raster *standard-output*
+                                             :format (file-format destination)
                                              :width (width destination)
                                              :height (height destination)
                                              :border-width (border-width destination)

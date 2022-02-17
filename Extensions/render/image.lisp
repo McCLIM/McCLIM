@@ -28,7 +28,9 @@
           (defun ,name (src-array dst-array x1s y1s x1d y1d x2 y2)
             (declare (type image-index x1s y1s x1d y1d x2 y2)
                      (type argb-pixel-array src-array dst-array)
-                     (optimize (speed 3) (safety 0)))
+                     (optimize (speed 3)
+                               #-ccl (safety 0)
+                               #+ccl (safety 1)))
             (do-regions ((src-j dest-j y1s y1d y2)
                          (src-i dest-i x1s x1d x2) ,@(when backwardp
                                                        `(:backward t)))
