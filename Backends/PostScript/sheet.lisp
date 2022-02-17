@@ -6,6 +6,7 @@
 ;;;  (c) Copyright 2001 by Lionel Salabartan <salabart@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2002 by Alexey Dejneka <adejneka@comail.ru>
 ;;;  (c) Copyright 2002 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -35,99 +36,98 @@
       (read-sequence font font-stream)
       (write-string font (medium-drawable stream)))))
 
-(defmacro with-output-to-postscript-stream ((stream-var file-stream
-                                             &rest options)
-                                            &body body)
-  (let ((cont (gensym)))
-    `(flet ((,cont (,stream-var)
-              ,@body))
-       (declare (dynamic-extent #',cont))
-       (invoke-with-output-to-postscript-stream #',cont
-                                                ,file-stream ,@options))))
+(defmacro with-output-to-postscript-stream
+    ((stream-var file-stream &rest options) &body body)
+  `(with-output-to-drawing-stream (,stream-var :ps ,file-stream ,@options)
+     ,@body))
 
-(defun invoke-with-output-to-postscript-stream (continuation
-                                                file-stream &key (device-type :a4)
-                                                              multi-page scale-to-fit
-                                                              (orientation :portrait)
-                                                              header-comments)
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (port (eql :ps)) file-stream &rest args
+     &key (device-type :a4) (orientation :portrait) &allow-other-keys)
   (flet ((make-it (file-stream)
-           (climb:with-port (port :ps :stream file-stream
-                                  :device-type device-type
-                                  :page-orientation orientation)
-             (let ((stream (make-postscript-stream port device-type
-                                                   multi-page scale-to-fit
-                                                   orientation header-comments))
-                   (trim-page-to-output-size (eql device-type :eps))
-                   translate-x translate-y)
-               (sheet-adopt-child (find-graft :port port) stream)
-               (unwind-protect
-                    (with-slots (title for) stream
-                      (with-output-recording-options (stream :record t :draw nil)
-                        (with-graphics-state (stream)
-                          ;; we need at least one level of saving -- APD, 2002-02-11
-                          (funcall continuation stream)
-                          (unless trim-page-to-output-size
-                            (new-page stream)))) ; Close final page.
-                      (format file-stream "%!PS-Adobe-3.0~@[ EPSF-3.0~*~]~@
+           (with-port (port :ps :stream file-stream
+                                :device-type device-type
+                                :page-orientation orientation)
+             (apply #'invoke-with-output-to-drawing-stream
+                    continuation port file-stream args))))
+    (typecase file-stream
+      ((or pathname string)
+       (with-open-file (stream file-stream :direction :output
+                                           :if-does-not-exist :create
+                                           :if-exists :supersede)
+         (make-it stream)))
+      (t (make-it file-stream)))))
+
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (port postscript-port) (file-stream stream)
+     &key (device-type :a4) multi-page scale-to-fit (orientation :portrait) header-comments)
+  (let ((stream (make-postscript-stream port device-type
+                                        multi-page scale-to-fit
+                                        orientation header-comments))
+        (trim-page-to-output-size (eql device-type :eps))
+        translate-x translate-y)
+    (sheet-adopt-child (find-graft :port port) stream)
+    (unwind-protect
+         (with-slots (title for) stream
+           (with-output-recording-options (stream :record t :draw nil)
+             (with-graphics-state (stream)
+               ;; we need at least one level of saving -- APD, 2002-02-11
+               (funcall continuation stream)
+               (unless trim-page-to-output-size
+                 (new-page stream)))) ; Close final page.
+           (format file-stream "%!PS-Adobe-3.0~@[ EPSF-3.0~*~]~@
                                            %%Creator: McCLIM~@
                                            %%Title: ~A~@
                                            %%For: ~A~@
                                            %%LanguageLevel: 2~%"
-                              trim-page-to-output-size title for)
-                      (if trim-page-to-output-size
-                          (let ((record (stream-output-history stream)))
-                            (with-bounding-rectangle* (lx ly ux uy) record
-                              (setf translate-x (- (floor lx))
-                                    translate-y (ceiling uy))
-                              (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%"
-                                      0 0
-                                      (+ translate-x (ceiling ux))
-                                      (- translate-y (floor ly)))))
-                          (let ((width (graft-width (graft stream)))
-                                (height (graft-height (graft stream)))
-                                (paper (device-type port)))
-                            (format file-stream "%%BoundingBox: 0 0 ~A ~A~@
+                   trim-page-to-output-size title for)
+           (if trim-page-to-output-size
+               (let ((record (stream-output-history stream)))
+                 (with-bounding-rectangle* (lx ly ux uy) record
+                   (setf translate-x (- (floor lx))
+                         translate-y (ceiling uy))
+                   (format file-stream "%%BoundingBox: ~A ~A ~A ~A~%"
+                           0 0
+                           (+ translate-x (ceiling ux))
+                           (- translate-y (floor ly)))))
+               (let ((width (graft-width (graft stream)))
+                     (height (graft-height (graft stream)))
+                     (paper (device-type port)))
+                 (format file-stream "%%BoundingBox: 0 0 ~A ~A~@
                                                %%DocumentMedia: ~A ~A ~A 0 () ()~@
                                                %%Pages: (atend)~%"
-                                    width height paper width height)))
-                      (format file-stream "%%DocumentNeededResources: (atend)~@
+                         width height paper width height)))
+           (format file-stream "%%DocumentNeededResources: (atend)~@
                                            %%EndComments~%~%")
-                      (write-postscript-dictionary file-stream)
-                      (dolist (text-style (clim-postscript-font:device-fonts (sheet-medium stream)))
-                        (write-font-to-postscript-stream (sheet-medium stream) text-style))
-                      (start-page stream)
-                      (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)
+           (write-postscript-dictionary file-stream)
+           (dolist (text-style (clim-postscript-font:device-fonts (sheet-medium stream)))
+             (write-font-to-postscript-stream (sheet-medium stream) text-style))
+           (start-page stream)
+           (format file-stream "~@[~A ~]~@[~A translate~%~]" translate-x translate-y)
 
-                      (with-output-recording-options (stream :draw t :record nil)
-                        (with-graphics-state (stream)
-                          (if trim-page-to-output-size
-                              (replay (stream-output-history stream) stream)
-                              (let ((last-page (first (postscript-pages stream))))
-                                (dolist (page (reverse (postscript-pages stream)))
-                                  (climi::letf (((sheet-transformation stream)
-                                                 (make-postscript-transformation
-                                                  (sheet-native-region (graft stream))
-                                                  page
-                                                  scale-to-fit)))
-                                    (replay page stream))
-                                  (unless (eql page last-page)
-                                    (emit-new-page stream))))))))
+           (with-output-recording-options (stream :draw t :record nil)
+             (with-graphics-state (stream)
+               (if trim-page-to-output-size
+                   (replay (stream-output-history stream) stream)
+                   (let ((last-page (first (postscript-pages stream))))
+                     (dolist (page (reverse (postscript-pages stream)))
+                       (climi::letf (((sheet-transformation stream)
+                                      (make-postscript-transformation
+                                       (sheet-native-region (graft stream))
+                                       page
+                                       scale-to-fit)))
+                         (replay page stream))
+                       (unless (eql page last-page)
+                         (emit-new-page stream))))))))
 
-                 (with-slots (current-page document-fonts) stream
-                   (format file-stream "end~%showpage~%~@
+      (with-slots (current-page document-fonts) stream
+        (format file-stream "end~%showpage~%~@
                                         %%Trailer~@
                                         %%Pages: ~D~@
                                         %%DocumentNeededResources: ~{font ~A~%~^%%+ ~}~@
                                         %%EOF~%"
-                           current-page (reverse document-fonts))
-                   (finish-output file-stream)))))))
-    (typecase file-stream
-      ((or pathname string)
-       (with-open-file (stream file-stream :direction :output
-                               :if-does-not-exist :create
-                               :if-exists :supersede)
-         (make-it stream)))
-      (t (make-it file-stream)))))
+                current-page (reverse document-fonts))
+        (finish-output file-stream)))))
 
 (defun start-page (stream)
   (with-slots (current-page transformation) stream
