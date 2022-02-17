@@ -924,7 +924,7 @@ outside the clipping area should be grey.")
     (translated-doit 200 0 :filled nil)
     (translated-doit 200 200 :filled nil)
     (translated-doit 200 400 :filled nil
-                             :line-dashes 10
+                             :line-dashes '(10)
                              :line-thickness 3)))
 
 

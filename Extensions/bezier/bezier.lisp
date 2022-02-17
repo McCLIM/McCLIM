@@ -243,7 +243,7 @@ second curve point, yielding (200 50)."
                      (list nil vec))
                    (list (cons coord build) vec))))
            coord-seq
-           :initial-value (list nil (make-array 4 :fill-pointer 0)))
+           :initial-value (list nil (make-array 4 :fill-pointer 0 :adjustable t)))
    (if leftover
        (error "Invalid coord-seq: ~S" coord-seq)
        coord-seq)))

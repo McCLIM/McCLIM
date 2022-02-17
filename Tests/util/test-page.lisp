@@ -95,18 +95,10 @@
   (draw-rectangles* stream #(180 150 220 170
                              180 190 220 210)
                     :ink +purple+ :line-thickness 3 :filled nil)
-  (let ((design
-          (mcclim-bezier:make-bezier-curve*
-           (list 20 150 20 80 90 110 90 170 90 220 140 210 140 140))))
-    (mcclim-bezier:draw-bezier-design* stream design
-                                       :line-thickness 5
-                                       :ink +orange+))
-  (let ((design
-          (mcclim-bezier:make-bezier-area*
-           (list 34 44 34 128 147 44 47 156 34 128 50 50 34 44))))
-    (mcclim-bezier:draw-bezier-design* stream design
-                                       :line-thickness 4
-                                       :ink +sea-green+))
+  (let ((design1 (clime:make-polybezier* '(20 150 20 80 90 110 90 170 90 220 140 210 140 140)))
+        (design2 (clime:make-bezigon* '(34 44 34 128 147 44 47 156 34 128 50 50 34 44))))
+    (draw-design stream design1 :line-thickness 5 :ink +orange+ )
+    (draw-design stream design2 :line-thickness 4 :ink +sea-green+))
   (draw-text* stream "Test Page" 170 200
               :text-style (make-text-style :fix :bold :huge))
   (draw-text* stream "Bogus" 250 250)
