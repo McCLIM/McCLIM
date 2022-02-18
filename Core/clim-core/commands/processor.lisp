@@ -286,7 +286,9 @@
                      ;; in ENSURE-COMPLETE-COMMAND we sanitize the returned
                      ;; value. -- jd 2022-02-18
                      (let* ((event (accelerator-gesture-event c))
-                            (command (lookup-keystroke-command-item event command-table)))
+                            (numeric-arg (accelerator-gesture-numeric-argument c))
+                            (command (lookup-keystroke-command-item
+                                      event command-table :numeric-arg numeric-arg)))
                        (when (typep command `(or symbol (cons symbol)))
                          (return-from read-command-using-keystrokes
                            (ensure-complete-command command command-table stream)))))))
