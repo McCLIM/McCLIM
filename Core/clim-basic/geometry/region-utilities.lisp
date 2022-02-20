@@ -1227,9 +1227,11 @@ y2."
             (incf n)))
         res))))
 
+(defvar *polygonalize-precision* 0.1)
+
 (defun polygonalize-ellipse (cx cy rdx1 rdy1 rdx2 rdy2
                              start-angle end-angle
-                             &key (filled t) (precision 0.1))
+                             &key (filled t) (precision *polygonalize-precision*))
   (multiple-value-bind (a b theta #|cdx1 cdy1 cdx2 cdy2|#)
       (ellipse-normalized-representation* rdx1 rdy1 rdx2 rdy2)
     (collect (control-coords)
@@ -1482,7 +1484,7 @@ and RADIUS2-DY"
 ;;; Bezier -> Polygon
 ;;; Converting a path to a polyline or an area to a polygon
 
-(defun polygonalize-bezigon (coords &key (precision 0.1))
+(defun polygonalize-bezigon (coords &key (precision *polygonalize-precision*))
   (labels ((%polygonalize (p0 p1 p2 p3)
              "Convert a cubic bezier segment to a list of line segments."
              (if (< (- (+ (distance p0 p1)
@@ -1501,7 +1503,7 @@ and RADIUS2-DY"
                           (%polygonalize p0123 p123 p23 p3))))))
     (loop with points = (coord-seq->point-seq coords)
           with start = (first points)
-          for (p0 p1 p2 p3) on points by #'cdr
+          for (p0 p1 p2 p3) on points by #'cdddr
           while p3
           appending (%polygonalize p0 p1 p2 p3) into result
           finally (return (expand-point-seq (list* start result))))))
