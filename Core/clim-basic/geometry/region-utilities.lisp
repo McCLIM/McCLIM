@@ -124,7 +124,7 @@ less than or equal to 2pi. Note that 4pi would be normalized to 0, not
   (let ((diff (- end start)))
     (cond ((<= diff 0)
            (values 0 0))
-          ((>= diff (* 2 pi))
+          ((>= diff (- (* 2 pi) single-float-epsilon))
            (values 0 (* 2 pi)))
           (t
            (values (mod start (* 2 pi))

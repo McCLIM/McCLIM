@@ -432,15 +432,6 @@
                                                right top)
                                 t filled)))))
 
-(defmethod medium-draw-ellipse* :around (medium center-x center-y
-                                         radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                                         start-angle end-angle filled)
-  (declare (ignore medium center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy filled))
-  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
-    (setf start-angle 0
-          end-angle (* 2 pi)))
-  (call-next-method))
-
 (defmethod medium-draw-ellipse* :around ((medium transform-coordinates-mixin)
                                          cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
   (let ((tr (medium-transformation medium)))
