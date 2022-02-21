@@ -400,11 +400,6 @@
     (with-transformed-positions (tr coord-seq)
       (call-next-method medium coord-seq filled))))
 
-(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
-  (let ((polygon-coord-seq (polygonalize-bezigon coord-seq)))
-    (with-identity-transformation (medium)
-      (medium-draw-polygon* medium polygon-coord-seq nil filled))))
-
 (defun expand-rectangle-coords (left top right bottom)
   "Expand the two corners of a rectangle into a polygon coord-seq"
   (vector left top right top right bottom left bottom))
@@ -432,6 +427,7 @@
 (defmethod medium-draw-ellipse* :around (medium center-x center-y
                                          radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                                          start-angle end-angle filled)
+  (declare (ignore medium center-x center-y radius-1-dx radius-1-dy radius-2-dx radius-2-dy filled))
   (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
     (setf start-angle 0
           end-angle (* 2 pi)))
@@ -446,11 +442,6 @@
             (transform-ellipse tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
           (call-next-method medium cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)))))
 
-(defmethod medium-draw-ellipse* ((medium basic-medium)
-                                 cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
-  (with-identity-transformation (medium)
-    (let ((coords (polygonalize-ellipse cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 :filled filled)))
-     (medium-draw-polygon* medium coords nil filled))))
 
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height
@@ -487,6 +478,33 @@
     (with-transformed-positions (tr coord-seq)
       (do-sequence ((x1 y1 x2 y2) coord-seq)
         (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+
+;;; Fallback methods
+(defmethod medium-draw-point* ((medium basic-medium) x y)
+  (let ((radius (line-style-effective-thickness (medium-line-style medium) medium)))
+    (medium-draw-circle* medium x y radius 0 (* 2 pi) t)))
+
+(defmethod medium-draw-line* ((medium basic-medium) x1 y1 x2 y2)
+  (medium-draw-polygon* medium (list x1 y1 x2 y2) nil nil))
+
+(defmethod medium-draw-rectangle* ((medium basic-medium) x1 y1 x2 y2 filled)
+  (medium-draw-polygon* medium (list x1 y1 x2 y1 x2 y2 x1 y2) t filled))
+
+(defmethod medium-draw-circle* ((medium basic-medium) cx cy radius eta1 eta2 filled)
+  (medium-draw-ellipse* medium cx cy radius 0 0 radius eta1 eta2 filled))
+
+(defmethod medium-draw-ellipse* ((medium basic-medium)
+                                 cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
+  (let ((coords (polygonalize-ellipse cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 :filled filled)))
+    (medium-draw-polygon* medium coords nil filled)))
+
+#+ (or)
+(defmethod medium-draw-circle* ((medium basic-medium) cx cy radius eta1 eta2 filled)
+  (medium-draw-ellipse* medium cx cy radius 0 0 radius eta1 eta2 filled))
+
+(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
+  (let ((polygon-coord-seq (polygonalize-bezigon coord-seq)))
+    (medium-draw-polygon* medium polygon-coord-seq nil filled)))
 
 
 ;;; Other Medium-specific Output Functions
