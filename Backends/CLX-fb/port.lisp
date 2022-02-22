@@ -22,6 +22,8 @@
   (clim-sys:make-process
    (lambda ()
      (loop with mirror->%image = (slot-value port 'mirror->%image)
+           for display = (clx-port-display port)
+           while display
            do (handler-case
                   (maphash-values
                    (lambda (image)
@@ -30,7 +32,8 @@
                    mirror->%image)
                 (condition (condition)
                   (format *debug-io* "~A~%" condition)))
-              (xlib:display-force-output (clx-port-display port))
+              (ignore-errors
+               (xlib:display-force-output display))
               (sleep 0.01)))
    :name (format nil "~S's event process." port)))
 
