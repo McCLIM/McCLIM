@@ -219,7 +219,9 @@
     (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
-  (bounding-rectangle-position (stream-output-history pane)))
+  (if (pane-scroller pane)
+      (bounding-rectangle-position (window-viewport pane))
+      (values 0 0)))
 
 (defmethod* (setf window-viewport-position) (x y (pane clim-stream-pane))
   (scroll-extent pane x y)
