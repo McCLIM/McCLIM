@@ -1372,6 +1372,9 @@ length A and B, with angle THETA between the radii from the center of
 the ellipse, returns two values, the x and y coordinates of a point on
 the ellipse having angle LAMBDA0 (CCW) relative to the major axis of the
 ellipse."
+  (when (or (zerop a) (zerop b))
+    (return-from ellipse-point
+      (values center-x center-y)))
   (let ((eta (atan (/ (sin lambda0) b)
                    (/ (cos lambda0) a))))
     (values (+ center-x
@@ -1394,7 +1397,9 @@ LAMBDA0 is different from that used in ELLIPSE-POINT, which is relative
 to the major axis."
   (multiple-value-bind (a b theta)
       (reparameterize-ellipse radius1-dx radius1-dy radius2-dx radius2-dy)
-    (ellipse-point (- lambda0 theta) center-x center-y a b theta)))
+    (if (null theta)
+        (values center-x center-y)
+        (ellipse-point (- lambda0 theta) center-x center-y a b theta))))
 
 (defun ellipse-derivative (eta a b theta)
   "Given an ellipse having two radii of length A and B, with angle
