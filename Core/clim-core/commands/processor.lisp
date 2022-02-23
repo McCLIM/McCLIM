@@ -278,10 +278,21 @@
         (*partial-command-parser* partial-command-parser)
         (*accelerator-gestures* keystrokes))
     (let ((command
-            (handler-case (read-command command-table :stream stream)
-              (accelerator-gesture (c)
-                (lookup-keystroke-command-item (accelerator-gesture-event c)
-                                               command-table)))))
+            (handler-bind
+                ((accelerator-gesture
+                   (lambda (c)
+                     ;; LOOKUP-KEYSTROKE-COMMAND-ITEM is specified to return a
+                     ;; gesture if no command can be found. To avoid problems
+                     ;; in ENSURE-COMPLETE-COMMAND we sanitize the returned
+                     ;; value. -- jd 2022-02-18
+                     (let* ((event (accelerator-gesture-event c))
+                            (numeric-arg (accelerator-gesture-numeric-argument c))
+                            (command (lookup-keystroke-command-item
+                                      event command-table :numeric-arg numeric-arg)))
+                       (when (typep command `(or symbol (cons symbol)))
+                         (return-from read-command-using-keystrokes
+                           (ensure-complete-command command command-table stream)))))))
+              (read-command command-table :stream stream))))
       (ensure-complete-command command command-table stream))))
 
 
