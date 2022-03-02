@@ -289,7 +289,7 @@ y2."
     (multiple-value-bind (x2 y2) (point-position p2)
       (make-pg-edge* x1 y1 x2 y2 extra))))
 
-(defun polygon-op-inner (pg1 pg2 logop &aux (sps '()))
+(defun polygon-op-inner (edges logop &aux (sps '()))
   (labels ((add-interval (lx1 lx2 rx1 rx2)
              ;; This function is responsible for either extending existing
              ;; monotone chains or creating a new splitter.
@@ -326,18 +326,62 @@ y2."
                                           (make-point x1 scan-y1)
                                           (make-point x2 scan-y2))
                             (setq entry-x1 nil))))))
-    (over-sweep-bands (nconc (polygon->pg-edges pg1 :a)
-                             (polygon->pg-edges pg2 :b))
-                      #'sweep-line))
+    (over-sweep-bands edges #'sweep-line))
   sps)
 
+;;; Decompose a polygon into a set of non-intersecting monotone chains.
+(defun polygon-op-inner* (edges winding-rule &aux (sps '()))
+  (check-type winding-rule (member :even-odd :non-zero))
+  (labels ((add-interval (lx1 lx2 rx1 rx2)
+             ;; This function is responsible for either extending existing
+             ;; monotone chains or creating a new splitter.
+             (dolist (s sps
+                        ;; otherwise make a new chain.
+                        (push (make-pg-splitter
+                               :left  (list lx2 lx1)
+                               :right (list rx2 rx1))
+                              sps))
+               (when (and (region-equal lx1 (car (pg-splitter-left s)))
+                          (region-equal rx1 (car (pg-splitter-right s))))
+                 (push lx2 (pg-splitter-left s))
+                 (push rx2 (pg-splitter-right s))
+                 (return))))
+           (sweep-line (scan-y1 scan-y2 active-edges)
+             (loop with entry-x1 = nil
+                   with entry-x2 = nil
+                   with winding = 0
+                   for (x1 x2 extra) in active-edges
+                   do (incf winding extra)
+                      (if (ecase winding-rule
+                            (:even-odd (oddp winding))
+                            (:non-zero (not (zerop winding))))
+                          (when (null entry-x1)
+                            (setf entry-x1 x1
+                                  entry-x2 x2))
+                          (when entry-x1
+                            (add-interval (make-point entry-x1 scan-y1)
+                                          (make-point entry-x2 scan-y2)
+                                          (make-point x1 scan-y1)
+                                          (make-point x2 scan-y2))
+                            (setq entry-x1 nil))))))
+    (over-sweep-bands edges #'sweep-line)
+    sps))
+
+(defun pg-splitters->polygons (splitters)
+  (let* ((splitters (mapcar #'pg-splitter->polygon splitters))
+         (splitters (delete +nowhere+ splitters)))
+    (cond ((null splitters) +nowhere+)
+          ((null (cdr splitters))
+           (car splitters))
+          ((make-instance 'standard-region-union :regions splitters)))))
+
 (defun polygon-op (pg1 pg2 logop)
-  (let* ((sps (mapcar #'pg-splitter->polygon (polygon-op-inner pg1 pg2 logop)))
-         (sps (delete +nowhere+ sps)))
-    (cond ((null sps) +nowhere+)
-          ((null (cdr sps))
-           (car sps))
-          ((make-instance 'standard-region-union :regions sps)))))
+  (let ((edges (nconc (polygon->pg-edges pg1 :a)
+                      (polygon->pg-edges pg2 :b))))
+    (pg-splitters->polygons (polygon-op-inner edges logop))))
+
+(defun decompose-polygon (polygon &optional (winding-rule :even-odd))
+  (pg-splitters->polygons (polygon-op-inner* (polygon->pg-edges polygon nil) winding-rule)))
 
 (defun triangulate-polygon (polygon)
   (collect (triangles)
@@ -377,7 +421,7 @@ y2."
                                     do (triangles point n-1 n-2)
                                   finally (setf stack (list (list point chain)
                                                             (list top top-chain))))))))
-      (loop for chain in (polygon-op-inner polygon +nowhere+ #'logior)
+      (loop for chain in (polygon-op-inner* (polygon->pg-edges polygon nil) :even-odd)
             for points = (sort-points (pg-splitter-left chain)
                                       (pg-splitter-right chain))
             do (triangulate points)
@@ -435,7 +479,7 @@ y2."
                               do (let ((edges (sort-pg-edges cy1 cy2 active-edges)))
                                    (funcall fun cy1 cy2 edges))))))
     (do* ((edges (sort edges #'< :key #'pg-edge-y1))
-          (scan-y1 (pg-edge-y1 (car edges)) scan-y2)
+          (scan-y1 (and edges (pg-edge-y1 (car edges))) scan-y2)
           (scan-y2 nil)
           ;; After each iteration remove edges that end before the new scanline.
           (active-edges '() (delete-if (lambda (e)
@@ -459,16 +503,16 @@ y2."
              (let ((before-next-p (point-lessp* cx cy nx ny))
                    (before-prev-p (point-lessp* cx cy px py)))
                (when before-next-p
-                 (results (make-pg-edge* cx cy nx ny extra)))
+                 (results (make-pg-edge* cx cy nx ny (or extra (signum (- ny cy))))))
                (when before-prev-p
-                 (results (make-pg-edge* cx cy px py extra)))
+                 (results (make-pg-edge* cx cy px py (or extra (signum (- cy py))))))
                ;; When the current point is after both its adjacent points
                ;; we add a dummy edge of the length 0. Otherwise we would
                ;; miss a scanline anchored to this vertice because scanlines
                ;; are stepped based on each edge "lower" coordinate and this
                ;; point Y is always on the second position on its segments.
                (when (not (or before-next-p before-prev-p))
-                 (results (make-pg-edge* cx cy cx cy extra))))))
+                 (results (make-pg-edge* cx cy cx cy (or extra 0)))))))
       (loop with pts = (polygon-points pg)
             with prev = pts
             with cur = (cdr pts)
@@ -1235,7 +1279,7 @@ y2."
             (incf n)))
         res))))
 
-(defvar *polygonalize-precision* 0.1)
+(defvar *polygonalize-precision* 0.5)
 
 (defun polygonalize-ellipse (cx cy rdx1 rdy1 rdx2 rdy2
                              start-angle end-angle
@@ -1496,6 +1540,16 @@ and RADIUS2-DY"
 
 ;;; Bezier -> Polygon
 ;;; Converting a path to a polyline or an area to a polygon
+
+(defun bezier-segment/quadric-to-cubic (qx0 qy0 qx1 qy1 qx2 qy2)
+  (let ((cx1 (+ qx0 (* 2/3 (- qx1 qx0))))
+        (cy1 (+ qy0 (* 2/3 (- qy1 qy0))))
+        (cx2 (+ qx2 (* 2/3 (- qx1 qx2))))
+        (cy2 (+ qy2 (* 2/3 (- qy1 qy2)))))
+    (values qx0 qy0
+            cx1 cy1
+            cx2 cy2
+            qx2 qy2)))
 
 (defun polygonalize-bezigon (coords &key (precision *polygonalize-precision*))
   (labels ((%polygonalize (p0 p1 p2 p3)
