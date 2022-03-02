@@ -258,7 +258,6 @@
   (let ((text-style (make-instance 'device-font-text-style
                                    :display-device port
                                    :device-font-name font-name)))
-    (setf (text-style-mapping port text-style) font-name)
     text-style))
 
 ;;; Text-style utilities

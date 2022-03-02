@@ -212,8 +212,7 @@ of letters specified in a separate kerning-table."))
            (multiple-value-bind (family face size)
                (text-style-components style)
              (if (and (realp size)
-                      (text-style-components-fully-specified-p
-                       family face size))
+                      (text-style-components-fully-specified-p family face size))
                  style
                  (new-text-style family face size))))
           ((null style)

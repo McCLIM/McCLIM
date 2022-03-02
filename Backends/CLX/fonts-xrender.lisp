@@ -143,10 +143,10 @@ The following files should exist:~&~{  ~A~^~%~}"
                                &optional character-set)
   (declare (ignore character-set))
   (let ((font-name (climi::device-font-name text-style)))
-    (when (stringp font-name)
+    (when (typep font-name '(or string pathname))
       (setf (climi::device-font-name text-style)
-            (make-fontconfig-font-name :string font-name
-                                       :size (climb:normalize-font-size :normal))
+            (make-truetype-device-font-name :font-file font-name
+                                            :size (climb:normalize-font-size :normal))
             font-name (climi::device-font-name text-style)))
     (etypecase font-name
       (truetype-device-font-name
