@@ -2,7 +2,7 @@
 
 (defclass render-medium-mixin (basic-medium
                                climb:multiline-text-medium-mixin
-                               climb:font-rendering-medium-mixin)
+                               ttf-medium-mixin)
   ())
 
 (defun maybe-transformation (medium)

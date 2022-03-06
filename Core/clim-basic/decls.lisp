@@ -457,9 +457,26 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric text-style-fixed-width-p (text-style medium))
 (defgeneric text-size (medium string &key text-style start end))
 
+(defgeneric text-style-leading (text-style medium)
+  (:method (text-style medium)
+    1.2))
+
 (defgeneric text-style-character-width (text-style medium char)
   (:method (text-style medium char)
     (text-size medium char :text-style text-style)))
+
+(defgeneric text-bounding-rectangle*
+    (medium string &key text-style start end align-x align-y direction)
+  (:documentation "Function returns a bounding box of the text for given
+text-style, alignment and direction.
+
+Argument types:
+align-x   (member :left :center :right)
+align-y   (member :top :baseline :center :baseline* :bottom)
+direction (member :ltr :rtl)
+
+Returned values:
+xmin ymin xmax ymax."))
 
 ;;; 11.2 Text Style Binding Forms
 

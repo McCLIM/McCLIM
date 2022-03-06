@@ -2061,33 +2061,11 @@
    ;; Text-style
    #:text-style-character-width
    #:text-bounding-rectangle*
+   #:text-style-leading
    #:normalize-font-size
    #:parse-text-style*
-   ;; Font abstraction
-   #:font-face
-   #:font-size
-   #:font-character-width
-   #:font-string-width
-   #:font-string-glyph-codes
-   #:font-glyph-code-char
-   #:font-text-extents
-   #:font-ascent
-   #:font-descent
-   #:font-leading
-   #:font-tracking
-   #:font-fixed-width
-   #:font-kerning-p
-   #:font-glyph-width
-   #:font-glyph-height
-   #:font-glyph-top
-   #:font-glyph-left
-   #:font-glyph-bottom
-   #:font-glyph-right
-   #:font-glyph-dx
-   #:font-glyph-dy
    ;; Mixins available for backends
    #:multiline-text-medium-mixin
-   #:font-rendering-medium-mixin
    #:approx-bbox-medium-mixin
    #:transform-coordinates-mixin
    ;; From CLIM (mentioned in the spec)

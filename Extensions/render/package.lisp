@@ -39,31 +39,16 @@
    #:gray->alpha))
 
 (defpackage #:mcclim-render-internals
-  (:use #:clim #:clime #:clim-lisp #:mcclim-render #:mcclim-render-extensions)
+  (:use #:clim #:clime #:clim-lisp #:mcclim-render #:mcclim-render-extensions #:mcclim-truetype)
   (:import-from #:alexandria
                 #:minf
                 #:maxf
                 #:when-let
-                #:when-let*)
+                #:when-let*
+                #:ensure-gethash)
   (:import-from #:clim-internals
                 #:standard-color
                 #:standard-flipping-ink)
-  (:import-from #:mcclim-truetype
-                #:glyph-info
-                #:font-glyph-info
-                #:font-generate-glyph
-                #:glyph-info-left
-                #:glyph-info-top
-                #:glyph-info-advance-height
-                #:glyph-info-advance-width
-                #:glyph-info-pixarray
-                #:glyph-pixarray
-                #:ensure-gethash
-                #:invoke-with-truetype-path-restart
-                #:*truetype-font-path*
-                #:*zpb-font-lock*
-                #:*families/faces*
-                #:truetype-face)
   (:import-from #:clim-backend
                 #:port-set-mirror-geometry
                 #:medium-native-transformation

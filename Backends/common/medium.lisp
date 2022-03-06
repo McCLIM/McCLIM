@@ -3,15 +3,15 @@
 (defclass multiline-text-medium-mixin () ()
   (:documentation "Takes care of splitting string into multiple lines and adjusts Y-position."))
 
-(defmethod clim:medium-draw-text* :around ((medium multiline-text-medium-mixin) string x y
-                                           start end
-                                           align-x align-y
-                                           toward-x toward-y transform-glyphs)
+(defmethod medium-draw-text* :around ((medium multiline-text-medium-mixin) string x y
+                                      start end
+                                      align-x align-y
+                                      toward-x toward-y transform-glyphs)
   (unless (position #\newline string :start start :end end)
-    (return-from clim:medium-draw-text* (call-next-method)))
+    (return-from medium-draw-text* (call-next-method)))
   (setq string (subseq string start end))
-  (let* ((font (text-style-mapping (port medium) (medium-text-style medium)))
-         (y-dx (font-leading font)))
+  (let* ((text-style (medium-text-style medium))
+         (y-dx (text-style-leading text-style medium)))
     ;; Single line centering is figured out in the primary method, we just fix
     ;; the X/Y if it will be different for the supplied positioning and then
     ;; increase it for each line. -- jd 2018-10-08
@@ -36,7 +36,7 @@
 (defclass approx-bbox-medium-mixin () ()
   (:documentation "Adjusts bounding rectangle to alignment with a decent heuristic."))
 
-(defmethod climb:text-bounding-rectangle* :around
+(defmethod text-bounding-rectangle* :around
     ((medium approx-bbox-medium-mixin) string &key text-style start end
                                                 (align-x :left)
                                                 (align-y :baseline)

@@ -169,6 +169,46 @@
     '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
     "Mapping between keyword and a font size."))
 
+(declaim (inline normalize-font-size))
+(defun normalize-font-size (size)
+  (cond ((null size)
+         (let ((size* (text-style-size *default-text-style*)))
+           (etypecase size*
+             (number size*)
+             (symbol (getf +font-sizes+ size* nil)))))
+        ((eq size :smaller)
+         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+        ((eq size :larger)
+         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+        ((realp size)
+         (round (max size 2)))
+        ((getf +font-sizes+ size nil))
+        (t
+         (error "~s is not a valid text style size!" size))))
+
+(defun parse-text-style* (style)
+  "Returns complete text-style without NIL components and with numeric size."
+  (flet ((new-text-style (family face size)
+           (let ((default *default-text-style*))
+             (make-text-style (or family (text-style-family default))
+                              (or face   (text-style-face   default))
+                              (normalize-font-size size)))))
+    (cond ((device-font-text-style-p style)
+           style)
+          ((text-style-p style)
+           (multiple-value-bind (family face size)
+               (text-style-components style)
+             (if (and (realp size)
+                      (text-style-components-fully-specified-p family face size))
+                 style
+                 (new-text-style family face size))))
+          ((null style)
+           (parse-text-style* *default-text-style*))
+          ((and (listp style) (alexandria:length= 3 style))
+           (destructuring-bind (family face size) style
+             (new-text-style family face size)))
+          (t (error "Invalid text style specification ~S." style)))))
+
 (defun text-style-components-fully-specified-p (family face size)
   (and family
        face
@@ -382,3 +422,15 @@
 
 (defmethod text-style-width (ts (sheet sheet))
   (text-style-width ts (sheet-medium sheet)))
+
+;;; Fallback methods for the text style metrics.
+
+(defmethod text-style-height (text-style medium)
+  (+ (text-style-ascent text-style medium)
+     (text-style-descent text-style medium)))
+
+(defmethod text-style-width (text-style medium)
+  (text-style-character-width text-style medium #\M))
+
+(defmethod text-style-fixed-width-p (text-style medium)
+  (eql (text-style-family text-style) :fix))
