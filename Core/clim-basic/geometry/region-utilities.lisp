@@ -67,6 +67,14 @@
       (multiple-value-bind (x3 y3) (point-position p3)
         (colinear-p* x1 y1 x2 y2 x3 y3)))))
 
+(defun colinear-approximate-p (p1 p2 p3 precision)
+  (multiple-value-bind (x1 y1) (point-position p1)
+    (multiple-value-bind (x2 y2) (point-position p2)
+      (multiple-value-bind (x3 y3) (point-position p3)
+        (<= (abs (- (* (- x2 x1) (- y3 y2))
+                    (* (- x3 x2) (- y2 y1))))
+            precision)))))
+
 ;;; Return the Euclidean distance between two points.
 (defun distance* (x0 y0 x1 y1)
   (sqrt (+ (square (- x1 x0))
@@ -1487,11 +1495,7 @@ and RADIUS2-DY"
 (defun polygonalize-bezigon (coords &key (precision *polygonalize-precision*))
   (labels ((%polygonalize (p0 p1 p2 p3)
              "Convert a cubic bezier segment to a list of line segments."
-             (if (< (- (+ (distance p0 p1)
-                          (distance p1 p2)
-                          (distance p2 p3))
-                       (distance p0 p3))
-                    precision)
+             (if (colinear-approximate-p p0 p1 p2 precision)
                  (list p3)
                  (let* ((p01 (part-way p0 p1 0.5))
                         (p12 (part-way p1 p2 0.5))
