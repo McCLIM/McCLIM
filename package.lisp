@@ -1948,6 +1948,9 @@
    #:bordered-output-record
 
    #:draw-rounded-rectangle*
+   #:draw-bezigon
+   #:draw-bezigon*
+   #:medium-draw-bezigon*
 
    #:highlight-output-record-tree
    #:text-selection-mixin
@@ -2113,6 +2116,7 @@
    #:medium-draw-rectangle*
    #:medium-draw-rectangles*
    #:medium-draw-text*
+   #:medium-draw-bezigon*
    #:medium-finish-output
    #:medium-force-output
    #:medium-line-style
