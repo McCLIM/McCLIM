@@ -726,6 +726,10 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
+(defmethod invoke-with-output-to-pixmap ((sheet sheet) cont &key width height)
+  (with-sheet-medium (medium sheet)
+    (invoke-with-output-to-pixmap medium cont :width width :height height)))
+
 ;;;
 ;;; DRAW-DESIGN
 ;;

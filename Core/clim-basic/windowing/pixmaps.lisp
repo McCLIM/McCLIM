@@ -56,27 +56,9 @@
       (error "COPY-AREA on a stream is not implemented")))
 
 (defmacro with-output-to-pixmap ((medium-var sheet &key width height) &body body)
-  (once-only (sheet width height)
-    (if (and width height)
-        (alexandria:with-gensyms (pixmap port)
-          `(let* ((,pixmap (allocate-pixmap ,sheet ,width ,height))
-                  (,port (port ,sheet))
-                  (,medium-var (make-medium ,port ,sheet)))
-             (degraft-medium ,medium-var ,port ,sheet)
-             (letf (((medium-drawable ,medium-var) ,pixmap)
-                    ((medium-clipping-region ,medium-var)
-                     (make-rectangle* 0 0 ,width ,height)))
-               ,@body)
-             ,pixmap))
-        (let ((record (gensym "OUTPUT-RECORD-")))
-          ;; What to do when only width or height are given?  And what's the
-          ;; meaning of medium-var? -- rudi 2005-09-05
-          `(let* ((,medium-var ,sheet)
-                  (,record (with-output-to-output-record (,medium-var)
-                             ,@body)))
-             (with-output-to-pixmap
-                 (,medium-var
-                  ,sheet
-                  :width ,(or width `(bounding-rectangle-width ,record))
-                  :height ,(or height `(bounding-rectangle-height ,record)))
-               (replay-output-record ,record ,medium-var)))))))
+  (with-gensyms (cont)
+    `(flet ((,cont (,medium-var)
+              (declare (ignorable ,medium-var))
+              ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-output-to-pixmap ,sheet (function ,cont) :width ,width :height ,height))))

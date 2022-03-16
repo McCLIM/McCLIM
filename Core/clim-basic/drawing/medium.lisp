@@ -366,6 +366,38 @@
   (declare (ignore from-drawable from-x from-y width height to-x to-y))
   (error "MEDIUM-COPY-AREA is not implemented for basic MEDIUMs"))
 
+(defmethod invoke-with-output-to-pixmap ((medium basic-medium) cont &key width height)
+  (unless (and width height)
+    ;; What to do when only width or height are given?  And what's the meaning
+    ;; of medium-var? -- rudi 2005-09-05
+    ;;
+    ;; We default WIDTH or HEIGHT to provided values. The output is clipped to a
+    ;; rectactangle [0 0 (or width max-x) (height max-y)]. We record the output
+    ;; only to learn about dimensions - it is not replayed because the medium
+    ;; can't be expected to work with this protocol. To produce the output we
+    ;; invoke the continuation again. -- jd 2022-03-16
+    (let ((sheet (medium-sheet medium)))
+      (if (output-recording-stream-p sheet)
+          (with-bounding-rectangle* (:x2 max-x :y2 max-y)
+              (invoke-with-output-to-output-record sheet
+                                                   (lambda (sheet record)
+                                                     (declare (ignore record))
+                                                     (funcall cont sheet))
+                                                   'standard-sequence-output-record)
+            (setf width (or width max-x)
+                  height (or height max-y)))
+          (error "WITH-OUTPUT-TO-PIXMAP: please provide :WIDTH and :HEIGHT."))))
+  (let* ((port (port medium))
+         (pixmap (allocate-pixmap medium width height))
+         (pixmap-medium (make-medium port (medium-sheet medium)))
+         (drawing-plane (make-rectangle* 0 0 width height)))
+    (degraft-medium pixmap-medium port medium)
+    (letf (((medium-drawable pixmap-medium) pixmap)
+           ((medium-clipping-region pixmap-medium) drawing-plane))
+      (medium-clear-area pixmap-medium 0 0 width height)
+      (funcall cont pixmap-medium)
+      pixmap)))
+
 
 ;;; Medium-specific Drawing Functions
 

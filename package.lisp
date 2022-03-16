@@ -2058,6 +2058,8 @@
    ;; drawing backends
    #:with-output-to-drawing-stream
    #:invoke-with-output-to-drawing-stream
+   #:invoke-with-output-to-pixmap
+   #:invoke-with-output-buffered
    ;; Text-style
    #:text-style-character-width
    #:text-bounding-rectangle*

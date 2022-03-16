@@ -506,6 +506,8 @@ xmin ymin xmax ymax."))
 (defgeneric medium-copy-area (from-drawable from-x from-y width height
                               to-drawable to-x to-y))
 
+(defgeneric invoke-with-output-to-pixmap (medium cont &key width height))
+
 ;; with-output-to-pixmap (medium-var medium &key width height) &body body [Macro]
 
 ;;; 12.7.3 Other Medium-specific Output Functions
