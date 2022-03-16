@@ -164,8 +164,10 @@
           (map-func command-table)))))
 
 (defun command-present-in-command-table-p (command-name command-table)
-  (let ((ht (slot-value (find-command-table command-table) 'commands)))
-    (nth-value 1 (gethash command-name ht))))
+  (let ((table (find-command-table command-table)))
+    (let ((ht (slot-value table 'commands)))
+      (when (nth-value 1 (gethash command-name ht))
+        table))))
 
 (defun command-accessible-in-command-table-p (command-name command-table)
   (or (command-present-in-command-table-p command-name command-table)
