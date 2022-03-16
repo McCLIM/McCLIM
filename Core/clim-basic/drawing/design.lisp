@@ -552,14 +552,12 @@ identity-transformation) then source design is returned."
 ;;;;
 
 (defun make-uniform-compositum (ink opacity-value)
-  (cond ((= opacity-value 0)
-         +transparent-ink+)
-        ((= opacity-value 1)
-         ink)
-        (t
-         (make-instance 'uniform-compositum
-           :ink ink
-           :mask (make-opacity opacity-value)))))
+  (if (= opacity-value 1)
+      ink
+      (make-instance 'uniform-compositum
+                     :ink ink
+                     :mask (make-opacity opacity-value))))
+
 ;;; COLOR
 
 (defmethod compose-in ((ink design) (mask color))
