@@ -541,9 +541,9 @@ xmin ymin xmax ymax."))
 ;;;; 14.5
 (defgeneric draw-design
     (medium design
-            &key ink clipping-region transformation line-style line-thickness
-            line-unit line-dashes line-joint-shape line-cap-shape text-style
-            text-family text-face text-size))
+     &key ink filled clipping-region transformation
+       line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape
+       text-style text-family text-face text-size))
 
 
 ;;; 15.3 The Text Cursor [complete]

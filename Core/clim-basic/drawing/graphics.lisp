@@ -251,6 +251,7 @@
            #(2 2 4 2) #(2 2 8 2)))       ; mixed
 
 (defmethod contrasting-dash-pattern-limit (port)
+  (declare (ignore port))
   (length +contrasting-dash-patterns+))
 
 (defun make-contrasting-dash-patterns (n &optional k)
@@ -747,9 +748,7 @@
 
 (defmethod draw-design (medium (design polygon)
                         &rest options &key &allow-other-keys)
-  (apply #'draw-polygon medium (polygon-points design)
-         :filled t
-         options))
+  (apply #'draw-polygon medium (polygon-points design) options))
 
 (defmethod draw-design (medium (design polybezier)
                         &rest options &key &allow-other-keys)
@@ -759,9 +758,7 @@
 
 (defmethod draw-design (medium (design bezigon)
                         &rest options &key &allow-other-keys)
-  (apply #'draw-bezigon medium (bezigon-points design)
-         :filled t
-         options))
+  (apply #'draw-bezigon medium (bezigon-points design) options))
 
 (defmethod draw-design (medium (design line)
                         &rest options &key &allow-other-keys)
