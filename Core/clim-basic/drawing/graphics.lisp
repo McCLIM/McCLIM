@@ -822,13 +822,13 @@
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+))
                         &rest options &key &allow-other-keys)
-  (apply #'draw-design
-         medium (bounding-rectangle (sheet-region medium)) options))
+  (apply #'draw-design medium
+         (bounding-rectangle (sheet-region medium)) options))
 
 (defmethod draw-design ((medium medium) (design (eql +everywhere+))
                         &rest options &key &allow-other-keys)
   (apply #'draw-design medium
-         (bounding-rectangle (sheet-region (medium-sheet medium))) options))
+         (bounding-rectangle (medium-clipping-region medium)) options))
 
 ;;;
 
