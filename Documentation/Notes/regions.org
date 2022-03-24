@@ -1,0 +1,207 @@
+#+title: Regions in McCLIM
+#+author: Daniel Kochmański
+#+date: [2022-01-13 Thu]
+
+* Introduction
+
+  "Technically correct to the real world is what mathematically equal is to
+  the floating-point arithmetic." -- me
+
+  Prerequisite reading (minimum):
+  - http://bauhh.dyndns.org:8000/clim-spec/P-II.html
+  - [[https://en.wikipedia.org/wiki/Algebra_of_sets]]
+
+  Glossary:
+  - simple region :: a region instance that is not a region set
+  - composable regions :: simple regions which composition yields a simple region
+
+  CLIM specification defines numerous regions that are later generalised as a
+  subset of all possible designs. The programmer may construct general regions
+  like points, paths and areas of specified types. Regions may be combined as
+  unions, intersections and differences, moreover and they may be transformed
+  with affine transformations.
+
+  CLIM doesn't explicitly specify the complement operation, however it may be
+  constructed using existing operators. ~+nowhere+~ and ~+everywhere+~ are
+  constants representing the empty set and the universe. The region complement
+  could be constructed as ~(region-difference +everywhere+ region)~.
+
+  Regions may be queried about certain properties with the following functions:
+  - pointp, pathp, areap :: predicates for dimensionality
+  - bounding-rectangle*        :: min-x, min-y, max-x, max-y
+  - region-contains-position-p :: P ∈ REGION
+  - region-equal               :: A = B
+  - region-contains-region-p   :: A ⊆ B
+  - region-intersects-region-p :: A ⋂ B ≠ ∅
+
+  Composition:
+  - region-union        :: A ⋃ B
+  - region-intersection :: A ⋂ B
+  - region-difference   :: A \ B
+
+  CLIM imposes a "dimensionality rule" for set operations - composing two
+  regions should always return a region of a single dimensionality. For
+  example (region-union <rectangle> <line>) should return only the rectangle.
+  This contradicts the design protocol specification that says that union
+  operations is the same as the operation ~compose-over~.
+
+  Transformation (there are more operations not strictly relevant to the
+  region protocol, like ~transform-position~):
+
+  - transform-region :: ⋃(∀P ∈ REGION : T(P))
+
+  - issue :: McCLIM implements ~transform-region~ for elliptical things by
+    transform only the center and diameters - this yields invalid result for
+    shearing transformation. Either signal an error or convert the ellipse to
+    some other object that is mathematically accurate (or at least visually
+    accurate - i.e a bezigon).
+
+  The specification permits for CLIM implementations to implement only a
+  subset of full region composition, however the union of rectangular regions
+  must be fully implemented. The implementation should error on unsupported
+  case (details are left to the implementation).
+
+  - issue :: McCLIM doesn't implement most operations for bezigons and
+    polybeziers. The literature is out there (!). So bezier things are mostly
+    useful for rendering purposes.
+
+* Region types
+
+  Basic regions (i.e not results of composition nor transformation) that may
+  be instationed:
+
+  - points :: standard-point
+  - paths  :: standard-line, standard-polyline, standard-elliptical-arc;
+    McCLIM extension: standard-polybezier
+  - areas  :: standard-rectangle, standard-polygon, standard-ellipse;
+    McCLIM extension: standard-bezigon
+
+  These standard regions are subclasses of many protocol classes. For example
+  ~standard-line~ implements the polyline and the polybezier protocols.
+
+  Sometimes it is not possible to represent composed regions as a simple
+  contiguous region. In order to support these cases classes are specified to
+  represent such compositions:
+
+  - standard-region-union
+  - standard-region-intersection
+  - standard-region-difference
+  - McCLIM extension: standard-rectangle-set
+
+  Along with a protocol:
+
+  - region-set-p
+  - region-set-regions
+  - map-over-region-set-regions
+
+* Simple region composition - canonical form
+
+  Two regions may be composable, then the result is another simple region, or
+  they can't be composed, then the result is a region set.
+
+  Points are not composable when:
+  - they are not equal
+
+  Paths are not composable when (or):
+  - their start and end point doesn't meet and they don't coincide
+  - they have incompatible representation (i.e a line and a curve)
+
+  Areas can't be composed when (or):
+  - they are disjoint
+  - they have incompatible representation (i.e a polygon and an ellipse)
+
+  The case of paths requires additional explanation. Paths have a start and
+  end point and the order does matter. Otherwise we wouldn't be able to
+  provide a canonical form for path composition of polylines.
+
+  - case 1 :: (region-union #<A-B-C> #<C-D-E>)     ;-> #<A-B-C-D-E>
+  - case 2 :: (region-union #<A-B-C> #<A-B-C>)
+    - incorrect (connect starts of both paths)     ;-> #<C-B-A-B-C> ; wrong
+    - correct   (ensure idempotent result)         ;-> #<A-B-C>
+  - case 3 :: (region-union #<A B C> #<C-B-A>)     ;-> #<A B C B A>
+  - case 4 :: (region-union #<A B C> #<B C E F A>) ;-> #<A B C E F A>
+    alternatively (also correct)                   ;-> #<B C E F A B C>
+
+* Canonical form of the region composition
+
+  As noted earlier, sometimes it is not possible to represent a region
+  composition as a simple region. Sometimes a composition has numerous valid
+  set representations - for example ~(A ⋃ B) ⋂ C~ may be represented as:
+
+  - #<intersection #<union A B> C>
+  - #<union #<intersection A C> #<intersection B C>>
+
+  Both are mathematically valid however not having a canonical representation
+  may lead to two problems:
+
+  - region-equal is more often wrong than it could be
+  - ad-hoc simplification rules may lead to the infinite recursion
+
+  To that end McCLIM imposes the following rule:
+
+  #+BEGIN_QUOTE
+    Each region composition is represented as either a simple region, an
+    intersection, or an union of simple regions and intersections.
+  #+END_QUOTE
+
+  It is easy to notice that the region difference is not accounted for in this
+  definition. This is because the region difference doesn't satisfy many
+  identies like a distributive property and composing them with other sets
+  gets tricky really fast.
+  
+  When the result of ~(region-difference a b)~ can't be represented as a
+  simple region, then we represent it as ~#<intersection a (complement b)>~.
+  
+  The class ~standard-region-complement~ is used to represent region
+  complements. The method ~bounding-rectangle*~ signals an error because the
+  region is not bound.
+
+* Unbound region algebra
+
+  McCLIM didn't implement the unbounded region arithmetic beyond basic cases
+  like ~(region-intersection r +nowhere+) -> +nowhere+~. Thanks to the fact
+  that we canonicalize region sets now, and that we may represent the region
+  complement, it is possible to set some rules that will make McCLIM region
+  algebra closed under defined set operations.
+
+  Utilities:
+
+  - region-complement :: for a bounded region it returns an unbounded region
+    and vice versa
+
+  To make the algebra work for "unbound" regions we need to specify an
+  additional canonicalization rules. The gist of these is that all unbound
+  regions must represented as the region complement of a bound region. Below
+  regions that are unbound have an asterix after their name (i.e ~B*~).
+
+  For unions and intersections of two region complements we'll use De Morgan's
+  laws:
+
+  - (region-union A* B*) ; -> #<complement #<intersection A B>>
+  - (region-intersection A* B*) ; -> #<complement #<union A B>>
+
+  Combining bound and unbound regions have different results depending on the
+  operation. For the union the result is unbound and for the intersection the
+  result is bound:
+
+  - (region-union A B*) ; -> #<complement #<intersection A* B>>
+  - (region-intersection A B*); -> #<intersection A B*>
+
+  Region differences are delegated to the region intersection (like before):
+
+  - (region-difference A B)   ; -> (region-intersection A B*)
+                              ;    #<intersection A B*>
+
+  - (region-difference A* B*) ; -> (region-intersection A* B)
+                              ;    #<intersection A* B>
+
+  - (region-difference A* B)  ; -> (region-intersection A* B*)
+                              ;    #<complement #<union A B>>
+
+  - (region-difference A B*)  ; -> (region-intersection A B)
+                              ;    #<intersection a b>>
+
+  Given the above we may with certainity signal an error from the function
+  ~bounding-rectangle*~ when the region is a ~standard-region-difference~.
+  Unbounding rectangle may be used to further narrow the bounding rectangle of
+  the region intersection.
