@@ -139,7 +139,10 @@ pattern, stencil, image etc)."))
   (:method ((pattern indirect-ink) x y)
     (%rgba-value (design-ink pattern x y)))
   (:method (design x y) ; fallback method
-    (%rgba-value (design-ink design x y))))
+    (let ((new-ink (design-ink design x y)))
+      (if (eq new-ink design)
+          (%rgba-value design)
+          (%pattern-rgba-value new-ink x y)))))
 
 (defmethod design-ink ((pattern %rgba-pattern) x y)
   (let ((array (pattern-array pattern)))
@@ -195,16 +198,12 @@ pattern, stencil, image etc)."))
         (%rgba-value element))))
 
 (defmethod design-ink ((pattern indexed-pattern) x y)
-  (let* ((array (pattern-array pattern))
-         ;; indexed-pattern may be used as a design in the rectangular-tile. If
-         ;; it is bigger than our pattern we return +transparent-ink+.
-         (element (if (array-in-bounds-p array y x)
-                      (elt (pattern-designs pattern) (aref array y x))
-                      +transparent-ink+)))
-    (if (patternp element)
-        ;; If design is a pattern we delegate the question
-        (design-ink element x y)
-        element)))
+  (let ((array (pattern-array pattern)))
+    ;; An INDEXED-PATTERN may be used as a design in a RECTANGULAR-TILE. If it
+    ;; is bigger than our pattern we return +transparent-ink+.
+    (if (array-in-bounds-p array y x)
+        (elt (pattern-designs pattern) (aref array y x))
+        +transparent-ink+)))
 
 (defclass stencil (%array-pattern)
   ((array :type (simple-array (single-float 0.0f0 1.0f0) 2)))
@@ -214,7 +213,7 @@ pattern, stencil, image etc)."))
   (make-instance 'stencil :array array))
 
 (defmethod design-ink ((pattern stencil) x y)
-  (let* ((array (pattern-array pattern)))
+  (let ((array (pattern-array pattern)))
     (if (array-in-bounds-p array y x)
         (make-opacity (aref array y x))
         +transparent-ink+)))

@@ -8,7 +8,7 @@
       (unless (or (zerop alpha)
                   (and clip-region
                        (not (region-contains-position-p clip-region x y))))
-        (let* ((value (climi::%rgba-value (clime:design-ink design x y)))
+        (let* ((value (climi::%pattern-rgba-value design x y))
                (a.fg (ldb (byte 8 24) value)))
           (if (> (octet-mult a.fg alpha) 250)
               (setf (aref pixels y x) value)
@@ -29,12 +29,10 @@
                   (and clip-region
                        (not (region-contains-position-p clip-region x y))))
         (multiple-value-bind (r.fg g.fg b.fg a.fg)
-            (%rgba->vals (let* ((ink (clime:design-ink design x y))
-                                (d1 (clime:design-ink (slot-value ink 'climi::design1) x y))
-                                (d2 (clime:design-ink (slot-value ink 'climi::design2) x y)))
-                           (logior (logxor (climi::%rgba-value d1)
-                                           (climi::%rgba-value d2))
-                                   #xff000000)))
+            (%rgba->vals (let* ((ink (climi::design-ink* design x y))
+                                (c1 (climi::%pattern-rgba-value (slot-value ink 'climi::design1) x y))
+                                (c2 (climi::%pattern-rgba-value (slot-value ink 'climi::design2) x y)))
+                           (logior (logxor c1 c2) #xff000000)))
           (let-rgba ((r.bg g.bg b.bg a.bg) (aref pixels y x))
             (setf (aref pixels y x)
                   (octet-blend-function*
