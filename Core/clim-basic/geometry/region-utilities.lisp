@@ -122,13 +122,17 @@ less than or equal to 2pi. Note that 4pi would be normalized to 0, not
 
 (defun normalize-angle* (start end)
   (let ((diff (- end start)))
-    (cond ((<= diff 0)
-           (values 0 0))
-          ((>= diff (- (* 2 pi) single-float-epsilon))
-           (values 0 (* 2 pi)))
-          (t
-           (values (mod start (* 2 pi))
-                   (mod end (* 2 pi)))))))
+    (cond
+      ((coordinate= 0 diff)
+       (values 0 0))
+      ((coordinate<= (* 2 pi) diff)
+       (values 0 (* 2 pi)))
+      (t
+       (let ((start (mod start (* 2 pi)))
+             (end (mod end (* 2 pi))))
+         (when (< end start)
+           (incf end (* 2 pi)))
+         (values start end))))))
 
 (defun find-angle* (x1 y1 x2 y2)
   "Returns the angle between two vectors described by x1, y1 and x2,
