@@ -942,6 +942,11 @@ were added."
         (with-drawing-options (stream :clipping-region record-clip)
           (call-next-method)))))
 
+
+;;; This may look like a good idea at first but it is not. The clip is copied
+;;; from the parent and means "external" context so it can't move with the
+;;; output record. -- jd 2022-03-28
+#+ (or)
 (defmethod* (setf output-record-position) :before
   (new-x new-y (record gs-clip-mixin))
   (with-standard-rectangle* (old-x old-y) record
