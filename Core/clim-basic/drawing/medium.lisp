@@ -222,7 +222,8 @@
   (:method ((medium medium))
     (if-let ((sheet (medium-sheet medium)))
       (sheet-device-region sheet)
-      (medium-clipping-region medium))))
+      (transform-region (medium-device-transformation medium)
+                        (medium-clipping-region medium)))))
 
 (defgeneric medium-native-transformation (medium)
   (:method ((medium medium))
@@ -234,7 +235,8 @@
   (:method ((medium medium))
     (if-let ((sheet (medium-sheet medium)))
       (sheet-native-region sheet)
-      (transform-region (medium-transformation medium)
+      (transform-region (compose-transformations (medium-native-transformation medium)
+                                                 (medium-transformation medium))
                         (medium-clipping-region medium)))))
 
 
