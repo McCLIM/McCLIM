@@ -19,7 +19,7 @@
   (pdf:close-fill-and-stroke))
 
 (defmethod medium-draw-line* ((medium pdf-medium) x1 y1 x2 y2)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
       (with-transformed-position (tr x1 y1)
@@ -27,7 +27,7 @@
           (put-line* x1 y1 x2 y2))))))
 
 (defmethod medium-draw-lines* ((medium pdf-medium) coord-seq)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
       (map-repeated-sequence 'nil 4
@@ -39,7 +39,7 @@
 
 
 (defmethod medium-draw-point* ((medium pdf-medium) x y)
-  (let ((tr (medium-native-transformation medium))
+  (let ((tr (medium-device-transformation medium))
         (radius (/ (medium-line-thickness medium) 2)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
@@ -47,7 +47,7 @@
         (put-circle* x y radius)))))
 
 (defmethod medium-draw-points* ((medium pdf-medium) coord-seq)
-  (let ((tr (medium-native-transformation medium))
+  (let ((tr (medium-device-transformation medium))
         (radius (/ (medium-line-thickness medium) 2)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
@@ -58,7 +58,7 @@
                              coord-seq))))
 
 (defmethod medium-draw-polygon* ((medium pdf-medium) coord-seq closed filled)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
       (pdf:polyline
@@ -78,7 +78,7 @@
          (pdf:stroke))))))
 
 (defmethod medium-draw-rectangle* ((medium pdf-medium) x1 y1 x2 y2 filled)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
       (with-transformed-position (tr x1 y1)
@@ -90,7 +90,7 @@
 
 
 (defmethod medium-draw-rectangles* ((medium pdf-medium) position-seq filled)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (pdf:with-saved-state
       (pdf-actualize-graphics-state medium :line-style :color)
       (map-repeated-sequence 'nil 4
@@ -203,7 +203,7 @@ is T."
                                  radius1-dx radius1-dy radius2-dx radius2-dy
                                  start-angle end-angle filled)
   (pdf:with-saved-state
-    (let ((tr (medium-native-transformation medium)))
+    (let ((tr (medium-device-transformation medium)))
       (pdf-actualize-graphics-state medium :line-style :color)
       (put-ellipse* center-x center-y
                     radius1-dx radius1-dy radius2-dx radius2-dy
@@ -231,6 +231,7 @@ is T."
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
+  (declare (ignore start end toward-x toward-y transform-glyphs))
   (pdf:with-saved-state
     (pdf:in-text-mode
       (pdf-actualize-graphics-state medium :text-style :color)
@@ -280,7 +281,7 @@ is T."
 ;;; Primitive paths
 (defmethod pdf-add-path (medium (polygon polygon))
   (let ((points (polygon-points polygon))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (let ((x0 (point-x (first points)))
           (y0 (point-y (first points))))
       (with-transformed-position (tr x0 y0)
@@ -294,6 +295,7 @@ is T."
         ))))
 
 (defmethod pdf-add-path (medium (ellipse ellipse))
+  (declare (ignore medium ellipse))
   #+(or)
   (progn
     (put-ellipse medium ellipse t)
@@ -317,8 +319,7 @@ is T."
     (:text-style . medium-text-style)))
 
 (defun pdf-current-state (medium kind)
-  (funcall (cdr (assoc kind *pdf-graphics-states*))
-           medium))
+  (funcall (cdr (assoc kind *pdf-graphics-states*)) medium))
 
 (defmacro pdf-saved-state (medium kind)
   `(getf (pdf-medium-graphics-state ,medium) ,kind))
@@ -384,21 +385,21 @@ is T."
     (pdf:set-rgb-stroke r g b)))
 
 ;;; Clipping region
-(defgeneric pdf-set-clipping-region (medium region))
-
-(defmethod pdf-set-clipping-region (medium region)
-  (pdf-add-path medium region)
-  (pdf:clip-path)
-  (pdf:end-path-no-op))
-
-(defmethod pdf-set-clipping-region (medium (region (eql +everywhere+))))
-
-(defmethod pdf-set-clipping-region (medium (region (eql +nowhere+)))
-  (pdf:basic-rect 0 0 0 0)
-  (pdf:clip-path)
-  (pdf:end-path-no-op))
+(defgeneric pdf-set-clipping-region (medium region)
+  (:method (medium (region (eql +everywhere+)))
+    (declare (ignore medium region)))
+  (:method (medium (region (eql +nowhere+)))
+    (declare (ignore medium region))
+    (pdf:basic-rect 0 0 0 0)
+    (pdf:clip-path)
+    (pdf:end-path-no-op))
+  (:method (medium region)
+    (pdf-add-path medium region)
+    (pdf:clip-path)
+    (pdf:end-path-no-op)))
 
 (defmethod pdf-set-graphics-state (medium (kind (eql :clipping-region)))
+  (declare (ignore kind))
   (pdf-set-clipping-region medium (medium-clipping-region medium)))
 
 (defun %font-name-pdf-name (font-name)
