@@ -501,6 +501,15 @@
       (with-transformed-position (tr to-x to-y)
         (call-next-method from-drawable from-x from-y width height to-drawable to-x to-y)))))
 
+#+ (or) ;; This is not the right thing to do because the transformation is lost.
+(defmethod medium-draw-text* :around ((medium transform-coordinates-mixin) string x y start end
+                                      align-x align-y toward-x toward-y transform-glyphs)
+  (let ((tr (medium-transformation medium)))
+    (with-identity-transformation (medium)
+      (with-transformed-position (tr x y)
+        (with-transformed-position (tr toward-x toward-y)
+          (call-next-method medium string x y start end align-x align-y toward-x toward-y transform-glyphs))))))
+
 ;;; Fallback methods relying on MEDIUM-DRAW-POLYGON*
 
 (defmethod medium-draw-point* ((medium basic-medium) x y)

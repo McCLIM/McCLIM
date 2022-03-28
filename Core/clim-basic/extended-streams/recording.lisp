@@ -896,6 +896,7 @@ were added."
 (defmethod recompute-extent-for-changed-child :around
     ((record standard-tree-output-record) child
      old-min-x old-min-y old-max-x old-max-y)
+  (declare (ignore old-min-x old-min-y old-max-x old-max-y))
   (when (eql record (output-record-parent child))
     ;; The child is _not_ being deleted. Update the spatial tree.
     (let ((entry (%entry-in-children-cache record child))
@@ -954,15 +955,6 @@ were added."
   (if-supplied (clipping-region)
     (region-equal (slot-value record 'clipping-region) clipping-region)))
 
-;;; 16.3.2. Graphics Displayed Output Records
-(defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
-                                            basic-output-record
-                                            displayed-output-record)
-  ((ink :reader displayed-output-record-ink)
-   (stream :initarg :stream))
-  (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD.")
-  (:default-initargs :stream nil))
-
 (defmethod replay-output-record :around
     ((record gs-line-style-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
@@ -989,9 +981,27 @@ were added."
   (with-drawing-options (stream :transformation (graphics-state-transformation record))
     (call-next-method)))
 
+(defmethod* (setf output-record-position) :around
+  (nx ny (record gs-transformation-mixin))
+  (with-standard-rectangle* (x1 y1) record
+    (let ((dx (- nx x1))
+          (dy (- ny y1)))
+      (multiple-value-prog1 (call-next-method)
+        (setf #1=(graphics-state-transformation record)
+              (compose-transformation-with-translation #1# dx dy))))))
+
 (defrecord-predicate gs-transformation-mixin (transformation)
   (if-supplied (transformation)
     (transformation-equal (graphics-state-transformation record) transformation)))
+
+;;; 16.3.2. Graphics Displayed Output Records
+(defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
+                                            basic-output-record
+                                            displayed-output-record)
+  ((ink :reader displayed-output-record-ink)
+   (stream :initarg :stream))
+  (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD.")
+  (:default-initargs :stream nil))
 
 (defclass standard-graphics-displayed-output-record
     (standard-displayed-output-record
@@ -1604,7 +1614,8 @@ were added."
      (end    nil nil)
      align-x align-y
      toward-x toward-y transform-glyphs)
-  ;; FIXME!!! Text direction.
+  ;; FIXME Text direction.
+  ;; FIXME This interpretation of TRANSFORM-GLYPHS is incorrect.
   (let* ((transformation (graphics-state-transformation medium))
          (text-style (graphics-state-text-style graphic)))
     (multiple-value-bind (left top right bottom)
@@ -1619,15 +1630,6 @@ were added."
             (values (+ point-x left) (+ point-y top)
                     (+ point-x right) (+ point-y bottom)))))))
 
-(defmethod* (setf output-record-position) :around
-  (nx ny (record draw-text-output-record))
-  (with-standard-rectangle* (x1 y1) record
-    (let ((dx (- nx x1))
-          (dy (- ny y1)))
-      (multiple-value-prog1 (call-next-method)
-        (setf #1=(graphics-state-transformation record)
-              (compose-transformation-with-translation #1# dx dy))))))
-
 (defmethod replay-output-record
     ((record draw-text-output-record) stream
      &optional (region +everywhere+) (x-offset 0) (y-offset 0))
@@ -1638,6 +1640,20 @@ were added."
     (let ((medium (sheet-medium stream)))
       (medium-draw-text* medium string point-x point-y 0 nil align-x
                          align-y toward-x toward-y transform-glyphs))))
+
+#+ (or) ;; See the :around method on GS-TRANSFORMATION-MIXIN.
+(defmethod* (setf output-record-position) :around
+  (nx ny (record draw-text-output-record))
+  (with-standard-rectangle* (x1 y1) record
+    (with-slots (point-x point-y toward-x toward-y) record
+      (let ((dx (- nx x1))
+            (dy (- ny y1)))
+        (multiple-value-prog1
+            (call-next-method)
+          (incf point-x dx)
+          (incf point-y dy)
+          (incf toward-x dx)
+          (incf toward-y dy))))))
 
 (defrecord-predicate draw-text-output-record
     (string (start nil) (end nil) ; START, END are keyword arguments but not slots
@@ -1792,10 +1808,10 @@ were added."
               ;; structure of our own? -- Hefner, 20080118
 
               ;; Some optimization might be possible here.
-              (with-drawing-options (stream :ink (graphics-state-ink substring)
-                                            :clipping-region (graphics-state-clip substring)
-                                            :text-style (graphics-state-text-style substring))
-                (with-identity-transformation (stream)
+              (with-identity-transformation (stream)
+                (with-drawing-options (stream :ink (graphics-state-ink substring)
+                                              :clipping-region (graphics-state-clip substring)
+                                              :text-style (graphics-state-text-style substring))
                   (draw-text* (sheet-medium stream)
                               string start-x (+ start-y (stream-baseline stream))))))))))
 
@@ -2106,6 +2122,7 @@ according to the flags RECORD and DRAW."
 
 ;;; Additional methods
 (defmethod handle-repaint :around ((stream output-recording-stream) region)
+  (declare (ignore region))
   (with-output-recording-options (stream :record nil)
     (call-next-method)))
 
