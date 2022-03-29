@@ -7,7 +7,7 @@
 (defclass rgb-image-port (raster-image-port)
   ())
 
-(defmethod find-port-type ((type (eql :rgb-image)))
+(defmethod find-port-type ((type (eql :raster)))
   (values 'rgb-image-port 'identity))
 
 (defmethod realize-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))

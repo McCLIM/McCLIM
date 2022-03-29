@@ -1,11 +1,11 @@
 (in-package #:clim-clx)
 
-(defparameter *families/names*
+(defparameter *clx-families/names*
   '(:fix         "adobe-courier"
     :serif       "adobe-times"
     :sans-serif  "adobe-helvetica"))
 
-(defparameter *families/faces*
+(defparameter *clx-families/faces*
   '(;; "adobe-courier"
     ((:fix :roman)                 . "medium-r")
     ((:fix :bold)                  . "bold-r")
@@ -37,10 +37,10 @@
       ((find-and-make-xlib-face (display family face size)
          (let* ((family-name (if (stringp family)
                                  family
-                                 (getf *families/names* family)))
+                                 (getf *clx-families/names* family)))
                 (face-name (if (stringp face)
                                face
-                               (assoc-value *families/faces*
+                               (assoc-value *clx-families/faces*
                                             (list family face) :test #'equal))))
            (flet ((try (encoding)
                     (open-font display
@@ -70,16 +70,19 @@
 
 
 
-(defmethod font-ascent ((font xlib:font))
-  (xlib:font-ascent font))
+(defmethod text-style-ascent (text-style (medium clx-medium))
+  (let ((font (text-style-mapping (port medium) text-style)))
+    (xlib:font-ascent font)))
 
-(defmethod font-descent ((font xlib:font))
-  (xlib:font-descent font))
+(defmethod text-style-descent (text-style (medium clx-medium))
+  (let ((font (text-style-mapping (port medium) text-style)))
+    (xlib:font-descent font)))
 
-(defmethod font-character-width ((font xlib:font) char)
-  (xlib:char-width font (char-code char)))
+(defmethod text-style-character-width (text-style (medium clx-medium) char)
+  (let ((font (text-style-mapping (port medium) text-style)))
+    (xlib:char-width font (char-code char))))
 
-(defmethod font-text-extents ((font xlib:font) string &key start end align-x align-y direction)
+(defun font-text-extents (font string &key start end align-x align-y direction)
   (declare (ignore align-x align-y direction))
   (multiple-value-bind (width ascent descent
                         left-bearing right-bearing overall-ascent overall-descent
@@ -87,9 +90,40 @@
       (xlib:text-extents font string :start start :end end :translate #'translate)
     (declare (ignore next-start overall-direction))
     (let ((height (+ overall-ascent overall-descent)))
-     (values left-bearing (- ascent) right-bearing descent
-             left-bearing overall-ascent width height overall-ascent overall-descent 0
-             width 0))))
+      (values left-bearing (- ascent) right-bearing descent
+              left-bearing overall-ascent width height overall-ascent overall-descent 0
+              width 0))))
+
+(defmethod text-bounding-rectangle* ((medium clx-medium) string
+                                     &key text-style (start 0) end
+                                          (align-x :left) (align-y :baseline) (direction :ltr))
+  (unless end
+    (setf end (length string)))
+  (when (= start end)
+    (return-from text-bounding-rectangle* (values 0 0 0 0)))
+  (let* ((text (string string))
+         (text-style (merge-text-styles text-style (medium-merged-text-style medium)))
+         (font (text-style-mapping (clim:port medium) text-style)))
+    (multiple-value-bind (xmin ymin xmax ymax)
+        (font-text-extents font text :start start :end end
+                                     :align-x align-x :align-y align-y :direction direction)
+      (values xmin ymin xmax ymax))))
+
+(defmethod text-size ((medium clx-medium) string &key text-style (start 0) end)
+  (setf string (string string)
+        end (or end (length string))
+        text-style (clim:merge-text-styles text-style (clim:medium-merged-text-style medium)))
+  (when (= start end)
+    (return-from climb:text-size (values 0 0 0 0 (clim:text-style-ascent text-style medium))))
+  (let ((text (string string))
+        (font (text-style-mapping (clim:port medium) text-style)))
+    (multiple-value-bind (xmin ymin xmax ymax
+                          left top width height
+                          ascent descent linegap
+                          cursor-dx cursor-dy)
+        (font-text-extents font text :start start :end end)
+      (declare (ignore xmin ymin xmax ymax left top descent linegap))
+      (values width height cursor-dx cursor-dy ascent))))
 
 
 ;;; Font listing implementation

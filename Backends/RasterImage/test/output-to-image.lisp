@@ -11,19 +11,17 @@
 
 (in-suite :mcclim-raster-image)
 
-(test with-output-to-raster-image.smoke
+(test with-output-to-drawing-stream.smoke
   "Smoke test for the WITH-OUTPUT-TO-RASTER-IMAGE macro."
 
   (flet ((do-it (width height border-width)
-           (let* ((name (format nil "with-output-to-raster-image-~A-~A-~A"
+           (let* ((name (format nil "with-output-to-drawing-stream-raster-~A-~A-~A"
                                 width height border-width))
                   (pathname (make-pathname :name name :type "png"))
                   (string   (with-output-to-string (*standard-output*)
                               (room))))
-             (mcclim-raster-image:with-output-to-raster-image-file
-                 (stream pathname :width width
-                                  :height height
-                                  :border-width border-width)
+             (clime:with-output-to-drawing-stream
+                 (stream :raster pathname :width width :height height :border-width border-width)
                (write-string string stream)))))
     (map-product (lambda (&rest args)
                    (finishes (apply #'do-it args)))
@@ -31,7 +29,8 @@
 
 (test with-output-to-image.nesting
   (finishes
-    (mcclim-raster-image::with-output-to-image (str nil)
-      (let ((image (mcclim-raster-image::with-output-to-image (str2 nil)
+    (clime:with-output-to-drawing-stream (str :raster :pattern :image nil)
+      (let ((image (clime:with-output-to-drawing-stream
+                       (str2 :raster :pattern :image nil)
                      (clim:draw-line* str2 0 0 10 10))))
         (clim:draw-design str image)))))

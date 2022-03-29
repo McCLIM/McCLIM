@@ -166,3 +166,7 @@
        (setf res (region-union res (region-difference x b))))
      y)
     res))
+
+(defmethod region-difference ((x standard-region-intersection) (y bounding-rectangle))
+  (let ((cy (make-instance 'standard-region-complement :complement y)))
+    (make-instance 'standard-region-intersection :regions (list* cy (region-set-regions x)))))

@@ -10,10 +10,16 @@
 
 (in-package #:clim-clx)
 
-(defclass clx-render-medium (clx-medium
-                             climb:multiline-text-medium-mixin
-                             climb:font-rendering-medium-mixin)
-  ((picture :initform nil)))
+(defclass clx-render-medium (ttf-medium-mixin clx-medium)
+  ((picture
+    :initform nil)
+   (%buffer% ;; stores the drawn string glyph ids.
+    :initform (make-array 1024
+                          :element-type '(unsigned-byte 32)
+                          :adjustable nil
+                          :fill-pointer nil)
+    :accessor clx-render-medium-%buffer%
+    :type (simple-array (unsigned-byte 32)))))
 
 (defun clx-render-medium-picture (medium)
   (or (slot-value medium 'picture)
@@ -25,7 +31,7 @@
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
   (declare (ignore filled))
-  (let ((tr (climb:medium-native-transformation medium)))
+  (let ((tr (medium-native-transformation medium)))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (let ((x1 (round-coordinate x1))
@@ -106,35 +112,6 @@
                                  start-angle end-angle filled)
   (call-next-method))
 
-(defmethod text-size ((medium clx-render-medium) string &key text-style (start 0) end
-                      &aux
-                        (string (string string))
-                        (end (or end (length string))))
-  (when (= start end)
-    (return-from text-size (values 0 0 0 0 (text-style-ascent text-style medium))))
-  (let* ((text-style (merge-text-styles text-style
-                                        (medium-merged-text-style medium)))
-         (font (text-style-mapping (port medium) text-style))
-         (text (subseq (string string) start end))
-         (ascent (climb:font-ascent font))
-         (line-height (+ ascent (climb:font-descent font)))
-         (leading (climb:font-leading font))
-         (current-dx 0)
-         (maximum-dx 0)
-         (current-y 0))
-    (dolines (text text)
-      (loop
-        with origin-x fixnum = 0
-        for code across (climb:font-string-glyph-codes font text)
-        do (incf origin-x (climb:font-glyph-dx font code))
-        finally
-           (alexandria:maxf maximum-dx origin-x)
-           (setf current-dx origin-x)
-           (incf current-y leading)))
-    (values maximum-dx (+ current-y line-height (- leading))
-            current-dx (- current-y leading)
-            ascent)))
-
 (defvar *draw-font-lock* (clim-sys:make-lock "draw-font"))
 (defmethod medium-draw-text* ((medium clx-render-medium) string x y
                               start end
@@ -145,7 +122,7 @@
                                             (min end (length string)))))
   (declare (ignore toward-x toward-y))
   (when (alexandria:emptyp string)
-    (return-from clim:medium-draw-text*))
+    (return-from medium-draw-text*))
   (with-clx-graphics () medium
     (clim-sys:with-lock-held (*draw-font-lock*)
       (draw-glyphs medium mirror gc x y string
@@ -224,40 +201,40 @@
                  start end)
            (type string string))
   (when (< (length (the (simple-array (unsigned-byte 32))
-                        (clx-truetype-font-%buffer% font)))
+                        (clx-render-medium-%buffer% medium)))
            (- end start))
-    (setf (clx-truetype-font-%buffer% font)
+    (setf (clx-render-medium-%buffer% medium)
           (make-array (* 256 (ceiling (- end start) 256))
                       :element-type '(unsigned-byte 32)
                       :adjustable nil :fill-pointer nil)))
   (when (and transform-glyphs
-             (not (clim:translation-transformation-p transformation)))
+             (not (translation-transformation-p transformation)))
     (setq string (subseq string start end))
     (ecase align-x
       (:left)
       (:center
-       (let ((origin-x (climb:text-size medium string :text-style text-style)))
+       (let ((origin-x (text-size medium string :text-style text-style)))
          (decf x (/ origin-x 2.0))))
       (:right
-       (let ((origin-x (climb:text-size medium string :text-style text-style)))
+       (let ((origin-x (text-size medium string :text-style text-style)))
          (decf x origin-x))))
     (ecase align-y
       (:top
-       (incf y (climb:font-ascent font)))
+       (incf y (font-ascent font)))
       (:baseline)
       (:center
-       (let* ((ascent (climb:font-ascent font))
-              (descent (climb:font-descent font))
+       (let* ((ascent (font-ascent font))
+              (descent (font-descent font))
               (height (+ ascent descent))
               (middle (- ascent (/ height 2.0s0))))
          (incf y middle)))
       (:baseline*)
       (:bottom
-       (decf y (climb:font-descent font))))
+       (decf y (font-descent font))))
     (return-from draw-glyphs
       (%render-transformed-glyphs
-       font string x y align-x align-y transformation mirror gc)))
-  (let ((glyph-ids (clx-truetype-font-%buffer% font))
+       medium font string x y align-x align-y transformation mirror gc)))
+  (let ((glyph-ids (clx-render-medium-%buffer% medium))
         (glyph-set (ensure-glyph-set port))
         (origin-x 0))
     (loop
@@ -271,15 +248,15 @@
                      (char-code char))
       do
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
-               (the (unsigned-byte 32) (mcclim-truetype:font-glyph-id font code)))
+               (the (unsigned-byte 32) (font-glyph-id font code)))
          (setf char next-char)
          (incf i*)
-         (incf origin-x (climb:font-glyph-dx font code))
+         (incf origin-x (font-glyph-dx font code))
       finally
          (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
                (the (unsigned-byte 32)
-                    (mcclim-truetype:font-glyph-id font (char-code char))))
-         (incf origin-x (climb:font-glyph-dx font (char-code char))))
+                    (font-glyph-id font (char-code char))))
+         (incf origin-x (font-glyph-dx font (char-code char))))
     (multiple-value-bind (x y) (transform-position transformation x y)
       (setq x (ecase align-x
                 (:left
@@ -290,19 +267,19 @@
                  (truncate (+ (- x origin-x) 0.5)))))
       (setq y (ecase align-y
                 (:top
-                 (truncate (+ y (climb:font-ascent font) 0.5)))
+                 (truncate (+ y (font-ascent font) 0.5)))
                 (:baseline
                  (truncate (+ y 0.5)))
                 (:center
-                 (let* ((ascent (climb:font-ascent font))
-                        (descent (climb:font-descent font))
+                 (let* ((ascent (font-ascent font))
+                        (descent (font-descent font))
                         (height (+ ascent descent))
                         (middle (- ascent (/ height 2.0s0))))
                    (truncate (+ y middle 0.5))))
                 (:baseline*
                  (truncate (+ y 0.5)))
                 (:bottom
-                 (truncate (+ y (- (climb:font-descent font)) 0.5)))))
+                 (truncate (+ y (- (font-descent font)) 0.5)))))
       (when (and (typep x '(signed-byte 16))
                  (typep y '(signed-byte 16)))
         (destructuring-bind (source-picture source-pixmap)
@@ -319,58 +296,34 @@
                                         glyph-ids
                                         :end (- end start)))))))
 
-(defun %font-generate-glyph (font code transformation glyph-set)
-  (let ((glyph-id (draw-glyph-id (port font)))
-        (character (code-char (ldb (byte #.(ceiling (log char-code-limit 2)) 0)
-                                   code)))
-        (next-character (code-char (ldb (byte #.(ceiling (log char-code-limit 2))
-                                              #.(ceiling (log char-code-limit 2)))
-                                        code))))
-    (multiple-value-bind (arr left top width height dx dy udx udy)
-        (if (identity-transformation-p transformation)
-            (mcclim-truetype:glyph-pixarray
-             font character next-character transformation)
-            (mcclim-truetype:glyph-pixarray
-             font character next-character
-             (compose-transformations
-              #1=(make-scaling-transformation 1.0 -1.0)
-              (compose-transformations transformation #1#))))
-      (when (= (array-dimension arr 0) 0)
-        (setf arr (make-array (list 1 1)
-                              :element-type '(unsigned-byte 8)
-                              :initial-element 0)))
+(defmethod font-generate-glyph :around
+    ((port clx-ttf-port) font code &key glyph-set)
+  (declare (ignore code font))
+  (let* ((info (call-next-method))
+         (pixarray (glyph-info-pixarray info))
+         (x1 (glyph-info-left info))
+         (y1 (glyph-info-top info))
+         (dx (glyph-info-advance-width info))
+         (dy (glyph-info-advance-height info)))
+    (when (= (array-dimension pixarray 0) 0)
+      (setf pixarray (make-array (list 1 1)
+                                 :element-type '(unsigned-byte 8)
+                                 :initial-element 0)))
+    ;; We negate X1 because we want to start drawing array X1 pixels /after/ the
+    ;; pen (pixarray contains only a glyph without its left-side bearing). TOP
+    ;; is not negated because glyph coordiantes are in the first quardant (while
+    ;; array's are in the fourth). -- jd 2018-09-29
+    (let ((glyph-set (or glyph-set (ensure-glyph-set port)))
+          (glyph-id (draw-glyph-id port)))
       (xlib:render-add-glyph glyph-set glyph-id
-                             :data arr
-;;; We negate LEFT, because we want to start drawing array LEFT pixels after the
-;;; pen (pixarray contains only a glyph without its left-side bearing). TOP is
-;;; not negated because glyph coordinates are in the first quadrant (while
-;;; array's are in fourth).
-;;;
-;;; I'm leaving this comment because it wasn't obvious to me why we negate LEFT
-;;; and not TOP here. -- jd 2018-09-29
-                             :x-origin (- left)
-                             :y-origin top
-                             :x-advance dx
-                             :y-advance dy)
-      (let ((right (+ left (1- (array-dimension arr 1))))
-            (bottom (- top (1- (array-dimension arr 0))))
-            (array #|arr|# nil))
-        ;; INV udx and udy are not transformed here for the transformed glyph
-        ;; rendering (to avoid accumulation of a roundnig error). See
-        ;; %RENDER-TRANSFORMED-GLYPHS. ARR is set to NIL because we are not
-        ;; interested in keeping opacity array (it is already kept on the X11
-        ;; side and we have no need for it on the Lisp side).
-        (mcclim-truetype:glyph-info glyph-id array width height
-                                    left right top bottom
-                                    dx dy udx udy)))))
-
-(defmethod mcclim-truetype:font-generate-glyph
-    ((font clx-truetype-font) code
-     &optional (transformation +identity-transformation+))
-  (%font-generate-glyph font code transformation (ensure-glyph-set (port font))))
+                             :data pixarray
+                             :x-origin (- x1) :y-origin y1
+                             :x-advance dx :y-advance dy)
+      (setf (glyph-info-id info) glyph-id))
+    info))
 
 ;;; Transforming glyphs is very inefficient because we don't cache them.
-(defun %render-transformed-glyphs (font string x y align-x align-y tr mirror gc
+(defun %render-transformed-glyphs (medium font string x y align-x align-y tr mirror gc
                                    &aux (end (length string)))
   (declare (ignore align-x align-y))
   ;; Sync the picture-clip-mask with that of the gcontext.
@@ -387,7 +340,7 @@
     with picture = (drawable-picture mirror)
     with source-picture = (car (gcontext-picture mirror gc))
     ;; ~
-    with glyph-ids = (clx-truetype-font-%buffer% font)
+    with glyph-ids = (clx-render-medium-%buffer% medium)
     with glyph-set = (make-glyph-set (xlib:drawable-display mirror))
     with char = (char string 0)
     with i* = 0
@@ -397,13 +350,15 @@
     as code = (dpb next-char-code (byte #.(ceiling (log char-code-limit 2))
                                         #.(ceiling (log char-code-limit 2)))
                    (char-code char))
-    as glyph-info = (%font-generate-glyph font code glyph-tr glyph-set)
+    as glyph-info = (font-generate-glyph (port medium) font code
+                                         :transformation glyph-tr
+                                         :glyph-set glyph-set)
     do
        (setf (aref (the (simple-array (unsigned-byte 32))
                         glyph-ids)
                    i*)
              (the (unsigned-byte 32)
-                  (mcclim-truetype:glyph-info-id glyph-info)))
+                  (glyph-info-id glyph-info)))
     do ;; rendering one glyph at a time
        (with-round-positions (tr current-x current-y)
          (when (and (typep current-x '(signed-byte 16))
@@ -412,17 +367,18 @@
                                          current-x current-y
                                          glyph-ids :start i* :end (1+ i*))))
        ;; INV advance values are untransformed - see FONT-GENERATE-GLYPH.
-       (incf current-x (mcclim-truetype:glyph-info-advance-width* glyph-info))
-       (incf current-y (mcclim-truetype:glyph-info-advance-height* glyph-info))
+       (incf current-x (glyph-info-advance-width* glyph-info))
+       (incf current-y (glyph-info-advance-height* glyph-info))
     do
        (setf char next-char)
        (incf i*)
     finally
        (setf (aref (the (simple-array (unsigned-byte 32)) glyph-ids) i*)
              (the (unsigned-byte 32)
-                  (mcclim-truetype:glyph-info-id
-                   (%font-generate-glyph font (char-code char)
-                                         glyph-tr glyph-set))))
+                  (glyph-info-id
+                   (font-generate-glyph (port medium) font (char-code char)
+                                        :transformation glyph-tr
+                                        :glyph-set glyph-set))))
     finally
        ;; rendering one glyph at a time (last glyph)
        (with-round-positions (tr current-x current-y)

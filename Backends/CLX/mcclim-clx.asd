@@ -24,10 +24,9 @@
              (:file "mirror" :depends-on ("basic"))))
    (:module "output" :pathname "" :components
             ((:file "bidi" :depends-on ())
-             (:file "fonts" :depends-on ("bidi"))
-             (:file "medium" :depends-on ("fonts"))
-             (:file "fonts-xrender")
-             (:file "medium-xrender" :depends-on ("medium" "fonts-xrender"))
+             (:file "fonts" :depends-on ("bidi" "medium"))
+             (:file "medium")
+             (:file "medium-xrender" :depends-on ("medium"))
              (:file "pixmap" :depends-on ("medium"))))
    (:file "input")))
 

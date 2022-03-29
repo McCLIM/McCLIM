@@ -107,7 +107,9 @@
 ;;; IMHO the CLIM dimensionality rule is brain dead! --gb
 
 (defmethod region-intersection ((a bounding-rectangle) (b bounding-rectangle))
-  (make-instance 'standard-region-intersection :regions (list a b)))
+   (cond ((region-contains-region-p a b) b)
+         ((region-contains-region-p b a) a)
+         (t (make-instance 'standard-region-intersection :regions (list a b)))))
 
 (define-commutative-method region-intersection
     ((bbox bounding-rectangle) (rdif standard-region-complement))

@@ -21,8 +21,8 @@
                   ;;#:save-image-to-file
                   ;;#:save-image-to-stream
                   )
+    ;; deprecated
     (:export
      #:with-output-to-raster-image-stream
      #:with-output-to-raster-image-file
-     #:with-output-to-rgba-pattern
-     #:with-output-to-image-stream))
+     #:with-output-to-rgba-pattern))

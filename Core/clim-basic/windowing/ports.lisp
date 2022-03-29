@@ -55,22 +55,26 @@
                 while (null port-class))
           (try-port (first server-path) server-path))
       (when (null port-class)
-        (error "No CLIM backends have been loaded!"))
+        (if server-path
+            (error "No CLIM backends have been loaded!~%Server-path: ~s." server-path)
+            (error "No CLIM backends have been loaded!")))
       (with-lock-held (*all-ports-lock*)
-        (or (find server-path *all-ports* :test #'equal :key #'port-server-path)
-            (first (push (make-instance port-class :server-path server-path)
-                         *all-ports*)))))))
+        (if-let ((port (find server-path *all-ports* :test #'equal :key #'port-server-path)))
+          (values port t)
+          (values (first (push (make-instance port-class :server-path server-path) *all-ports*))
+                  nil))))))
 
 (defmacro with-port ((port-var server &rest args &key &allow-other-keys)
                      &body body)
   `(invoke-with-port (lambda (,port-var) ,@body) ,server ,@args))
 
 (defun invoke-with-port (continuation server &rest args &key &allow-other-keys)
-  (let* ((path (list* server args))
-         (port (find-port :server-path path)))
-    (unwind-protect
-         (funcall continuation port)
-      (destroy-port port))))
+  (multiple-value-bind (port foundp)
+      (find-port :server-path (list* server args))
+    (if foundp
+        (funcall continuation port)
+        (unwind-protect (funcall continuation port)
+          (destroy-port port)))))
 
 ;;; Basic port
 

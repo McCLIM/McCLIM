@@ -75,10 +75,12 @@
          :name (format nil "~S's event process." port))))))
 
 (defmethod destroy-port :before ((port clx-basic-port))
-  (handler-case
-      (xlib:close-display (clx-port-display port))
-    (stream-error ()
-      (xlib:close-display (clx-port-display port) :abort t))))
+  (when-let ((display (clx-port-display port)))
+    (setf (clx-port-display port) nil)
+    (handler-case
+        (xlib:close-display display)
+      (stream-error ()
+        (xlib:close-display display :abort t)))))
 
 (defmethod pointer-position ((pointer clx-basic-pointer))
   (let* ((port (port pointer))

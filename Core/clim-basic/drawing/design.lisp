@@ -71,19 +71,15 @@
 ;;;
 ;;;   EFFECTIVE-TRANSFORMED-DESIGN design                             [function]
 ;;;
-;;;      Returns a transformed design with all transformations collapset into a
-;;;      single transformation and a design being the source pattern. If
-;;;      resulting transformation is an identity returns source pattern
-;;;      itself. If function is called with a pattern which is not transformed
-;;;      that pattern is returned.
+;;;      Returns a transformed design with all transformations collapsed into a
+;;;      single transformation and a source pattern. If resulting transformation
+;;;      is an identity then DESIGN is returned.
 ;;;
 ;;;
 ;;;   DESIGN-INK design x y                                           [method]
 ;;;
-;;;      Returns ink at position X, Y. If DESIGN is uniform then it is
-;;;      returned. If DESIGN is not defined for the specified coordinates (i.e
-;;;      for array pattern they are out of bounds), +TRANSPARENT-INK+ is
-;;;      returned.
+;;;      Returns ink at position X, Y. When DESIGN is not defined under the
+;;;      specified coordinates, then +TRANSPARENT-INK+ is returned.
 ;;;
 ;;;
 ;;;   COLOR-RGBA design                                               [method]
@@ -192,6 +188,12 @@
             (t (setf (gethash key *color-hash-table*)
                      (make-instance 'named-color :name name :red red :green green :blue blue)))))))
 
+(defun design-ink* (design x y)
+  (loop for old-design = design then new-design
+        for new-design = (design-ink old-design x y)
+        until (eq old-design new-design)
+        finally (return new-design)))
+
 ;;;
 ;;; Below is a literal translation from Dylan's DUIM source code,
 ;;; which was itself probably literal translation from some Lisp code.
@@ -253,6 +255,7 @@
           (make-named-color "Contrasting8" 0.53529414 0.378431375 0.38431373)))
 
 (defmethod contrasting-inks-limit (port)
+  (declare (ignore port))
   (length +contrasting-colors+))
 
 (defun make-contrasting-inks (n &optional k)
@@ -364,7 +367,7 @@
 ;;; Regions
 (defmethod design-ink ((design region) x y)
   (if (region-contains-position-p design x y)
-      (design-ink +foreground-ink+ x y)
+      +foreground-ink+
       +transparent-ink+))
 
 ;;;;
@@ -439,12 +442,12 @@
 ;;; This may be cached in a transformed-design slot. -- jd 2018-09-24
 (defun effective-transformed-design (design &aux source-design)
   "Merges all transformations along the way and returns a shallow, transformed
-desgin. If design is not transformed (or effective transformation is an
+design. If design is not transformed (or effective transformation is an
 identity-transformation) then source design is returned."
   (check-type design design)
   (labels ((effective-transformation (p)
-             (let* ((design* (transformed-design-design p))
-                    (transformation (transformed-design-transformation p)))
+             (let ((design* (transformed-design-design p))
+                   (transformation (transformed-design-transformation p)))
                (typecase design*
                  (transformed-design
                   (compose-transformations transformation
@@ -458,7 +461,7 @@ identity-transformation) then source design is returned."
            (effective-transformed-design (transformed-design-design design))
            (make-instance (type-of design)
                           ;; Argument order matters: EFFECTIVE-TRANSFORMATION
-                          ;; sets SOURCE-DESIGN.
+                          ;; sets the lexical variable SOURCE-DESIGN.
                           :transformation (effective-transformation design)
                           :design source-design)))
       (otherwise design))))
@@ -552,14 +555,12 @@ identity-transformation) then source design is returned."
 ;;;;
 
 (defun make-uniform-compositum (ink opacity-value)
-  (cond ((= opacity-value 0)
-         +transparent-ink+)
-        ((= opacity-value 1)
-         ink)
-        (t
-         (make-instance 'uniform-compositum
-           :ink ink
-           :mask (make-opacity opacity-value)))))
+  (if (= opacity-value 1)
+      ink
+      (make-instance 'uniform-compositum
+                     :ink ink
+                     :mask (make-opacity opacity-value))))
+
 ;;; COLOR
 
 (defmethod compose-in ((ink design) (mask color))

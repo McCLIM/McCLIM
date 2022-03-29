@@ -457,14 +457,10 @@
     (let ((output (get-frame-pane frame 'render-output)))
       (labels ((draw ()
                  (with-slots (recording-p) *application-frame*
-                   (let ((pattern (mcclim-raster-image::with-output-to-image-pattern
-                                      (stream :width *width*
-                                              :height *height*
-                                              :border-width *border-width*
-                                              :recording-p recording-p)
-                                    (draw-rectangle* stream 0 0 *width* *height*
-                                                     :filled t
-                                                     :ink +grey90+)
+                   (let ((pattern (clime:with-output-to-drawing-stream
+                                      (stream :raster :pattern :width *width* :height *height*
+                                              :border-width *border-width* :recording-p recording-p)
+                                    (draw-rectangle* stream 0 0 *width* *height* :filled t :ink +grey90+)
                                     (funcall (drawing-test-display-function item) frame stream))))
                      (draw-pattern* output pattern 0 0)
                      (medium-finish-output (sheet-medium output))))))
@@ -545,8 +541,8 @@
                                         (drawing-test-category test)
                                         (drawing-test-name test) format)))
          (height (+ 72 *height*)))
-    (mcclim-raster-image:with-output-to-raster-image-file
-        (stream filename :width *width* :height height)
+    (clime:with-output-to-drawing-stream
+        (stream :raster filename :width *width* :height height)
       (draw-rectangle* stream 0 0 *width* height :filled t :ink +grey90+)
       (drawing-test-print stream test filename))))
 
@@ -924,7 +920,7 @@ outside the clipping area should be grey.")
     (translated-doit 200 0 :filled nil)
     (translated-doit 200 200 :filled nil)
     (translated-doit 200 400 :filled nil
-                             :line-dashes 10
+                             :line-dashes '(10)
                              :line-thickness 3)))
 
 
@@ -2187,8 +2183,8 @@ outside the clipping area should be grey.")
 (define-drawing-test "RGB Design" "RGB Design" (frame stream)
     ""
   (declare (ignore frame))
-  (let ((pattern (mcclim-raster-image::with-output-to-rgba-pattern
-                     (stream :width 200 :height 200)
+  (let ((pattern (clime:with-output-to-drawing-stream
+                     (stream :raster :pattern :width 200 :height 200)
                    (draw-rectangle* stream 0 0 200 200 :filled t :ink +grey90+)
                    (draw-rectangle* stream 0 0 200 200 :ink +yellow+)
                    (picture01 stream))))

@@ -222,7 +222,8 @@
   (:method ((medium medium))
     (if-let ((sheet (medium-sheet medium)))
       (sheet-device-region sheet)
-      (medium-clipping-region medium))))
+      (transform-region (medium-device-transformation medium)
+                        (medium-clipping-region medium)))))
 
 (defgeneric medium-native-transformation (medium)
   (:method ((medium medium))
@@ -234,7 +235,8 @@
   (:method ((medium medium))
     (if-let ((sheet (medium-sheet medium)))
       (sheet-native-region sheet)
-      (transform-region (medium-transformation medium)
+      (transform-region (compose-transformations (medium-native-transformation medium)
+                                                 (medium-transformation medium))
                         (medium-clipping-region medium)))))
 
 
@@ -366,44 +368,77 @@
   (declare (ignore from-drawable from-x from-y width height to-x to-y))
   (error "MEDIUM-COPY-AREA is not implemented for basic MEDIUMs"))
 
+(defmethod invoke-with-output-to-pixmap ((medium basic-medium) cont &key width height)
+  (unless (and width height)
+    ;; What to do when only width or height are given?  And what's the meaning
+    ;; of medium-var? -- rudi 2005-09-05
+    ;;
+    ;; We default WIDTH or HEIGHT to provided values. The output is clipped to a
+    ;; rectactangle [0 0 (or width max-x) (height max-y)]. We record the output
+    ;; only to learn about dimensions - it is not replayed because the medium
+    ;; can't be expected to work with this protocol. To produce the output we
+    ;; invoke the continuation again. -- jd 2022-03-16
+    (let ((sheet (medium-sheet medium)))
+      (if (output-recording-stream-p sheet)
+          (with-bounding-rectangle* (:x2 max-x :y2 max-y)
+              (invoke-with-output-to-output-record sheet
+                                                   (lambda (sheet record)
+                                                     (declare (ignore record))
+                                                     (funcall cont sheet))
+                                                   'standard-sequence-output-record)
+            (setf width (or width max-x)
+                  height (or height max-y)))
+          (error "WITH-OUTPUT-TO-PIXMAP: please provide :WIDTH and :HEIGHT."))))
+  (let* ((port (port medium))
+         (pixmap (allocate-pixmap medium width height))
+         (pixmap-medium (make-medium port (medium-sheet medium)))
+         (drawing-plane (make-rectangle* 0 0 width height)))
+    (degraft-medium pixmap-medium port medium)
+    (letf (((medium-drawable pixmap-medium) pixmap)
+           ((medium-clipping-region pixmap-medium) drawing-plane))
+      (medium-clear-area pixmap-medium 0 0 width height)
+      (funcall cont pixmap-medium)
+      pixmap)))
+
 
 ;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* :around ((medium transform-coordinates-mixin) x y)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-position (tr x y)
-      (call-next-method medium x y))))
+    (with-identity-transformation (medium)
+      (with-transformed-position (tr x y)
+        (call-next-method medium x y)))))
 
 (defmethod medium-draw-points* :around ((medium transform-coordinates-mixin) coord-seq)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-positions (tr coord-seq)
-      (call-next-method medium coord-seq))))
+    (with-identity-transformation (medium)
+      (with-transformed-positions (tr coord-seq)
+        (call-next-method medium coord-seq)))))
 
 (defmethod medium-draw-line* :around ((medium transform-coordinates-mixin) x1 y1 x2 y2)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-position (tr x1 y1)
-      (with-transformed-position (tr x2 y2)
-        (call-next-method medium x1 y1 x2 y2)))))
+    (with-identity-transformation (medium)
+      (with-transformed-position (tr x1 y1)
+        (with-transformed-position (tr x2 y2)
+          (call-next-method medium x1 y1 x2 y2))))))
 
 (defmethod medium-draw-lines* :around ((medium transform-coordinates-mixin) coord-seq)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-positions (tr coord-seq)
-      (call-next-method medium coord-seq))))
+    (with-identity-transformation (medium)
+      (with-transformed-positions (tr coord-seq)
+        (call-next-method medium coord-seq)))))
 
 (defmethod medium-draw-polygon* :around ((medium transform-coordinates-mixin) coord-seq closed filled)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-positions (tr coord-seq)
-      (call-next-method medium coord-seq closed filled))))
+    (with-identity-transformation (medium)
+      (with-transformed-positions (tr coord-seq)
+        (call-next-method medium coord-seq closed filled)))))
 
 (defmethod medium-draw-bezigon* :around ((medium transform-coordinates-mixin) coord-seq filled)
   (let ((tr (medium-transformation medium)))
-    (with-transformed-positions (tr coord-seq)
-      (call-next-method medium coord-seq filled))))
-
-(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
-  (let ((polygon-coord-seq (polygonalize-bezigon coord-seq)))
     (with-identity-transformation (medium)
-      (medium-draw-polygon* medium polygon-coord-seq nil filled))))
+      (with-transformed-positions (tr coord-seq)
+        (call-next-method medium coord-seq filled)))))
 
 (defun expand-rectangle-coords (left top right bottom)
   "Expand the two corners of a rectangle into a polygon coord-seq"
@@ -412,16 +447,18 @@
 (defmethod medium-draw-rectangle* :around ((medium transform-coordinates-mixin) left top right bottom filled)
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
-        (multiple-value-bind (left top right bottom)
-            (transform-rectangle* tr left top right bottom)
-          (call-next-method medium left top right bottom filled))
+        (with-identity-transformation (medium)
+          (multiple-value-bind (left top right bottom)
+              (transform-rectangle* tr left top right bottom)
+            (call-next-method medium left top right bottom filled)))
         (medium-draw-polygon* medium (expand-rectangle-coords left top right bottom)
                               t filled))) )
 
 (defmethod medium-draw-rectangles* :around ((medium transform-coordinates-mixin) position-seq filled)
   (let ((tr (medium-transformation medium)))
     (if (rectilinear-transformation-p tr)
-        (call-next-method medium (transform-positions tr position-seq) filled)
+        (with-identity-transformation (medium)
+          (call-next-method medium (transform-positions tr position-seq) filled))
         (do-sequence ((left top right bottom) position-seq)
           (medium-draw-polygon* medium (vector left top
                                                left bottom
@@ -429,64 +466,93 @@
                                                right top)
                                 t filled)))))
 
-(defmethod medium-draw-ellipse* :around (medium center-x center-y
-                                         radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                                         start-angle end-angle filled)
-  (when (<= (abs (- (mod start-angle (* 2 pi)) (mod end-angle (* 2 pi)))) short-float-epsilon)
-    (setf start-angle 0
-          end-angle (* 2 pi)))
-  (call-next-method))
-
 (defmethod medium-draw-ellipse* :around ((medium transform-coordinates-mixin)
                                          cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
   (let ((tr (medium-transformation medium)))
     (if (identity-transformation-p tr)
         (call-next-method)
-        (multiple-value-bind (cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
-            (transform-ellipse tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
-          (call-next-method medium cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)))))
+        (with-identity-transformation (medium)
+          (multiple-value-bind (cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
+              (transform-ellipse tr cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2)
+            (call-next-method medium cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled))))))
 
-(defmethod medium-draw-ellipse* ((medium basic-medium)
-                                 cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
-  (with-identity-transformation (medium)
-    (let ((coords (polygonalize-ellipse cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 :filled filled)))
-     (medium-draw-polygon* medium coords nil filled))))
+(defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
+                                     from-x from-y width height
+                                     (to-drawable transform-coordinates-mixin) to-x to-y)
+  (let ((from-tr (medium-transformation from-drawable))
+        (to-tr (medium-transformation to-drawable)))
+    (with-identity-transformation (from-drawable)
+      (with-identity-transformation (to-drawable)
+        (with-transformed-position (from-tr from-x from-y)
+          (with-transformed-position (to-tr to-x to-y)
+            (call-next-method from-drawable from-x from-y width height to-drawable to-x to-y)))))))
 
 (defmethod medium-copy-area :around ((from-drawable transform-coordinates-mixin)
                                      from-x from-y width height
                                      to-drawable to-x to-y)
-  (with-transformed-position ((medium-transformation from-drawable)
-                              from-x from-y)
-    (call-next-method from-drawable from-x from-y width height
-                      to-drawable to-x to-y)))
+  (let ((tr (medium-transformation from-drawable)))
+    (with-identity-transformation (from-drawable)
+      (with-transformed-position (tr from-x from-y)
+        (call-next-method from-drawable from-x from-y width height to-drawable to-x to-y)))))
 
 (defmethod medium-copy-area :around (from-drawable from-x from-y width height
                                      (to-drawable  transform-coordinates-mixin)
                                      to-x to-y)
-  (with-transformed-position ((medium-transformation to-drawable)
-                              to-x to-y)
-    (call-next-method from-drawable from-x from-y width height
-                      to-drawable to-x to-y)))
+  (let ((tr (medium-transformation to-drawable)))
+    (with-identity-transformation (to-drawable)
+      (with-transformed-position (tr to-x to-y)
+        (call-next-method from-drawable from-x from-y width height to-drawable to-x to-y)))))
+
+#+ (or) ;; This is not the right thing to do because the transformation is lost.
+(defmethod medium-draw-text* :around ((medium transform-coordinates-mixin) string x y start end
+                                      align-x align-y toward-x toward-y transform-glyphs)
+  (let ((tr (medium-transformation medium)))
+    (with-identity-transformation (medium)
+      (with-transformed-position (tr x y)
+        (with-transformed-position (tr toward-x toward-y)
+          (call-next-method medium string x y start end align-x align-y toward-x toward-y transform-glyphs))))))
+
+;;; Fallback methods relying on MEDIUM-DRAW-POLYGON*
+
+(defmethod medium-draw-point* ((medium basic-medium) x y)
+  (let ((radius (line-style-effective-thickness (medium-line-style medium) medium)))
+    (medium-draw-circle* medium x y radius 0 (* 2 pi) t)))
+
+(defmethod medium-draw-line* ((medium basic-medium) x1 y1 x2 y2)
+  (medium-draw-polygon* medium (list x1 y1 x2 y2) nil nil))
+
+(defmethod medium-draw-rectangle* ((medium basic-medium) x1 y1 x2 y2 filled)
+  (medium-draw-polygon* medium (list x1 y1 x2 y1 x2 y2 x1 y2) t filled))
+
+(defmethod medium-draw-circle* ((medium basic-medium) cx cy radius eta1 eta2 filled)
+  (medium-draw-ellipse* medium cx cy radius 0 0 radius eta1 eta2 filled))
+
+(defmethod medium-draw-ellipse* ((medium basic-medium)
+                                 cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 filled)
+  (let ((coords (polygonalize-ellipse cx cy rdx1 rdy1 rdx2 rdy2 eta1 eta2 :filled filled)))
+    (medium-draw-polygon* medium coords nil filled)))
+
+#+ (or)
+(defmethod medium-draw-circle* ((medium basic-medium) cx cy radius eta1 eta2 filled)
+  (medium-draw-ellipse* medium cx cy radius 0 0 radius eta1 eta2 filled))
+
+(defmethod medium-draw-bezigon* ((medium basic-medium) coord-seq filled)
+  (let ((polygon-coord-seq (polygonalize-bezigon coord-seq)))
+    (medium-draw-polygon* medium polygon-coord-seq nil filled)))
 
 ;;; Fall-through Methods For Multiple Objects Drawing Functions
 
 (defmethod medium-draw-points* ((medium transform-coordinates-mixin) coord-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (with-transformed-positions (tr coord-seq)
-      (do-sequence ((x y) coord-seq)
-        (medium-draw-point* medium x y)))))
+  (do-sequence ((x y) coord-seq)
+    (medium-draw-point* medium x y)))
 
 (defmethod medium-draw-lines* ((medium transform-coordinates-mixin) position-seq)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (with-transformed-positions (tr position-seq)
-      (do-sequence ((x1 y1 x2 y2) position-seq)
-        (medium-draw-line* medium x1 y1 x2 y2)))))
+  (do-sequence ((x1 y1 x2 y2) position-seq)
+    (medium-draw-line* medium x1 y1 x2 y2)))
 
 (defmethod medium-draw-rectangles* ((medium transform-coordinates-mixin) coord-seq filled)
-  (let ((tr (invert-transformation (medium-transformation medium))))
-    (with-transformed-positions (tr coord-seq)
-      (do-sequence ((x1 y1 x2 y2) coord-seq)
-        (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+  (do-sequence ((x1 y1 x2 y2) coord-seq)
+    (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))
 
 
 ;;; Other Medium-specific Output Functions
@@ -498,7 +564,8 @@
   nil)
 
 (defmethod medium-clear-area ((medium basic-medium) left top right bottom)
-  (draw-rectangle* medium left top right bottom :ink +background-ink+))
+  (draw-rectangle* medium left top right bottom
+                   :ink (compose-over +background-ink+ +black+)))
 
 (defmethod medium-beep ((medium basic-medium))
   nil)

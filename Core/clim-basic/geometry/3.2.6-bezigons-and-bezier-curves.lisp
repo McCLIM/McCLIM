@@ -57,8 +57,8 @@
   (do-sequence* ((x0 y0 x1 y1 x2 y2 x3 y3) coord-seq 6)
     (funcall function x0 y0 x1 y1 x2 y2 x3 y3)))
 
-(defclass standard-polybezier (cached-bbox-mixin bezier-thing) ())
-(defclass standard-bezigon (cached-bbox-mixin bezier-thing) ())
+(defclass standard-polybezier (cached-bbox-mixin polybezier bezier-thing) ())
+(defclass standard-bezigon (cached-bbox-mixin bezigon bezier-thing) ())
 
 (defun make-polybezier (point-seq)
   (assert (= (mod (length point-seq) 3) 1))

@@ -13,65 +13,73 @@
 
 (in-package #:clim-pdf)
 
-(defmacro with-output-to-pdf-stream ((stream-var file-stream &rest options)
-                                     &body body)
-  (let ((cont (gensym)))
-    `(flet ((,cont (,stream-var)
-              ,@body))
-       (declare (dynamic-extent #',cont))
-       (invoke-with-output-to-pdf-stream #',cont ,file-stream ,@options))))
+(defmacro with-output-to-pdf-stream
+    ((stream-var file-stream &rest options) &body body)
+  `(with-output-to-drawing-stream (,stream-var :pdf ,file-stream ,@options)
+     ,@body))
 
-(defun invoke-with-output-to-pdf-stream (continuation
-                                         file-stream
-                                         &key (device-type :a4)
-                                              multi-page scale-to-fit
-                                              trim-page-to-output-size
-                                           (orientation :portrait)
-                                           (units :device)
-                                           header-comments)
-  (climb:with-port (port :pdf :stream file-stream
-                         :device-type device-type
-                         :page-orientation orientation)
-    (let* ((stream (make-clim-pdf-stream port device-type
-                                         multi-page scale-to-fit
-                                         orientation header-comments)))
-      (sheet-adopt-child (find-graft :port port :units units) stream)
-      (with-output-recording-options (stream :record t :draw nil)
-        (funcall continuation stream)
-        (new-page stream))
-      (with-slots (title author subject) stream
-        (let ((output
-               (typecase file-stream
-                 (stream (flexi-streams:make-flexi-stream
-                          file-stream
-                          :external-format :latin-1))
-                 (t file-stream)))
-              (pdf:*compress-streams* nil))
-          (with-output-recording-options (stream :draw t :record nil)
-            (pdf:with-document (:title title :author author :subject subject)
-              (dolist (page (reverse (pdf-pages stream)))
-                (when trim-page-to-output-size
-                  (change-page-dimensions port
-                                          (+ (bounding-rectangle-width page) *pdf-left-margin* *pdf-right-margin*)
-                                          (+ (bounding-rectangle-height page) *pdf-top-margin* *pdf-bottom-margin*)))
-                (let* ((page-region (sheet-native-region (graft stream)))
-                       (transform (make-pdf-transformation
-                                   page-region
-                                   page
-                                   scale-to-fit
-                                   trim-page-to-output-size)))
-                  (with-bounding-rectangle* (left top right bottom) page-region
-                    (pdf:with-page (:bounds (vector left top right bottom))
-                      (climi::letf (((sheet-transformation stream)
-                                     transform))
-                        (replay page stream
-                                (if (or scale-to-fit trim-page-to-output-size)
-                                    nil
-                                    (make-rectangle*
-                                     0 0
-                                     (- right *pdf-left-margin* *pdf-right-margin*)
-                                     (- bottom *pdf-top-margin* *pdf-bottom-margin*)))))))))
-              (pdf:write-document output))))))))
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (port (eql :pdf)) file-stream &rest args
+     &key (device-type :a4) (orientation :portrait) &allow-other-keys)
+  (flet ((make-it (file-stream)
+           (with-port (port :pdf :stream file-stream
+                                 :device-type device-type
+                                 :page-orientation orientation)
+             (apply #'invoke-with-output-to-drawing-stream
+                    continuation port file-stream args))))
+    (typecase file-stream
+      ((or pathname string)
+       (with-open-file (stream file-stream :direction :output
+                                           :if-does-not-exist :create
+                                           :if-exists :supersede
+                                           :element-type '(unsigned-byte 8))
+         (make-it stream)))
+      (t (make-it file-stream)))))
+
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (port pdf-port) file-stream
+     &key (device-type :a4) multi-page scale-to-fit trim-page-to-output-size
+          (orientation :portrait) (units :device) header-comments)
+  (let* ((stream (make-clim-pdf-stream port device-type
+                                       multi-page scale-to-fit
+                                       orientation header-comments)))
+    (sheet-adopt-child (find-graft :port port :units units) stream)
+    (with-output-recording-options (stream :record t :draw nil)
+      (funcall continuation stream)
+      (new-page stream))
+    (with-slots (title author subject) stream
+      (let ((output
+              (typecase file-stream
+                (stream (flexi-streams:make-flexi-stream
+                         file-stream
+                         :external-format :latin-1))
+                (t file-stream)))
+            (pdf:*compress-streams* nil))
+        (with-output-recording-options (stream :draw t :record nil)
+          (pdf:with-document (:title title :author author :subject subject)
+            (dolist (page (reverse (pdf-pages stream)))
+              (when trim-page-to-output-size
+                (change-page-dimensions port
+                                        (+ (bounding-rectangle-width page) *pdf-left-margin* *pdf-right-margin*)
+                                        (+ (bounding-rectangle-height page) *pdf-top-margin* *pdf-bottom-margin*)))
+              (let* ((page-region (sheet-native-region (graft stream)))
+                     (transform (make-pdf-transformation
+                                 page-region
+                                 page
+                                 scale-to-fit
+                                 trim-page-to-output-size)))
+                (with-bounding-rectangle* (left top right bottom) page-region
+                  (pdf:with-page (:bounds (vector left top right bottom))
+                    (climi::letf (((sheet-transformation stream)
+                                   transform))
+                      (replay page stream
+                              (if (or scale-to-fit trim-page-to-output-size)
+                                  nil
+                                  (make-rectangle*
+                                   0 0
+                                   (- right *pdf-left-margin* *pdf-right-margin*)
+                                   (- bottom *pdf-top-margin* *pdf-bottom-margin*)))))))))
+            (pdf:write-document output)))))))
 
 (defmethod new-page ((stream clim-pdf-stream))
   (push (stream-output-history stream) (pdf-pages stream))

@@ -16,51 +16,55 @@
 (in-package #:clim-demo.patterns)
 
 ;;; uniform designs arranged in a pattern
-(eval-when (:load-toplevel :compile-toplevel :execute)
-  (defparameter *text-right-margin* 380)
-  (defparameter *block-height* 220)
-  (defparameter *total-height* 1280)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+ (defparameter *text-right-margin* 380)
+ (defparameter *block-height* 220)
+ (defparameter *total-height* 1280))
 
-  (let* ((array (make-array '(50 50) :initial-element 1 :element-type 'bit))
-         (array2 (make-array '(20 20) :initial-element 1 :element-type 'fixnum))
-         (array3 (make-array '(50 50) :initial-element 0.0f0 :element-type 'single-float))
-         (2-designs  (list +dark-blue+ +dark-red+))
-         (2-designs* (list +dark-salmon+ +dark-slate-grey+))
-         (4-designs  (list +orange+ +dark-green+ +red+ +blue+))
-         (4-designs* (list +purple+ +blue+ +red+ +grey+))
-         (x-designs  (list (make-rectangular-tile (make-pattern array2 4-designs) 25 25)
-                           (make-rectangular-tile (make-pattern array2 4-designs*) 25 25))))
-    ;; set array for 4x4 checkboard
-    (dotimes (i 25)
-      (dotimes (j 25)
-        (setf (aref array i j) 0
-              (aref array (- 49 i) (- 49 j)) 0)))
-    ;; set array2 for 5x5 checkboard
-    (dotimes (i 20)
-      (dotimes (j 20)
-        (setf (aref array2 i j) (mod (+ (truncate i 5) (truncate j 5)) 4))))
-    ;; set array3 for gradient stencil
-    (dotimes (i 50)
-      (dotimes (j 50)
-        (setf (aref array3 i j) (/ (+ i j) 100.0f0))))
+(defparameter *patterns* nil)
 
-    (defparameter *patterns*
-      (list
-       ;; 50x50 checkboard indexed pattern
-       (make-pattern array 2-designs)
-       ;; 50x50 checkboard indexed pattern with indexed rectangular-tile inks
-       (make-pattern array x-designs)
-       ;; 30x30 checkboard 4-indexed pattern rotated by pi/4 and translated
-       (transform-region (compose-transformation-with-translation
-                          (make-rotation-transformation* (/ pi 4) 10.5 10.5)
-                          12.5 12.5)
-                         (make-pattern array2 4-designs))
-       ;; 40x40 checkboard indexed rectangular-tile (ink is 20x20)
-       (make-rectangular-tile (make-pattern array2 4-designs) 40 40)
-       ;; 30x30 checkboard indexed rectangular-tile (ink is 50x50)
-       (make-rectangular-tile (make-pattern array 2-designs*) 30 30)
-       ;; 50x50 checkboard stencil
-       (make-stencil array3)))))
+(defun initialize-patterns ()
+  (unless *patterns*
+    (setf *patterns*
+          (let* ((array (make-array '(50 50) :initial-element 1 :element-type 'bit))
+                 (array2 (make-array '(20 20) :initial-element 1 :element-type 'fixnum))
+                 (array3 (make-array '(50 50) :initial-element 0.0f0 :element-type 'single-float))
+                 (2-designs  (list +dark-blue+ +dark-red+))
+                 (2-designs* (list +dark-salmon+ +dark-slate-grey+))
+                 (4-designs  (list +orange+ +dark-green+ +red+ +blue+))
+                 (4-designs* (list +purple+ +blue+ +red+ +grey+))
+                 (x-designs  (list (make-rectangular-tile (make-pattern array2 4-designs) 25 25)
+                                   (make-rectangular-tile (make-pattern array2 4-designs*) 25 25))))
+            ;; set array for 4x4 checkboard
+            (dotimes (i 25)
+              (dotimes (j 25)
+                (setf (aref array i j) 0
+                      (aref array (- 49 i) (- 49 j)) 0)))
+            ;; set array2 for 5x5 checkboard
+            (dotimes (i 20)
+              (dotimes (j 20)
+                (setf (aref array2 i j) (mod (+ (truncate i 5) (truncate j 5)) 4))))
+            ;; set array3 for gradient stencil
+            (dotimes (i 50)
+              (dotimes (j 50)
+                (setf (aref array3 i j) (float (/ (+ i j) 100.0f0)))))
+
+            (list
+             ;; 50x50 checkboard indexed pattern
+             (make-pattern array 2-designs)
+             ;; 50x50 checkboard indexed pattern with indexed rectangular-tile inks
+             (make-pattern array x-designs)
+             ;; 30x30 checkboard 4-indexed pattern rotated by pi/4 and translated
+             (transform-region (compose-transformation-with-translation
+                                (make-rotation-transformation* (/ pi 4) 10.5 10.5)
+                                12.5 12.5)
+                               (make-pattern array2 4-designs))
+             ;; 40x40 checkboard indexed rectangular-tile (ink is 20x20)
+             (make-rectangular-tile (make-pattern array2 4-designs) 40 40)
+             ;; 30x30 checkboard indexed rectangular-tile (ink is 50x50)
+             (make-rectangular-tile (make-pattern array 2-designs*) 30 30)
+             ;; 50x50 checkboard stencil
+             (make-stencil array3))))))
 
 (defparameter *general-description*
   "In this demo we explore draw-pattern* and draw-design capabilities when used
@@ -330,6 +334,7 @@ right-trimmed for spaces."
 
 (defun display (frame pane &aux (draw *draw*))
   (declare (ignore frame))
+  (initialize-patterns)
   (do ((i 5 (+ i 16))
        (j 5 (+ j 16))
        (max-i *text-right-margin*)
@@ -351,16 +356,16 @@ right-trimmed for spaces."
               :line-dashes t )
   (layout-examples (pane)
     (test-example pane :first-quadrant nil
-                  :draw draw
-                  :description "[1] Basic case. Patterns are drawn with current
+                       :draw draw
+                       :description "[1] Basic case. Patterns are drawn with current
                   transformation being just a translation. Ink should start at
                   top-left corner of the square (should be aligned with
                   it). Likely failures: ink has offset, ink not scrolling with a
                   square.")
     ;; Bug #2: if first-quadrant is t non-uniform design is not drawn.
     (test-example pane :first-quadrant t
-                  :draw draw
-                  :description "[2] Y-axis is reverted (FIRST-QUADRANT=T). Since
+                       :draw draw
+                       :description "[2] Y-axis is reverted (FIRST-QUADRANT=T). Since
                   it is draw-pattern only translation is applied. Should look
                   like the test [1]. Likely failures: inverted ink, squares not
                   visible, additional vertical offset, error in basic-pane, same

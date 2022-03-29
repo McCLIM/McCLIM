@@ -50,7 +50,8 @@
                  (:file "colors"   :depends-on ("design"))
                  (:file "pattern"  :depends-on ("design"))
                  (:file "medium"   :depends-on ("design" "text-style" "colors"))
-                 (:file "graphics" :depends-on ("design" "text-style" "medium"))))
+                 (:file "graphics" :depends-on ("design" "text-style" "medium"))
+                 (:file "with-output-to-drawing-stream")))
    (:module "extended-streams"
     :depends-on ("setf-star" "decls" "utils" "protocol-classes" "multiprocessing" "geometry" "windowing" "drawing")
     :components ((:file "text-formatting") ; standard-page-layout

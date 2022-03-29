@@ -32,7 +32,6 @@
 ;;; CLX-MEDIUM class
 
 (defclass clx-medium (multiline-text-medium-mixin
-                      font-rendering-medium-mixin
                       basic-medium)
   ((gc :initform nil)
    (last-medium-device-region :initform nil

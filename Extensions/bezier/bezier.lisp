@@ -243,7 +243,7 @@ second curve point, yielding (200 50)."
                      (list nil vec))
                    (list (cons coord build) vec))))
            coord-seq
-           :initial-value (list nil (make-array 4 :fill-pointer 0)))
+           :initial-value (list nil (make-array 4 :fill-pointer 0 :adjustable t)))
    (if leftover
        (error "Invalid coord-seq: ~S" coord-seq)
        coord-seq)))
@@ -747,7 +747,7 @@ second curve point, yielding (200 50)."
 (defparameter *pixmaps* (make-hash-table :test #'equal))
 
 (defmethod resolve-ink (medium)
-  (clime:design-ink (medium-ink medium) 0 0))
+  (climi::design-ink* (medium-ink medium) 0 0))
 
 (defun make-ink (medium transparency)
   (let* ((a (/ transparency 16.0))

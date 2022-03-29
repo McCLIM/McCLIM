@@ -251,6 +251,7 @@
            #(2 2 4 2) #(2 2 8 2)))       ; mixed
 
 (defmethod contrasting-dash-pattern-limit (port)
+  (declare (ignore port))
   (length +contrasting-dash-patterns+))
 
 (defun make-contrasting-dash-patterns (n &optional k)
@@ -726,6 +727,10 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
+(defmethod invoke-with-output-to-pixmap ((sheet sheet) cont &key width height)
+  (with-sheet-medium (medium sheet)
+    (invoke-with-output-to-pixmap medium cont :width width :height height)))
+
 ;;;
 ;;; DRAW-DESIGN
 ;;
@@ -743,9 +748,7 @@
 
 (defmethod draw-design (medium (design polygon)
                         &rest options &key &allow-other-keys)
-  (apply #'draw-polygon medium (polygon-points design)
-         :filled t
-         options))
+  (apply #'draw-polygon medium (polygon-points design) options))
 
 (defmethod draw-design (medium (design polybezier)
                         &rest options &key &allow-other-keys)
@@ -755,9 +758,7 @@
 
 (defmethod draw-design (medium (design bezigon)
                         &rest options &key &allow-other-keys)
-  (apply #'draw-bezigon medium (bezigon-points design)
-         :filled t
-         options))
+  (apply #'draw-bezigon medium (bezigon-points design) options))
 
 (defmethod draw-design (medium (design line)
                         &rest options &key &allow-other-keys)
@@ -804,15 +805,13 @@
                                  (apply #'draw-design medium region options))
                                design))
 
-#+nyi
 (defmethod draw-design (medium (design standard-region-intersection)
                         &rest options &key &allow-other-keys)
-  )
+  (apply #'draw-design medium +everywhere+ :clipping-region design options))
 
-#+nyi
 (defmethod draw-design (medium (design standard-region-complement)
                         &rest options &key &allow-other-keys)
-  )
+  (apply #'draw-design medium +everywhere+ :clipping-region design options))
 
 (defmethod draw-design (medium (design (eql +nowhere+))
                         &rest options &key &allow-other-keys)
@@ -821,13 +820,13 @@
 
 (defmethod draw-design ((medium sheet) (design (eql +everywhere+))
                         &rest options &key &allow-other-keys)
-  (apply #'draw-design
-         medium (bounding-rectangle (sheet-region medium)) options))
+  (apply #'draw-design medium
+         (bounding-rectangle (sheet-region medium)) options))
 
 (defmethod draw-design ((medium medium) (design (eql +everywhere+))
                         &rest options &key &allow-other-keys)
   (apply #'draw-design medium
-         (bounding-rectangle (sheet-region (medium-sheet medium))) options))
+         (bounding-rectangle (medium-clipping-region medium)) options))
 
 ;;;
 
@@ -846,6 +845,37 @@
 (defmethod draw-design (medium (color indirect-ink)
                         &rest options &key &allow-other-keys)
   (apply #'draw-design medium +everywhere+ :ink color options))
+
+;;;
+
+(defmethod draw-design (medium (design over-compositum)
+                        &rest options &key &allow-other-keys)
+  (apply #'draw-design medium (compositum-background design) options)
+  (apply #'draw-design medium (compositum-foreground design) options))
+
+(defmethod draw-design (medium (design in-compositum)
+                        &rest options &key &allow-other-keys)
+  (let ((mask (compositum-mask)))
+    (if (regionp mask)
+        (apply #'draw-design medium mask
+               :ink (compositum-ink design)
+               options)
+        (apply #'draw-design medium +everywhere+
+               :ink design
+               options))))
+
+(defmethod draw-design (medium (design out-compositum)
+                        &rest options &key &allow-other-keys)
+  (let ((mask (compositum-mask design)))
+    (if (regionp mask)
+        (apply #'draw-design medium (region-complement mask)
+               :ink (compositum-ink design)
+               options)
+        (apply #'draw-design medium +everywhere+
+               :ink design
+               options))))
+
+;;;
 
 (defmethod draw-design (medium (pattern pattern)
                         &key clipping-region transformation &allow-other-keys)

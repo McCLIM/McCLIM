@@ -158,6 +158,9 @@ x1 y1 moveto x1 y2 lineto x2 y2 lineto x2 y1 lineto x1 y1 lineto"
   (write-coordinates stream x1 y1)
   (format stream "pl~%"))
 
+(defparameter +underhanded-transformation+
+  (make-reflection-transformation* 0 0 0 1))
+
 (define-postscript-procedure
     (put-ellipse :postscript-name "pe"
                  :postscript-body
@@ -175,15 +178,12 @@ setmatrix")
            (cy (point-y center))
            (tr (make-transformation ndx2 ndx1 ndy2 ndy1 cx cy))
            (circle (untransform-region tr ellipse))
-           ;; we need an extra minus sign because the rotation
-           ;; convention for Postscript differs in chirality from the
-           ;; abstract CLIM convention; we do a reflection
-           ;; transformation to move the coordinates to the right
-           ;; handedness, but then the sense of positive rotation is
-           ;; backwards, so we need this reflection for angles.  --
-           ;; CSR, 2005-08-01
-           (start-angle (- (or (ellipse-end-angle circle) 0)))
-           (end-angle (- (or (ellipse-start-angle circle) (* -2 pi)))))
+           ;; The handedness between CLIM and PS don't match. We need to reflect
+           ;; and swap angles to account for that. -- jd 2022-03-25
+           (eta1 (ellipse-start-angle circle))
+           (eta2 (ellipse-end-angle circle))
+           (start-angle (untransform-angle +underhanded-transformation+ eta2))
+           (end-angle   (untransform-angle +underhanded-transformation+ eta1)))
       (write-string (if filled "true " "false ") stream)
       (write-angle stream (if (< end-angle start-angle)
                               (+ end-angle (* 2 pi))
@@ -223,7 +223,7 @@ setmatrix")
    to the current path of STREAM."))
 
 (defmethod postscript-add-path (stream medium (region (eql +nowhere+)))
-  (declare (ignore stream)))
+  (declare (ignore stream medium regiong)))
 
 (defmethod postscript-add-path (stream medium (region standard-region-union))
   (map-over-region-set-regions (lambda (region)
@@ -243,7 +243,7 @@ setmatrix")
 ;;; Primitive paths
 (defmethod postscript-add-path (stream medium (polygon polygon))
   (let ((points (polygon-points polygon))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (let ((x0 (point-x (first points)))
           (y0 (point-y (first points))))
       (with-transformed-position (tr x0 y0)
@@ -256,7 +256,7 @@ setmatrix")
     (format stream "closepath~%")))
 
 (defmethod postscript-add-path (stream medium (ellipse ellipse))
-  (let* ((tr (medium-native-transformation medium))
+  (let* ((tr (medium-device-transformation medium))
          (ellipse (transform-region tr ellipse)))
     (put-ellipse stream ellipse t)))
 
@@ -363,7 +363,6 @@ setmatrix")
   (color-rgb ink))
 
 (defmethod medium-color-rgb (medium ink)
-  (declare (ignore medium))
   (warn "~s: unsupported ink ~s." medium ink)
   (values 1.0 0.0 1.0))
 
@@ -376,18 +375,16 @@ setmatrix")
     (format stream "setrgbcolor~%")))
 
 ;;; Clipping region
-(defgeneric postscript-set-clipping-region (stream medium region))
-
-(defmethod postscript-set-clipping-region (stream medium region)
-  (format stream "newpath~%")
-  (postscript-add-path stream medium region)
-  (format stream "clip~%"))
-
-(defmethod postscript-set-clipping-region (stream medium (region (eql +everywhere+)))
-  (declare (ignore stream)))
-
-(defmethod postscript-set-clipping-region (stream medium (region (eql +nowhere+)))
-  (format stream "newpath 0 0 moveto closepath clip~%"))
+(defgeneric postscript-set-clipping-region (stream medium region)
+  (:method (stream medium (region (eql +everywhere+)))
+    (declare (ignore stream medium region)))
+  (:method (stream medium (region (eql +nowhere+)))
+    (declare (ignore medium region))
+    (format stream "newpath 0 0 moveto closepath clip~%"))
+  (:method (stream medium region)
+    (format stream "newpath~%")
+    (postscript-add-path stream medium region)
+    (format stream "clip~%")))
 
 (defmethod postscript-set-graphics-state (stream medium
                                           (kind (eql :clipping-region)))
@@ -408,7 +405,7 @@ setmatrix")
 
 (defmethod medium-draw-point* ((medium postscript-medium) x y)
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium))
+        (tr (medium-device-transformation medium))
         (radius (/ (medium-line-thickness medium) 2)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :color)
@@ -421,7 +418,7 @@ setmatrix")
 
 (defmethod medium-draw-points* ((medium postscript-medium) coord-seq)
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium))
+        (tr (medium-device-transformation medium))
         (radius (/ (medium-line-thickness medium) 2)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :color)
@@ -437,7 +434,7 @@ setmatrix")
 
 (defmethod medium-draw-line* ((medium postscript-medium) x1 y1 x2 y2)
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (postscript-actualize-graphics-state stream medium :line-style :color)
     (format stream "newpath ")
     (with-transformed-position (tr x1 y1)
@@ -447,7 +444,7 @@ setmatrix")
 
 (defmethod medium-draw-lines* ((medium postscript-medium) coord-seq)
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :line-style :color)
       (format stream "newpath~%")
@@ -463,7 +460,7 @@ setmatrix")
     ((medium postscript-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :line-style :color)
       (format stream "newpath~%")
@@ -483,7 +480,7 @@ setmatrix")
 (defmethod medium-draw-rectangle*
     ((medium postscript-medium) x1 y1 x2 y2 filled)
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :line-style :color)
       (format stream "newpath~%")
@@ -496,7 +493,7 @@ setmatrix")
     ((medium postscript-medium) position-seq filled)
   (assert (evenp (length position-seq)))
   (let ((stream (medium-drawable medium))
-        (tr (medium-native-transformation medium)))
+        (tr (medium-device-transformation medium)))
     (with-graphics-state ((medium-sheet medium))
       (postscript-actualize-graphics-state stream medium :line-style :color)
       (format stream "newpath~%")
@@ -512,7 +509,7 @@ setmatrix")
                                  radius1-dx radius1-dy radius2-dx radius2-dy
                                  start-angle end-angle filled)
   (let* ((stream (medium-drawable medium))
-         (tr (medium-native-transformation medium))
+         (tr (medium-device-transformation medium))
          (ellipse (transform-region
                    tr
                    (make-ellipse* center-x center-y
@@ -571,6 +568,7 @@ setmatrix")
                               start end
                               align-x align-y
                               toward-x toward-y transform-glyphs)
+  (declare (ignore toward-x toward-y transform-glyphs))
   (setq string (if (characterp string)
                    (make-string 1 :initial-element string)
                    (subseq string start end)))

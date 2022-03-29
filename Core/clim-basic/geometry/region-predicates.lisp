@@ -83,6 +83,11 @@
   (or (eq a b)
       (region-equal +nowhere+ (region-difference b a))))
 
+(defmethod region-contains-region-p ((a standard-rectangle) (b bounding-rectangle))
+  (with-standard-rectangle* (x1 y1 x2 y2) a
+    (with-bounding-rectangle* (bx1 by1 bx2 by2) b
+      (and (<= x1 bx1) (<= y1 by1) (>= x2 bx2) (>= y2 by2)))))
+
 (defmethod region-contains-region-p ((a bounding-rectangle) (b standard-region-complement))
   nil)
 

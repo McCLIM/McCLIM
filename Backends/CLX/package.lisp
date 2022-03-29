@@ -12,7 +12,7 @@
            #:x-keysym-to-clim-modifiers))
 
 (defpackage #:clim-clx
-  (:use #:clim #:clim-lisp #:clim-backend)
+  (:use #:clim #:clim-lisp #:clim-backend #:mcclim-truetype)
   (:import-from #:climi
                 #:+alt-key+
                 ;;

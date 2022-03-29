@@ -66,6 +66,10 @@
                     t)
              ,name)))
 
+(defmacro declmacro (name lambda-list)
+  (declare (ignore lambda-list))
+  `(quote ,name))
+
 ;;;; Early special variables
 
 (defvar *application-frame* nil)
@@ -453,9 +457,26 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric text-style-fixed-width-p (text-style medium))
 (defgeneric text-size (medium string &key text-style start end))
 
+(defgeneric text-style-leading (text-style medium)
+  (:method (text-style medium)
+    1.2))
+
 (defgeneric text-style-character-width (text-style medium char)
   (:method (text-style medium char)
     (text-size medium char :text-style text-style)))
+
+(defgeneric text-bounding-rectangle*
+    (medium string &key text-style start end align-x align-y direction)
+  (:documentation "Function returns a bounding box of the text for given
+text-style, alignment and direction.
+
+Argument types:
+align-x   (member :left :center :right)
+align-y   (member :top :baseline :center :baseline* :bottom)
+direction (member :ltr :rtl)
+
+Returned values:
+xmin ymin xmax ymax."))
 
 ;;; 11.2 Text Style Binding Forms
 
@@ -484,6 +505,8 @@ different icons for different purposes based on the icon sizes."))
 (defgeneric copy-area (medium from-x from-y width height to-x to-y))
 (defgeneric medium-copy-area (from-drawable from-x from-y width height
                               to-drawable to-x to-y))
+
+(defgeneric invoke-with-output-to-pixmap (medium cont &key width height))
 
 ;; with-output-to-pixmap (medium-var medium &key width height) &body body [Macro]
 
@@ -518,9 +541,9 @@ different icons for different purposes based on the icon sizes."))
 ;;;; 14.5
 (defgeneric draw-design
     (medium design
-            &key ink clipping-region transformation line-style line-thickness
-            line-unit line-dashes line-joint-shape line-cap-shape text-style
-            text-family text-face text-size))
+     &key ink filled clipping-region transformation
+       line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape
+       text-style text-family text-face text-size))
 
 
 ;;; 15.3 The Text Cursor [complete]
@@ -1302,6 +1325,13 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric window-viewport-position (window))
 ;; (defgeneric (setf* window-viewport-position) (x y window))
 
+;;; 29.4.5 Creating a Standalone CLIM Window
+(declfun open-window-stream
+  (&key port left top right bottom width height foreground background text-style
+        (vertical-spacing 2) end-of-line-action end-of-page-action output-record
+        (draw t) (record t) (initial-cursor-visibility :off) text-margin save-under
+        input-buffer (scroll-bars :vertical) borders label))
+
 
 ;;; 30.3 Basic gadgets
 
@@ -1387,10 +1417,21 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric stream-pathname (stream))
 (defgeneric stream-truename (stream))
 
-;; E.1
+;;; E.0 Drawing backend protocols (generalization of the postscript backend)
+(declmacro with-output-to-drawing-stream (stream-var backend destination &rest args))
+(defgeneric invoke-with-output-to-drawing-stream (continuation backend destination &key &allow-other-keys)
+  (:argument-precedence-order backend destination continuation))
+
+;;; E.1
+
+(declmacro with-output-to-postscript-stream
+  ((stream-var stream
+    &key device-type multi-page scale-to-fit orientation header-comments)
+  &body body))
 
 (defgeneric new-page (stream))
 
+
 ;;;
 
 (defgeneric medium-miter-limit (medium)

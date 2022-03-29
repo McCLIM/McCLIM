@@ -64,7 +64,13 @@
                (:file "graph-formatting-test")
                (:file "asynchronous-commands")
                (:file "reinitialize-frame")
-               (:file "demodemo")))
+               (:file "demodemo")
+               (:module "images"
+                :components ((:static-file "glider.png")
+                             (:static-file "kitten.jpg")
+                             (:static-file "MicroGrayTest.png")
+                             (:static-file "RGBXPLORER8.png")
+                             (:static-file "White_Balance_RGB.png")))))
 
 (defsystem "clim-examples/superapp"
   :depends-on ("mcclim" "bordeaux-threads")
