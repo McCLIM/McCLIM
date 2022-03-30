@@ -37,7 +37,7 @@
   A window containing the following should open (in the screenshot,
   the array elements have been expanded by left-clicking them):
 
-  [[file:../../Documentation/Manual/Texinfo/figures/clouseau-startup-screenshot.png]]
+  [[file:../../Documentation/Manual/figures/clouseau-startup-screenshot.png]]
 
   + Left-click an object to expand or collapse it.
 
@@ -50,7 +50,7 @@
 * Documentation
 
   + For user and developer documentation see the Inspector chapter in
-    file:../../Documentation/Manual/Texinfo/.
+    file:../../Documentation/Manual/.
 
   + For design-related documentation that may be useful when working
     on the inspector clouseau system itself, see [[file:DESIGN.org]].
