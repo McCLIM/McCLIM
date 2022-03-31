@@ -910,9 +910,8 @@
 (defmethod draw-design (medium (pattern transformed-pattern)
                         &key clipping-region transformation &allow-other-keys)
   (flet ((draw-it ()
-           (let* ((effective-pattern (effective-transformed-design pattern))
-                  (pattern-tr (transformed-design-transformation effective-pattern))
-                  (pattern-ds (transformed-design-design effective-pattern))
+           (let* ((pattern-tr (transformed-design-transformation pattern))
+                  (pattern-ds (transformed-design-design pattern))
                   (ink-tr (compose-transformations (medium-transformation medium) pattern-tr))
                   (width (pattern-width pattern-ds))
                   (height (pattern-height pattern-ds))
@@ -935,18 +934,15 @@
              ;; should draw the full (untransformed) pattern at the transformed x/y
              ;; coordinates. This requires we revert to the identity transformation
              ;; before drawing the rectangle. -Hefner
-             (let* ((effective-pattern (effective-transformed-design pattern))
-                    ;; Effective design
-                    (effective-design  (transformed-design-design effective-pattern))
+             (let* (;; Effective design
+                    (effective-design  (transformed-design-design pattern))
                     (design-rectangle  (make-rectangle*
                                         0 0
                                         (pattern-width effective-design)
                                         (pattern-height effective-design)))
                     ;; Effective pattern transformation
-                    (pattern-transform (transformed-design-transformation
-                                        effective-pattern))
-                    (pattern-region    (transform-region
-                                        pattern-transform design-rectangle))
+                    (pattern-transform (transformed-design-transformation pattern))
+                    (pattern-region    (transform-region pattern-transform design-rectangle))
                     ;; Final transformation and region. Adjust for
                     ;; offsets introduced by PATTERN-TRANSFORM and
                     ;; axis flipping introduced by the medium

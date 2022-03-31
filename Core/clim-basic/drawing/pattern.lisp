@@ -288,9 +288,8 @@ Returns a pattern representing this file."
 
 ;;; This may be cached in a transformed-pattern slot. -- jd 2018-09-24
 (defmethod bounding-rectangle* ((pattern transformed-pattern))
-  (let* ((pattern* (effective-transformed-design pattern))
-         (source-pattern (transformed-design-design pattern*))
-         (transformation (transformed-design-transformation pattern*))
+  (let* ((source-pattern (transformed-design-design pattern))
+         (transformation (transformed-design-transformation pattern))
          (width (pattern-width source-pattern))
          (height (pattern-height source-pattern))
          (rectangle (make-rectangle* 0 0 width height)))
@@ -298,7 +297,6 @@ Returns a pattern representing this file."
 
 (defmethod pattern-width ((pattern transformed-pattern)
                           &aux
-                            (pattern (effective-transformed-design pattern))
                             (pattern* (transformed-design-design pattern))
                             (transformation (transformed-design-transformation pattern))
                             (width (pattern-width pattern*))
@@ -308,7 +306,6 @@ Returns a pattern representing this file."
 
 (defmethod pattern-height ((pattern transformed-pattern)
                            &aux
-                             (pattern (effective-transformed-design pattern))
                              (pattern* (transformed-design-design pattern))
                              (transformation (transformed-design-transformation pattern))
                              (width (pattern-width pattern*))
@@ -318,17 +315,13 @@ Returns a pattern representing this file."
 
 (defmethod transform-region (transformation (design pattern))
   (let ((old-transformation (transformed-design-transformation design)))
-    (if (and (translation-transformation-p transformation)
-             (translation-transformation-p old-transformation))
-        (make-instance 'transformed-pattern
-                       :design (transformed-design-design design)
-                       :transformation (compose-transformations old-transformation transformation))
-        (make-instance 'transformed-pattern :design design :transformation transformation))))
+    (make-instance 'transformed-pattern
+                   :design (transformed-design-design design)
+                   :transformation (compose-transformations old-transformation transformation))))
 
 (defmethod design-ink ((design transformed-design) x y)
-  (let* ((effective-pattern (effective-transformed-design design))
-         (source-pattern (transformed-design-design effective-pattern))
-         (transformation (transformed-design-transformation effective-pattern))
+  (let* ((source-pattern (transformed-design-design design))
+         (transformation (transformed-design-transformation design))
          (inv-tr (invert-transformation transformation)))
     (multiple-value-bind (x y) (transform-position inv-tr x y)
       ;; It is important to not use ROUND here, since when the fractional part
