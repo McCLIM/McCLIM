@@ -289,11 +289,8 @@ Returns a pattern representing this file."
 ;;; This may be cached in a transformed-pattern slot. -- jd 2018-09-24
 (defmethod bounding-rectangle* ((pattern transformed-pattern))
   (let* ((source-pattern (transformed-design-design pattern))
-         (transformation (transformed-design-transformation pattern))
-         (width (pattern-width source-pattern))
-         (height (pattern-height source-pattern))
-         (rectangle (make-rectangle* 0 0 width height)))
-    (bounding-rectangle* (transform-region transformation rectangle))))
+         (transformation (transformed-design-transformation pattern)))
+    (bounding-rectangle* (transform-region transformation (bounding-rectangle source-pattern)))))
 
 (defmethod pattern-width ((pattern transformed-pattern)
                           &aux

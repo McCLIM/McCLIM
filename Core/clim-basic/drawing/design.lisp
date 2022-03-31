@@ -459,6 +459,12 @@
             :ink  (compositum-ink object)
             :mask (compositum-mask object))))
 
+(defmethod pattern-width ((design masked-compositum))
+  (pattern-width (compositum-ink design)))
+
+(defmethod pattern-height ((design masked-compositum))
+  (pattern-height (compositum-ink design)))
+
 (defclass in-compositum (masked-compositum) ())
 
 (defmethod compose-in ((ink design) (mask design))
