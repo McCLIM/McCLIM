@@ -439,7 +439,10 @@ translated, so they begin at different position than [0,0])."))
                             &aux (ink* (climi::transformed-design-design
                                         (clime:effective-transformed-design ink))))
   (let* ((drawable (clx-drawable medium))
-         (rgba-pattern (climi::%collapse-pattern ink))
+         (rgba-pattern (climi::%collapse-pattern ink
+                                                 0 0
+                                                 (pattern-width ink)
+                                                 (pattern-height ink)))
          (pm (compute-rgb-image drawable rgba-pattern))
          (gc (xlib:create-gcontext :drawable drawable)))
     (setf (xlib:gcontext-fill-style gc) :tiled

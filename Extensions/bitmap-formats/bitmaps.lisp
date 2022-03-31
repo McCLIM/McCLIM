@@ -29,7 +29,9 @@
 
 (defmacro define-opticl-image-file-writer (format fn)
   `(define-bitmap-file-writer ,format (image destination)
-     (let* ((pattern (%collapse-pattern image))
+     (let* ((width (pattern-width image))
+            (height (pattern-height image))
+            (pattern (%collapse-pattern image 0 0 width height))
             (rgba-array (pattern-array pattern))
             (array (opticl:coerce-image (convert-to-opticl-img rgba-array)
                                         'opticl:8-bit-rgba-image)))

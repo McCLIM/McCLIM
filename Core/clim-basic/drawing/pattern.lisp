@@ -51,14 +51,14 @@
 ;;;
 ;;;      Collapses ink into a single RGBA value. Use only on uniform designs.
 ;;;
-;;;   %PATTERN-RGBA-VALUE pattern x y                                   [method]
+;;;   %PATTERN-RGBA-VALUE pattern x y                                 [function]
 ;;;
 ;;;      Returns pattern color in RGBA for a point [X,Y]. Unoptimized
 ;;;      implementation of %COLLAPSE-PATTERN may use that function.
 ;;;
-;;;   %COLLAPSE-PATTERN pattern                                         [method]
+;;;   %COLLAPSE-PATTERN pattern x y w h                               [function]
 ;;;
-;;;      Takes an arbitrary pattern and returns a %RGBA-PATTERN.
+;;;      Takes an arbitrary design and returns an IMAGE.
 ;;;
 ;;; Note: rectangular-tile is an "infinite" pattern which has a special
 ;;; treatment for drawing. That is a consequence of wording in 14.2: "To create
@@ -107,43 +107,6 @@ pattern, stencil, image etc)."))
   ((array :type (simple-array (unsigned-byte 32) 2)))
   (:documentation "Helper class of RGBA result of another pattern."))
 
-(declaim (ftype (function (t) (values (unsigned-byte 32) &optional nil))
-                %rgba-value))
-(defun %rgba-value (element)
-  "Helper function collapsing uniform design into 4-byte RGBA value."
-  (flet ((transform (parameter)
-           (logand (truncate (* parameter 255)) 255)))
-    (etypecase element
-      ((unsigned-byte 32) element)
-      ;; Uniform-compositium is a masked-compositum rgb + opacity
-      ((or color opacity uniform-compositum)
-       (multiple-value-bind (red green blue opacity)
-           (color-rgba element)
-         (logior (ash (transform opacity) 24)
-                 (ash (transform red)     16)
-                 (ash (transform green)    8)
-                 (ash (transform blue)     0))))
-      (indirect-ink
-       (%rgba-value (indirect-ink-ink element)))
-      (everywhere-region
-       (%rgba-value *foreground-ink*)))))
-
-(defgeneric %pattern-rgba-value (pattern x y)
-  (:documentation "Returns a collapsed RGBA value for position [X, Y].")
-  (:method ((pattern %rgba-pattern) (x fixnum) (y fixnum))
-    (let ((array (pattern-array pattern)))
-      (declare (type (array (unsigned-byte 32) 2) array))
-      (if (array-in-bounds-p array y x)
-          (aref array y x)
-          #x00000000)))
-  (:method ((pattern indirect-ink) x y)
-    (%rgba-value (design-ink pattern x y)))
-  (:method (design x y) ; fallback method
-    (let ((new-ink (design-ink design x y)))
-      (if (eq new-ink design)
-          (%rgba-value design)
-          (%pattern-rgba-value new-ink x y)))))
-
 (defmethod design-ink ((pattern %rgba-pattern) x y)
   (let ((array (pattern-array pattern)))
     (declare (type (array (unsigned-byte 32) 2) array))
@@ -160,19 +123,6 @@ pattern, stencil, image etc)."))
               (t (make-uniform-compositum (color) (/ alpha 255.0))))))
         +transparent-ink+)))
 
-(defgeneric %collapse-pattern (pattern)
-  (:documentation "Returns a %RGBA-PATTERN with colors.")
-  (:method ((pattern pattern)) ;; default method
-    (let* ((width (pattern-width pattern))
-           (height (pattern-height pattern))
-           (array (make-array (list height width)
-                              :element-type '(unsigned-byte 32))))
-      (dotimes (y height)
-        (dotimes (x width)
-          (setf (aref array y x) (%pattern-rgba-value pattern x y))))
-      (make-instance '%rgba-pattern :array array)))
-  (:method ((pattern %rgba-pattern)) pattern))
-
 
 ;;; Rectangular patterns
 
@@ -184,18 +134,6 @@ pattern, stencil, image etc)."))
   (check-type array array)
   (check-type designs sequence)
   (make-instance 'indexed-pattern :array array :designs designs))
-
-(defmethod %pattern-rgba-value ((pattern indexed-pattern) x y)
-  (let* ((array (pattern-array pattern))
-         ;; indexed-pattern may be used as a design in the rectangular-tile. If
-         ;; it is bigger than our pattern we return +transparent-ink+.
-         (element (if (array-in-bounds-p array y x)
-                      (elt (pattern-designs pattern) (aref array y x))
-                      +transparent-ink+)))
-    (if (patternp element)
-        ;; If design is a pattern we delegate the question
-        (%pattern-rgba-value element x y)
-        (%rgba-value element))))
 
 (defmethod design-ink ((pattern indexed-pattern) x y)
   (let ((array (pattern-array pattern)))
@@ -257,25 +195,11 @@ throughout the drawing plane. This is most commonly used with patterns."))
                  :height height
                  :design design))
 
-(defmethod %pattern-rgba-value ((pattern rectangular-tile) x y
-                                &aux
-                                  (x (mod x (pattern-width pattern)))
-                                  (y (mod y (pattern-height pattern))))
-  (let ((element (rectangular-tile-design pattern)))
-    (if (patternp element)
-        ;; If design is a pattern we delegate the question
-        (%pattern-rgba-value element x y)
-        (%rgba-value element))))
-
 (defmethod design-ink ((pattern rectangular-tile) x y
                        &aux
                          (x (mod x (pattern-width pattern)))
                          (y (mod y (pattern-height pattern))))
-  (let ((element (rectangular-tile-design pattern)))
-    (if (patternp element)
-        ;; If design is a pattern we delegate the question.
-        (design-ink element x y)
-        element)))
+  (design-ink (rectangular-tile-design pattern) x y))
 
 
 ;;; Bitmap images (from files)
@@ -407,18 +331,55 @@ Returns a pattern representing this file."
          (transformation (transformed-design-transformation effective-pattern))
          (inv-tr (invert-transformation transformation)))
     (multiple-value-bind (x y) (transform-position inv-tr x y)
-      ;; It is important to not use ROUND here, since when the
-      ;; fractional part is exactly 0.5, we get wrong dimensions -- loke 2019-01-06
+      ;; It is important to not use ROUND here, since when the fractional part
+      ;; is exactly 0.5, we get wrong dimensions -- loke 2019-01-06
       (design-ink source-pattern (floor (+ x 0.5)) (floor (+ y 0.5))))))
 
-(defmethod %collapse-pattern ((pattern transformed-pattern))
-  (with-bounding-rectangle* (x1 y1) pattern
-    (let* ((x1 (round x1))
-           (y1 (round y1))
-           (height (round (pattern-height pattern)))
-           (width  (round (pattern-width pattern)))
-           (array  (make-array (list height width) :element-type '(unsigned-byte 32))))
-      (dotimes (i width)
-        (dotimes (j height)
-          (setf (aref array j i) (%pattern-rgba-value pattern (+ i x1) (+ j y1)))))
-      (make-instance '%rgba-pattern :array array))))
+
+;;; Utilities
+
+(declaim (ftype (function (t) (values (unsigned-byte 32) &optional nil)) %rgba-value))
+(defun %rgba-value (element)
+  "Helper function collapsing uniform design into 4-byte RGBA value."
+  (flet ((transform (parameter)
+           (logand (truncate (* parameter 255)) 255)))
+    (etypecase element
+      ((unsigned-byte 32) element)
+      ;; Uniform-compositium is a masked-compositum rgb + opacity
+      ((or color opacity uniform-compositum)
+       (multiple-value-bind (red green blue opacity)
+           (color-rgba element)
+         (logior (ash (transform opacity) 24)
+                 (ash (transform red)     16)
+                 (ash (transform green)    8)
+                 (ash (transform blue)     0))))
+      (indirect-ink
+       (%rgba-value (indirect-ink-ink element)))
+      (everywhere-region
+       (%rgba-value *foreground-ink*)))))
+
+(defun %pattern-rgba-value (pattern x y)
+  (let ((ink (design-ink pattern x y)))
+    (if (eq ink pattern)
+        (%rgba-value ink)
+        (%pattern-rgba-value ink x y))))
+
+(defun %collapse-pattern (design x0 y0 width height)
+  (when (and (typep design '%rgba-pattern)
+             (zerop x0)
+             (zerop y0)
+             (= width (pattern-width design))
+             (= height (pattern-height design)))
+    (return-from %collapse-pattern design))
+  (let* ((x0 (floor (+ x0 .5)))
+         (y0 (floor (+ y0 .5)))
+         (width (floor (+ width .5)))
+         (height (floor (+ height .5)))
+         (array (make-array (list height width)
+                            :element-type '(unsigned-byte 32))))
+    (loop for i from 0 below width
+          for x from x0 do
+            (loop for j below height
+                  for y from y0 do
+        (setf (aref array j i) (%pattern-rgba-value design x y))))
+    (make-instance '%rgba-pattern :array array)))
