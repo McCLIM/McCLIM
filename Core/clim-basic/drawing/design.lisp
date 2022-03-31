@@ -501,10 +501,20 @@ identity-transformation) then source design is returned."
 (defmethod compose-in ((ink design) (mask design))
   (make-instance 'in-compositum :ink ink :mask mask))
 
+(defmethod design-ink ((design in-compositum) x y)
+  (let ((ink  (design-ink* (compositum-ink  design) x y))
+        (mask (design-ink* (compositum-mask design) x y)))
+    (compose-in ink mask)))
+
 (defclass out-compositum (masked-compositum) ())
 
 (defmethod compose-out ((ink design) (mask design))
   (make-instance 'out-compositum :ink ink :mask mask))
+
+(defmethod design-ink ((design out-compositum) x y)
+  (let ((ink  (design-ink* (compositum-ink  design) x y))
+        (mask (design-ink* (compositum-mask design) x y)))
+    (compose-out ink mask)))
 
 (defclass over-compositum (design)
   ((foreground :initarg :foreground :reader compositum-foreground)
@@ -518,8 +528,8 @@ identity-transformation) then source design is returned."
 ;;; Inefficient fallback method.
 ;;; FIXME we forward-reference %rgba-value.
 (defmethod design-ink ((ink over-compositum) x y)
-  (let ((fg (design-ink (compositum-foreground ink) x y))
-        (bg (design-ink (compositum-background ink) x y)))
+  (let ((fg (design-ink* (compositum-foreground ink) x y))
+        (bg (design-ink* (compositum-background ink) x y)))
     (multiple-value-bind (r g b o)
         (multiple-value-call #'color-blend-function
           (color-rgba fg)
