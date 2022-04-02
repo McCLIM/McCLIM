@@ -583,6 +583,9 @@
 (defmethod allocate-medium ((port port) sheet)
   (make-medium port sheet))
 
+(defmethod make-medium ((port port) sheet)
+  (make-instance 'basic-medium :sheet sheet :port port))
+
 (defmethod deallocate-medium ((port port) medium)
   (declare (ignorable port medium))
   nil)
