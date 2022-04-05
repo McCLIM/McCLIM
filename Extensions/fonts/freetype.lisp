@@ -354,8 +354,8 @@ or NIL if the current transformation is the identity transformation."
     (clim-clx::with-clx-graphics () medium
       (unless (eq align-y :baseline)
         (let* ((font (clim:text-style-mapping (clim:port medium) (clim:medium-text-style medium)))
-               (ascent (climb:font-ascent font))
-               (descent (climb:font-descent font))
+               (ascent (mcclim-truetype:font-ascent font))
+               (descent (mcclim-truetype:font-descent font))
                (text-height (+ ascent descent)))
           (setq y (ecase align-y
                     (:top (+ y ascent))                              ; OK
@@ -452,8 +452,8 @@ or NIL if the current transformation is the identity transformation."
           (when transform-matrix
             (free-glyphset glyphset)))))))
 
-(defmethod climb:font-text-extents ((font freetype-font) string
-                                    &key align-x align-y (start 0) (end (length string)) (direction :ltr))
+(defun font-text-extents (font string
+                          &key align-x align-y (start 0) (end (length string)) (direction :ltr))
   (declare (ignore align-x align-y))
   ;; Values to return:
   ;;-> xmin ymin xmax ymax left top width height ascent descent linegap cursor-dx cursor-dy
@@ -465,19 +465,19 @@ or NIL if the current transformation is the identity transformation."
                (let ((cached-glyphs (freetype-font/cached-glyphs font)))
                  (multiple-value-bind (width ascender descender)
                      (loop
-                        with rx = 0
-                        with ascender = 0
-                        with descender = 0
-                        for current-index on index-list
-                        for e = (car current-index)
-                        for attrs = (gethash (glyph-entry-codepoint e) cached-glyphs)
-                        do (progn
-                             (when (cdr current-index)
-                               (incf rx (/ (glyph-entry-x-advance e) 64)))
-                             (setf descender (max descender (- (glyph-attributes-height attrs)
-                                                               (glyph-attributes-y-origin attrs))))
-                             (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
-                        finally (return (values rx ascender descender)))
+                       with rx = 0
+                       with ascender = 0
+                       with descender = 0
+                       for current-index on index-list
+                       for e = (car current-index)
+                       for attrs = (gethash (glyph-entry-codepoint e) cached-glyphs)
+                       do (progn
+                            (when (cdr current-index)
+                              (incf rx (/ (glyph-entry-x-advance e) 64)))
+                            (setf descender (max descender (- (glyph-attributes-height attrs)
+                                                              (glyph-attributes-y-origin attrs))))
+                            (setf ascender (max ascender (glyph-attributes-y-origin attrs))))
+                       finally (return (values rx ascender descender)))
                    (let* ((e (car (last index-list)))
                           (glyph-attrs (gethash (glyph-entry-codepoint e) cached-glyphs)))
                      (values
@@ -496,7 +496,7 @@ or NIL if the current transformation is the identity transformation."
                       ;; line properties
                       (freetype2:face-ascender-pixels face)
                       (freetype2:face-descender-pixels face)
-                      (- (climb:font-leading font)
+                      (- (font-leading font)
                          (+ (freetype2:face-ascender-pixels face)
                             (freetype2:face-descender-pixels face)))
                       ;; cursor motion
@@ -510,37 +510,37 @@ or NIL if the current transformation is the identity transformation."
                     (blocks (find-replacement-fonts port text-style string))
                     (size (clim:text-style-size text-style)))
                (loop
-                  with curr-x = 0
-                  with sizes = nil
-                  for (string family style) in blocks
-                  for new-text-style = (if family (clim:make-text-style family style size) text-style)
-                  do (let ((font (clim:text-style-mapping port new-text-style)))
-                       (setf sizes (multiple-value-list (text-extents font string 0 (length string))))
-                       (incf curr-x (car sizes)))
-                  finally
+                 with curr-x = 0
+                 with sizes = nil
+                 for (string family style) in blocks
+                 for new-text-style = (if family (clim:make-text-style family style size) text-style)
+                 do (let ((font (clim:text-style-mapping port new-text-style)))
+                      (setf sizes (multiple-value-list (text-extents font string 0 (length string))))
+                      (incf curr-x (car sizes)))
+                 finally
                     (setf (car sizes) curr-x)
                     (return (apply #'values sizes)))))
             (t
              (text-extents font string start end))))))
 
-(defmethod climb:font-glyph-dx ((font freetype-font) character)
-  (nth-value 2 (climb:font-text-extents font (format nil "~c" (code-char character)))))
-
-(defmethod climb:text-bounding-rectangle* ((medium clx-freetype-medium) string
-                                           &key
-                                             text-style
-                                             (start 0) end
-                                             (align-x :left) (align-y :baseline) (direction :ltr)
-                                           &aux (end (or end (length string))))
+(defmethod climb:text-bounding-rectangle*
+    ((medium clx-freetype-medium) string
+     &key
+       text-style
+       (start 0) end
+       (align-x :left) (align-y :baseline) (direction :ltr)
+     &aux (end (or end (length string))))
   (when (= start end)
     (return-from climb:text-bounding-rectangle* (values 0 0 0 0)))
   (let ((text (string string))
-        (font (clim:text-style-mapping (clim:port medium)
-                                        (clim:merge-text-styles text-style
-                                                                (clim:medium-merged-text-style medium)))))
+        (font (clim:text-style-mapping
+               (clim:port medium)
+               (clim:merge-text-styles text-style
+                                       (clim:medium-merged-text-style medium)))))
     (multiple-value-bind (xmin ymin xmax ymax)
-        (climb:font-text-extents font text :start start :end end
-                                 :align-x align-x :align-y align-y :direction direction)
+        (font-text-extents font text :start start :end end
+                                     :align-x align-x :align-y align-y
+                                     :direction direction)
       (values xmin ymin xmax ymax))))
 
 (defmethod climb:text-size ((medium clx-freetype-medium) string &key text-style (start 0) end)
@@ -556,15 +556,19 @@ or NIL if the current transformation is the identity transformation."
                             left top width height
                             ascent descent linegap
                             cursor-dx cursor-dy)
-          (climb:font-text-extents font text :start start :end end)
+          (font-text-extents font text :start start :end end)
         (declare (ignore xmin ymin xmax ymax left top descent linegap))
         (values width height cursor-dx cursor-dy ascent)))))
 
-(defmethod climb:font-ascent ((font freetype-font))
+(defun font-leading (font)
+  (declare (ignore font))
+  1.2)
+
+(defun mcclim-truetype:font-ascent (font)
   (with-face-from-font (face font)
     (freetype2:face-ascender-pixels face)))
 
-(defmethod climb:font-descent ((font freetype-font))
+(defun mcclim-truetype:font-descent (font)
   (with-face-from-font (face font)
     (freetype2:face-descender-pixels face)))
 
@@ -663,7 +667,7 @@ or NIL if the current transformation is the identity transformation."
                   :key #'clim-extensions:font-family-name))))
   (clim-clx::font-families port))
 
-(defmethod clim-extensions:font-family-all-faces ((family freetype-font-family))
+(defmethod clime:font-family-all-faces ((family freetype-font-family))
   (loop
     for face being each hash-value in (freetype-font-family/faces family)
     collect face))
@@ -671,9 +675,8 @@ or NIL if the current transformation is the identity transformation."
 ;;;
 ;;;  Character info
 ;;;
-
-(macrolet ((define-glyph-info-method (name reader-function)
-             `(defmethod ,name ((font freetype-font) code)
+(macrolet ((define-glyph-info-function (name reader-function)
+             `(defun ,name (font code)
                 (with-face-from-font (face font)
                   (freetype2-ffi:ft-set-transform face (cffi:null-pointer) (cffi:null-pointer))
                   ;; This ensures that the glyph in question has been cached
@@ -682,18 +685,34 @@ or NIL if the current transformation is the identity transformation."
                     (unless info
                       (error "Character with code ~s was not found in font ~s after loading cached glyphs" code font))
                     ,reader-function)))))
-  (define-glyph-info-method climb:font-glyph-top (glyph-attributes-y-origin info))
-  (define-glyph-info-method climb:font-glyph-left (- (glyph-attributes-x-origin info)))
-  (define-glyph-info-method climb:font-glyph-bottom (- (glyph-attributes-height info)
-                                                       (glyph-attributes-y-origin info)))
-  (define-glyph-info-method climb:font-glyph-right (- (glyph-attributes-width info)
-                                                      (glyph-attributes-x-origin info)))
-  (define-glyph-info-method climb:font-glyph-width (glyph-attributes-width info))
-  (define-glyph-info-method climb:font-glyph-height (glyph-attributes-height info)))
+  (define-glyph-info-function font-glyph-top
+      (glyph-attributes-y-origin info))
+  (define-glyph-info-function font-glyph-left
+      (- (glyph-attributes-x-origin info)))
+  (define-glyph-info-function font-glyph-bottom
+      (- (glyph-attributes-height info)
+         (glyph-attributes-y-origin info)))
+  (define-glyph-info-function font-glyph-right
+      (- (glyph-attributes-width info)
+         (glyph-attributes-x-origin info)))
+  (define-glyph-info-function font-glyph-width
+      (glyph-attributes-width info))
+  (define-glyph-info-function font-glyph-height
+      (glyph-attributes-height info)))
 
-(defmethod climb:font-string-glyph-codes ((font freetype-font) string &key (start 0) (end (length string)))
+(defun font-glyph-dx (font character)
+  (nth-value 2 (font-text-extents font (format nil "~c" (code-char character)))))
+
+(defun font-string-glyph-codes (font string &key (start 0) (end (length string)))
   (let ((index-list (make-glyph-list font (subseq string start end) :ltr)))
     (map 'vector #'glyph-entry-codepoint index-list)))
+
+(defmethod climb:text-style-character-width (text-style (medium clx-freetype-medium) char)
+  (let* ((font (climb:text-style-mapping (clim:port medium) text-style))
+         (codes (font-string-glyph-codes font (string char)))
+         (code (alexandria:first-elt codes)))
+    (assert (alexandria:length= 1 codes))
+    (font-glyph-dx font code)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Font replacement code

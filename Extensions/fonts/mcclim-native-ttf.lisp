@@ -50,6 +50,9 @@
   (let ((family (font-face-family face)))
     (pushnew face (all-faces family))))
 
+(defgeneric font-leading (font)
+  (:method (font) 1.2))
+
 (defclass truetype-font ()
   ((face          :initarg :face     :reader font-face)
    (size          :initarg :size     :reader font-size)
