@@ -66,10 +66,10 @@
                    (is (eq input result)))))
               (error
                (signals error (climi::parse-text-style* input))))))
-        `(;; Invalid text style specifications
-          (1                 error)
-          ((nil nil)         error)
-          ((nil nil nil nil) error)
+        `(;; Invalid text style specifications default to *undefined-text-style*.
+          (1                 t)
+          ((nil nil)         t)
+          ((nil nil nil nil) t)
           ;; Valid ones
           (nil)
           ((nil nil nil))
