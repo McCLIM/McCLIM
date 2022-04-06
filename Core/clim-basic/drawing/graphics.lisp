@@ -270,7 +270,8 @@
 (defun draw-point (sheet point
                    &rest args
                    &key ink clipping-region transformation
-                        line-style line-thickness line-unit)
+                        line-style line-thickness line-unit
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness line-unit))
   (with-medium-options (sheet args)
@@ -280,7 +281,8 @@
 (defun draw-point* (sheet x y
                     &rest args
                     &key ink clipping-region transformation
-                         line-style line-thickness line-unit)
+                         line-style line-thickness line-unit
+                    &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness line-unit))
   (with-medium-options (sheet args)
@@ -289,7 +291,8 @@
 (defun draw-points (sheet point-seq
                     &rest args
                     &key ink clipping-region transformation
-                         line-style line-thickness line-unit)
+                         line-style line-thickness line-unit
+                    &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness line-unit))
   (with-medium-options (sheet args)
@@ -298,7 +301,8 @@
 (defun draw-points* (sheet coord-seq
                      &rest args
                      &key ink clipping-region transformation
-                          line-style line-thickness line-unit)
+                          line-style line-thickness line-unit
+                     &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness line-unit))
   (with-medium-options (sheet args)
@@ -307,7 +311,8 @@
 (defun draw-line (sheet point1 point2
                   &rest args
                   &key ink clipping-region transformation line-style
-                    line-thickness line-unit line-dashes line-cap-shape)
+                       line-thickness line-unit line-dashes line-cap-shape
+                  &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -318,7 +323,8 @@
 (defun draw-line* (sheet x1 y1 x2 y2
                    &rest args
                    &key ink clipping-region transformation line-style
-                     line-thickness line-unit line-dashes line-cap-shape)
+                        line-thickness line-unit line-dashes line-cap-shape
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -327,7 +333,8 @@
 (defun draw-lines (sheet point-seq
                    &rest args
                    &key ink clipping-region transformation line-style
-                     line-thickness line-unit line-dashes line-cap-shape)
+                        line-thickness line-unit line-dashes line-cap-shape
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -336,7 +343,8 @@
 (defun draw-lines* (sheet coord-seq
                     &rest args
                     &key ink clipping-region transformation line-style
-                      line-thickness line-unit line-dashes line-cap-shape)
+                         line-thickness line-unit line-dashes line-cap-shape
+                    &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -345,18 +353,20 @@
 (defun draw-polygon (sheet point-seq
                      &rest args
                      &key (filled t) (closed t) ink clipping-region
-                       transformation line-style line-thickness
-                       line-unit line-dashes line-joint-shape line-cap-shape)
+                          transformation line-style line-thickness
+                          line-unit line-dashes line-joint-shape line-cap-shape
+                     &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
     (medium-draw-polygon* medium (expand-point-seq point-seq) closed filled)))
 
 (defun draw-polygon* (sheet coord-seq
-                    &rest args
-                    &key (filled t) (closed t) ink clipping-region
-                      transformation line-style line-thickness line-unit
-                      line-dashes line-joint-shape line-cap-shape)
+                      &rest args
+                      &key (filled t) (closed t) ink clipping-region
+                           transformation line-style line-thickness line-unit
+                           line-dashes line-joint-shape line-cap-shape
+                      &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
@@ -365,8 +375,9 @@
 (defun draw-bezigon (sheet point-seq
                      &rest args
                      &key (filled t) ink clipping-region
-                       transformation line-style line-thickness
-                       line-unit line-dashes line-joint-shape line-cap-shape)
+                          transformation line-style line-thickness
+                          line-unit line-dashes line-joint-shape line-cap-shape
+                     &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
@@ -375,18 +386,20 @@
 (defun draw-bezigon* (sheet coord-seq
                       &rest args
                       &key (filled t) ink clipping-region
-                        transformation line-style line-thickness line-unit
-                        line-dashes line-joint-shape line-cap-shape)
+                           transformation line-style line-thickness line-unit
+                           line-dashes line-joint-shape line-cap-shape
+                      &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape line-cap-shape))
   (with-medium-options (sheet args)
     (medium-draw-bezigon* medium coord-seq filled)))
 
 (defun draw-rectangle (sheet point1 point2
-                        &rest args
-                        &key (filled t) ink clipping-region transformation
-                          line-style line-thickness line-unit
-                          line-dashes line-joint-shape)
+                       &rest args
+                       &key (filled t) ink clipping-region transformation
+                            line-style line-thickness line-unit
+                            line-dashes line-joint-shape
+                       &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
@@ -397,8 +410,9 @@
 (defun draw-rectangle* (sheet x1 y1 x2 y2
                         &rest args
                         &key (filled t) ink clipping-region transformation
-                          line-style line-thickness line-unit line-dashes
-                          line-joint-shape)
+                             line-style line-thickness line-unit line-dashes
+                             line-joint-shape
+                        &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
@@ -407,8 +421,9 @@
 (defun draw-rectangles (sheet points
                         &rest args
                         &key (filled t) ink clipping-region transformation
-                          line-style line-thickness line-unit line-dashes
-                          line-joint-shape)
+                             line-style line-thickness line-unit line-dashes
+                             line-joint-shape
+                        &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
@@ -420,8 +435,9 @@
 (defun draw-rectangles* (sheet position-seq
                          &rest args
                          &key (filled t) ink clipping-region transformation
-                           line-style line-thickness line-unit
-                           line-dashes line-joint-shape)
+                              line-style line-thickness line-unit
+                              line-dashes line-joint-shape
+                         &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (with-medium-options (sheet args)
@@ -430,8 +446,9 @@
 (defun draw-triangle (sheet point1 point2 point3
                       &rest args
                       &key (filled t) ink clipping-region transformation
-                        line-style line-thickness line-unit line-dashes
-                        line-joint-shape)
+                           line-style line-thickness line-unit line-dashes
+                           line-joint-shape
+                      &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (apply #'draw-polygon sheet (list point1 point2 point3)
@@ -440,20 +457,21 @@
 (defun draw-triangle* (sheet x1 y1 x2 y2 x3 y3
                        &rest args
                        &key (filled t) ink clipping-region transformation
-                         line-style line-thickness line-unit line-dashes
-                         line-joint-shape)
+                            line-style line-thickness line-unit line-dashes
+                            line-joint-shape
+                       &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-joint-shape))
   (apply #'draw-polygon* sheet (list x1 y1 x2 y2 x3 y3)
          :filled filled :closed t args))
 
-(defun draw-ellipse (sheet
-                     center-point
+(defun draw-ellipse (sheet center-point
                      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                      &rest args
                      &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                       ink clipping-region transformation line-style
-                       line-thickness line-unit line-dashes line-cap-shape)
+                          ink clipping-region transformation line-style
+                          line-thickness line-unit line-dashes line-cap-shape
+                     &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (multiple-value-setq (start-angle end-angle)
@@ -465,13 +483,13 @@
                             radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                             start-angle end-angle filled))))
 
-(defun draw-ellipse* (sheet
-                      center-x center-y
+(defun draw-ellipse* (sheet center-x center-y
                       radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                       &rest args
                       &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                        ink clipping-region transformation line-style
-                        line-thickness line-unit line-dashes line-cap-shape)
+                           ink clipping-region transformation line-style
+                           line-thickness line-unit line-dashes line-cap-shape
+                      &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -480,13 +498,13 @@
                           radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                           start-angle end-angle filled)))
 
-(defun draw-circle (sheet
-                    center-point radius
+(defun draw-circle (sheet center-point radius
                     &rest args
                     &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                      ink clipping-region transformation
-                      line-style line-thickness line-unit line-dashes
-                      line-cap-shape)
+                         ink clipping-region transformation
+                         line-style line-thickness line-unit line-dashes
+                         line-cap-shape
+                    &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -496,12 +514,12 @@
                             radius 0 0 radius
                             start-angle end-angle filled))))
 
-(defun draw-circle* (sheet
-                     center-x center-y radius
+(defun draw-circle* (sheet center-x center-y radius
                      &rest args
                      &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                       ink clipping-region transformation line-style
-                       line-thickness line-unit line-dashes line-cap-shape)
+                          ink clipping-region transformation line-style
+                          line-thickness line-unit line-dashes line-cap-shape
+                     &allow-other-keys)
   (declare (ignore ink clipping-region transformation line-style line-thickness
                    line-unit line-dashes line-cap-shape))
   (with-medium-options (sheet args)
@@ -511,13 +529,14 @@
                           start-angle end-angle filled)))
 
 (defun draw-text (sheet string point
-                   &rest args
-                   &key (start 0) (end nil)
-                     (align-x :left) (align-y :baseline)
-                     (toward-point nil toward-point-p)
-                     transform-glyphs
-                     ink clipping-region transformation
-                     text-style text-family text-face text-size)
+                  &rest args
+                  &key (start 0) (end nil)
+                       (align-x :left) (align-y :baseline)
+                       (toward-point nil toward-point-p)
+                       transform-glyphs
+                       ink clipping-region transformation
+                       text-style text-family text-face text-size
+                  &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    text-style text-family text-face text-size))
   (with-medium-options (sheet args)
@@ -534,10 +553,11 @@
 (defun draw-text* (sheet string x y
                    &rest args
                    &key (start 0) (end nil)
-                     (align-x :left) (align-y :baseline)
-                     (toward-x (1+ x)) (toward-y y) transform-glyphs
-                     ink clipping-region transformation
-                     text-style text-family text-face text-size)
+                        (align-x :left) (align-y :baseline)
+                        (toward-x (1+ x)) (toward-y y) transform-glyphs
+                        ink clipping-region transformation
+                        text-style text-family text-face text-size
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    text-style text-family text-face text-size))
   (with-medium-options (sheet args)
@@ -552,7 +572,8 @@
                         line-style line-thickness
                         line-unit line-dashes line-cap-shape
                         (to-head t) from-head (head-length 10) (head-width 5)
-                        (head-filled nil) angle)
+                        (head-filled nil) angle
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape
@@ -568,7 +589,8 @@
                          line-style line-thickness
                          line-unit line-dashes line-cap-shape
                          (to-head t) from-head (head-length 10) (head-width 5)
-                         (head-filled nil) angle)
+                         (head-filled nil) angle
+                    &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
@@ -588,17 +610,7 @@
                (p end)
                (q start)
                (line-style (medium-line-style sheet))
-               ;; FIXME: I believe this thickness is in "line-style-units",
-               ;; which are only coincidentally the same as pixel coorindates
-               ;; on screen backends, using :normal units. There is no function
-               ;; documented for converting the units to stream coordinates.
-               (thickness (multiple-value-bind (dx dy)
-                              (transform-distance
-                               (invert-transformation
-                                (medium-transformation sheet))
-                               (line-style-thickness line-style)
-                               0)
-                            (sqrt (+ (* dx dx) (* dy dy)))))
+               (thickness (line-style-effective-thickness line-style sheet))
                (width/2 (/ head-width 2))
                (a (atan (/ width/2 head-length)))
                (offset (if (and head-length (not (zerop head-length)))
@@ -648,8 +660,9 @@
 (defun draw-oval (sheet center-pt x-radius y-radius
                   &rest args
                   &key (filled t) ink clipping-region transformation
-                    line-style line-thickness line-unit
-                    line-dashes line-cap-shape)
+                       line-style line-thickness line-unit
+                       line-dashes line-cap-shape
+                  &allow-other-keys)
   (declare (ignore filled ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
@@ -659,8 +672,9 @@
 (defun draw-oval* (sheet center-x center-y x-radius y-radius
                    &rest args
                    &key (filled t) ink clipping-region transformation
-                     line-style line-thickness line-unit
-                     line-dashes line-cap-shape)
+                        line-style line-thickness line-unit
+                        line-dashes line-cap-shape
+                   &allow-other-keys)
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
@@ -868,14 +882,10 @@
 
 (defmethod draw-design (medium (design in-compositum)
                         &rest options &key &allow-other-keys)
-  (let ((mask (compositum-mask)))
+  (let ((mask (compositum-mask design)))
     (if (regionp mask)
-        (apply #'draw-design medium mask
-               :ink (compositum-ink design)
-               options)
-        (apply #'draw-design medium +everywhere+
-               :ink design
-               options))))
+        (apply #'draw-design medium mask :ink (compositum-ink design) options)
+        (apply #'draw-design medium +everywhere+ :ink design options))))
 
 (defmethod draw-design (medium (design out-compositum)
                         &rest options &key &allow-other-keys)
