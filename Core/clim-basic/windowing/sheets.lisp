@@ -760,7 +760,10 @@ this might be different from the sheet's native region and transformation.")))
          :documentation "If non-NIL, an array pattern or a sequence of
                          array patterns that should be used by the
                          host's window manager to represent the sheet,
-                         for example when its mirror is iconified.")))
+                         for example when its mirror is iconified."))
+  (:default-initargs
+   :icon nil
+   :pretty-name "McCLIM Window"))
 
 (defmethod shrink-sheet ((sheet top-level-sheet-mixin))
   (port-shrink-sheet (port sheet) sheet))

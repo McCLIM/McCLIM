@@ -80,7 +80,7 @@
   (let* ((fm (find-frame-manager :port port))
          (frame (apply #'make-application-frame 'a-window-stream
                        :frame-manager fm
-                       :pretty-name (or label "")
+                       :pretty-name (or label "McCLIM Window")
                        :left left
                        :top top
                        :right right
