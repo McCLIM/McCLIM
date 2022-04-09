@@ -527,9 +527,16 @@ translated, so they begin at different position than [0,0])."))
                    (min-y    (round-coordinate (- y radius))))
               (when (and (typep min-x '(signed-byte 16))
                          (typep min-y '(signed-byte 16)))
-                (xlib:draw-arc mirror gc min-x min-y
-                               diameter diameter
-                               0 (* 2 pi) t))))))))
+                (flet ((draw-circle ()
+                         (xlib:draw-arc mirror gc min-x min-y
+                                        diameter diameter
+                                        0 (* 2 pi) t))
+                       (draw-square ()
+                         (xlib:draw-rectangle mirror gc min-x min-y
+                                              diameter diameter t)))
+                  (if (eq (line-style-cap-shape line-style) :round)
+                      (draw-circle)
+                      (draw-square))))))))))
 
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
