@@ -727,6 +727,19 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
+(defmethod medium-copy-area ((from-drawable sheet) fx fy w h (to-drawable sheet) tx ty)
+  (with-sheet-medium (from-drawable from-drawable)
+    (with-sheet-medium (to-drawable to-drawable)
+      (medium-copy-area from-drawable fx fy w h to-drawable tx ty))))
+
+(defmethod medium-copy-area ((from-drawable sheet) fx fy w h to-drawable tx ty)
+  (with-sheet-medium (from-drawable from-drawable)
+    (medium-copy-area from-drawable fx fy w h to-drawable tx ty)))
+
+(defmethod medium-copy-area (from-drawable fx fy w h (to-drawable sheet) tx ty)
+  (with-sheet-medium (to-drawable to-drawable)
+    (medium-copy-area from-drawable fx fy w h to-drawable tx ty)))
+
 (defmethod invoke-with-output-to-pixmap ((sheet sheet) cont &key width height)
   (with-sheet-medium (medium sheet)
     (invoke-with-output-to-pixmap medium cont :width width :height height)))
