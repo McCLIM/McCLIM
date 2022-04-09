@@ -512,7 +512,7 @@ translated, so they begin at different position than [0,0])."))
 ;;; Medium-specific Drawing Functions
 
 (defmethod medium-draw-point* ((medium clx-medium) x y)
-  (with-transformed-position ((medium-native-transformation medium) x y)
+  (with-transformed-position ((medium-device-transformation medium) x y)
     (with-clx-graphics () medium
       (let ((diameter (line-style-effective-thickness line-style medium)))
         (if (< diameter 2)
@@ -541,7 +541,7 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-draw-points* ((medium clx-medium) coord-seq)
   (with-transformed-positions
-      ((medium-native-transformation medium) coord-seq)
+      ((medium-device-transformation medium) coord-seq)
     (with-clx-graphics () medium
       (let ((diameter (line-style-effective-thickness line-style medium)))
         (if (< diameter 2)
@@ -564,14 +564,14 @@ translated, so they begin at different position than [0,0])."))
 
 (defmethod medium-draw-line* ((medium clx-medium) x1 y1 x2 y2)
   (multiple-value-bind (x1 y1 x2 y2)
-      (clipped-line (medium-native-transformation medium) x1 y1 x2 y2)
+      (clipped-line (medium-device-transformation medium) x1 y1 x2 y2)
     (when x1
       (with-clx-graphics () medium
         (xlib:draw-line mirror gc x1 y1 x2 y2)))))
 
 (defmethod medium-draw-polygon* ((medium clx-medium) coord-seq closed filled)
   (assert (evenp (length coord-seq)))
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (multiple-value-bind (coords unionp)
         (clipped-poly tr coord-seq closed)
       (when coords
@@ -592,7 +592,7 @@ translated, so they begin at different position than [0,0])."))
       (call-next-method)))
 
 (defmethod medium-draw-rectangle* ((medium clx-medium) left top right bottom filled)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (if (rectilinear-transformation-p tr)
         (multiple-value-bind (left top width height)
             (clipped-rect tr left top right bottom)
@@ -612,7 +612,7 @@ translated, so they begin at different position than [0,0])."))
           (index  0))
       (do-sequence ((left top right bottom) position-seq)
         (multiple-value-bind (min-x min-y width height)
-            (clipped-rect (medium-native-transformation medium)
+            (clipped-rect (medium-device-transformation medium)
                           left top right bottom)
           (setf (aref points (+ index 0)) min-x)
           (setf (aref points (+ index 1)) min-y)
@@ -629,7 +629,7 @@ translated, so they begin at different position than [0,0])."))
                                  rdx1 rdy1 rdx2 rdy2
                                  start-angle end-angle filled)
   ;;; Round the parameters of the ellipse so that it occupies the expected pixels
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (with-transformed-position (tr center-x center-y)
       (climi::with-transformed-distance (tr rdx2 rdy2)
         (climi::with-transformed-distance (tr rdx1 rdy1)
@@ -748,7 +748,7 @@ translated, so they begin at different position than [0,0])."))
   (xlib:display-force-output (clx-port-display (port medium))))
 
 (defmethod medium-clear-area ((medium clx-medium) left top right bottom)
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (with-transformed-position (tr left top)
       (with-transformed-position (tr right bottom)
         (let ((min-x (round-coordinate (min left right)))

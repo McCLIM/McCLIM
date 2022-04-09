@@ -31,7 +31,7 @@
 
 (defun medium-draw-rectangle-xrender (medium x1 y1 x2 y2 filled)
   (declare (ignore filled))
-  (let ((tr (medium-native-transformation medium)))
+  (let ((tr (medium-device-transformation medium)))
     (with-transformed-position (tr x1 y1)
       (with-transformed-position (tr x2 y2)
         (let ((x1 (round-coordinate x1))
@@ -129,8 +129,7 @@
                    :start start :end end
                    :align-x align-x :align-y align-y
                    :translate #'translate
-                   :transformation (sheet-device-transformation
-                                    (medium-sheet medium))
+                   :transformation (medium-device-transformation medium)
                    :transform-glyphs transform-glyphs))))
 
 
