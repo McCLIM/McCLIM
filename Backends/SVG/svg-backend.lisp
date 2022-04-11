@@ -112,11 +112,55 @@
     (let ((id (ensure-resource-id (medium (cons :clip region))
                 (cl-who:with-html-output (drawable (medium-drawable medium))
                   (:defs (:|clipPath| :id ^resource-id (draw-design medium region)))))))
-      (values :clip id)))
+      (values :clip (url id))))
   (:method ((medium svg-medium) (region standard-region-complement))
     (error "SVG: Unsupported clip ~s." 'standard-region-complement))
   (:method ((medium svg-medium) (region standard-region-intersection))
     (error "SVG: Unsupported clip ~s." 'standard-region-intersection)))
+
+(defmethod medium-clip ((medium svg-medium) (region standard-region-complement))
+  (let ((id (ensure-resource-id (medium (cons :mask region))
+              (cl-who:with-html-output (drawable (medium-drawable medium) :indent t)
+                (:defs nil nil
+                  (let ((pattern-id
+                          (ensure-resource-id (medium (cons :mask-pattern region))
+                            (cl-who:htm (:pattern :id ^resource-id :|patternUnits| "userSpaceOnUse"
+                                         :x 0 :y 0 :width "100%" :height "100%")
+                                        (:g :fill "white" (draw-design medium +everywhere+))
+                                        (:g :fill "black" (draw-design medium (region-complement region)))))))
+                    (cl-who:htm
+                     (:mask :id ^resource-id :|maskUnits| "userSpaceOnUse"
+                      :x 0 :y 0 :width "100%" :height "100%"
+                      (:rect :x 0 :y 0 :width "100%" :height "100%" :fill (url pattern-id))))))))))
+    (values :mask (url id))))
+
+(defmethod medium-clip ((medium svg-medium) (clip standard-region-intersection))
+  (let ((mask-id "none"))
+    (cl-who:with-html-output (drawable (medium-drawable medium) :indent t)
+      (:defs nil nil
+        (labels ((add-pattern (region)
+                   (ensure-resource-id (medium (cons :mask-pattern region))
+                     (cl-who:htm (:pattern :id ^resource-id :|patternUnits| "userSpaceOnUse"
+                                  :x 0 :y 0 :width "100%" :height "100%"
+                                  (etypecase region
+                                    (standard-region-intersection
+                                     (error "BUG: not canonical form!"))
+                                    (standard-region-complement
+                                     (cl-who:htm (:g :fill "white" (draw-design medium +everywhere+)))
+                                     (cl-who:htm (:g :fill "black" (draw-design medium (region-complement region)))))
+                                    (bounding-rectangle
+                                     (cl-who:htm (:g :fill "white" (draw-design medium region)))))))))
+                 (add-mask (pattern-id mask-id)
+                   (ensure-resource-id (medium (cons :mask pattern-id))
+                     (cl-who:htm
+                      (:mask :id ^resource-id :|maskUnits| "userSpaceOnUse"
+                       :x 0 :y 0 :width "100%" :height "100%"
+                       (:rect :x 0 :y 0 :width "100%" :height "100%"
+                              :fill pattern-id :mask mask-id))))))
+          (loop for region in (region-set-regions clip)
+                for pattern-id = (add-pattern region)
+                do (setf mask-id (url (add-mask (url pattern-id) mask-id)))))))
+    (values :mask mask-id)))
 
 ;;; This would be so much nicer had SVG accept RGBA as a fill from the get-go.
 (defun uniform-design-values (design)
@@ -148,6 +192,40 @@
             (fmt mxx) (fmt myx)
             (fmt mxy) (fmt myy)
             (fmt  tx) (fmt  ty))))
+
+(defun svg-miter-limit (miter-limit-as-angle)
+  ;; svg-miter-limit = miter-length / stroke-width = 1 / sin(theta/2)
+  (/ 1 (sin (/ miter-limit-as-angle 2))))
+
+(defun svg-parse-text-style-family (text-style-family)
+  (case text-style-family
+    (:serif "serif")
+    (:sans-serif "sans-serif")
+    (:fix "monospace")
+    (otherwise text-style-family)))
+
+;;; Returns values: font-style, font-weight and font-variant.
+(defun svg-parse-text-style-face (text-style-face)
+  (etypecase text-style-face
+    (symbol
+     (ecase text-style-face
+       (:italic (values "italic" "normal" "normal"))
+       (:bold   (values "normal" "bold"   "normal"))
+       (:roman  (values "normal" "normal" "normal"))))
+    (list
+     (values (if (member :italic text-style-face) "italic" "normal")
+             (if (member :bold   text-style-face) "bold"   "normal")
+             "normal"))
+    (string
+     (handler-case (let* ((s1 (position #\- text-style-face))
+                          (s2 (position #\- text-style-face :start (1+ s1)))
+                          (style   (subseq text-style-face 0 s1))
+                          (weight  (subseq text-style-face (1+ s1) s2))
+                          (variant (subseq text-style-face (1+ s2))))
+                     (values style weight variant))
+       (error ()
+         (svg-parse-text-style-face
+          (text-style-face *undefined-text-style*)))))))
 
 (defvar *configuring-device-p* nil)
 
@@ -188,9 +266,38 @@
                (configure-area ()
                  (funcall cont drawable))
                (configure-path ()
-                 (funcall cont drawable))
+                 (let* ((line-style (medium-line-style medium))
+                        (thickness (fmt (line-style-effective-thickness line-style medium)))
+                        (dashes (map 'list #'fmt (line-style-effective-dashes line-style medium)))
+                        (cap-shape (ecase (line-style-cap-shape line-style)
+                                     ((:butt :no-end-point) "butt")
+                                     (:square "square")
+                                     (:round "round")))
+                        (joint-shape (ecase (line-style-joint-shape line-style)
+                                       ((:bevel :none) "bevel")
+                                       (:miter "miter")
+                                       (:round "round")))
+                        (miter-limit (svg-miter-limit (medium-miter-limit medium))))
+                   (cl-who:htm
+                     (:g :stroke-width thickness
+                         :stroke-dasharray (format nil "~{~a~^ ~}" dashes)
+                         :stroke-linecap cap-shape
+                         :stroke-linejoin joint-shape
+                         :miter-limit miter-limit
+                         (funcall cont drawable)))))
                (configure-text ()
-                 (funcall cont drawable)))
+                 (multiple-value-bind (family face size)
+                     (text-style-components (parse-text-style* (medium-text-style medium)))
+                   (let ((font-family (svg-parse-text-style-family family)))
+                     (multiple-value-bind (font-style font-weight font-variant)
+                         (svg-parse-text-style-face face)
+                       (cl-who:htm
+                         (:g :font-family font-family
+                             :font-style font-style
+                             :font-weight font-weight
+                             :font-variant font-variant
+                             :font-size size
+                             (funcall cont drawable))))))))
         (let ((*configuring-device-p* t))
           (configure-clip))))))
 
