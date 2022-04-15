@@ -63,6 +63,9 @@
       (format nil "~d" number)
       (format nil "~f" number)))
 
+(defvar *viewport-w*)
+(defvar *viewport-h*)
+
 (defmethod invoke-with-output-to-drawing-stream
     (continuation (port svg-port) (destination stream) &rest args)
   (declare (ignore args))
@@ -74,13 +77,15 @@
           (clip (make-rectangle* 0 0 width height))
           (w-in (format nil "~ain" (fmt (/ width dpi))))
           (h-in (format nil "~ain" (fmt (/ height dpi))))
-          (bbox (format nil "0 0 ~a ~a" (fmt width) (fmt height))))
+          (bbox (format nil "0 0 ~a ~a" (fmt width) (fmt height)))
+          (*viewport-w* width)
+          (*viewport-h* height))
       (with-drawing-options (medium :clipping-region clip)
         (cl-who:with-html-output (destination destination)
           (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
-                :xmlns "http://www.w3.org/2000/svg"
-                :|xmlns:xlink| "http://www.w3.org/1999/xlink"
-                (funcall continuation medium)))))))
+           :xmlns "http://www.w3.org/2000/svg"
+           :|xmlns:xlink| "http://www.w3.org/1999/xlink"
+           (funcall continuation medium)))))))
 
 
 (defclass svg-medium (mcclim-truetype:ttf-medium-mixin basic-medium)
@@ -120,14 +125,14 @@
 
 (defmethod medium-clip ((medium svg-medium) (region standard-region-complement))
   (let ((id (ensure-resource-id (medium (cons :mask region))
-              (cl-who:with-html-output (drawable (medium-drawable medium) :indent t)
+              (cl-who:with-html-output (drawable (medium-drawable medium))
                 (:defs nil nil
                   (let ((pattern-id
                           (ensure-resource-id (medium (cons :mask-pattern region))
                             (cl-who:htm (:pattern :id ^resource-id :|patternUnits| "userSpaceOnUse"
-                                         :x 0 :y 0 :width "100%" :height "100%")
-                                        (:g :fill "white" (draw-design medium +everywhere+))
-                                        (:g :fill "black" (draw-design medium (region-complement region)))))))
+                                         :x 0 :y 0 :width "100%" :height "100%"
+                                         (:g :fill "white" (draw-design medium +everywhere+))
+                                         (:g :fill "black" (draw-design medium (region-complement region))))))))
                     (cl-who:htm
                      (:mask :id ^resource-id :|maskUnits| "userSpaceOnUse"
                       :x 0 :y 0 :width "100%" :height "100%"
@@ -401,3 +406,170 @@
                :text-anchor text-anchor
                :dominant-baseline dominant-baseline
                (cl-who:fmt (subseq string start (or end (length string)))))))))
+
+
+;;; Patterns
+
+(defun encode-svg-pattern (pattern &optional (format :jpeg))
+  (check-type format (member :png :jpeg))
+  (with-output-to-string (stream)
+    (format stream "data:image/~(~a~);base64," format)
+    (cl-base64:usb8-array-to-base64-stream
+     (flexi-streams:with-output-to-sequence (octet-stream)
+       (climi::write-bitmap-file pattern octet-stream :format format))
+     stream)))
+
+(defmethod medium-design-ink ((medium svg-medium) (pattern image-pattern))
+  (let ((id (ensure-resource-id (medium (cons :image pattern))
+              (let* ((href (encode-svg-pattern pattern)) ;; :png for alpha channel
+                     (width (pattern-width pattern))
+                     (height (pattern-height pattern)))
+                (cl-who:with-html-output (drawable (medium-drawable medium))
+                  (:defs nil nil
+                    (:pattern :id ^resource-id :x 0 :y 0 :width "100%" :height "100%"
+                              :|patternUnits| "userSpaceOnUse"
+                              (:image :|xlink:href| href :x 0 :y 0 :width (fmt width) :height (fmt height)))))))))
+    (values (url id) 1.0)))
+
+
+(defmethod medium-design-ink ((medium svg-medium) (pattern rectangular-tile))
+  (let ((id (ensure-resource-id (medium (cons :design-ink pattern))
+              (let* ((src-pattern (rectangular-tile-design pattern))
+                     (src-id (medium-design-ink medium src-pattern))
+                     (src-width (fmt (pattern-width src-pattern)))
+                     (src-height (fmt (pattern-height src-pattern)))
+                     ;;
+                     (tile-width (fmt (pattern-width pattern)))
+                     (tile-height (fmt (pattern-height pattern))))
+                (cl-who:with-html-output (drawable (medium-drawable medium))
+                  (:defs nil nil
+                    (:pattern :id ^resource-id :x 0 :y 0 :width tile-width :height tile-height
+                              :|patternUnits| "userSpaceOnUse"
+                              (:rect :x 0 :y 0 :width src-width :height src-height :fill src-id))))))))
+    (values (url id) 1.0)))
+
+(defmethod medium-design-ink ((medium svg-medium) (pattern transformed-pattern))
+  (let ((id (ensure-resource-id (medium (cons :design-ink pattern))
+              (let* ((transform (svg-transform (transformed-design-transformation pattern)))
+                     (src-pattern (transformed-design-design pattern))
+                     (src-id (medium-design-ink medium src-pattern))
+                     (src-width (fmt (pattern-width src-pattern)))
+                     (src-height (fmt (pattern-height src-pattern)))
+                     ;;
+                     (tilep (typep src-pattern 'rectangular-tile))
+                     (width  (if tilep src-width  "100%"))
+                     (height (if tilep src-height "100%")))
+                (cl-who:with-html-output (drawable (medium-drawable medium))
+                  (:defs nil nil
+                    (:pattern :id ^resource-id :x 0 :y 0 :width width :height height
+                              :|patternUnits| "userSpaceOnUse"
+                     :|patternTransform| transform
+                     (:rect :x 0 :y 0 :width src-width :height src-height :fill src-id))))))))
+    (values (url id) 1.0)))
+
+(defmethod medium-design-ink ((medium svg-medium) (pattern pattern))
+  (let ((id (ensure-resource-id (medium (cons :design-ink pattern))
+              (let* ((href (encode-svg-pattern pattern :png))
+                     (width (pattern-width pattern))
+                     (height (pattern-height pattern)))
+                (cl-who:with-html-output (drawable (medium-drawable medium))
+                  (:defs nil nil
+                    (:pattern :id ^resource-id :x 0 :y 0 :width "100%" :height "100%"
+                              :|patternUnits| "userSpaceOnUse"
+                              (:image :|xlink:href| href :x 0 :y 0 :width (fmt width) :height (fmt height)))))))))
+    (values (url id) 1.0)))
+
+;;; Recursive patterns
+
+;;; FIXME this could do some more sophisticated analysis!
+;;; FIXME alternative color profiles (rgb, grayscale, alhpa)
+;;; FIXME hardcoded viewport size
+;;; FIXME detect transparency and collapse to png when feasible
+;;;
+;;; Some indexed patterns can't be reused at different positions because some of
+;;; their palette designs is not uniform. Reusing a cached pattern at different
+;;; positions may happenen when:
+;;;
+;;; - it is tiled
+;;; - it is transformed
+;;;
+;;; Tiling is potentially infinite so if we want to cache a rectangular tile
+;;; then we need to compute it for the whole viewport. Alternatively we may skip
+;;; caching and create a new picture for each tile, or parametrize cache.
+;;;
+;;; Transformed pattern has a finite size (transformed rectangle) so it possible
+;;; to cache them without creating too costly resources.
+;;;
+;;; Somewhat problematic part is that a transformed pattern and rectangular
+;;; pattern may parent each other so it is necessary to find the leaf child and
+;;; only then verify whether it is an index pattern. If there is at least one
+;;; tile in the sequence then the overal pattern is infinite.
+(defun maybe-collapse-pattern (pattern)
+  (let ((tile-p nil))
+    (labels ((unmoveable-pattern-p (design)
+               (typecase design
+                 (rectangular-tile
+                  (setf tile-p t)
+                  (unmoveable-pattern-p (rectangular-tile-design design)))
+                 (transformed-pattern
+                  (unmoveable-pattern-p (transformed-design-design design)))
+                 (otherwise
+                  (and (typep design 'climi::indexed-pattern)
+                       (some (lambda (p)
+                               (not (typep p '(or color opacity climi::uniform-compositum))))
+                             (climi::pattern-designs design))
+                       design)))))
+      (when (unmoveable-pattern-p pattern)
+        ;; FIXME hardcoded viewport size.
+        (if tile-p
+            (climi::%collapse-pattern pattern 0 0 *viewport-w* *viewport-h*)
+            (with-bounding-rectangle* (x0 y0 :width width :height height) pattern
+              (transform-region (make-translation-transformation x0 y0)
+                                (climi::%collapse-pattern pattern x0 y0 width height))))))))
+
+;;; This method is very inefficient (evaluation time and memory) and very
+;;; expensive (file size). We are flexing to do the right thing. Normally we'd
+;;; use palette in-composition using shaders.
+(defmethod medium-design-ink :around ((medium svg-medium) (pattern pattern))
+  (alx:if-let ((collapsed (maybe-collapse-pattern pattern)))
+    (let ((id (ensure-resource-id (medium (cons :design-ink pattern))
+                (alx:simple-style-warning
+                 "Collapsing the pattern for the viewport - this is very inefficient!")
+                (let* ((rht (resources (port medium)))
+                       (cid (progn (medium-design-ink medium collapsed)
+                                   (resource-id medium (cons :design-ink collapsed)))))
+                  (setf (gethash (cons :design-ink pattern) rht) cid)
+                  (setf ^resource-id cid)))))
+      (values (url id) 1.0))
+    (call-next-method)))
+
+
+;;; Masked composition
+
+;;; Normally we'd use a mask, but this is yet another feature that is handled
+;;; differently by every second renderer. That's why we simply flatten the ink
+;;; when it is not an uniform compositum.
+;;;
+;;; CLIM II specification hints that handling only uniform masks is OK.  That
+;;; said we still want to support stencils so let's get lazy big time.
+(defun compose-stencil  (medium pattern)
+  (let* ((pattern* (climi::%collapse-pattern pattern 0 0 *viewport-w* *viewport-h*)))
+    (medium-design-ink medium pattern*)))
+
+(defmethod medium-design-ink ((medium svg-medium) (design climi::in-compositum))
+  (let ((ink (climi::compositum-ink design))
+        (mask (climi::compositum-mask design)))
+    (alx:if-let ((opacity (ignore-errors (opacity-value mask))))
+      (multiple-value-bind (ink-url ink-opacity)
+          (medium-design-ink medium ink)
+        (values ink-url (* ink-opacity opacity)))
+      (compose-stencil medium design))))
+
+(defmethod medium-design-ink ((medium svg-medium) (design climi::out-compositum))
+  (let ((ink (climi::compositum-ink design))
+        (mask (climi::compositum-mask design)))
+    (alx:if-let ((opacity (ignore-errors (opacity-value mask))))
+      (multiple-value-bind (ink-url ink-opacity)
+          (medium-design-ink medium ink)
+        (values ink-url (* ink-opacity (- 1.0 opacity))))
+      (compose-stencil medium design))))
