@@ -183,12 +183,11 @@
   (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
-  (let* ((q (compose-space sheet))
-         (window (realize-mirror-aux
+  (let* ((window (realize-mirror-aux
                   port sheet
                   :map nil
-                  :width (space-requirement-width q)
-                  :height (space-requirement-height q)))
+                  :width (bounding-rectangle-width sheet)
+                  :height (bounding-rectangle-height sheet)))
          (name (clime:sheet-name sheet))
          (instance-name (string-downcase name))
          (class-name (string-capitalize name))

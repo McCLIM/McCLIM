@@ -72,25 +72,24 @@
                                 :map (sheet-enabled-p sheet)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))
-  (let ((q (compose-space sheet)))
-    (let ((frame (pane-frame sheet))
-          (window (clim-clx::realize-mirror-aux port sheet
-                                      :event-mask *event-mask*
-                                      :map nil
-                                      :width (space-requirement-width q)
-                                      :height (space-requirement-height q))))
-      (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
-      (setf (xlib:wm-name window) (frame-pretty-name frame))
-      (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
-      (xlib:set-wm-class
-       window
-       (string-downcase (frame-name frame))
-       (string-capitalize (string-downcase (frame-name frame))))
-      (setf (xlib:wm-protocols window) `(:wm_delete_window))
-      (xlib:change-property window
-                            :WM_CLIENT_LEADER (list (xlib:window-id window))
-                            :WINDOW 32)
-      window)))
+  (let ((frame (pane-frame sheet))
+        (window (clim-clx::realize-mirror-aux port sheet
+                                              :event-mask *event-mask*
+                                              :map nil
+                                              :width (bounding-rectangle-width sheet)
+                                              :height (bounding-rectangle-height sheet))))
+    (setf (xlib:wm-hints window) (xlib:make-wm-hints :input :on))
+    (setf (xlib:wm-name window) (frame-pretty-name frame))
+    (setf (xlib:wm-icon-name window) (frame-pretty-name frame))
+    (xlib:set-wm-class
+     window
+     (string-downcase (frame-name frame))
+     (string-capitalize (string-downcase (frame-name frame))))
+    (setf (xlib:wm-protocols window) `(:wm_delete_window))
+    (xlib:change-property window
+                          :WM_CLIENT_LEADER (list (xlib:window-id window))
+                          :WINDOW 32)
+    window))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-sheet-mixin))
   (clim-clx::realize-mirror-aux port sheet
