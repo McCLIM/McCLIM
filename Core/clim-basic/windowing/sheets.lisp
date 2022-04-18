@@ -758,6 +758,7 @@ this might be different from the sheet's native region and transformation.")))
                          for example when its mirror is iconified."))
   (:default-initargs
    :icon nil
+   :name 'top-level
    :pretty-name "McCLIM Window"))
 
 (defmethod shrink-sheet ((sheet top-level-sheet-mixin))
