@@ -501,6 +501,30 @@ Valid values of @code{destination} are:
 
 This backends accepts the same set of options as the PostScript backend.
 
+@subsection SVG
+
+This backend symbol designator is @code{:svg}. To make this backend
+available load the system @code{"mcclim-svg"}.
+
+Valid values of @code{destination} are:
+
+@itemize @bullet
+@item a string or a pathname denoting the file to create
+@item an output stream the file contents will be written to
+@end itemize
+
+This backend accepts the following @code{options}:
+
+@itemize @bullet
+@item scale-to-fit
+@item width - width in device unit
+@item height - height in device unit
+@item dpi - density used to calculate device units
+@item units - graft units
+@item orientation - graft orientation
+@item preview - opens the file with xdg-open
+@end itemize
+
 @subsection RasterImage
 
 This backend symbol designator is @code{:raster}.
