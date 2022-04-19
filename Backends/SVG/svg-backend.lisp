@@ -21,15 +21,14 @@
        ^resource-id)))
 
 (defun parse-server-path (server-path)
-  (destructuring-bind (port-type &rest args &key dpi width height)
+  (destructuring-bind (port-type &rest args)
       server-path
-    (declare (ignore dpi width height))
     (list* port-type :id (gensym) args)))
 
 (defmethod find-port-type ((port (eql :svg)))
   (values (find-class 'svg-port) 'parse-server-path))
 
-    ;;; Ensure that the "real" method receives a stream.
+;;; Ensure that the "real" method receives a stream.
 (defmethod invoke-with-output-to-drawing-stream
     (cont (port (eql :svg)) destination &rest args &key (preview nil))
   (let* ((args (alx:remove-from-plist args :preview))
@@ -66,6 +65,9 @@
 (defvar *viewport-w*)
 (defvar *viewport-h*)
 
+;;; This version of the method supplies only a medium (there is no sheet output
+;;; protocol involved). I'm leaving it here as a reference.
+#+ (or)
 (defmethod invoke-with-output-to-drawing-stream
     (continuation (port svg-port) (destination stream) &rest args)
   (declare (ignore args))
@@ -573,3 +575,110 @@
           (medium-design-ink medium ink)
         (values ink-url (* ink-opacity (- 1.0 opacity))))
       (compose-stencil medium design))))
+
+
+;;; Graft
+
+(defclass svg-graft (graft)
+  ((density :initarg :dpi    :reader density)
+   (region  :initarg :region :reader sheet-native-region)
+   (native  :initarg :native :reader sheet-native-transformation)))
+
+(defmethod print-object ((graft svg-graft) stream)
+  (print-unreadable-object (graft stream :type t :identity nil)
+    (format stream "~ax~a"
+            (graft-width graft :units :device)
+            (graft-height graft :units :device))))
+
+;;; The constructor is used as a converter - it is possible to supply any valid
+;;; combination of the orientation and units and the created graft will have its
+;;; native transformation convert supplied parameters to device parameters:
+;;;
+;;;   (ORIENTATION, UNITS) -> (:DEFAULT :DEVICE)
+;;;
+(defmethod climb:make-graft ((port svg-port) &key (orientation :default) (units :device))
+  (destructuring-bind (port-type &key (width 640) (height 360) (dpi 96) &allow-other-keys)
+      (port-server-path port)
+    (declare (ignore port-type))
+    (let* ((graft (make-instance 'svg-graft :orientation orientation :units units
+                                            :mirror (destination port)
+                                            :dpi dpi
+                                            :region (make-rectangle* 0 0 width height)))
+           ;; Transform graft units to 1/dpi (for example 1/96in).
+           (units-transformation
+             (make-scaling-transformation (/ width (graft-width graft  :units units))
+                                          (/ height (graft-height graft :units units))))
+           (orientation-transformation (ecase orientation
+                                         (:graphics (compose-transformations
+                                                    (make-translation-transformation 0 height)
+                                                    (make-reflection-transformation* 0 0 1 0)))
+                                         (:default +identity-transformation+)))
+           (region (make-rectangle* 0 0 width height))
+           (native (compose-transformations orientation-transformation units-transformation)))
+      (setf (slot-value graft 'region) region)
+      (setf (slot-value graft 'native) native)
+      graft)))
+
+(defmethod graft-width ((graft svg-graft) &key (units :device))
+  (let ((native-width (bounding-rectangle-width (sheet-native-region graft))))
+    (ecase units
+      (:device native-width)
+      (:inches (/ native-width (density graft)))
+      (:millimeters (* (/ native-width (density graft)) 25.4))
+      (:screen 1))))
+
+(defmethod graft-height ((graft svg-graft) &key (units :device))
+  (let ((native-height (bounding-rectangle-height (sheet-native-region graft))))
+    (ecase units
+      (:device native-height)
+      (:inches (/ native-height (density graft)))
+      (:millimeters (* (/ native-height (density graft)) 25.4))
+      (:screen 1))))
+
+(defun scale-to-fit (continuation stream)
+  (with-output-recording-options (stream :record t :draw nil)
+    (funcall continuation stream))
+  (let* ((history (stream-output-history stream))
+         (graft (graft stream))
+         (scale (min (/ (graft-width graft :units (graft-units graft))
+                        (bounding-rectangle-width history))
+                     (/ (graft-height graft :units (graft-units graft))
+                        (bounding-rectangle-height history))))
+         (transformation (compose-transformation-with-scaling
+                          (make-translation-transformation
+                           (- (bounding-rectangle-min-x history))
+                           (- (bounding-rectangle-min-y history)))
+                          scale scale)))
+    (with-output-recording-options (stream :draw t :record nil)
+      (climi::letf (((sheet-transformation stream) transformation))
+        (replay history stream)))))
+
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (port svg-port) (destination stream) &rest args)
+  (declare (ignore args))
+  (destructuring-bind (port-type &key (units :device) (orientation :default) (scale-to-fit nil)
+                       &allow-other-keys)
+      (port-server-path port)
+    (declare (ignore port-type))
+    (setf (destination port) destination)
+    (let ((graft (make-graft port :units units :orientation orientation)))
+      (let* ((w-in (format nil "~ain" (fmt (graft-width graft :units :inches))))
+             (h-in (format nil "~ain" (fmt (graft-height graft :units :inches))))
+             (*viewport-w* (graft-width graft :units :device))
+             (*viewport-h* (graft-height graft :units :device))
+             (bbox (format nil "0 0 ~a ~a" (fmt *viewport-w*) (fmt *viewport-h*)))
+             (sheet-region (if scale-to-fit
+                               +everywhere+ ; don't clip when fitting
+                               (untransform-region
+                                (sheet-native-transformation graft)
+                                (sheet-native-region graft))))
+             (sheet (make-instance 'clim-stream-pane :port port :background +white+
+                                                     :region sheet-region)))
+        (sheet-adopt-child graft sheet)
+        (cl-who:with-html-output (destination destination)
+          (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
+           :xmlns "http://www.w3.org/2000/svg"
+           :|xmlns:xlink| "http://www.w3.org/1999/xlink"
+           (if scale-to-fit
+               (scale-to-fit continuation sheet)
+               (funcall continuation sheet))))))))
