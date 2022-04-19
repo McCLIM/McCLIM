@@ -345,8 +345,7 @@ translated, so they begin at different position than [0,0])."))
       (incf (xlib:gcontext-clip-y gc) gc-y)
       gc)))
 
-(defmethod medium-gcontext ((medium clx-medium) (ink clime:transformed-design)
-                            &aux (ink (clime:effective-transformed-design ink)))
+(defmethod medium-gcontext ((medium clx-medium) (ink clime:transformed-design))
   (with-bounding-rectangle* (x1 y1) ink
     (with-transformed-position ((medium-native-transformation medium) x1 y1)
       (let ((gc-x (round-coordinate x1))
@@ -436,10 +435,12 @@ translated, so they begin at different position than [0,0])."))
     pm))
 
 (defmethod design-gcontext ((medium clx-medium) (ink clime:pattern)
-                            &aux (ink* (climi::transformed-design-design
-                                        (clime:effective-transformed-design ink))))
+                            &aux (ink* (clime:transformed-design-design ink)))
   (let* ((drawable (clx-drawable medium))
-         (rgba-pattern (climi::%collapse-pattern ink))
+         (rgba-pattern (climi::%collapse-pattern ink
+                                                 0 0
+                                                 (pattern-width ink)
+                                                 (pattern-height ink)))
          (pm (compute-rgb-image drawable rgba-pattern))
          (gc (xlib:create-gcontext :drawable drawable)))
     (setf (xlib:gcontext-fill-style gc) :tiled

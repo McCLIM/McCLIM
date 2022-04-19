@@ -69,13 +69,6 @@
 ;;;
 
 ;;;
-;;;   EFFECTIVE-TRANSFORMED-DESIGN design                             [function]
-;;;
-;;;      Returns a transformed design with all transformations collapsed into a
-;;;      single transformation and a source pattern. If resulting transformation
-;;;      is an identity then DESIGN is returned.
-;;;
-;;;
 ;;;   DESIGN-INK design x y                                           [method]
 ;;;
 ;;;      Returns ink at position X, Y. When DESIGN is not defined under the
@@ -428,7 +421,6 @@
 
 ;;;
 ;;; For patterns look in pattern.lisp
-
 ;;;
 
 (defclass transformed-design (design)
@@ -439,33 +431,6 @@
     :initarg :design
     :reader transformed-design-design)))
 
-;;; This may be cached in a transformed-design slot. -- jd 2018-09-24
-(defun effective-transformed-design (design &aux source-design)
-  "Merges all transformations along the way and returns a shallow, transformed
-design. If design is not transformed (or effective transformation is an
-identity-transformation) then source design is returned."
-  (check-type design design)
-  (labels ((effective-transformation (p)
-             (let ((design* (transformed-design-design p))
-                   (transformation (transformed-design-transformation p)))
-               (typecase design*
-                 (transformed-design
-                  (compose-transformations transformation
-                                           (effective-transformation design*)))
-                 (otherwise
-                  (setf source-design design*)
-                  transformation)))))
-    (typecase design
-      (transformed-design
-       (if (identity-transformation-p (transformed-design-transformation design))
-           (effective-transformed-design (transformed-design-design design))
-           (make-instance (type-of design)
-                          ;; Argument order matters: EFFECTIVE-TRANSFORMATION
-                          ;; sets the lexical variable SOURCE-DESIGN.
-                          :transformation (effective-transformation design)
-                          :design source-design)))
-      (otherwise design))))
-
 (defmethod transform-region :around (transformation (design design))
   (if (or (identity-transformation-p transformation)
           (typep design '(or color opacity uniform-compositum standard-flipping-ink indirect-ink)))
@@ -474,13 +439,11 @@ identity-transformation) then source design is returned."
 
 (defmethod transform-region (transformation (design design))
   (let ((old-transformation (transformed-design-transformation design)))
-    (if (and (translation-transformation-p transformation)
-             (translation-transformation-p old-transformation))
-        (make-instance 'transformed-design
-                       :design (transformed-design-design design)
-                       :transformation (compose-transformations old-transformation transformation))
-        (make-instance 'transformed-design :design design :transformation transformation))))
+    (make-instance 'transformed-design
+                   :design (transformed-design-design design)
+                   :transformation (compose-transformations old-transformation transformation))))
 
+(defun effective-transformed-design (design) design) ;obsolete
 (defmethod transformed-design-transformation ((design design)) +identity-transformation+)
 (defmethod transformed-design-design ((design design)) design)
 
@@ -496,15 +459,31 @@ identity-transformation) then source design is returned."
             :ink  (compositum-ink object)
             :mask (compositum-mask object))))
 
+(defmethod pattern-width ((design masked-compositum))
+  (pattern-width (compositum-ink design)))
+
+(defmethod pattern-height ((design masked-compositum))
+  (pattern-height (compositum-ink design)))
+
 (defclass in-compositum (masked-compositum) ())
 
 (defmethod compose-in ((ink design) (mask design))
   (make-instance 'in-compositum :ink ink :mask mask))
 
+(defmethod design-ink ((design in-compositum) x y)
+  (let ((ink  (design-ink* (compositum-ink  design) x y))
+        (mask (design-ink* (compositum-mask design) x y)))
+    (compose-in ink mask)))
+
 (defclass out-compositum (masked-compositum) ())
 
 (defmethod compose-out ((ink design) (mask design))
   (make-instance 'out-compositum :ink ink :mask mask))
+
+(defmethod design-ink ((design out-compositum) x y)
+  (let ((ink  (design-ink* (compositum-ink  design) x y))
+        (mask (design-ink* (compositum-mask design) x y)))
+    (compose-out ink mask)))
 
 (defclass over-compositum (design)
   ((foreground :initarg :foreground :reader compositum-foreground)
@@ -518,8 +497,8 @@ identity-transformation) then source design is returned."
 ;;; Inefficient fallback method.
 ;;; FIXME we forward-reference %rgba-value.
 (defmethod design-ink ((ink over-compositum) x y)
-  (let ((fg (design-ink (compositum-foreground ink) x y))
-        (bg (design-ink (compositum-background ink) x y)))
+  (let ((fg (design-ink* (compositum-foreground ink) x y))
+        (bg (design-ink* (compositum-background ink) x y)))
     (multiple-value-bind (r g b o)
         (multiple-value-call #'color-blend-function
           (color-rgba fg)

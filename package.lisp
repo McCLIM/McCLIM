@@ -1969,7 +1969,7 @@
    #:rectangular-tile
    #:transformed-design
    #:transformed-pattern
-   #:effective-transformed-design
+   #:effective-transformed-design       ; obsolete
    #:rectangular-tile-design
    ;; readers
    #:pattern-array

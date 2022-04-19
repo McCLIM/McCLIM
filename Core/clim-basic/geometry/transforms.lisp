@@ -459,6 +459,23 @@ real numbers, and default to 0."
   `(let ((,coord-seq (transform-positions ,transformation ,coord-seq)))
      ,@body))
 
+;;; DWIM macro.
+(defmacro with-transformed-positions* ((transformation &rest coord-seq) &body body)
+  (cond
+    ((null coord-seq)
+     `(progn ,@body))
+    ((null (rest coord-seq))
+     `(with-transformed-positions (,transformation ,(car coord-seq))
+        ,@body))
+    (t
+     (destructuring-bind (x y . coord-seq) coord-seq
+       (if (null coord-seq)
+           `(with-transformed-position (,transformation ,x ,y)
+              ,@body)
+           `(with-transformed-position (,transformation ,x ,y)
+              (with-transformed-positions* (,transformation ,@coord-seq)
+                ,@body)))))))
+
 (defmacro with-translation ((medium dx dy) &body body)
   `(with-drawing-options (,medium
                           :transformation

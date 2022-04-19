@@ -108,7 +108,7 @@
                        :name 'backend-selector
                        :value 'ps
                        :name-key #'symbol-name
-                       :items '(ps pdf png))
+                       :items '(ps pdf svg png))
             (spacing (:thickness 6)
               (make-pane 'push-button
                          :label "Run"
@@ -159,6 +159,11 @@
                      :activate-callback #'(lambda (x)
                                             (declare (ignore x))
                                             (print-all-pdf-tests)))
+          (make-pane 'push-button
+                     :label "Print All (/tmp/*.svg)"
+                     :activate-callback #'(lambda (x)
+                                            (declare (ignore x))
+                                            (print-all-svg-tests)))
           (make-pane 'push-button
                      :label "Print All (/tmp/*.png)"
                      :activate-callback #'(lambda (x)
@@ -329,7 +334,8 @@
           (drawing-test-raster-image test :png filename)
           (funcall (ecase backend
                      (ps #'drawing-test-postscript)
-                     (pdf #'drawing-test-pdf))
+                     (pdf #'drawing-test-pdf)
+                     (svg #'drawing-test-svg))
                    test
                    filename)))))
 
@@ -529,6 +535,33 @@
 (defun print-pdf-test (test-name)
   (when-let ((test (gethash test-name *drawing-tests*)))
     (restart-case (drawing-test-pdf test)
+      (:skip ()
+       :report (lambda (stream)
+                 (format stream "skip ~a-~a"
+                         (drawing-test-category test)
+                         (drawing-test-name test)))))))
+
+(defun drawing-test-svg (test &optional filename)
+  (let* ((test (if (symbolp test) (gethash test *drawing-tests*) test))
+         (filename (or filename (format nil "/tmp/~a-~a.svg"
+                                        (drawing-test-category test)
+                                        (drawing-test-name test)))))
+    (with-open-file (out filename :direction :output :if-exists :supersede)
+      (clime:with-output-to-drawing-stream (stream :svg out)
+        (drawing-test-print stream test filename)))))
+
+(defun print-all-svg-tests ()
+  (loop for test being the hash-values of *drawing-tests*
+        do (restart-case (drawing-test-svg test)
+             (:skip ()
+              :report (lambda (stream)
+                        (format stream "skip ~a-~a"
+                                (drawing-test-category test)
+                                (drawing-test-name test)))))))
+
+(defun print-svg-test (test-name)
+  (when-let ((test (gethash test-name *drawing-tests*)))
+    (restart-case (drawing-test-svg test)
       (:skip ()
        :report (lambda (stream)
                  (format stream "skip ~a-~a"
