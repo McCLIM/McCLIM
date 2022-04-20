@@ -217,16 +217,15 @@
 
 #+ (or)
 (with-output-to-drawing-stream (stream :svg "/tmp/truncated-inches.svg" :preview t
-                                       :width 640 :height 360
+                                       :width 400
+                                       :height :compute
                                        :orientation :graphics
-                                       :units :inches
+                                       :units :millimeters
                                        :scale-to-fit t)
-  (medium-clear-area stream 0 0 640 360)
-  (draw-circle* stream 0 0 100 :ink +dark-red+)
-  (format stream "~a ~a~%"
-          (graft-units (graft stream))
-          (graft-orientation (graft stream)))
-  (format-graph stream 3 2)
-  (terpri stream)
-  (format-table stream 10 8))
-
+  (surrounding-output-with-border (stream :background +white+ :filled t)
+    (draw-rectangle* stream -100 -100 100 100 :ink +blue+)
+    (draw-rectangle* stream 25 25 75 75 :ink +red+)
+    (draw-circle* stream 0 0 100 :ink (compose-in +green+ (make-opacity .5)))
+    (format-graph stream 3 2)
+    (terpri stream)
+    (format-table stream 10 8)))
