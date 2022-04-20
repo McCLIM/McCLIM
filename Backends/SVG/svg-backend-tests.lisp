@@ -229,3 +229,18 @@
     (format-graph stream 3 2)
     (terpri stream)
     (format-table stream 10 8)))
+
+#+ (or)
+(with-output-to-drawing-stream (stream :svg "/tmp/truncated-millimeters.svg" :preview t
+                                       :width 15 :height :compute
+                                       :orientation :graphics
+                                       :units :inches
+                                       :scale-to-fit t)
+  (surrounding-output-with-border (stream :background +white+ :filled t)
+    (draw-circle* stream 0 0 100 :ink +dark-red+)
+    (format stream "~a ~a~%"
+            (graft-units (graft stream))
+            (graft-orientation (graft stream)))
+    (format-graph stream 3 2)
+    (terpri stream)
+    (format-table stream 10 8)))
