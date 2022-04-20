@@ -516,12 +516,12 @@ Valid values of @code{destination} are:
 This backend accepts the following @code{options}:
 
 @itemize @bullet
-@item scale-to-fit
-@item width - width in device unit
-@item height - height in device unit
-@item dpi - density used to calculate device units
-@item units - graft units
-@item orientation - graft orientation
+@item scale-to-fit - scale and move graphics so they fill whole viewport
+@item width - width in @code{:units} units, defaults to @code{:compute}
+@item height - height in @code{:units} units, defaults to @code{:compute}
+@item dpi - density used to calculate device units, defaults to @code{96}
+@item units - graft units, defaults to @code{:device}
+@item orientation - graft orientation, defaults to @code{:default}
 @item preview - opens the file with xdg-open
 @end itemize
 
