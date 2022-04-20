@@ -6,7 +6,9 @@
 
 (defclass svg-port (mcclim-truetype:ttf-port-mixin basic-port)
   ((destination :accessor destination)
-   (resources :initform (make-hash-table :test #'equal) :reader resources)))
+   (resources :initform (make-hash-table :test #'equal) :reader resources)
+   (viewport-width :accessor viewport-width)
+   (viewport-height :accessor viewport-height)))
 
 (defun resource-id (holder resource)
   (let ((ht (resources (port holder))))
@@ -62,9 +64,6 @@
       (format nil "~d" number)
       (format nil "~f" number)))
 
-(defvar *viewport-w*)
-(defvar *viewport-h*)
-
 ;;; This version of the method supplies only a medium (there is no sheet output
 ;;; protocol involved). I'm leaving it here as a reference.
 #+ (or)
@@ -79,9 +78,7 @@
           (clip (make-rectangle* 0 0 width height))
           (w-in (format nil "~ain" (fmt (/ width dpi))))
           (h-in (format nil "~ain" (fmt (/ height dpi))))
-          (bbox (format nil "0 0 ~a ~a" (fmt width) (fmt height)))
-          (*viewport-w* width)
-          (*viewport-h* height))
+          (bbox (format nil "0 0 ~a ~a" (fmt width) (fmt height))))
       (with-drawing-options (medium :clipping-region clip)
         (cl-who:with-html-output (destination destination)
           (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
@@ -506,7 +503,7 @@
 ;;; pattern may parent each other so it is necessary to find the leaf child and
 ;;; only then verify whether it is an index pattern. If there is at least one
 ;;; tile in the sequence then the overal pattern is infinite.
-(defun maybe-collapse-pattern (pattern)
+(defun maybe-collapse-pattern (medium pattern)
   (let ((tile-p nil))
     (labels ((unmoveable-pattern-p (design)
                (typecase design
@@ -522,9 +519,11 @@
                              (climi::pattern-designs design))
                        design)))))
       (when (unmoveable-pattern-p pattern)
-        ;; FIXME hardcoded viewport size.
         (if tile-p
-            (climi::%collapse-pattern pattern 0 0 *viewport-w* *viewport-h*)
+            (let* ((port (port medium))
+                   (width (viewport-width port))
+                   (height (viewport-height port)))
+             (climi::%collapse-pattern pattern 0 0 width height))
             (with-bounding-rectangle* (x0 y0 :width width :height height) pattern
               (transform-region (make-translation-transformation x0 y0)
                                 (climi::%collapse-pattern pattern x0 y0 width height))))))))
@@ -533,7 +532,7 @@
 ;;; expensive (file size). We are flexing to do the right thing. Normally we'd
 ;;; use palette in-composition using shaders.
 (defmethod medium-design-ink :around ((medium svg-medium) (pattern pattern))
-  (alx:if-let ((collapsed (maybe-collapse-pattern pattern)))
+  (alx:if-let ((collapsed (maybe-collapse-pattern medium pattern)))
     (let ((id (ensure-resource-id (medium (cons :design-ink pattern))
                 (alx:simple-style-warning
                  "Collapsing the pattern for the viewport - this is very inefficient!")
@@ -555,7 +554,10 @@
 ;;; CLIM II specification hints that handling only uniform masks is OK.  That
 ;;; said we still want to support stencils so let's get lazy big time.
 (defun compose-stencil  (medium pattern)
-  (let* ((pattern* (climi::%collapse-pattern pattern 0 0 *viewport-w* *viewport-h*)))
+  (let* ((port (port medium))
+         (pattern* (climi::%collapse-pattern pattern 0 0
+                                             (viewport-width port)
+                                             (viewport-height port))))
     (medium-design-ink medium pattern*)))
 
 (defmethod medium-design-ink ((medium svg-medium) (design climi::in-compositum))
@@ -590,6 +592,14 @@
             (graft-width graft :units :device)
             (graft-height graft :units :device))))
 
+(defun compute-units-transformation (width height units dpi)
+  ;; This is a transformation FROM units TO :device.
+  (ecase units
+    (:device +identity-transformation+)
+    (:inches (make-scaling-transformation dpi dpi))
+    (:millimeters (make-scaling-transformation (/ dpi 25.4) (/ dpi 25.4)))
+    (:screen (make-scaling-transformation width height))))
+
 ;;; The constructor is used as a converter - it is possible to supply any valid
 ;;; combination of the orientation and units and the created graft will have its
 ;;; native transformation convert supplied parameters to device parameters:
@@ -597,23 +607,25 @@
 ;;;   (ORIENTATION, UNITS) -> (:DEFAULT :DEVICE)
 ;;;
 (defmethod climb:make-graft ((port svg-port) &key (orientation :default) (units :device))
-  (destructuring-bind (port-type &key (width 640) (height 360) (dpi 96) &allow-other-keys)
+  (destructuring-bind (port-type &key (dpi 96) &allow-other-keys)
       (port-server-path port)
     (declare (ignore port-type))
     (let* ((graft (make-instance 'svg-graft :orientation orientation :units units
                                             :mirror (destination port)
-                                            :dpi dpi
-                                            :region (make-rectangle* 0 0 width height)))
+                                            :dpi dpi))
+           (width (viewport-width port))
+           (height (viewport-height port))
            ;; Transform graft units to 1/dpi (for example 1/96in).
            (units-transformation
-             (make-scaling-transformation (/ width (graft-width graft  :units units))
-                                          (/ height (graft-height graft :units units))))
+             (compute-units-transformation width height units dpi))
+           (region (transform-region units-transformation
+                                     (make-rectangle* 0 0 width height)))
+           (height* (bounding-rectangle-height region))
            (orientation-transformation (ecase orientation
                                          (:graphics (compose-transformations
-                                                    (make-translation-transformation 0 height)
-                                                    (make-reflection-transformation* 0 0 1 0)))
+                                                     (make-translation-transformation 0 height*)
+                                                     (make-reflection-transformation* 0 0 1 0)))
                                          (:default +identity-transformation+)))
-           (region (make-rectangle* 0 0 width height))
            (native (compose-transformations orientation-transformation units-transformation)))
       (setf (slot-value graft 'region) region)
       (setf (slot-value graft 'native) native)
@@ -635,50 +647,105 @@
       (:millimeters (* (/ native-height (density graft)) 25.4))
       (:screen 1))))
 
-(defun scale-to-fit (continuation stream)
-  (with-output-recording-options (stream :record t :draw nil)
-    (funcall continuation stream))
-  (let* ((history (stream-output-history stream))
-         (graft (graft stream))
-         (scale (min (/ (graft-width graft :units (graft-units graft))
-                        (bounding-rectangle-width history))
-                     (/ (graft-height graft :units (graft-units graft))
-                        (bounding-rectangle-height history))))
-         (transformation (compose-transformation-with-scaling
-                          (make-translation-transformation
-                           (- (bounding-rectangle-min-x history))
-                           (- (bounding-rectangle-min-y history)))
-                          scale scale)))
-    (with-output-recording-options (stream :draw t :record nil)
-      (climi::letf (((sheet-transformation stream) transformation))
-        (replay history stream)))))
+;;; When SCALE-TO-FIT is T then all output is transformed so that its bounding
+;;; rectangle is the same as the graft native region. Transformation must
+;;; maintain the aspect ratio.
+(defun compute-scale-transformation (stream width height)
+  (with-bounding-rectangle* (min-x min-y :width bbox-w :height bbox-h)
+      (stream-output-history stream)
+    (let ((transformation (make-translation-transformation (- min-x) (- min-y))))
+      (cond
+        ((and (eq width :compute) (eq height :compute))
+         (setf width bbox-w)
+         (setf height bbox-h))
+        ((eq width :compute)
+         (let* ((scale (/ height bbox-h))
+                (scaling-transformation (make-scaling-transformation scale scale)))
+           (setf transformation (compose-transformations scaling-transformation transformation)
+                 width (transform-distance scaling-transformation bbox-w 0))))
+        ((eq height :compute)
+         (let* ((scale (/ width bbox-w))
+                (scaling-transformation (make-scaling-transformation scale scale)))
+           (setf transformation (compose-transformations scaling-transformation transformation)
+                 height (nth-value 1 (transform-distance scaling-transformation 0 bbox-h)))))
+        (t
+         (let* ((scale (min (/ width bbox-w)
+                            (/ height bbox-h)))
+                (scaling-transformation (make-scaling-transformation scale scale)))
+           (setf transformation (compose-transformations scaling-transformation transformation)))))
+      (values transformation width height))))
+
+(defun correct-transformation (port stream width height)
+  (multiple-value-bind (scaling graft-w graft-h)
+      (compute-scale-transformation stream width height)
+    (setf (viewport-width port) graft-w
+          (viewport-height port) graft-h
+          (sheet-transformation stream) scaling)))
+
+(defun correct-width-or-height (port stream width height)
+  (with-bounding-rectangle* (:x2 max-x :y2 max-y) (stream-output-history stream)
+    (if (eq width :compute)
+        (setf (viewport-width port) max-x)
+        (setf (viewport-width port) width))
+    (if (eq height :compute)
+        (setf (viewport-height port) max-y)
+        (setf (viewport-height port) height))))
+
+(defun two-pass-drawing (continuation port &rest args
+                         &key (scale-to-fit nil)
+                              (width :compute)
+                              (height :compute)
+                              (orientation :default)
+                              (units :device)
+                         &allow-other-keys)
+  (declare (ignore args))
+  (let ((stream (make-instance 'clim-stream-pane :port port :background +white+ :region +everywhere+)))
+    (with-output-recording-options (stream :record t :draw nil)
+      (funcall continuation stream))
+    (if scale-to-fit
+        (correct-transformation  port stream width height)
+        (correct-width-or-height port stream width height))
+    (let* ((graft (make-graft port :units units :orientation orientation))
+           (w-in (format nil "~ain" (fmt (graft-width graft :units :inches))))
+           (h-in (format nil "~ain" (fmt (graft-height graft :units :inches))))
+           (*viewport-w* (graft-width graft :units :device))
+           (*viewport-h* (graft-height graft :units :device))
+           (bbox (format nil "0 0 ~a ~a" (fmt *viewport-w*) (fmt *viewport-h*))))
+      (sheet-adopt-child graft stream)
+      (cl-who:with-html-output (destination (destination port))
+        (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
+         :xmlns "http://www.w3.org/2000/svg"
+         :|xmlns:xlink| "http://www.w3.org/1999/xlink"
+         (stream-replay stream))))))
+
+(defun one-pass-drawing (continuation port &rest args
+                         &key (orientation :default) (units :device) width height
+                         &allow-other-keys)
+  (declare (ignore args))
+  (setf (viewport-width port) width)
+  (setf (viewport-height port) height)
+  (let* ((graft (make-graft port :units units :orientation orientation))
+         (w-in (format nil "~ain" (fmt (graft-width graft :units :inches))))
+         (h-in (format nil "~ain" (fmt (graft-height graft :units :inches))))
+         (bbox (format nil "0 0 ~a ~a" (fmt (viewport-width port)) (fmt (viewport-height port))))
+         (region (untransform-region (sheet-native-transformation graft)
+                                     (sheet-native-region graft)))
+         (stream (make-instance 'clim-stream-pane :port port :background +white+ :region region)))
+    (sheet-adopt-child graft stream)
+    (cl-who:with-html-output (destination (destination port))
+      (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
+       :xmlns "http://www.w3.org/2000/svg"
+       :|xmlns:xlink| "http://www.w3.org/1999/xlink"
+       (funcall continuation stream)))))
 
 (defmethod invoke-with-output-to-drawing-stream
     (continuation (port svg-port) (destination stream) &rest args)
   (declare (ignore args))
-  (destructuring-bind (port-type &key (units :device) (orientation :default) (scale-to-fit nil)
-                       &allow-other-keys)
-      (port-server-path port)
-    (declare (ignore port-type))
-    (setf (destination port) destination)
-    (let ((graft (make-graft port :units units :orientation orientation)))
-      (let* ((w-in (format nil "~ain" (fmt (graft-width graft :units :inches))))
-             (h-in (format nil "~ain" (fmt (graft-height graft :units :inches))))
-             (*viewport-w* (graft-width graft :units :device))
-             (*viewport-h* (graft-height graft :units :device))
-             (bbox (format nil "0 0 ~a ~a" (fmt *viewport-w*) (fmt *viewport-h*)))
-             (sheet-region (if scale-to-fit
-                               +everywhere+ ; don't clip when fitting
-                               (untransform-region
-                                (sheet-native-transformation graft)
-                                (sheet-native-region graft))))
-             (sheet (make-instance 'clim-stream-pane :port port :background +white+
-                                                     :region sheet-region)))
-        (sheet-adopt-child graft sheet)
-        (cl-who:with-html-output (destination destination)
-          (:svg :version "1.1" :width w-in :height h-in :|viewBox| bbox
-           :xmlns "http://www.w3.org/2000/svg"
-           :|xmlns:xlink| "http://www.w3.org/1999/xlink"
-           (if scale-to-fit
-               (scale-to-fit continuation sheet)
-               (funcall continuation sheet))))))))
+  (let ((server-path (rest (port-server-path port))))
+    (destructuring-bind (&key (scale-to-fit nil) (width :compute) (height :compute)
+                         &allow-other-keys)
+        server-path
+      (setf (destination port) destination)
+      (if (or scale-to-fit (eq width :compute) (eq height :compute))
+          (apply #'two-pass-drawing continuation port server-path)
+          (apply #'one-pass-drawing continuation port server-path)))))
