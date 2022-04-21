@@ -258,9 +258,10 @@
 
 ;;; TOP-LEVEL-SHEET
 
-(defclass top-level-sheet-pane (top-level-sheet-mixin single-child-composite-pane)
+(defclass top-level-sheet-pane
+    (mirrored-sheet-mixin top-level-sheet-mixin single-child-composite-pane)
   ()
-  (:documentation "For the first pane in the architecture"))
+  (:documentation "For the first pane in the layout."))
 
 (defun top-level-sheet-pane-p (pane)
   (typep pane 'top-level-sheet-pane))
