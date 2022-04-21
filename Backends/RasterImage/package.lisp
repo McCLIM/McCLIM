@@ -16,7 +16,6 @@
                   #:image-mirror-mixin
                   #:image-pixmap-mixin
                   #:mirror->%image
-                  #:%make-image
                   #:image-mirror-image
                   ;;#:save-image-to-file
                   ;;#:save-image-to-stream

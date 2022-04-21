@@ -15,7 +15,7 @@
     (setf (mirror->%image port mirror) mirror)
     (multiple-value-bind (width height)
         (bounding-rectangle-size sheet)
-      (%make-image mirror width height))
+      (mcclim-render::%create-mirror-image mirror width height))
     mirror))
 
 (defmethod destroy-mirror ((port rgb-image-port) (sheet mirrored-sheet-mixin))
@@ -32,5 +32,5 @@
 (defmethod allocate-pixmap ((medium raster-image-medium) width height)
   (let ((pixmap (make-instance 'rgb-image-pixmap :width width :height height)))
     (setf (mirror->%image (port medium) pixmap) pixmap)
-    (%make-image pixmap width height)
+    (mcclim-render::%create-mirror-image pixmap width height)
     pixmap))

@@ -19,30 +19,26 @@
 
 ;;; implementation
 
-(defun %make-image (mirror width height)
-  (check-type mirror image-mirror-mixin)
-  (setf width (ceiling width))
-  (setf height (ceiling height))
-  (with-slots (image) mirror
-    (%create-mirror-image mirror (1+ width) (1+ height))))
-
 (defun %set-image-region (mirror region)
   (check-type mirror image-mirror-mixin)
   (with-slots (image) mirror
     (with-bounding-rectangle* (:width width :height height) region
-      (let ((width (1+ (ceiling width)))
-            (height (1+ (ceiling height))))
+      (let ((width (ceiling width))
+            (height (ceiling height)))
         (if (or (null image)
                 (/= width (pattern-width image))
                 (/= height (pattern-height image)))
             (%create-mirror-image mirror width height)
-            nil)))))
+            image)))))
 
 (defmethod %create-mirror-image (mirror width height)
   (check-type mirror image-mirror-mixin)
+  (setf width (1+ (ceiling width)))
+  (setf height (1+ (ceiling height)))
   (with-slots (image dirty-region) mirror
     (setf image (make-image width height))
-    (setf dirty-region +nowhere+)))
+    (setf dirty-region +nowhere+)
+    image))
 
 (defun %notify-image-updated (mirror region)
   (check-type mirror image-mirror-mixin)

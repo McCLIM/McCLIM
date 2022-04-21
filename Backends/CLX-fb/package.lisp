@@ -39,8 +39,7 @@
                 #:image-pixmap-mixin
                 #:image-mirror-mixin
                 ;;
-                #:mirror->%image
-                #:%make-image)
+                #:mirror->%image)
   (:import-from #:clim-clx
                 #:clx-port-display
                 #:initialize-clx

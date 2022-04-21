@@ -125,7 +125,7 @@
          (pixmap (make-instance 'clx-fb-pixmap
                                 :width width :height height :port port)))
     (setf (mirror->%image port pixmap) pixmap)
-    (%make-image pixmap width height)
+    (mcclim-render::%create-mirror-image pixmap width height)
     pixmap))
 
 (defmethod deallocate-pixmap ((pixmap clx-fb-pixmap))
