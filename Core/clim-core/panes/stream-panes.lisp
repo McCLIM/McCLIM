@@ -186,11 +186,7 @@
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
-  (let ((output-history (stream-output-history pane)))
-    (with-bounding-rectangle* (left top right bottom) output-history
-      (when (sheet-viewable-p pane)
-        (medium-clear-area (sheet-medium pane) left top right bottom)))
-    (clear-output-record output-history))
+  (clear-output-record (stream-output-history pane))
   (window-erase-viewport pane)
   (when-let ((cursor (stream-text-cursor pane)))
     (setf (cursor-position cursor)
@@ -201,8 +197,7 @@
   (change-space-requirements pane))
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+  (window-erase-viewport pane)
   (stream-replay pane))
 
 (defun clim-stream-pane-default-display-function (frame pane)
@@ -214,9 +209,8 @@
       (sheet-region pane)))
 
 (defmethod window-erase-viewport ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (or (pane-viewport-region pane)
-                                              (sheet-region pane))
-    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (window-viewport pane)
+    (medium-clear-area (sheet-medium pane) x1 y1 x2 y2)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
   (if (pane-scroller pane)
