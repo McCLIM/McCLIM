@@ -57,8 +57,7 @@
     (%draw-image %image image
                  (round x) (round y)
                  (round width) (round height)
-                 (round to-x) (round to-y)
-                 (maybe-region medium))))
+                 (round to-x) (round to-y))))
 
 ;;; XXX: used only for medium-draw-text* for now.
 (defun %medium-fill-image-mask (medium mask-image from-x from-y width height to-x to-y)

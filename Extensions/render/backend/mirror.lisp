@@ -51,16 +51,9 @@
       (setf dirty-region (region-union dirty-region region)))))
 
 ;;; XXX: this is used for scroll
-(defun %draw-image (mirror src-image x y width height to-x to-y clip-region)
+(defun %draw-image (mirror src-image x y width height to-x to-y)
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    (unless (and (rectanglep clip-region)
-                 (region-contains-region-p clip-region
-                                           (make-rectangle* to-x
-                                                            to-y
-                                                            (+ to-x width)
-                                                            (+ to-y height))))
-      (warn "copy image not correct"))
     (with-slots (image-lock) mirror
       (clim-sys:with-lock-held (image-lock)
         (let* ((image (image-mirror-image mirror))
@@ -71,10 +64,6 @@
                     &optional stencil (x-dest 0) (y-dest 0))
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    #+(or) ;; XXX: clip-region is not correct hance warnings
-    (when (or (not (rectanglep clip-region))
-              (not (region-contains-region-p clip-region (make-rectangle* x y (+ x width) (+ y height)))))
-      (warn "fill image mask not correct [~A -> ~A]" clip-region (make-rectangle* x y (+ x width) (+ y height))))
     (with-slots (image-lock) mirror
       (clim-sys:with-lock-held (image-lock)
         (let ((region (fill-image image ink
@@ -91,8 +80,9 @@
       (clim-sys:with-lock-held (image-lock)
         (let ((reg (aa-fill-paths image ink paths state transformation region)))
           (with-bounding-rectangle* (min-x min-y max-x max-y) reg
-            (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
-                                                           (ceiling max-x) (ceiling max-y)))))))))
+            (%notify-image-updated mirror
+                                   (make-rectangle* (floor min-x) (floor min-y)
+                                                    (ceiling max-x) (ceiling max-y)))))))))
 
 (defun %stroke-paths (medium mirror paths line-style transformation region ink)
   (check-type mirror image-mirror-mixin)
