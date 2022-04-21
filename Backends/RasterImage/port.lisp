@@ -66,8 +66,7 @@
   (declare (ignore port sheet))
   (bounding-rectangle* region))
 
-(defgeneric make-raster-top-level-sheet (port format))
-
-(defmethod make-raster-top-level-sheet ((port raster-image-port) format)
+(defun make-raster-top-level-sheet (port format)
   (declare (ignore format))
+  (check-type port raster-image-port)
   (make-instance 'raster-image-top-level-pane :enabled-p nil :port port))

@@ -34,7 +34,7 @@
                   (format *debug-io* "~A~%" condition)))
               (ignore-errors
                (xlib:display-force-output display))
-              (sleep 0.01)))
+              (sleep 1/30)))
    :name (format nil "~S's event process." port)))
 
 (defparameter *event-mask* '(:exposure

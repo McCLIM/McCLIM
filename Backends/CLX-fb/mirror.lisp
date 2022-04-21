@@ -11,9 +11,9 @@
    (gcontext :initform nil)))
 
 ;;; for port
-(defmethod mcclim-render-internals::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
-  (with-slots (mcclim-render-internals::dirty-region) mirror
-    (setf mcclim-render-internals::dirty-region nil))
+(defmethod mcclim-render::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
+  (with-slots (mcclim-render::dirty-region) mirror
+    (setf mcclim-render::dirty-region nil))
   ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
   (with-slots (width height clx-image xlib-image) mirror
     (setf width w
@@ -86,26 +86,28 @@
   (declare (optimize speed))
   (with-slots (xmirror
                clx-image xlib-image
-               mcclim-render-internals::image-lock gcontext
-               mcclim-render-internals::dirty-region
-               mcclim-render-internals::finished-output
-               mcclim-render-internals::updating-p
+               mcclim-render::image-lock gcontext
+               mcclim-render::dirty-region
+               mcclim-render::finished-output
+               mcclim-render::updating-p
                width height dirty-xr)
       mirror
     (when (not (region-equal dirty-xr +nowhere+))
       (let (reg)
-        (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
+        (clim-sys:with-lock-held (mcclim-render::image-lock)
           (setf reg dirty-xr)
           (setf dirty-xr +nowhere+))
         (image-mirror-put width height xmirror gcontext clx-image reg)))))
 
 (defun %mirror-force-output (mirror)
-  (with-slots (mcclim-render-internals::image-lock mcclim-render-internals::dirty-region dirty-xr width height clx-image
+  (with-slots (mcclim-render::image-lock
+               mcclim-render::dirty-region
+               dirty-xr width height clx-image
                xlib-image xmirror)
       mirror
-    (when mcclim-render-internals::dirty-region
-      (clim-sys:with-lock-held (mcclim-render-internals::image-lock)
-        (when mcclim-render-internals::dirty-region
-          (setf dirty-xr (region-union dirty-xr mcclim-render-internals::dirty-region))
+    (when mcclim-render::dirty-region
+      (clim-sys:with-lock-held (mcclim-render::image-lock)
+        (when mcclim-render::dirty-region
+          (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
           (image-mirror-pre-put width height xmirror mirror clx-image xlib-image dirty-xr)
-          (setf mcclim-render-internals::dirty-region nil))))))
+          (setf mcclim-render::dirty-region nil))))))

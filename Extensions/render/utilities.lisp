@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (defmacro do-regions (((src-j dest-j y1s y1d y2)
                        (src-i dest-i x1s x1d x2)

@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (defclass image-sheet-mixin (mirrored-sheet-mixin design)
   ())

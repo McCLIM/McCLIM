@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 ;;; Image
 
@@ -15,7 +15,7 @@
 
 (defun make-image (width height)
   "Create an empty transparent image of size WIDTH x HEIGHT."
-  ;; XXX: something in text rendering depends image being transparent by
+  ;; XXX something in text rendering depends image being transparent by
   ;; default. This should be fixed.
   (make-instance 'clime:image-pattern :array (make-argb-pixel-array width height)))
 
@@ -32,8 +32,9 @@
                                #-ccl (safety 0)
                                #+ccl (safety 1)))
             (do-regions ((src-j dest-j y1s y1d y2)
-                         (src-i dest-i x1s x1d x2) ,@(when backwardp
-                                                       `(:backward t)))
+                         (src-i dest-i x1s x1d x2)
+                         ,@(when backwardp
+                             `(:backward t)))
               (setf (aref dst-array dest-j dest-i)
                     (aref src-array src-j src-i)))))))
   (define-copy-image %copy-image nil)

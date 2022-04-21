@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (deftype octet ()
   '(unsigned-byte 8))

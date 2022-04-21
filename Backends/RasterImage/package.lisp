@@ -8,7 +8,7 @@
                   #:with-transformed-positions
                   #:unmanaged-top-level-sheet-pane
                   #:vbox-pane)
-    (:import-from :mcclim-render-internals
+    (:import-from :mcclim-render
                   #:render-medium-mixin
                   #:render-port-mixin
                   #:image-mirror-image

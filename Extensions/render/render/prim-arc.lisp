@@ -25,7 +25,7 @@
 ;;; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 ;;; Adapted from Ben Deane's com.elbeno.curve 0.1 library, with
 ;;; permission. See http://www.elbeno.com/lisp/ for the original.

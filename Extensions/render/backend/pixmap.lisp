@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (defclass image-pixmap-mixin (image-mirror-mixin)
   ((width :initarg :width :accessor pixmap-width)

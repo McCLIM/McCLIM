@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (defun aa-render-draw-fn (image clip-region design)
   (let ((pixels (climi::pattern-array image)))

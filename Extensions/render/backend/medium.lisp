@@ -1,8 +1,8 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
-(defclass render-medium-mixin (basic-medium
+(defclass render-medium-mixin (ttf-medium-mixin
                                climb:multiline-text-medium-mixin
-                               ttf-medium-mixin)
+                               basic-medium)
   ())
 
 (defun maybe-transformation (medium)
