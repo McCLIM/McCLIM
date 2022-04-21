@@ -1,10 +1,9 @@
 (in-package #:mcclim-render)
 
 (defclass image-mirror-mixin ()
-  ((image :initform nil :reader image-mirror-image)
+  ((image :initform nil :accessor image-mirror-image)
    (image-lock :initform (clim-sys:make-lock "image"))
-   (resize-image-p :initform t :reader image-mirror-resize-image-p)
-   (dirty-region :initform nil)
+   (dirty-region :type region :initform +nowhere+)
    (state :initform (aa:make-state))))
 
 (defmethod image-mirror-image ((sheet sheet))
@@ -12,15 +11,11 @@
               (image (mirror->%image (port sheet) mirror)))
     (image-mirror-image image)))
 
-(defmethod (setf image-mirror-image) (img (mirror image-mirror-mixin))
-  (when img
-    (with-slots (image resize-image-p) mirror
-      (setf resize-image-p nil)
-      (setf image img))))
-
-(defmethod (setf image-mirror-image) (img (sheet sheet))
-  (when-let ((mirror (image-mirror-image sheet)))
-    (setf (image-mirror-image mirror) img)))
+(defmethod (setf image-mirror-image) (image (sheet sheet))
+  (assert (not (null image)))
+  (when-let* ((mirror (sheet-mirror sheet))
+              (%image (mirror->%image (port sheet) mirror)))
+    (setf (image-mirror-image %image) image)))
 
 ;;; implementation
 
@@ -33,14 +28,13 @@
 
 (defun %set-image-region (mirror region)
   (check-type mirror image-mirror-mixin)
-  (with-slots (image resize-image-p) mirror
+  (with-slots (image) mirror
     (with-bounding-rectangle* (:width width :height height) region
       (let ((width (1+ (ceiling width)))
             (height (1+ (ceiling height))))
-        (if (and resize-image-p
-                 (or (null image)
-                     (/= width (pattern-width image))
-                     (/= height (pattern-height image))))
+        (if (or (null image)
+                (/= width (pattern-width image))
+                (/= height (pattern-height image)))
             (%create-mirror-image mirror width height)
             nil)))))
 
@@ -48,15 +42,13 @@
   (check-type mirror image-mirror-mixin)
   (with-slots (image dirty-region) mirror
     (setf image (make-image width height))
-    (setf dirty-region nil)))
+    (setf dirty-region +nowhere+)))
 
 (defun %notify-image-updated (mirror region)
   (check-type mirror image-mirror-mixin)
   (when region
     (with-slots (dirty-region) mirror
-      (setf dirty-region (if dirty-region
-                             (region-union dirty-region region)
-                             region)))))
+      (setf dirty-region (region-union dirty-region region)))))
 
 ;;; XXX: this is used for scroll
 (defun %draw-image (mirror src-image x y width height to-x to-y clip-region)

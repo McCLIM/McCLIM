@@ -13,7 +13,7 @@
 ;;; for port
 (defmethod mcclim-render::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
   (with-slots (mcclim-render::dirty-region) mirror
-    (setf mcclim-render::dirty-region nil))
+    (setf mcclim-render::dirty-region +nowhere+))
   ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
   (with-slots (width height clx-image xlib-image) mirror
     (setf width w
@@ -87,7 +87,6 @@
   (with-slots (xmirror
                clx-image xlib-image
                mcclim-render::image-lock gcontext
-               mcclim-render::dirty-region
                mcclim-render::finished-output
                mcclim-render::updating-p
                width height dirty-xr)
@@ -105,9 +104,9 @@
                dirty-xr width height clx-image
                xlib-image xmirror)
       mirror
-    (when mcclim-render::dirty-region
+    (unless (region-equal mcclim-render::dirty-region +nowhere+)
       (clim-sys:with-lock-held (mcclim-render::image-lock)
-        (when mcclim-render::dirty-region
+        (unless (region-equal mcclim-render::dirty-region +nowhere+)
           (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
           (image-mirror-pre-put width height xmirror mirror clx-image xlib-image dirty-xr)
-          (setf mcclim-render::dirty-region nil))))))
+          (setf mcclim-render::dirty-region +nowhere+))))))
