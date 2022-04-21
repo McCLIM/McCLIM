@@ -201,6 +201,9 @@ throughout the drawing plane. This is most commonly used with patterns."))
                          (y (mod y (pattern-height pattern))))
   (design-ink (rectangular-tile-design pattern) x y))
 
+(defmethod bounding-rectangle ((pattern rectangular-tile))
+  (make-rectangle* 0 0 (pattern-width pattern) (pattern-height pattern)))
+
 
 ;;; Bitmap images (from files)
 ;;;
@@ -290,7 +293,8 @@ Returns a pattern representing this file."
 (defmethod bounding-rectangle* ((pattern transformed-pattern))
   (let* ((source-pattern (transformed-design-design pattern))
          (transformation (transformed-design-transformation pattern)))
-    (bounding-rectangle* (transform-region transformation (bounding-rectangle source-pattern)))))
+    (bounding-rectangle* (transform-region transformation
+                                           (bounding-rectangle source-pattern)))))
 
 (defmethod pattern-width ((pattern transformed-pattern)
                           &aux
