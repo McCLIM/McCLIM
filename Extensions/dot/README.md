@@ -11,9 +11,9 @@ This extension is MIT licensed.
 ## How it works
 
 This extension integrates with the [cl-dot](https://github.com/michaelw/cl-dot)
-project. When laying out the graph, an instance of `cl-dot::graph` is created
+project. When laying out the graph, an instance of `cl-dot:graph` is created
 that represents the graph. This graph is then passed to a user overridable
-function that must return a `cl-dot::graph` instance, with all the layout
+function that must return a `cl-dot:graph` instance, with all the layout
 relevant attributes (like `pos`) populated.
 
 The default layout function (`external-graphviz-dot-processor`) calls

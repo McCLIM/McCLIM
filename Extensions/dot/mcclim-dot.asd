@@ -9,7 +9,10 @@
 (defsystem "mcclim-dot/core"
   :license "MIT"
   :description "Core DOT routines."
-  :depends-on ("mcclim" "mcclim-bezier" "cl-dot" "alexandria" "split-sequence" "parse-number"
+  :depends-on ("mcclim"
+               "mcclim-bezier"
+               (:version "cl-dot" "0.9")
+               "alexandria" "split-sequence" "parse-number"
                "closer-mop")
   :components ((:file "package")
                (:file "core" :depends-on ("package"))))
