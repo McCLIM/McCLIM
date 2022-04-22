@@ -39,15 +39,20 @@
        (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
            (region-intersection region
                                 (make-rectangle* 0 0 width height))
-         (let ((width (round (- max-x min-x)))
-               (height (round (- max-y min-y))))
+         (let* ((min-x (floor min-x))
+                (min-y (floor min-y))
+                (max-x (ceiling max-x))
+                (max-y (ceiling max-y))
+                (width (- max-x min-x))
+                (height (- max-y min-y)))
            (when (and xmirror clx-image)
              (xlib::put-image (window xmirror)
                               gcontext
                               clx-image
-                              :src-x (round (max min-x 0))
-                              :src-y (round (max min-y 0))
-                              :x (round (max min-x 0)) :y (round (max min-y 0))
+                              :src-x (max min-x 0)
+                              :src-y (max min-y 0)
+                              :x (max min-x 0)
+                              :y (max min-y 0)
                               :width  (max 0 (- width (min 0 (- min-x))))
                               :height (max 0 (- height (min 0 (- min-y)))))))))
    dirty-r))
@@ -69,17 +74,13 @@
                         (region-intersection region (make-rectangle* 0 0 (1- width) (1- height)))
                       (declare (type fixnum min-x min-y max-x max-y))
                       (when (and xmirror clx-image)
-                        (do ((y min-y)
-                             (x min-x (1+ x)))
-                            ((> y max-y))
-                          (locally
+                        (locally
                               (declare (type (simple-array (unsigned-byte 32) (* *))
                                              pixels
                                              xlib-image))
-                            (setf (aref xlib-image y x) (aref pixels y x)))
-                          (when (= x max-x)
-                            (incf y)
-                            (setf x min-x))))))))))
+                          (loop for y from min-y upto max-y do
+                            (loop for x from min-x upto max-x do
+                              (setf (aref xlib-image y x) (aref pixels y x))))))))))))
     (map-over-region-set-regions fn dirty-r)))
 
 (defun image-mirror-to-x (mirror)

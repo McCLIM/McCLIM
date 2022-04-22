@@ -65,7 +65,7 @@
           ((> sx dx) #1#)
           ((< sx dx) #2#)
           (t nil)))
-  (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
+  (make-rectangle* dx dy (+ dx width) (+ dy height)))
 
 (macrolet
     ((define-blend-image (name backwardp)
@@ -108,7 +108,7 @@
           ((> sx dx) #1#)
           ((< sx dx) #2#)
           (t nil)))
-  (make-rectangle* (1- dx) (1- dy) (+ dx width) (+ dy height)))
+  (make-rectangle* dx dy (+ dx width) (+ dy height)))
 
 (defun clone-image (image)
   (let ((src-array (climi::pattern-array image)))
@@ -129,14 +129,14 @@
   (when clip-region
     (let ((region (make-rectangle* x y (+ x width) (+ y height))))
       (cond ;; Disregard CLIP-REGION if x,y,width,height is entirely contained.
-            ((region-contains-region-p clip-region region)
-             (setf clip-region nil))
-            ((bounding-rectangle-p clip-region)
-             (with-bounding-rectangle* (x1 y1 :width w :height h)
-                 (region-intersection clip-region region)
-               (setf x (floor x1) y (floor y1)
-                     width (ceiling w) height (ceiling h)
-                     clip-region nil))))))
+        ((region-contains-region-p clip-region region)
+         (setf clip-region nil))
+        ((bounding-rectangle-p clip-region)
+         (with-bounding-rectangle* (x1 y1 :width w :height h)
+             (region-intersection clip-region region)
+           (setf x (floor x1) y (floor y1)
+                 width (ceiling w) height (ceiling h)
+                 clip-region nil))))))
   (let* (;; Stencil
          (stencil-array (and stencil (climi::pattern-array stencil)))
          (stencil-width-max (when stencil-array
@@ -229,6 +229,4 @@
                (setf (aref dst-array j i)
                      (octet-blend-function* source-r source-g source-b source-a
                                             r.bg     g.bg     b.bg     a.bg)))))))))
-  ;; XXX These #'1- are fishy. We don't capture correct region (rounding
-  ;; issue?). This problem is visible when scrolling.
-  (make-rectangle* (1- x) (1- y) (+ x width) (+ y height)))
+  (make-rectangle* x y (+ x width) (+ y height)))
