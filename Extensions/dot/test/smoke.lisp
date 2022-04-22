@@ -113,38 +113,38 @@ R. Gansner, Eleftherios Koutsofios, Stephen C. North, Kiem-phong Vo")
 
 (def-test smoke-test-1 (:suite :mcclim-dot)
   (finishes
-    (mcclim-raster-image:with-output-to-raster-image-file
-        (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-default.png"))
+    (clim-extensions:with-output-to-drawing-stream
+        (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-default.png"))
       (clim:surrounding-output-with-border (s :background clim:+white+)
         (format-graph *simple-graph* s :digraph))))
   (finishes
-    (mcclim-raster-image:with-output-to-raster-image-file
-        (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot.png"))
+    (clim-extensions:with-output-to-drawing-stream
+        (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot.png"))
       (clim:surrounding-output-with-border (s :background clim:+white+)
         (format-graph *simple-graph* s :dot-digraph)))))
 
 (def-test layout-override-1 (:suite :mcclim-dot)
   (let (override)
     (finishes
-      (mcclim-raster-image:with-output-to-raster-image-file
-          (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-1.png"))
+      (clim-extensions:with-output-to-drawing-stream
+          (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-1.png"))
         (clim:surrounding-output-with-border (s :background clim:+white+)
           (setf override (mcclim-dot:make-layout-override
                           (format-graph *simple-graph* s :dot-digraph)))))
-      (mcclim-raster-image:with-output-to-raster-image-file
-          (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-2.png"))
+      (clim-extensions:with-output-to-drawing-stream
+          (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-2.png"))
         (clim:surrounding-output-with-border (s :background clim:+white+)
           (format-graph *simple-graph-2* s :dot-digraph :layout-override override))))
 
     (finishes
-      (mcclim-raster-image:with-output-to-raster-image-file
-          (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-3.png"))
+      (clim-extensions:with-output-to-drawing-stream
+          (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-3.png"))
         (clim:surrounding-output-with-border (s :background clim:+white+)
           (setf override (mcclim-dot:make-layout-override
                           (format-graph *simple-graph* s :dot-digraph)
                           :include-edges-p t))))
 
-      (mcclim-raster-image:with-output-to-raster-image-file
-          (s (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-4.png"))
+      (clim-extensions:with-output-to-drawing-stream
+          (s :raster (asdf:system-relative-pathname :mcclim-dot "smoke-test-1-dot-override-4.png"))
         (clim:surrounding-output-with-border (s :background clim:+white+)
           (format-graph *simple-graph-2* s :dot-digraph :layout-override override))))))

@@ -6,8 +6,8 @@
 (cl:in-package #:mcclim-dot.test)
 
 (def-test edge-label-1 (:suite :mcclim-dot)
-  (mcclim-raster-image:with-output-to-raster-image-file
-      (s (asdf:system-relative-pathname :mcclim-dot "edge-label-1.png"))
+  (clim-extensions:with-output-to-drawing-stream
+      (s :raster (asdf:system-relative-pathname :mcclim-dot "edge-label-1.png"))
     (clim:surrounding-output-with-border (s :background clim:+white+)
       (clim:format-graph-from-roots
        '(a)
