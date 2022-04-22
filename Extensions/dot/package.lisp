@@ -9,4 +9,5 @@
                     (#:dot #:cl-dot)
                     (#:pn #:parse-number)
                     (#:ss #:split-sequence))
-  (:export #:dot-arc-drawer))
+  (:export #:dot-arc-drawer
+           #:make-layout-override))
