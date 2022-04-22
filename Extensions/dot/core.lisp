@@ -10,7 +10,7 @@
 (defclass dot-graph-output-record (clim:standard-graph-output-record)
   ((dot-layout
     :documentation
-    "Holds an instance of CL-DOT::GRAPH with the results of the layout.")
+    "Holds an instance of DOT-LAYOUT with the results of the layout.")
    (dot-bounding-box
     :documentation
     "A RECTANGLE specifying the bounding box of the DOT-LAYOUT.")
@@ -18,6 +18,13 @@
     :initform (make-hash-table :test 'equal)
     :documentation
     "Maps a dot id to a node record.")
+   (layout-override
+    :initform nil
+    :initarg :layout-override
+    :documentation
+    "If non-NIL, is an instance of DOT-LAYOUT specifying where nodes
+and (optionally) edges are positioned. Must be an object returned by
+MAKE-LAYOUT-OVERRIDE.")
    (dot-processor
     :initarg :dot-processor
     :documentation
@@ -213,6 +220,10 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
   (apply #'clim:make-point
          (mapcar #'pn:parse-number (ss:split-sequence #\, string))))
 
+(defun point-to-coordinate-string (point)
+  "Convert a POINT to a tring of two numbers, separated by a comma."
+  (format nil "~F,~F" (clim:point-x point) (clim:point-y point)))
+
 (defun coordinate-string-to-rectangle (string)
   "Convert a string of four numbers, separated by a comma into a RECTANGLE."
   (apply #'clim:make-rectangle*
@@ -236,6 +247,94 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
 (defun splines-string-to-splines (string)
   (mapcar #'spline-string-to-spline (ss:split-sequence #\; string)))
 
+(defun spline-to-spline-string (spline)
+  "Convert a DOT-SPLINE to a spline string in the Dot language."
+  (let ((start (dot-spline-start spline))
+        (end (dot-spline-end spline))
+        (points (dot-spline-points spline)))
+    (format nil "~@[e,~A ~]~@[s,~A ~]~{~A~^ ~}"
+            (if (not (null end)) (point-to-coordinate-string end))
+            (if (not (null start)) (point-to-coordinate-string start))
+            (mapcar #'point-to-coordinate-string points))))
+
+(defun splines-to-splines-string (splines)
+  "Convert a list of DOT-SPLINEs to a splines string in the Dot language."
+  (format nil "~{~A~^;~}" (mapcar #'spline-to-spline-string splines)))
+
+
+;; Layout
+
+(defclass dot-layout ()
+  ((%nodes
+    :initarg :nodes
+    :reader node-layout)
+   (%edges
+    :initarg :edges
+    :reader edge-layout)
+   (%key
+    :initarg :key
+    :initform #'identity
+    :reader layout-key))
+  (:documentation
+   "Contains the results of performing layout. Can also be provided as a
+:LAYOUT-OVERRIDE."))
+
+(defun make-dot-layout (dot-graph dot-id-to-record)
+  "Helper function to take a CL-DOT::GRAPH instance, extract the layout
+relevant information, and return a DOT-LAYOUT instance."
+  (let ((node-pos-ht (make-hash-table))
+        (edge-spline-ht (make-hash-table :test 'equal)))
+    (dolist (dot-node (dot::nodes-of dot-graph))
+      (let* ((node (gethash (dot::id-of dot-node) dot-id-to-record))
+             (pos-attribute (getf (dot::attributes-of dot-node) :pos))
+             (pos (coordinate-string-to-point pos-attribute)))
+        (setf (gethash node node-pos-ht) pos)))
+    (dolist (dot-edge (dot::edges-of dot-graph))
+      (let* ((attributes (dot::attributes-of dot-edge))
+             (pos (getf attributes :pos))
+             (lp (getf attributes :lp))
+             (splines (splines-string-to-splines pos))
+             (from-dot-node (dot::source-of dot-edge))
+             (from (gethash (dot::id-of from-dot-node) dot-id-to-record))
+             (to-dot-node (dot::target-of dot-edge))
+             (to (gethash (dot::id-of to-dot-node) dot-id-to-record)))
+        (setf (gethash (list from to) edge-spline-ht)
+              (list splines
+                    (unless (null lp)
+                      (coordinate-string-to-point lp))))))
+    (make-instance 'dot-layout :nodes node-pos-ht :edges edge-spline-ht)))
+
+(defun make-layout-override (record &key (key #'identity) include-edges-p)
+  "Given a DOT-GRAPH-OUTPUT-RECORD that has already been layed out, extract an
+instance suitable for passing to :LAYOUT-OVERRIDE in another call to
+FORMAT-GRAPH-FROM-ROOTS.
+
+If KEY is provided, it is applied to every GRAPH-NODE-OBJECT to produce a key
+that is EQL comparable in future layouts. If INCLUDE-EDGES-P, then edge layouts
+will be included in the returned instance as well."
+  (with-slots (dot-layout) record
+    (let ((node-pos-ht (make-hash-table))
+          (edge-spline-ht (make-hash-table :test 'equal)))
+      (with-hash-table-iterator (next (node-layout dot-layout))
+        (loop
+          (multiple-value-bind (more node point) (next)
+            (unless more (return))
+            (setf (gethash (funcall key (clim:graph-node-object node)) node-pos-ht)
+                  point))))
+      (when include-edges-p
+        (with-hash-table-iterator (next (edge-layout dot-layout))
+          (loop
+            (multiple-value-bind (more edge dot-layout) (next)
+              (unless more (return))
+              (destructuring-bind (from to) edge
+                (setf (gethash (list (funcall key (clim:graph-node-object from))
+                                     (funcall key (clim:graph-node-object to)))
+                               edge-spline-ht)
+                      dot-layout))))))
+      (make-instance 'dot-layout
+                     :nodes node-pos-ht
+                     :edges (when include-edges-p edge-spline-ht)))))
+
 
 ;; CLIM graph to CL-DOT::GRAPH
 
@@ -243,29 +342,52 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
   "Create a CL-DOT::NODE for the OBJECT. Create a unique ID, set the attributes
 to match the OBJECT's bounding box, and save the ID in the RECORD's
 DOT-ID-TO-RECORD map."
-  (let* ((id (princ-to-string (incf *id*)))
-         (node (make-instance 'dot:node
-                              :id id
-                              :attributes
-                              `(:shape :rectangle
-                                :fixedsize "true"
-                                :width ,(float (pts-to-inches (clim:bounding-rectangle-width object)))
-                                :height ,(float (pts-to-inches (clim:bounding-rectangle-height object)))))))
-    (with-slots (dot-id-to-record) record
-      (setf (gethash id dot-id-to-record) object)
-      node)))
+  (with-slots (layout-override) record
+    (let ((id (princ-to-string (incf *id*)))
+          (attributes (list :shape :rectangle
+                            :fixedsize "true"
+                            :width (float (pts-to-inches (clim:bounding-rectangle-width object)))
+                            :height (float (pts-to-inches (clim:bounding-rectangle-height object)))))
+          node)
+      (when layout-override
+        (a:when-let ((pos-override (gethash (funcall (layout-key layout-override)
+                                                     (clim:graph-node-object object))
+                                            (node-layout layout-override))))
+          (push (point-to-coordinate-string pos-override) attributes)
+          (push :pos attributes)))
+      (setf node (make-instance 'dot:node :id id :attributes attributes))
+      (with-slots (dot-id-to-record) record
+        (setf (gethash id dot-id-to-record) object)
+        node))))
 
 (defmethod dot:graph-object-points-to ((record dot-graph-output-record) object)
   "Return a children that OBJECT points to."
-  (loop
-    :for child :in (clim:graph-node-children object)
-    :for attributes := (when (typep (car *arc-drawer*) 'dot-arc-drawer)
-                         (apply #'dot-edge-label-to-dot-attributes
-                                (car *arc-drawer*) *dot-stream* object child
-                                (cdr *arc-drawer*)))
-    :collect (make-instance 'dot:attributed
-                            :object child
-                            :attributes attributes)))
+  (with-slots (layout-override) record
+    (let ((edges-ht (if (not (null layout-override)) (edge-layout layout-override)))
+          (out ()))
+      (dolist (child (clim:graph-node-children object) out)
+        (let ((attributes ()))
+          (when (typep (car *arc-drawer*) 'dot-arc-drawer)
+            (a:appendf attributes
+                       (apply #'dot-edge-label-to-dot-attributes
+                              (car *arc-drawer*) *dot-stream* object child (cdr *arc-drawer*))))
+          (when edges-ht
+            (let ((object-key (funcall (layout-key layout-override)
+                                       (clim:graph-node-object object)))
+                  (child-key (funcall (layout-key layout-override)
+                                      (clim:graph-node-object child))))
+              (destructuring-bind (splines lp)
+                  (gethash (list object-key child-key) edges-ht '(nil nil))
+                (when splines
+                  (push (splines-to-splines-string splines) attributes)
+                  (push :pos attributes))
+                (when lp
+                  (push (point-to-coordinate-string lp) attributes)
+                  (push :lp attributes)))))
+          (push (make-instance 'dot:attributed
+                               :object child
+                               :attributes attributes)
+                out))))))
 
 (defun compute-dot-graph (record stream arc-drawer arc-drawing-options)
   "Compute the CL-DOT:GRAPH representation of the RECORD."
@@ -284,12 +406,17 @@ DOT-ID-TO-RECORD map."
 description, calling the DOT-PROCESSOR to perform the layout, and saving the
 results in the DOT-LAYOUT and DOT-BOUNDING-BOX slots."
   (let ((input-dot-graph (compute-dot-graph graph-record stream arc-drawer arc-drawing-options)))
-    (with-slots (dot-processor dot-processor-options dot-layout dot-bounding-box)
+    (with-slots (dot-processor dot-processor-options dot-layout dot-bounding-box dot-id-to-record layout-override)
         graph-record
-      (setf dot-layout
-            (apply dot-processor graph-record input-dot-graph dot-processor-options))
-      (setf dot-bounding-box
-            (coordinate-string-to-rectangle (getf (dot::attributes-of dot-layout) :bb))))))
+      (let ((dot-graph (apply dot-processor graph-record input-dot-graph
+                              :directed (typep graph-record 'dot-digraph-output-record)
+                              (append (if (not (null layout-override))
+                                          (list :noop 2))
+                                      dot-processor-options))))
+        (setf dot-layout
+              (make-dot-layout dot-graph dot-id-to-record))
+        (setf dot-bounding-box
+              (coordinate-string-to-rectangle (getf (dot::attributes-of dot-graph) :bb)))))))
 
 (defun call-with-dot-transformation (thunk medium graph-record)
   "Call THUNK with the transformation on MEDIUM set to translate GRAPH-RECORD's
@@ -313,17 +440,17 @@ is upper left)."
                                     stream arc-drawer arc-drawing-options)
   (with-slots (dot-layout dot-id-to-record) graph-record
     (with-dot-transformation (stream graph-record)
-      (dolist (dot-node (dot::nodes-of dot-layout))
-        (let* ((node (gethash (dot::id-of dot-node) dot-id-to-record))
-               (bb-width (clim:bounding-rectangle-width node))
-               (bb-height (clim:bounding-rectangle-height node))
-               (pos-attribute (getf (dot::attributes-of dot-node) :pos))
-               (pos (coordinate-string-to-point pos-attribute)))
-          (setf (clim:output-record-position node)
-                (clim:transform-position (clim:medium-transformation stream)
-                                         (- (clim:point-x pos) (/ bb-width 2))
-                                         (+ (clim:point-y pos) (/ bb-height 2))))
-          (clim:add-output-record node graph-record))))))
+      (with-hash-table-iterator (next (node-layout dot-layout))
+        (loop
+          (multiple-value-bind (more node point) (next)
+            (unless more (return))
+            (let ((bb-width (clim:bounding-rectangle-width node))
+                  (bb-height (clim:bounding-rectangle-height node)))
+              (setf (clim:output-record-position node)
+                    (clim:transform-position (clim:medium-transformation stream)
+                                             (- (clim:point-x point) (/ bb-width 2))
+                                             (+ (clim:point-y point) (/ bb-height 2))))
+              (clim:add-output-record node graph-record))))))))
 
 (defmethod clim:layout-graph-edges :around ((graph-record dot-graph-output-record)
                                             stream arc-drawer arc-drawing-options)
@@ -333,23 +460,20 @@ is upper left)."
 (defmethod clim:layout-graph-edges ((graph-record dot-graph-output-record)
                                     stream arc-drawer arc-drawing-options)
   (with-slots (dot-layout dot-id-to-record) graph-record
-    (dolist (dot-edge (dot::edges-of dot-layout))
-      (let* ((attributes (dot::attributes-of dot-edge))
-             (pos (getf attributes :pos))
-             (lp (getf attributes :lp))
-             (splines (splines-string-to-splines pos))
-             (from-dot-node (dot::source-of dot-edge))
-             (from (gethash (dot::id-of from-dot-node) dot-id-to-record))
-             (to-dot-node (dot::target-of dot-edge))
-             (to (gethash (dot::id-of to-dot-node) dot-id-to-record))
-             (start-point (or (dot-spline-start (first splines))
-                              (first (dot-spline-points (first splines)))))
-             (end-point (or (dot-spline-end (a:last-elt splines))
-                            (a:last-elt (dot-spline-points (a:last-elt splines))))))
-        (with-dot-transformation (stream graph-record)
-          (apply arc-drawer stream from to
-                 (clim:point-x start-point) (clim:point-y start-point)
-                 (clim:point-x end-point) (clim:point-y end-point)
-                 :splines splines
-                 :label-center (unless (null lp) (coordinate-string-to-point lp))
-                 arc-drawing-options))))))
+    (with-dot-transformation (stream graph-record)
+      (with-hash-table-iterator (next (edge-layout dot-layout))
+        (loop
+          (multiple-value-bind (more edge layout) (next)
+            (unless more (return))
+            (destructuring-bind (from to) edge
+              (destructuring-bind (splines lp) layout
+                (let ((start-point (or (dot-spline-start (first splines))
+                                       (first (dot-spline-points (first splines)))))
+                      (end-point (or (dot-spline-end (a:last-elt splines))
+                                     (a:last-elt (dot-spline-points (a:last-elt splines))))))
+                  (apply arc-drawer stream from to
+                         (clim:point-x start-point) (clim:point-y start-point)
+                         (clim:point-x end-point) (clim:point-y end-point)
+                         :splines splines
+                         :label-center (unless (null lp) lp)
+                         arc-drawing-options))))))))))
