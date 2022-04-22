@@ -17,7 +17,7 @@
 (defsystem "mcclim-dot/graphviz"
   :license "MIT"
   :description "Interface to graphviz via an external process."
-  :depends-on ("mcclim-dot/core" "jsown" "uiop")
+  :depends-on ("mcclim-dot/core" "shasht" "uiop")
   :components ((:file "graphviz")))
 
 (defsystem "mcclim-dot/test"
