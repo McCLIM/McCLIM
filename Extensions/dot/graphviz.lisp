@@ -57,12 +57,12 @@ visualization tools."
                (pos (gethash "pos" raw-edge))
                (label (gethash "label" raw-edge))
                (lp (gethash "lp" raw-edge)))
-          (push (make-instance 'dot::edge
+          (push (make-instance 'dot:edge
                                :source tail
                                :target head
                                :attributes (list :pos pos :label label :lp lp))
                 edges)))
-      (make-instance 'dot::graph
+      (make-instance 'dot:graph
                      :attributes (list :bb bb)
                      :nodes nodes
                      :edges edges))))

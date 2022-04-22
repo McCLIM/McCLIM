@@ -30,8 +30,8 @@ MAKE-LAYOUT-OVERRIDE.")
     :documentation
     "A function that takes two positional arguments and any number of keyword
 arguments. The first argument is this graph output record. The second is an
-instance of CL-DOT::GRAPH, representing the layout problem. This function must
-return an instance of CL-DOT::GRAPH with the nodes and edges layed out.")
+instance of CL-DOT:GRAPH, representing the layout problem. This function must
+return an instance of CL-DOT:GRAPH with the nodes and edges layed out.")
    (dot-processor-options
     :initarg :dot-processor-options
     :initform nil
@@ -280,24 +280,24 @@ non-NIL, an arrow should be drawn from the last POINTS to END."))
 :LAYOUT-OVERRIDE."))
 
 (defun make-dot-layout (dot-graph dot-id-to-record)
-  "Helper function to take a CL-DOT::GRAPH instance, extract the layout
+  "Helper function to take a CL-DOT:GRAPH instance, extract the layout
 relevant information, and return a DOT-LAYOUT instance."
   (let ((node-pos-ht (make-hash-table))
         (edge-spline-ht (make-hash-table :test 'equal)))
-    (dolist (dot-node (dot::nodes-of dot-graph))
-      (let* ((node (gethash (dot::id-of dot-node) dot-id-to-record))
-             (pos-attribute (getf (dot::attributes-of dot-node) :pos))
+    (dolist (dot-node (dot:nodes-of dot-graph))
+      (let* ((node (gethash (dot:id-of dot-node) dot-id-to-record))
+             (pos-attribute (getf (dot:attributes-of dot-node) :pos))
              (pos (coordinate-string-to-point pos-attribute)))
         (setf (gethash node node-pos-ht) pos)))
-    (dolist (dot-edge (dot::edges-of dot-graph))
-      (let* ((attributes (dot::attributes-of dot-edge))
+    (dolist (dot-edge (dot:edges-of dot-graph))
+      (let* ((attributes (dot:attributes-of dot-edge))
              (pos (getf attributes :pos))
              (lp (getf attributes :lp))
              (splines (splines-string-to-splines pos))
-             (from-dot-node (dot::source-of dot-edge))
-             (from (gethash (dot::id-of from-dot-node) dot-id-to-record))
-             (to-dot-node (dot::target-of dot-edge))
-             (to (gethash (dot::id-of to-dot-node) dot-id-to-record)))
+             (from-dot-node (dot:source-of dot-edge))
+             (from (gethash (dot:id-of from-dot-node) dot-id-to-record))
+             (to-dot-node (dot:target-of dot-edge))
+             (to (gethash (dot:id-of to-dot-node) dot-id-to-record)))
         (setf (gethash (list from to) edge-spline-ht)
               (list splines
                     (unless (null lp)
@@ -336,10 +336,10 @@ will be included in the returned instance as well."
                      :edges (when include-edges-p edge-spline-ht)))))
 
 
-;; CLIM graph to CL-DOT::GRAPH
+;; CLIM graph to CL-DOT:GRAPH
 
 (defmethod dot:graph-object-node ((record dot-graph-output-record) object)
-  "Create a CL-DOT::NODE for the OBJECT. Create a unique ID, set the attributes
+  "Create a CL-DOT:NODE for the OBJECT. Create a unique ID, set the attributes
 to match the OBJECT's bounding box, and save the ID in the RECORD's
 DOT-ID-TO-RECORD map."
   (with-slots (layout-override) record
@@ -402,7 +402,7 @@ DOT-ID-TO-RECORD map."
                                              (:vertical "TB")))))))
 
 (defun perform-layout (graph-record stream arc-drawer arc-drawing-options)
-  "Perform the layout for GRAPH-RECORD by creating the CL-DOT::GRAPH
+  "Perform the layout for GRAPH-RECORD by creating the CL-DOT:GRAPH
 description, calling the DOT-PROCESSOR to perform the layout, and saving the
 results in the DOT-LAYOUT and DOT-BOUNDING-BOX slots."
   (let ((input-dot-graph (compute-dot-graph graph-record stream arc-drawer arc-drawing-options)))
@@ -416,7 +416,7 @@ results in the DOT-LAYOUT and DOT-BOUNDING-BOX slots."
         (setf dot-layout
               (make-dot-layout dot-graph dot-id-to-record))
         (setf dot-bounding-box
-              (coordinate-string-to-rectangle (getf (dot::attributes-of dot-graph) :bb)))))))
+              (coordinate-string-to-rectangle (getf (dot:attributes-of dot-graph) :bb)))))))
 
 (defun call-with-dot-transformation (thunk medium graph-record)
   "Call THUNK with the transformation on MEDIUM set to translate GRAPH-RECORD's
