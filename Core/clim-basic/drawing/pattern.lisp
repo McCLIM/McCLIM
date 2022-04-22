@@ -88,6 +88,12 @@
   (:documentation "Abstract class for all patterns based on an array (indexed
 pattern, stencil, image etc)."))
 
+(defmethod print-object ((object %array-pattern) stream)
+  (print-unreadable-object (object stream :type t :identity nil)
+    (format stream ":WIDTH ~s :HEIGHT ~S"
+            (pattern-width object)
+            (pattern-height object))))
+
 (defmethod pattern-width ((pattern %array-pattern))
   (array-dimension (pattern-array pattern) 1))
 
