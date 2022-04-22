@@ -312,6 +312,10 @@ if there is one, or STREAM"
 
 (def-stream-method event-listen ((stream standard-encapsulating-stream)))
 
+(def-stream-method graft ((stream standard-encapsulating-stream)))
+
+(def-stream-method port ((stream standard-encapsulating-stream)))
+
 ;;; trampoline methods
 
 (def-stream-method medium-foreground ((stream standard-encapsulating-stream)))
