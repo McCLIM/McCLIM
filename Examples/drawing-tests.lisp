@@ -464,8 +464,8 @@
       (labels ((draw ()
                  (with-slots (recording-p) *application-frame*
                    (let ((pattern (clime:with-output-to-drawing-stream
-                                      (stream :raster :pattern :width *width* :height *height*
-                                              :border-width *border-width* :recording-p recording-p)
+                                      (stream :raster :pattern :recording-p recording-p
+                                              :width *width* :height *height*)
                                     (draw-rectangle* stream 0 0 *width* *height* :filled t :ink +grey90+)
                                     (funcall (drawing-test-display-function item) frame stream))))
                      (draw-pattern* output pattern 0 0)

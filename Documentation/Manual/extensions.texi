@@ -538,12 +538,11 @@ Valid values of @code{destination} are:
 This backend accepts the following @code{options}:
 
 @itemize @bullet
-@item border-width  - a frame around the image (defaults to 0)
-@item width  - defaults to :compute - added to 2*border-width
-@item height - defaults to :compute - added to 2*border-width
-@item format - output format unless implicit from the destination
-@item target - when the destination is :pattern then try to reuse the target
-@item recording-p - when true the second returned value is the output record history
+@item width  - defaults to :compute
+@item height - defaults to :compute
+@item format - output format (unless implicit from the destination)
+@item target - when the destination is :pattern, then try to reuse the target
+@item recording-p - when true, then the second returned value is the history
 @end itemize
 
 @code{format} is a symbol that names the type of the image. Valid values are
