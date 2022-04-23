@@ -37,5 +37,5 @@
 
 ;;; We return a gensym because the RENDER-PORT-MIXIN maintains a hash table
 ;;; which maps mirrors to images - a key must be unique. -- jd 2020-11-09
-(defmethod realize-mirror ((port render-port-mixin) (sheet image-sheet-mixin))
+(defmethod realize-mirror ((port render-port-mixin) (sheet mirrored-sheet-mixin))
   (gensym "RENDER-PORT-MIRROR"))

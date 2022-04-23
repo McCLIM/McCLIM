@@ -12,7 +12,6 @@
                   #:render-medium-mixin
                   #:render-port-mixin
                   #:image-mirror-image
-                  #:image-sheet-mixin
                   #:image-mirror-mixin
                   #:image-pixmap-mixin
                   #:mirror->%image

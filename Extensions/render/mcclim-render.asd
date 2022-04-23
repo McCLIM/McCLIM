@@ -23,7 +23,6 @@
                (:module "backend"
                 :serial t
                 :components ((:file "mirror")
-                             (:file "mirrored-sheet")
                              (:file "medium")
                              (:file "pixmap")
                              (:file "fonts")
