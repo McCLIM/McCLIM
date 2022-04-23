@@ -165,7 +165,7 @@
                                  (aref stencil-array stencil-y stencil-x)
                                  0)))))
            (update-ink (i j)
-             (setf ink (clime:design-ink design i j))
+             (setf ink (climi::design-ink* design i j))
              (when (and (eq old-ink ink) (= old-alpha alpha))
                (return-from update-ink))
              (setf old-alpha alpha
