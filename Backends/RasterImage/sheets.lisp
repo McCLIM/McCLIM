@@ -33,8 +33,7 @@
                                        climi::unmanaged-top-level-sheet-pane)
   ())
 
-(defun make-raster-top-level-sheet (port format)
-  (declare (ignore format))
+(defun make-raster-top-level-sheet (port)
   (check-type port raster-image-port)
   (make-instance 'raster-image-top-level-pane :enabled-p nil :port port))
 

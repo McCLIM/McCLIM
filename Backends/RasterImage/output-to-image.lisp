@@ -33,11 +33,10 @@
 
 (defmethod invoke-with-output-to-drawing-stream
     (continuation (port raster-image-port) (destination (eql :pattern))
-     &key (width :compute) (height :compute) (format :png)
-       (target nil) (recording-p nil)
+     &key (width :compute) (height :compute) (target nil) (recording-p nil)
      &allow-other-keys)
   (let* ((graft (graft port))
-         (top-level-sheet (make-raster-top-level-sheet port format))
+         (top-level-sheet (make-raster-top-level-sheet port))
          (stream (make-raster-image-stream port)))
     (sheet-adopt-child top-level-sheet stream)
     (sheet-adopt-child graft top-level-sheet)
