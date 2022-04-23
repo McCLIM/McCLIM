@@ -6,11 +6,8 @@
                "mcclim-backend-common")
   :serial t
   :components ((:file "package")
-               (:file "graft")
-               (:file "medium")
-               (:file "top-level-pane")
+               (:file "sheets")
                (:file "port")
-               (:file "stream")
                (:file "output-to-image")
                (:file "rgb-port")
                (:file "output-destination"))

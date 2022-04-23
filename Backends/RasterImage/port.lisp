@@ -1,8 +1,6 @@
 (in-package #:mcclim-raster-image)
 
-;;;
 ;;; Port
-;;;
 
 (defclass raster-image-port (render-port-mixin basic-port)
   ((width :reader raster-image-port-width)
@@ -53,6 +51,9 @@
 
 ;;; medium
 
+(defclass raster-image-medium (render-medium-mixin basic-medium)
+  ())
+
 (defmethod make-medium ((port raster-image-port) (sheet basic-sheet))
   (make-instance 'raster-image-medium :port port :sheet sheet))
 
@@ -65,8 +66,3 @@
 (defmethod port-set-mirror-geometry ((port raster-image-port) sheet region)
   (declare (ignore port sheet))
   (bounding-rectangle* region))
-
-(defun make-raster-top-level-sheet (port format)
-  (declare (ignore format))
-  (check-type port raster-image-port)
-  (make-instance 'raster-image-top-level-pane :enabled-p nil :port port))
