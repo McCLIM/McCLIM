@@ -13,8 +13,8 @@
   (setf (mcclim-render:image-dirty-region mirror) +nowhere+)
   ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
   (with-slots (width height clx-image xlib-image) mirror
-    (setf width w
-          height h)
+    (setf width (ceiling w)
+          height (ceiling h))
     ;; Fill the image with a recognizable color so that pixels in the
     ;; mirror image which the backend never fills stand out. The
     ;; highest byte should not be used by X, but in case something
