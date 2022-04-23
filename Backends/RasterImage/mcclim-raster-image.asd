@@ -9,7 +9,6 @@
                (:file "sheets")
                (:file "port")
                (:file "output-to-image")
-               (:file "rgb-port")
                (:file "output-destination"))
   :in-order-to ((test-op (test-op "mcclim-raster-image/test"))))
 
