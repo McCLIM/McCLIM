@@ -149,8 +149,7 @@ caches it."
     (let ((start (dot-spline-start spline))
           (end (dot-spline-end spline))
           (points (dot-spline-points spline)))
-      (apply #'mcclim-bezier:draw-bezier-design*
-             stream (mcclim-bezier:make-bezier-curve points) args)
+      (apply #'clime:draw-bezigon stream points :filled nil args)
       (unless (null start)
         (apply #'clim:draw-arrow stream (first points) start args))
       (unless (null end)
