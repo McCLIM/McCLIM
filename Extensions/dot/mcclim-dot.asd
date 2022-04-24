@@ -10,7 +10,6 @@
   :license "MIT"
   :description "Core DOT routines."
   :depends-on ("mcclim"
-               "mcclim-bezier"
                (:version "cl-dot" "0.9")
                "alexandria" "split-sequence" "parse-number"
                "closer-mop")
