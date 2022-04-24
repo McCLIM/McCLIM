@@ -7,15 +7,13 @@
    (state :initform (aa:make-state))))
 
 (defmethod image-mirror-image ((sheet sheet))
-  (when-let* ((mirror (sheet-mirror sheet))
-              (image (mirror->%image (port sheet) mirror)))
-    (image-mirror-image image)))
+  (when-let ((mirror (sheet-mirror sheet)))
+    (image-mirror-image mirror)))
 
 (defmethod (setf image-mirror-image) (image (sheet sheet))
   (assert (not (null image)))
-  (when-let* ((mirror (sheet-mirror sheet))
-              (%image (mirror->%image (port sheet) mirror)))
-    (setf (image-mirror-image %image) image)))
+  (when-let ((mirror (sheet-mirror sheet)))
+    (setf (image-mirror-image mirror) image)))
 
 ;;; implementation
 

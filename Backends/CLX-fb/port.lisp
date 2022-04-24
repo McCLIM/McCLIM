@@ -3,7 +3,7 @@
 (defclass clx-fb-port (render-port-mixin
                        clim-xcommon:keysym-port-mixin
                        clim-clx::clx-basic-port)
-  ())
+  ((all-mirrors :initform '() :accessor all-mirrors)))
 
 (defmethod find-port-type ((type (eql :clx-fb)))
   (values 'clx-fb-port (nth-value 1 (find-port-type :clx))))
@@ -21,15 +21,13 @@
 (defun initialize-clx-framebuffer (port)
   (clim-sys:make-process
    (lambda ()
-     (loop with mirror->%image = (slot-value port 'mirror->%image)
-           for display = (clx-port-display port)
+     (loop for display = (clx-port-display port)
            while display
            do (handler-case
-                  (maphash-values
-                   (lambda (image)
-                     (when (typep image 'clx-fb-mirror)
-                       (image-mirror-to-x image)))
-                   mirror->%image)
+                  (dolist (mirror (all-mirrors port))
+                    (if (typep mirror 'clx-fb-mirror)
+                        (image-mirror-to-x mirror)
+                        (error "huh? ~s" (class-of mirror))))
                 (condition (condition)
                   (format *debug-io* "~A~%" condition)))
               (ignore-errors
@@ -47,28 +45,26 @@
 
 (defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (let* ((window (clim-clx::%realize-mirror port sheet))
-         (mirror (make-instance 'clx-mirror :window window))
-         (%image (make-instance 'clx-fb-mirror :xmirror mirror)))
+         (mirror (make-instance 'clx-fb-mirror :window window)))
     (setf (getf (xlib:window-plist window) 'sheet) sheet)
-    (setf (slot-value %image 'gcontext)
+    (setf (slot-value mirror 'gcontext)
           (xlib:create-gcontext :drawable window
                                 :background (values 0 0 0)
                                 :foreground (values 255 255 255)))
-    (setf (mirror->%image port mirror) %image)
+    (push mirror (all-mirrors port))
     mirror))
 
 (defmethod destroy-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (let* ((mirror (sheet-direct-mirror sheet))
-         (%image (mirror->%image port mirror))
          (window (window mirror)))
-    (with-slots (gcontext clx-image) %image
+    (with-slots (gcontext clx-image) mirror
       (xlib:free-gcontext gcontext)
       ;;(xlib:destroy-image clx-image)
       (setf gcontext nil
             clx-image nil))
     (remf (xlib:window-plist window) 'sheet)
-    (xlib:destroy-window window)
-    (setf (mirror->%image port mirror) nil)))
+    (alexandria:deletef (all-mirrors port) mirror)
+    (xlib:destroy-window window)))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
   (clim-clx::realize-mirror-aux port sheet
@@ -109,9 +105,17 @@
                  :sheet sheet))
 
 (defmethod port-force-output ((port clx-fb-port))
-  (maphash-values (lambda (image)
-                    (when (typep image 'clx-fb-mirror)
-                      (%mirror-force-output image)))
-                  (slot-value port 'mirror->%image))
+  (dolist (mirror (all-mirrors port))
+    (if (typep mirror 'clx-fb-mirror)
+        (%mirror-force-output mirror)
+        (error "huh? ~s" (class-of mirror))))
   (xlib:display-force-output (clx-port-display port)))
 
+(defmethod distribute-event :before
+    ((port clx-fb-port) (event window-configuration-event))
+  (let ((sheet (event-sheet event))
+        (width (climi::window-configuration-event-width event))
+        (height (climi::window-configuration-event-height event)))
+    (when-let ((mirror (sheet-direct-mirror sheet)))
+      (mcclim-render::%set-image-region
+       mirror (make-bounding-rectangle 0 0 width height)))))

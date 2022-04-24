@@ -24,16 +24,6 @@
     (setf (slot-value port 'height) height)
     (make-graft port)))
 
-(defun %destroy-all-mirrors (port)
-  (maphash (lambda (key val)
-             (declare (ignore key))
-             (when (sheetp val)
-               (destroy-mirror port val)))
-           (slot-value port 'mirror->%image)))
-
-(defmethod destroy-port :before ((port raster-image-port))
-  (%destroy-all-mirrors port))
-
 ;;; Port-Graft methods
 
 (defmethod make-graft ((port raster-image-port) &key (orientation :default)
@@ -61,18 +51,6 @@
   (make-instance 'raster-image-medium :port port :sheet sheet))
 
 ;;; mirror
-
-(defmethod realize-mirror ((port raster-image-port) (sheet mirrored-sheet-mixin))
-  (let ((mirror (make-instance 'image-mirror-mixin)))
-    (setf (mirror->%image port mirror) mirror)
-    (multiple-value-bind (width height)
-        (bounding-rectangle-size sheet)
-      (mcclim-render::%create-mirror-image mirror width height))
-    mirror))
-
-(defmethod destroy-mirror ((port raster-image-port) (sheet mirrored-sheet-mixin))
-  (let ((mirror (sheet-direct-mirror sheet)))
-    (setf (mirror->%image port mirror) nil)))
 
 (defmethod port-set-mirror-geometry ((port raster-image-port) sheet region)
   (declare (ignore port sheet))

@@ -22,18 +22,18 @@
         (medium-device-region medium))))
 
 (defun %medium-stroke-paths (medium paths)
-  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))
+  (when-let ((mirror (medium-drawable medium))
              (transformation (maybe-transformation medium)))
-    (%stroke-paths medium %image paths
+    (%stroke-paths medium mirror paths
                    (medium-line-style medium)
                    transformation
                    (maybe-region medium)
                    (transform-region transformation (medium-ink medium)))))
 
 (defun %medium-fill-paths (medium paths)
-  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium)))
+  (when-let ((mirror (medium-drawable medium))
              (transformation (maybe-transformation medium)))
-    (%fill-paths %image paths
+    (%fill-paths mirror paths
                  transformation
                  (maybe-region medium)
                  (transform-region transformation (medium-ink medium)))))
@@ -42,14 +42,14 @@
   (when-let ((%image
               (etypecase medium
                 (medium
-                 (mirror->%image (port medium) (medium-drawable medium)))
+                 (medium-drawable medium))
                 (image-pixmap-mixin
                  medium)))
              (image
               (etypecase image
                 (basic-sheet
                  (image-mirror-image
-                  (mirror->%image (port image) (sheet-mirror image))))
+                  (sheet-mirror image)))
                 (image-pixmap-mixin
                  (image-mirror-image image))
                 (clime:image-pattern
@@ -61,8 +61,8 @@
 
 ;;; XXX: used only for medium-draw-text* for now.
 (defun %medium-fill-image-mask (medium mask-image from-x from-y width height to-x to-y)
-  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium))))
-    (%fill-image %image
+  (when-let ((mirror (medium-drawable medium)))
+    (%fill-image mirror
                  (round from-x) (round from-y)
                  (round width) (round height)
                  (transform-region (maybe-transformation medium)
@@ -72,8 +72,8 @@
                  mask-image (round to-x) (round to-y))))
 
 (defun %medium-fill-image (medium x y width height)
-  (when-let ((%image (mirror->%image (port medium) (medium-drawable medium))))
-    (%fill-image %image
+  (when-let ((mirror (medium-drawable medium)))
+    (%fill-image mirror
                  (round x) (round y)
                  (round width) (round height)
                  (transform-region (maybe-transformation medium)
