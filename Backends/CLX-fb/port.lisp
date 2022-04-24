@@ -115,18 +115,3 @@
                   (slot-value port 'mirror->%image))
   (xlib:display-force-output (clx-port-display port)))
 
-;;; Pixmap
-
-(defclass clx-fb-pixmap (image-pixmap-mixin)
-  ((port :initarg :port :accessor port)))
-
-(defmethod allocate-pixmap ((medium clx-fb-medium) width height)
-  (let* ((port (port medium))
-         (pixmap (make-instance 'clx-fb-pixmap
-                                :width width :height height :port port)))
-    (setf (mirror->%image port pixmap) pixmap)
-    (mcclim-render::%create-mirror-image pixmap width height)
-    pixmap))
-
-(defmethod deallocate-pixmap ((pixmap clx-fb-pixmap))
-  (setf (mirror->%image (port pixmap) pixmap) nil))

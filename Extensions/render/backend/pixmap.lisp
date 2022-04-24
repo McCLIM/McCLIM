@@ -1,12 +1,24 @@
 (in-package #:mcclim-render)
 
-(defclass image-pixmap-mixin (image-mirror-mixin)
-  ((width :initarg :width :accessor pixmap-width)
-   (height :initarg :height :accessor pixmap-height)))
+(defclass image-pixmap-mixin (image-mirror-mixin) ())
+
+(defmethod pixmap-width ((pixmap image-pixmap-mixin))
+  (pattern-width (image-mirror-image pixmap)))
+
+(defmethod pixmap-height ((pixmap image-pixmap-mixin))
+  (pattern-height (image-mirror-image pixmap)))
 
 (defmethod pixmap-depth ((pixmap image-pixmap-mixin))
   (declare (ignore pixmap))
   32)
+
+(defmethod allocate-pixmap ((medium render-medium-mixin) width height)
+  (let ((pixmap (make-instance 'image-pixmap-mixin)))
+    (mcclim-render::%create-mirror-image pixmap width height)
+    pixmap))
+
+(defmethod deallocate-pixmap ((pixmap render-medium-mixin))
+  (setf (image-mirror-image pixmap) nil))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y
                              width height

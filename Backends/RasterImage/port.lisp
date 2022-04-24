@@ -77,19 +77,3 @@
 (defmethod port-set-mirror-geometry ((port raster-image-port) sheet region)
   (declare (ignore port sheet))
   (bounding-rectangle* region))
-
-;;; pixmap
-
-(defclass raster-image-pixmap (image-pixmap-mixin)
-  ((port :initarg :port :reader port)))
-
-(defmethod allocate-pixmap ((medium raster-image-medium) width height)
-  (let* ((port (port medium))
-         (pixmap (make-instance 'raster-image-pixmap
-                                :width width :height height :port port)))
-    (setf (mirror->%image port pixmap) pixmap)
-    (mcclim-render::%create-mirror-image pixmap width height)
-    pixmap))
-
-(defmethod deallocate-pixmap ((pixmap raster-image-pixmap))
-  (setf (mirror->%image (port pixmap) pixmap) nil))

@@ -35,7 +35,6 @@
                 #:render-medium-mixin
                 #:render-port-mixin
                 #:image-mirror-image
-                #:image-pixmap-mixin
                 #:image-mirror-mixin
                 ;;
                 #:mirror->%image)

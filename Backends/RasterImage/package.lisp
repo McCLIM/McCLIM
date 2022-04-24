@@ -13,7 +13,6 @@
                   #:render-port-mixin
                   #:image-mirror-image
                   #:image-mirror-mixin
-                  #:image-pixmap-mixin
                   #:mirror->%image
                   #:image-mirror-image
                   ;;#:save-image-to-file
