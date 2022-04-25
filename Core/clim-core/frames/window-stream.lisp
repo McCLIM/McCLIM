@@ -20,18 +20,18 @@
                                            standard-encapsulating-stream
                                            standard-extended-input-stream
                                            fundamental-character-output-stream)
-  ((scroll-bars :initform :vertical
-                :initarg :scroll-bars)
+  ((initargs :initform '()
+             :initarg :initargs)
    stream
    pane)
   (:pane
-   (with-slots (stream pane scroll-bars) *application-frame*
+   (with-slots (initargs stream pane) *application-frame*
      (multiple-value-setq (pane stream)
-       (make-clim-stream-pane :name 'a-window-stream-pane
-                              :display-time nil
-                              :type 'window-stream
-                              :scroll-bars scroll-bars
-                              :height 400 :width 700))
+       (apply #'make-clim-stream-pane :name 'a-window-stream-pane
+                                      :display-time nil
+                                      :type 'window-stream
+                                      :height 400 :width 700
+                                      initargs))
      pane)))
 
 (defmethod close ((stream window-stream) &key abort)
@@ -42,71 +42,47 @@
   (when (next-method-p)
     (call-next-method)))
 
-(defun open-window-stream (&key port
-                                left top right bottom width height
-                                foreground background
-                                text-style
-                                (vertical-spacing 2)
-                                end-of-line-action
-                                end-of-page-action
-                                output-record
-                                (draw t)
-                                (record t)
-                                (initial-cursor-visibility :off)
-                                text-margin
-                                save-under
-                                input-buffer
-                                (scroll-bars :vertical)
-                                borders
-                                label)
-  (declare (ignorable foreground background
-                      text-style
-                      vertical-spacing
-                      end-of-line-action
-                      end-of-page-action
-                      output-record
-                      draw
-                      record
-                      initial-cursor-visibility
-                      text-margin
-                      save-under
-                      borders
-                      label))
+(defun open-window-stream (&rest args
+                           &key port left top right bottom width height
+                                input-buffer label
+                           &allow-other-keys)
   (setf port (or port (find-port)))
   ;; Input buffers in the spec are not well defined for panes but at least we
   ;; know that they are vectors while event queues are deliberately
   ;; unspecified. OPEN-WINDOW-STREAM description is fudged in this regard by
   ;; allowing to specify input-buffer as either. -- jd 2019-06-21
-  (let* ((fm (find-frame-manager :port port))
-         (frame (apply #'make-application-frame 'a-window-stream
-                       :frame-manager fm
-                       :pretty-name (or label "McCLIM Window")
-                       :left left
-                       :top top
-                       :right right
-                       :bottom bottom
-                       :width width
-                       :height height
-                       :scroll-bars scroll-bars
-                       (typecase input-buffer
-                         (event-queue (list :frame-event-queue input-buffer))
-                         (vector      (list :frame-input-buffer input-buffer))
-                         (otherwise   nil)))))
-    ;; Adopt and enable the pane
-    (when (eq (frame-state frame) :disowned)
-      (adopt-frame fm frame))
-    (unless (or (eq (frame-state frame) :enabled)
-                (eq (frame-state frame) :shrunk))
-      (enable-frame frame))
-    ;; Start a new thread to run the event loop, if necessary.
-    (let ((*application-frame* frame))
-      (stream-set-input-focus (encapsulating-stream-stream frame)))
-    #+clim-mp
-    (unless input-buffer
-      (redisplay-frame-panes frame :force-p t)
-      (clim-sys:make-process (lambda () (let ((*application-frame* frame))
-                                          (standalone-event-loop)))))
-    (encapsulating-stream-stream frame)))
+  (with-keywords-removed
+      (args (:port :left :top :right :bottom :width :height :input-buffer))
+    (let* ((fm (find-frame-manager :port port))
+           (frame (apply #'make-application-frame 'a-window-stream
+                         :frame-manager fm
+                         :pretty-name (or label "McCLIM Window")
+                         :left left
+                         :top top
+                         :right right
+                         :bottom bottom
+                         :width width
+                         :height height
+                         :initargs args
+                         (typecase input-buffer
+                           (event-queue (list :frame-event-queue input-buffer))
+                           (vector      (list :frame-input-buffer input-buffer))
+                           (otherwise   nil)))))
+      ;; Adopt and enable the pane
+      (when (eq (frame-state frame) :disowned)
+        (adopt-frame fm frame))
+      (unless (or (eq (frame-state frame) :enabled)
+                  (eq (frame-state frame) :shrunk))
+        (enable-frame frame))
+      ;; Start a new thread to run the event loop, if necessary.
+      (let ((*application-frame* frame))
+        (stream-set-input-focus (encapsulating-stream-stream frame)))
+      #+clim-mp
+      (unless input-buffer
+        (redisplay-frame-panes frame :force-p t)
+        (clim-sys:make-process (lambda () (let ((*application-frame* frame))
+                                            (standalone-event-loop)))))
+      (encapsulating-stream-stream frame))))
 
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by
