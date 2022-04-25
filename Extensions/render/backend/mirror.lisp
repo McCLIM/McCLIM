@@ -15,6 +15,10 @@
   (when-let ((mirror (sheet-mirror sheet)))
     (setf (image-mirror-image mirror) image)))
 
+(defmacro with-image-locked ((mirror) &body body)
+  `(clim-sys:with-lock-held ((slot-value ,mirror 'image-lock))
+     ,@body))
+
 ;;; implementation
 
 (defun %set-image-region (mirror region)
@@ -48,42 +52,38 @@
 (defun %draw-image (mirror src-image x y width height to-x to-y)
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    (with-slots (image-lock) mirror
-      (clim-sys:with-lock-held (image-lock)
-        (let* ((image (image-mirror-image mirror))
-               (region (copy-image src-image x y width height image to-x to-y)))
-          (%notify-image-updated mirror region))))))
+    (with-image-locked (mirror)
+      (let* ((image (image-mirror-image mirror))
+             (region (copy-image src-image x y width height image to-x to-y)))
+        (%notify-image-updated mirror region)))))
 
 (defun %fill-image (mirror x y width height ink clip-region
                     &optional stencil (x-dest 0) (y-dest 0))
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    (with-slots (image-lock) mirror
-      (clim-sys:with-lock-held (image-lock)
-        (let ((region (fill-image image ink
-                                  :x x :y y :width width :height height
-                                  :stencil stencil
-                                  :stencil-dx x-dest :stencil-dy y-dest
-                                  :clip-region clip-region)))
-          (%notify-image-updated mirror region))))))
+    (with-image-locked (mirror)
+      (let ((region (fill-image image ink
+                                :x x :y y :width width :height height
+                                :stencil stencil
+                                :stencil-dx x-dest :stencil-dy y-dest
+                                :clip-region clip-region)))
+        (%notify-image-updated mirror region)))))
 
 (defun %fill-paths (mirror paths transformation region ink)
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    (with-slots (image-lock state) mirror
-      (clim-sys:with-lock-held (image-lock)
-        (let ((reg (aa-fill-paths image ink paths state transformation region)))
-          (with-bounding-rectangle* (min-x min-y max-x max-y) reg
-            (%notify-image-updated mirror
-                                   (make-rectangle* (floor min-x) (floor min-y)
-                                                    (ceiling max-x) (ceiling max-y)))))))))
+    (with-image-locked (mirror)
+      (let ((reg (aa-fill-paths image ink paths state transformation region)))
+        (with-bounding-rectangle* (min-x min-y max-x max-y) reg
+          (%notify-image-updated mirror
+                                 (make-rectangle* (floor min-x) (floor min-y)
+                                                  (ceiling max-x) (ceiling max-y))))))))
 
 (defun %stroke-paths (medium mirror paths line-style transformation region ink)
   (check-type mirror image-mirror-mixin)
   (when-let ((image (image-mirror-image mirror)))
-    (with-slots (image-lock state) mirror
-      (clim-sys:with-lock-held (image-lock)
-        (let ((reg (aa-stroke-paths medium image ink paths line-style state transformation region)))
-          (with-bounding-rectangle* (min-x min-y max-x max-y) reg
-            (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
-                                                           (ceiling max-x) (ceiling max-y)))))))))
+    (with-image-locked (mirror)
+      (let ((reg (aa-stroke-paths medium image ink paths line-style state transformation region)))
+        (with-bounding-rectangle* (min-x min-y max-x max-y) reg
+          (%notify-image-updated mirror (make-rectangle* (floor min-x) (floor min-y)
+                                                         (ceiling max-x) (ceiling max-y))))))))

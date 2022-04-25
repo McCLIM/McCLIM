@@ -35,7 +35,8 @@
                 #:render-medium-mixin
                 #:render-port-mixin
                 #:image-mirror-image
-                #:image-mirror-mixin)
+                #:image-mirror-mixin
+                #:with-image-locked)
   (:import-from #:clim-clx
                 #:clx-port-display
                 #:initialize-clx

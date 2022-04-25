@@ -84,26 +84,23 @@
 (defun image-mirror-to-x (mirror)
   (declare (optimize speed))
   (with-slots (clx-image xlib-image
-               mcclim-render::image-lock gcontext
-               mcclim-render::finished-output
-               mcclim-render::updating-p
+               gcontext
                width height dirty-xr)
       mirror
     (when (not (region-equal dirty-xr +nowhere+))
       (let (reg)
-        (clim-sys:with-lock-held (mcclim-render::image-lock)
+        (with-image-locked (mirror)
           (setf reg dirty-xr)
           (setf dirty-xr +nowhere+))
         (image-mirror-put width height mirror gcontext clx-image reg)))))
 
 (defun %mirror-force-output (mirror)
-  (with-slots (mcclim-render::image-lock
-               mcclim-render::dirty-region
+  (with-slots (mcclim-render::dirty-region
                dirty-xr width height clx-image
                xlib-image)
       mirror
     (unless (region-equal mcclim-render::dirty-region +nowhere+)
-      (clim-sys:with-lock-held (mcclim-render::image-lock)
+      (with-image-locked (mirror)
         (unless (region-equal mcclim-render::dirty-region +nowhere+)
           (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
           (image-mirror-pre-put width height mirror mirror clx-image xlib-image dirty-xr)

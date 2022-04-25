@@ -27,6 +27,7 @@
    ;; image
    #:draw-image*
    ;; image ops
+   #:with-image-locked
    #:make-image
    #:clone-image
    #:copy-image
