@@ -978,7 +978,9 @@ implement this."
        (invoke-handle-empty-input ,stream #',input-cont #',handler-cont))))
 
 (define-condition empty-input-condition (simple-condition)
-  ((stream :reader empty-input-condition-stream :initarg :stream)))
+  ((stream :reader empty-input-condition-stream :initarg :stream))
+  (:default-initargs :format-control "The input is empty."
+                     :format-arguments '()))
 
 ;;; The code that signalled the error might have consumed the gesture, or
 ;;; not.
