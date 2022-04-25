@@ -68,7 +68,9 @@
 
 (defgeneric %invalidate-cached-device-transformations (sheet))
 (defgeneric %invalidate-cached-device-regions (sheet)
-  (:method (sheet) nil))
+  (:method (sheet)
+    (declare (ignore sheet))
+    nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -403,55 +405,47 @@
   nil)
 
 (defmethod sheet-native-transformation ((sheet basic-sheet))
-  (with-slots (native-transformation) sheet
-    (unless native-transformation
-      (setf native-transformation
+  (or (slot-value sheet 'native-transformation)
+      (setf (slot-value sheet 'native-transformation)
             (if-let ((parent (sheet-parent sheet)))
               (compose-transformations
                (sheet-native-transformation parent)
                (sheet-transformation sheet))
-              +identity-transformation+)))
-    native-transformation))
+              +identity-transformation+))))
 
 ;;; Native region is volatile, and is only computed at the first
 ;;; request when it's equal to nil.
 (defmethod sheet-native-region ((sheet basic-sheet))
-  (with-slots (native-region) sheet
-    (unless native-region
-      (let ((this-native-region (transform-region
-                                 (sheet-native-transformation sheet)
-                                 (sheet-region sheet)))
-            (parent (sheet-parent sheet)))
-        (setf native-region
+  (or (slot-value sheet 'native-region)
+      (setf (slot-value sheet 'native-region)
+            (let ((this-native-region (transform-region
+                                       (sheet-native-transformation sheet)
+                                       (sheet-region sheet)))
+                  (parent (sheet-parent sheet)))
               (if (null parent)
                   this-native-region
                   (region-intersection this-native-region
-                                       (sheet-native-region parent))))))
-    native-region))
+                                       (sheet-native-region parent)))))))
 
 (defmethod sheet-device-transformation ((sheet basic-sheet))
-  (with-slots (device-transformation) sheet
-    (unless device-transformation
-      (setf device-transformation
+  (or (slot-value sheet 'device-transformation)
+      (setf (slot-value sheet 'device-transformation)
             (let ((medium (sheet-medium sheet)))
               (compose-transformations
                (sheet-native-transformation sheet)
                (if medium
                    (medium-transformation medium)
-                   +identity-transformation+)))))
-    device-transformation))
+                   +identity-transformation+))))))
 
 (defmethod sheet-device-region ((sheet basic-sheet))
-  (with-slots (device-region) sheet
-    (unless device-region
-      (setf device-region
+  (or (slot-value sheet 'device-region)
+      (setf (slot-value sheet 'device-region)
             (if-let ((medium (sheet-medium sheet)))
               (region-intersection
                (sheet-native-region sheet)
                (transform-region (sheet-device-transformation sheet)
                                  (medium-clipping-region medium)))
-              (sheet-native-region sheet))))
-    device-region))
+              (sheet-native-region sheet)))))
 
 (defmethod invalidate-cached-transformations ((sheet basic-sheet))
   (with-slots (native-transformation device-transformation) sheet
@@ -495,6 +489,7 @@
   (note-sheet-region-changed sheet))
 
 (defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
+  (declare (ignore cursor))
   (unless (sheet-direct-mirror sheet)
     (let ((msheet (sheet-mirrored-ancestor sheet)))
       (set-sheet-pointer-cursor (port msheet) msheet (sheet-pointer-cursor msheet)))))
