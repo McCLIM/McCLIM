@@ -2233,7 +2233,7 @@ according to the flags RECORD and DRAW."
                 ;; Restore the cursor position or move the cursor.
                 (setf (stream-cursor-position stream)
                       (values cx (+ cy (if move-cursor
-                                           (max (if first-quadrant (- y1) 0)
+                                           (max (if first-quadrant (- y1) y2)
                                                 (or height record-height))
                                            0)))))
               record)))))))
