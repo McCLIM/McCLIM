@@ -117,5 +117,6 @@
         (width (climi::window-configuration-event-width event))
         (height (climi::window-configuration-event-height event)))
     (when-let ((mirror (sheet-direct-mirror sheet)))
-      (mcclim-render::%set-image-region
-       mirror (make-bounding-rectangle 0 0 width height)))))
+      (with-image-locked (mirror)
+        (mcclim-render::%set-image-region
+         mirror (make-rectangle* 0 0 width height))))))

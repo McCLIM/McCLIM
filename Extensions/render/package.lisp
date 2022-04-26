@@ -24,6 +24,9 @@
    #:gray->rgb
    #:gray->alpha
    #:color->octets
+   ;; image-mirror-mixin
+   #:image-mirror-image
+   #:image-dirty-region
    ;; image
    #:draw-image*
    ;; image ops

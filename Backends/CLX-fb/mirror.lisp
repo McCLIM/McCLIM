@@ -10,8 +10,7 @@
 
 ;;; for port
 (defmethod mcclim-render::%create-mirror-image :after ((mirror clx-fb-mirror) w h)
-  (with-slots (mcclim-render::dirty-region) mirror
-    (setf mcclim-render::dirty-region +nowhere+))
+  (setf (mcclim-render:image-dirty-region mirror) +nowhere+)
   ;;(let ((data (climi::pattern-array (image-mirror-image mirror))))
   (with-slots (width height clx-image xlib-image) mirror
     (setf width w
@@ -62,8 +61,8 @@
              (dpb green (byte 8 8)
                   (dpb red (byte 8 16) 0)))))
 
-(defun image-mirror-pre-put (width height xmirror sheet clx-image xlib-image dirty-r)
-  (let* ((pixels (climi::pattern-array (image-mirror-image sheet)))
+(defun image-mirror-pre-put (width height mirror clx-image xlib-image dirty-r)
+  (let* ((pixels (clime:pattern-array (image-mirror-image mirror)))
          (fn (etypecase pixels
                ((simple-array (unsigned-byte 32) 2)
                 #'(lambda (region)
@@ -71,7 +70,7 @@
                     (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
                         (region-intersection region (make-rectangle* 0 0 (1- width) (1- height)))
                       (declare (type fixnum min-x min-y max-x max-y))
-                      (when (and xmirror clx-image)
+                      (when (and mirror clx-image)
                         (locally
                               (declare (type (simple-array (unsigned-byte 32) (* *))
                                              pixels
@@ -83,11 +82,9 @@
 
 (defun image-mirror-to-x (mirror)
   (declare (optimize speed))
-  (with-slots (clx-image xlib-image
-               gcontext
-               width height dirty-xr)
+  (with-slots (clx-image xlib-image gcontext width height dirty-xr)
       mirror
-    (when (not (region-equal dirty-xr +nowhere+))
+    (unless (region-equal dirty-xr +nowhere+)
       (let (reg)
         (with-image-locked (mirror)
           (setf reg dirty-xr)
@@ -95,13 +92,12 @@
         (image-mirror-put width height mirror gcontext clx-image reg)))))
 
 (defun %mirror-force-output (mirror)
-  (with-slots (mcclim-render::dirty-region
-               dirty-xr width height clx-image
-               xlib-image)
+  (with-slots (dirty-xr width height clx-image xlib-image)
       mirror
-    (unless (region-equal mcclim-render::dirty-region +nowhere+)
-      (with-image-locked (mirror)
-        (unless (region-equal mcclim-render::dirty-region +nowhere+)
-          (setf dirty-xr (region-union dirty-xr mcclim-render::dirty-region))
-          (image-mirror-pre-put width height mirror mirror clx-image xlib-image dirty-xr)
-          (setf mcclim-render::dirty-region +nowhere+))))))
+    (let ((dirty-region (mcclim-render:image-dirty-region mirror)))
+      (unless (region-equal dirty-region +nowhere+)
+        (with-image-locked (mirror)
+          (unless (region-equal dirty-region +nowhere+)
+            (setf dirty-xr (region-union dirty-xr dirty-region)
+                  (mcclim-render:image-dirty-region mirror) +nowhere+)
+            (image-mirror-pre-put width height mirror clx-image xlib-image dirty-xr)))))))
