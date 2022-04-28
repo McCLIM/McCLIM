@@ -21,26 +21,11 @@
                  (transform-region (medium-native-transformation medium)
                                    (medium-ink medium)))))
 
-(defun %medium-draw-image (medium image x y width height to-x to-y)
-  (when-let ((%image
-              (etypecase medium
-                (medium
-                 (medium-drawable medium))
-                (image-pixmap-mixin
-                 medium)))
-             (image
-              (etypecase image
-                (basic-sheet
-                 (image-mirror-image
-                  (sheet-mirror image)))
-                (image-pixmap-mixin
-                 (image-mirror-image image))
-                (clime:image-pattern
-                 image))))
-    (%draw-image %image image
-                 (round x) (round y)
-                 (round width) (round height)
-                 (round to-x) (round to-y))))
+(defun %medium-draw-image (target source x y width height to-x to-y)
+  (%draw-image target source
+               (round x) (round y)
+               (round width) (round height)
+               (round to-x) (round to-y)))
 
 ;;; XXX: used only for medium-draw-text* for now.
 (defun %medium-fill-image-mask (medium mask-image from-x from-y width height to-x to-y)

@@ -17,7 +17,7 @@
     (%create-mirror-image pixmap width height)
     pixmap))
 
-(defmethod deallocate-pixmap ((pixmap render-medium-mixin))
+(defmethod deallocate-pixmap ((pixmap image-pixmap-mixin))
   (setf (image-mirror-image pixmap) nil))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y
@@ -41,8 +41,8 @@
             (transform-position
              (medium-native-transformation from-drawable)
              from-x from-y)
-          (%medium-draw-image to-drawable
-                              (medium-sheet from-drawable)
+          (%medium-draw-image (medium-drawable to-drawable)
+                              (medium-drawable from-drawable)
                               (+ x2 (- min-x x1))
                               (+ y2 (- min-y y1))
                               (- max-x min-x) (- max-y min-y)
@@ -65,7 +65,7 @@
            (medium-native-transformation from-drawable)
            from-x from-y)
         (%medium-draw-image to-drawable
-                            (medium-sheet from-drawable)
+                            (medium-drawable from-drawable)
                             (+ x2 (- min-x to-x))
                             (+ y2 (- min-y to-y))
                             (- max-x min-x) (- max-y min-y)
@@ -87,7 +87,7 @@
                                (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
           (multiple-value-bind (x1 y1)
               (transform-position to-native to-x to-y)
-            (%medium-draw-image to-drawable
+            (%medium-draw-image (medium-drawable to-drawable)
                                 from-drawable
                                 (+ from-x (- min-x x1))
                                 (+ from-y (- min-y y1))

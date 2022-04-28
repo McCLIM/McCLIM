@@ -57,13 +57,14 @@
           (region-union (image-dirty-region mirror) region))))
 
 ;;; XXX: this is used for scroll
-(defun %draw-image (mirror src-image x y width height to-x to-y)
-  (check-type mirror image-mirror-mixin)
-  (when-let ((image (image-mirror-image mirror)))
-    (with-image-locked (mirror)
-      (let* ((image (image-mirror-image mirror))
-             (region (copy-image src-image x y width height image to-x to-y)))
-        (%notify-image-updated mirror region)))))
+(defun %draw-image (target source x y width height to-x to-y)
+  (check-type target image-mirror-mixin)
+  (check-type source image-mirror-mixin)
+  (with-image-locked (target)
+    (let* ((src-image (image-mirror-image source))
+           (dst-image (image-mirror-image target))
+           (region (copy-image src-image x y width height dst-image to-x to-y)))
+      (%notify-image-updated target region))))
 
 (defun %fill-image (mirror x y width height ink clip-region
                     &optional stencil (x-dest 0) (y-dest 0))
