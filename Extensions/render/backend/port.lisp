@@ -15,9 +15,12 @@
 
 (defmethod realize-mirror ((port render-port-mixin) (sheet mirrored-sheet-mixin))
   (let ((mirror (make-instance 'image-mirror-mixin)))
-    (multiple-value-bind (width height)
-        (bounding-rectangle-size sheet)
-      (%create-mirror-image mirror width height))
+    ;; We need to update the mirror geometry to initialize the sheet native
+    ;; region. Normally this is triggered by the WINDOW-CONFIGURATION-EVENT.
+    ;; -- jd 2022-04-28
+    (setf (climi::%sheet-direct-mirror sheet) mirror)
+    (climi::update-mirror-geometry sheet)
+    (climi::dispatch-repaint sheet +everywhere+)
     mirror))
 
 (defmethod destroy-mirror ((port render-port-mixin) (sheet mirrored-sheet-mixin))
