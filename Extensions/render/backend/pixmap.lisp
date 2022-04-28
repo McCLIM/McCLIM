@@ -14,7 +14,7 @@
 
 (defmethod allocate-pixmap ((medium render-medium-mixin) width height)
   (let ((pixmap (make-instance 'image-pixmap-mixin)))
-    (mcclim-render::%create-mirror-image pixmap width height)
+    (%create-mirror-image pixmap width height)
     pixmap))
 
 (defmethod deallocate-pixmap ((pixmap render-medium-mixin))

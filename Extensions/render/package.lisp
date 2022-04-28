@@ -50,4 +50,5 @@
                 #:medium-native-transformation
                 #:medium-device-transformation
                 #:medium-native-region
-                #:medium-device-region))
+                #:medium-device-region
+                #:multiline-text-medium-mixin))

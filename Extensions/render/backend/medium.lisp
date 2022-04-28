@@ -1,42 +1,25 @@
 (in-package #:mcclim-render)
 
-(defclass render-medium-mixin (ttf-medium-mixin
-                               climb:multiline-text-medium-mixin
-                               basic-medium)
+(defclass render-medium-mixin
+    (ttf-medium-mixin multiline-text-medium-mixin basic-medium)
   ())
 
-(defun maybe-transformation (medium)
-  (let ((drawable (if (mediump medium)
-                      (medium-drawable medium)
-                      medium)))
-    (if (typep drawable 'image-pixmap-mixin)
-        +identity-transformation+
-        (medium-native-transformation medium))))
-
-(defun maybe-region (medium)
-  (let ((drawable (if (mediump medium)
-                      (medium-drawable medium)
-                      medium)))
-    (if (typep drawable 'image-pixmap-mixin)
-        (make-rectangle* 0 0 (pixmap-width drawable) (pixmap-height drawable))
-        (medium-device-region medium))))
-
 (defun %medium-stroke-paths (medium paths)
-  (when-let ((mirror (medium-drawable medium))
-             (transformation (maybe-transformation medium)))
+  (when-let ((mirror (medium-drawable medium)))
     (%stroke-paths medium mirror paths
                    (medium-line-style medium)
-                   transformation
-                   (maybe-region medium)
-                   (transform-region transformation (medium-ink medium)))))
+                   (medium-device-transformation medium)
+                   (medium-device-region medium)
+                   (transform-region (medium-native-transformation medium)
+                                     (medium-ink medium)))))
 
 (defun %medium-fill-paths (medium paths)
-  (when-let ((mirror (medium-drawable medium))
-             (transformation (maybe-transformation medium)))
+  (when-let ((mirror (medium-drawable medium)))
     (%fill-paths mirror paths
-                 transformation
-                 (maybe-region medium)
-                 (transform-region transformation (medium-ink medium)))))
+                 (medium-device-transformation medium)
+                 (medium-device-region medium)
+                 (transform-region (medium-native-transformation medium)
+                                   (medium-ink medium)))))
 
 (defun %medium-draw-image (medium image x y width height to-x to-y)
   (when-let ((%image
@@ -65,9 +48,9 @@
     (%fill-image mirror
                  (round from-x) (round from-y)
                  (round width) (round height)
-                 (transform-region (maybe-transformation medium)
+                 (transform-region (medium-native-transformation medium)
                                    (medium-ink medium))
-                 (maybe-region medium)
+                 (medium-device-region medium)
                  ;; Stencil
                  mask-image (round to-x) (round to-y))))
 
@@ -76,19 +59,19 @@
     (%fill-image mirror
                  (round x) (round y)
                  (round width) (round height)
-                 (transform-region (maybe-transformation medium)
+                 (transform-region (medium-native-transformation medium)
                                    (medium-ink medium))
-                 (maybe-region medium))))
+                 (medium-device-region medium))))
 
 ;;; standard medium protocol
 
 (defmethod medium-draw-rectangle* ((medium render-medium-mixin) left top right bottom filled)
   (when (< right left) (rotatef left right))
   (when (< bottom top) (rotatef top bottom))
-  (let* ((region (region-intersection
-                  (maybe-region medium)
-                  (transform-region (maybe-transformation medium)
-                                    (make-rectangle* left top right bottom)))))
+  (let ((region (region-intersection
+                 (medium-device-region medium)
+                 (transform-region (medium-device-transformation medium)
+                                   (make-rectangle* left top right bottom)))))
     (flet ((path ()
              (let ((path (make-path left top)))
                (line-to path right top)
