@@ -28,22 +28,18 @@
                (round to-x) (round to-y)))
 
 ;;; XXX: used only for medium-draw-text* for now.
-(defun %medium-fill-image-mask (medium mask-image from-x from-y width height to-x to-y)
+(defun %medium-fill-image-mask (medium mask-image x1 y1 x2 y2 mask-dx mask-dy)
   (when-let ((mirror (medium-drawable medium)))
-    (%fill-image mirror
-                 (round from-x) (round from-y)
-                 (round width) (round height)
+    (%fill-image mirror x1 y1 x2 y2
                  (transform-region (medium-native-transformation medium)
                                    (medium-ink medium))
                  (medium-device-region medium)
                  ;; Stencil
-                 mask-image to-x to-y)))
+                 mask-image mask-dx mask-dy)))
 
-(defun %medium-fill-image (medium x y width height)
+(defun %medium-fill-image (medium x1 y1 x2 y2)
   (when-let ((mirror (medium-drawable medium)))
-    (%fill-image mirror
-                 (round x) (round y)
-                 (round width) (round height)
+    (%fill-image mirror x1 y1 x2 y2
                  (transform-region (medium-native-transformation medium)
                                    (medium-ink medium))
                  (medium-device-region medium))))
@@ -51,26 +47,18 @@
 ;;; standard medium protocol
 
 (defmethod medium-draw-rectangle* ((medium render-medium-mixin) left top right bottom filled)
-  (when (< right left) (rotatef left right))
-  (when (< bottom top) (rotatef top bottom))
-  (let ((region (region-intersection
-                 (medium-device-region medium)
-                 (transform-region (medium-device-transformation medium)
-                                   (make-rectangle* left top right bottom)))))
-    (flet ((path ()
-             (let ((path (make-path left top)))
-               (line-to path right top)
-               (line-to path right bottom)
-               (line-to path left bottom)
-               (close-path path)
-               path)))
-      (cond ((not filled)
-             (%medium-stroke-paths medium (list (path))))
-            ((rectanglep region)
-             (with-bounding-rectangle* (x1 y1 :width w :height h) region
-               (%medium-fill-image medium x1 y1 w h)))
-            (t
-             (%medium-fill-paths medium (list (path))))))))
+  (if filled
+      (climi::with-transformed-positions*
+          ((medium-device-transformation medium) left top right bottom)
+        (when (< right left) (rotatef left right))
+        (when (< bottom top) (rotatef top bottom))
+        (%medium-fill-image medium left top right bottom))
+      (%medium-stroke-paths medium (let ((path (make-path left top)))
+                                     (line-to path right top)
+                                     (line-to path right bottom)
+                                     (line-to path left bottom)
+                                     (close-path path)
+                                     (list path)))))
 
 (defmethod medium-draw-polygon* ((medium render-medium-mixin) coord-seq closed filled)
   (let ((x (elt coord-seq 0))

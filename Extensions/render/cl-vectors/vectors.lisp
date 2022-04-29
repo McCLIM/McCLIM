@@ -33,30 +33,35 @@
                                  cap-shape))))
 
 (defun aa-cells-sweep/rectangle (image ink state clip-region)
-  (let* ((complex-clip-region (if (rectanglep clip-region)
-                                  nil
-                                  clip-region))
-         (draw-function (if (typep ink 'standard-flipping-ink)
-                            (aa-render-xor-draw-fn image complex-clip-region ink)
-                            (aa-render-draw-fn image complex-clip-region ink))))
-    (with-bounding-rectangle* (min-x min-y max-x max-y) clip-region
+  (with-bounding-rectangle* (x1 y1 x2 y2) image
+    (with-bounding-rectangle* (a b c d) clip-region
+      (maxf x1 a) (maxf y1 b)
+      (minf x2 c) (minf y2 d))
+    (when (region-contains-region-p clip-region (make-rectangle* x1 y1 x2 y2))
+      (setf clip-region nil))
+    (let ((draw-function (if (typep ink 'standard-flipping-ink)
+                             (aa-render-xor-draw-fn image clip-region ink)
+                             (aa-render-draw-fn image clip-region ink))))
       (%aa-cells-sweep/rectangle state
-                                 (floor min-x)
-                                 (floor min-y)
-                                 (ceiling max-x)
-                                 (ceiling max-y)
+                                 (floor x1)
+                                 (floor y1)
+                                 (ceiling x2)
+                                 (ceiling y2)
                                  draw-function))))
 
 (defun aa-cells-alpha-sweep/rectangle (image state clip-region)
-  (let ((draw-function (aa-render-alpha-draw-fn image (if (rectanglep clip-region)
-                                                          nil
-                                                          clip-region))))
-    (with-bounding-rectangle* (min-x min-y max-x max-y) clip-region
+  (with-bounding-rectangle* (x1 y1 x2 y2) image
+    (with-bounding-rectangle* (a b c d) clip-region
+      (maxf x1 a) (maxf y1 b)
+      (minf x2 c) (minf y2 d))
+    (when (region-contains-region-p clip-region (make-rectangle* x1 y1 x2 y2))
+      (setf clip-region nil))
+    (let ((draw-function (aa-render-alpha-draw-fn image clip-region)))
       (%aa-cells-sweep/rectangle state
-                                 (floor min-x)
-                                 (floor min-y)
-                                 (ceiling max-x)
-                                 (ceiling max-y)
+                                 (floor x1)
+                                 (floor y1)
+                                 (ceiling x2)
+                                 (ceiling y2)
                                  draw-function))))
 
 (defun aa-stroke-paths (medium image design paths line-style state transformation clip-region)

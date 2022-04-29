@@ -22,9 +22,6 @@
               (y1 (+ origin-y (- dy)))
               (x2 (+ x1 (pattern-width opacity-image)))
               (y2 (+ y1 (pattern-height opacity-image))))
-         (clim:with-bounding-rectangle* (min-x min-y :width width :height height)
-             (region-intersection (medium-device-region medium)
-                                  (make-rectangle* x1 y1 x2 y2))
-           (%medium-fill-image-mask medium opacity-image
-                                    min-x min-y width height
-                                    (- (round x1)) (- (round y1)))))))
+         (%medium-fill-image-mask medium opacity-image
+                                  x1 y1 x2 y2
+                                  (- x1) (- y1)))))

@@ -11,6 +11,13 @@
 (deftype argb-pixel ()
   '(unsigned-byte 32))
 
+;;; Designs
+
+(deftype bounded-region ()
+  `(and (not rectangular-tile)
+        (not (or climi::everywhere-region standard-region-complement))
+        (or region pattern)))
+
 ;;; Pixel arrays
 ;;;
 ;;; Pixel arrays are two-dimensional array whose dimensions are at
