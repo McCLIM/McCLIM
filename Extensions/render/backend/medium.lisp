@@ -37,7 +37,7 @@
                                    (medium-ink medium))
                  (medium-device-region medium)
                  ;; Stencil
-                 mask-image (round to-x) (round to-y))))
+                 mask-image to-x to-y)))
 
 (defun %medium-fill-image (medium x y width height)
   (when-let ((mirror (medium-drawable medium)))

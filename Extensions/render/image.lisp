@@ -54,7 +54,7 @@
                    (dst-array (climi::pattern-array dst-image)))
   "Copy SRC-IMAGE to DST-IMAGE region-wise. Both may be the same image."
   (unless (%check-coords src-array dst-array sx sy dx dy width height)
-    (return-from copy-image nil))
+    (return-from copy-image +nowhere+))
   (let ((max-x (+ dx width -1))
         (max-y (+ dy height -1)))
     (declare (fixnum max-x max-y))
@@ -138,13 +138,13 @@
                  width (ceiling w) height (ceiling h)
                  clip-region nil))))))
   (let* (;; Stencil
-         (stencil-array (and stencil (climi::pattern-array stencil)))
+         (stencil-array (and stencil (pattern-array stencil)))
          (stencil-width-max (when stencil-array
                               (1- (array-dimension stencil-array 1))))
          (stencil-height-max (when stencil-array
                                (1- (array-dimension stencil-array 0))))
          ;; Destination
-         (dst-array (climi::pattern-array image))
+         (dst-array (pattern-array image))
          (x2 (+ x width -1))
          (y2 (+ y height -1))
          ;; Current mode and color

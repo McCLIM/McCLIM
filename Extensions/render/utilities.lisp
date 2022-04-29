@@ -29,16 +29,17 @@ top-left. Useful when we iterate over the same array and mutate its state."
 ;;; error if coordinates go out of arrays bounds.
 (defun %check-coords (src-array dst-array sx sy dx dy width height)
   (when (or (<= width 0) (<= height 0))
-    (warn "mcclim-render operation called with width = ~s and height = ~s; doing nothing."
-          width height)
     (return-from %check-coords nil))
   (unless (and (array-in-bounds-p src-array (1- (+ sy height)) (1- (+ sx width)))
                (array-in-bounds-p dst-array (1- (+ dy height)) (1- (+ dx width))))
     (error "mcclim-render operation: some coordinates are out of image bounds:~@
              src array ~s, P1 ~s, P2 ~s,~@
              dst array ~s, P1 ~s, P2 ~s."
-           (reverse (array-dimensions src-array)) (cons sx sy) (cons (+ sx width) (+ sy height))
-           (reverse (array-dimensions dst-array)) (cons dx dy) (cons (+ dx width) (+ dy height))))
+           (reverse (array-dimensions src-array))
+           (cons sx sy) (cons (+ sx width) (+ sy height))
+           (reverse (array-dimensions dst-array))
+           (cons dx dy)
+           (cons (+ dx width) (+ dy height))))
   t)
 
 ;;; color functions

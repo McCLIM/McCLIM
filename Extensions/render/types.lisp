@@ -38,6 +38,6 @@
   `(simple-array argb-pixel 2))
 
 (declaim (inline make-argb-pixel-array))
-(defun make-argb-pixel-array (width height &key (initial-element 0))
+(defun make-argb-pixel-array (width height &key (initial-element #xff88ff88))
   (make-array (list height width) :element-type 'argb-pixel
                                   :initial-element initial-element))
