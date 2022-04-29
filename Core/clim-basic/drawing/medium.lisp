@@ -554,7 +554,7 @@
 
 (defmethod medium-clear-area ((medium basic-medium) left top right bottom)
   (draw-rectangle* medium left top right bottom
-                   :ink (compose-over (indirect-ink-ink +background-ink+) +black+)))
+                   :ink (compose-over (medium-background medium) +black+)))
 
 (defmethod medium-beep ((medium basic-medium))
   nil)
