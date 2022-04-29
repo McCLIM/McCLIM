@@ -10,17 +10,17 @@ top-left. Useful when we iterate over the same array and mutate its state."
   (if (null backward)
       `(loop
           for ,src-j fixnum from ,y1s
-          for ,dest-j fixnum from ,y1d to ,y2
+          for ,dest-j fixnum from ,y1d below ,y2
           do (loop
                 for ,src-i fixnum from ,x1s
-                for ,dest-i fixnum from ,x1d to ,x2
+                for ,dest-i fixnum from ,x1d below ,x2
                 do (progn ,@body)))
       `(loop
           for ,src-j fixnum from (+ ,y1s (- ,y2 ,y1d)) downto ,y1s
           for ,dest-j fixnum from ,y2 downto ,y1d
           do (loop
-                for ,src-i fixnum from (+ ,x1s (- ,x2 ,x1d)) downto ,x1s
-                for ,dest-i fixnum from ,x2 downto ,x1d
+                for ,src-i fixnum from (+ ,x1s (- ,x2 ,x1d)) above ,x1s
+                for ,dest-i fixnum from ,x2 above ,x1d
                 do (progn ,@body)))))
 
 (declaim (inline %check-coords))
