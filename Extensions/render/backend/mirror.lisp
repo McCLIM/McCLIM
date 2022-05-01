@@ -59,12 +59,21 @@
            (region (copy-image src-image x y width height dst-image to-x to-y)))
       (%notify-image-updated target region))))
 
-(defun %fill-image (mirror x1 y1 x2 y2 ink clip-region
-                    &optional stencil (x-dest 0) (y-dest 0))
+(defun %fill-image-mask (mirror x1 y1 x2 y2 ink clip-region
+                         stencil x-dest y-dest)
   (with-image-locked (mirror)
     (when-let ((image (image-mirror-image mirror)))
-      (let ((region (fill-image image ink x1 y1 x2 y2 clip-region
-                                stencil x-dest y-dest)))
+      (let ((region (fill-image-mask (pattern-array image) ink
+                                     x1 y1 x2 y2 clip-region
+                                     (pattern-array stencil)
+                                     x-dest y-dest)))
+        (%notify-image-updated mirror region)))))
+
+(defun %fill-image (mirror x1 y1 x2 y2 ink clip-region)
+  (with-image-locked (mirror)
+    (when-let ((image (image-mirror-image mirror)))
+      (let ((region (fill-image (pattern-array image)
+                                ink x1 y1 x2 y2 clip-region)))
         (%notify-image-updated mirror region)))))
 
 (defun %fill-paths (mirror paths transformation region ink)

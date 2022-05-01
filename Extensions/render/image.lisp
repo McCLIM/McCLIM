@@ -115,54 +115,113 @@
     (declare (type argb-pixel-array src-array))
     (make-instance 'climi::%rgba-pattern :array (alexandria:copy-array src-array))))
 
-(defun fill-image (image design x1 y1 x2 y2 clip-region
-                   stencil stencil-dx stencil-dy)
-  "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
-  (flet ((narrow (region)
-           (when (typep region 'bounded-region)
-             (with-bounding-rectangle* (a b c d) region
-               (maxf x1 a) (maxf y1 b)
-               (minf x2 c) (minf y2 d)))))
-    (narrow image)
-    (narrow design)
-    (narrow clip-region))
+(defun fill-image (dst-array design x1 y1 x2 y2 clip-region)
+  "Blends DESIGN onto IMAGE with a CLIP-REGION."
+  (declare (type argb-pixel-array dst-array)
+           (type design design))
+  (maxf x1 0)
+  (maxf y1 0)
+  (minf x2 (array-dimension dst-array 1))
+  (minf y2 (array-dimension dst-array 0))
+  (when (typep design 'bounded-region)
+    (with-bounding-rectangle* (a b c d) design
+      (maxf x1 a) (maxf y1 b)
+      (minf x2 c) (minf y2 d)))
   (when (region-contains-region-p clip-region (make-rectangle* x1 y1 x2 y2))
     (setf clip-region nil))
   (setf x1 (floor x1)
         y1 (floor y1)
         x2 (ceiling x2)
         y2 (ceiling y2))
-  (setf stencil-dx (floor stencil-dx)
-        stencil-dy (floor stencil-dy))
   (locally
       (declare (optimize (speed 3) (safety 0))
                (type image-index x1 y1 x2 y2)
-               (type image-index-displacement stencil-dx stencil-dy))
-    (let* (;; Stencil
-           (stencil-array (and stencil (pattern-array stencil)))
-           (stencil-width-max (when stencil-array
-                                (1- (array-dimension stencil-array 1))))
-           (stencil-height-max (when stencil-array
-                                 (1- (array-dimension stencil-array 0))))
-           ;; Destination
-           (dst-array (pattern-array image))
-           ;; Current mode and color
+               (type (or null region) clip-region))
+    (let (;; Current mode and color
+          old-ink ink mode
+          source-rgba source-r source-g source-b source-a)
+      (declare (type argb-pixel-array dst-array)
+               (type octet old-alpha alpha))
+      (flet ((update-ink (i j)
+               (setf ink (climi::design-ink* design i j))
+               (when (eq old-ink ink)
+                 (return-from update-ink))
+               (setf old-ink ink)
+               (if (typep ink 'standard-flipping-ink)
+                   (setf source-rgba (let ((d1 (slot-value ink 'climi::design1))
+                                           (d2 (slot-value ink 'climi::design2)))
+                                       (logand #x00ffffff
+                                               (logxor (climi::%rgba-value d1)
+                                                       (climi::%rgba-value d2))))
+                         mode :flipping)
+                   (let ((ink-rgba (climi::%rgba-value ink)))
+                     (if (= 255 (ldb (byte 8 24) ink-rgba))
+                         (setf source-rgba ink-rgba
+                               mode :copy)
+                         (let-rgba ((r g b a) ink-rgba)
+                           (setf source-r r
+                                 source-g g
+                                 source-b b
+                                 source-a a
+                                 mode :blend)))))))
+        (do-regions ((src-j dst-j y1 y1 y2)
+                     (src-i dst-i x1 x1 x2))
+          (when (or (null clip-region)
+                    (region-contains-position-p clip-region src-i src-j))
+            (update-ink dst-i dst-j)
+            (case mode                  ; do nothing if MODE is NIL
+              (:flipping
+               (setf (aref dst-array dst-j dst-i) (logxor source-rgba
+                                                          (aref dst-array dst-j dst-i))))
+              (:copy
+               (setf (aref dst-array dst-j dst-i) source-rgba))
+              (:blend
+               (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array dst-j dst-i))
+                 (setf (aref dst-array dst-j dst-i)
+                       (octet-blend-function* source-r source-g source-b source-a
+                                              r.bg     g.bg     b.bg     a.bg)))))))))
+    (make-rectangle* x1 y1 x2 y2)))
+
+(defun fill-image-mask (dst-array design x1 y1 x2 y2 clip-region
+                        stencil-array stencil-dx stencil-dy)
+  "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
+  (declare (type argb-pixel-array dst-array)
+           (type design design)
+           (type stencil-array stencil-array)
+           (type image-index-displacement stencil-dx stencil-dy))
+  (maxf x1 0)
+  (maxf y1 0)
+  (minf x2 (array-dimension dst-array 1))
+  (minf y2 (array-dimension dst-array 0))
+  (when (typep design 'bounded-region)
+    (with-bounding-rectangle* (a b c d) design
+      (maxf x1 a) (maxf y1 b)
+      (minf x2 c) (minf y2 d)))
+  (when (region-contains-region-p clip-region (make-rectangle* x1 y1 x2 y2))
+    (setf clip-region nil))
+  (setf x1 (floor x1)
+        y1 (floor y1)
+        x2 (ceiling x2)
+        y2 (ceiling y2))
+  (locally
+      (declare (optimize (speed 3) (safety 0))
+               (type image-index x1 y1 x2 y2))
+    (let* ((stencil-width-max (1- (array-dimension stencil-array 1)))
+           (stencil-height-max (1- (array-dimension stencil-array 0)))
            (old-alpha 255) (alpha 255)
            old-ink ink
            mode
            source-rgba source-r source-g source-b source-a)
-      (declare (type (or null stencil-array) stencil-array)
+      (declare (type image-dimension stencil-width-max stencil-height-max)
                (type argb-pixel-array dst-array)
                (type octet old-alpha alpha))
       (flet ((update-alpha (i j)
-               (locally (declare (type stencil-array stencil-array)
-                                 (type image-dimension stencil-width-max stencil-height-max))
-                 (let ((stencil-x (+ stencil-dx i))
-                       (stencil-y (+ stencil-dy j)))
-                   (setf alpha (if (and (<= 0 stencil-y stencil-height-max)
-                                        (<= 0 stencil-x stencil-width-max))
-                                   (aref stencil-array stencil-y stencil-x)
-                                   0)))))
+               (let ((stencil-x (+ stencil-dx i))
+                     (stencil-y (+ stencil-dy j)))
+                 (setf alpha (if (and (<= 0 stencil-y stencil-height-max)
+                                      (<= 0 stencil-x stencil-width-max))
+                                 (aref stencil-array stencil-y stencil-x)
+                                 0))))
              (update-ink (i j)
                (setf ink (climi::design-ink* design i j))
                (when (and (eq old-ink ink) (= old-alpha alpha))
@@ -207,8 +266,7 @@
                      (src-i dst-i x1 x1 x2))
           (when (or (null clip-region)
                     (region-contains-position-p clip-region src-i src-j))
-            (when stencil-array
-              (update-alpha dst-i dst-j))
+            (update-alpha dst-i dst-j)
             (update-ink dst-i dst-j)
             (case mode                  ; do nothing if MODE is NIL
               (:flipping

@@ -30,12 +30,12 @@
 ;;; XXX: used only for medium-draw-text* for now.
 (defun %medium-fill-image-mask (medium mask-image x1 y1 x2 y2 mask-dx mask-dy)
   (when-let ((mirror (medium-drawable medium)))
-    (%fill-image mirror x1 y1 x2 y2
-                 (transform-region (medium-native-transformation medium)
-                                   (medium-ink medium))
-                 (medium-device-region medium)
-                 ;; Stencil
-                 mask-image mask-dx mask-dy)))
+    (%fill-image-mask mirror x1 y1 x2 y2
+                      (transform-region (medium-native-transformation medium)
+                                        (medium-ink medium))
+                      (medium-device-region medium)
+                      ;; Stencil
+                      mask-image (floor mask-dx) (floor mask-dy))))
 
 (defun %medium-fill-image (medium x1 y1 x2 y2)
   (when-let ((mirror (medium-drawable medium)))
@@ -46,19 +46,19 @@
 
 ;;; standard medium protocol
 
-(defmethod medium-draw-rectangle* ((medium render-medium-mixin) left top right bottom filled)
-  (if filled
-      (climi::with-transformed-positions*
-          ((medium-device-transformation medium) left top right bottom)
-        (when (< right left) (rotatef left right))
-        (when (< bottom top) (rotatef top bottom))
-        (%medium-fill-image medium left top right bottom))
-      (%medium-stroke-paths medium (let ((path (make-path left top)))
-                                     (line-to path right top)
-                                     (line-to path right bottom)
-                                     (line-to path left bottom)
-                                     (close-path path)
-                                     (list path)))))
+(defmethod medium-draw-rectangle* ((medium render-medium-mixin) x1 y1 x2 y2 filled)
+  (let ((transformation (medium-device-transformation medium)))
+    (if (and filled (rectilinear-transformation-p transformation))
+        (climi::with-transformed-positions* (transformation x1 y1 x2 y2)
+          (when (< x2 x1) (rotatef x2 x1))
+          (when (< y2 y1) (rotatef y2 y1))
+          (%medium-fill-image medium x1 y1 x2 y2))
+        (%medium-stroke-paths medium (let ((path (make-path x1 y1)))
+                                       (line-to path x2 y1)
+                                       (line-to path x2 y2)
+                                       (line-to path x1 y2)
+                                       (close-path path)
+                                       (list path))))))
 
 (defmethod medium-draw-polygon* ((medium render-medium-mixin) coord-seq closed filled)
   (let ((x (elt coord-seq 0))
