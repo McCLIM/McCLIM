@@ -52,14 +52,38 @@
 ;;; appropriate ink/region class pairs, we can reduce the number
 ;;; of methods necessary (in design.lisp).
 
-(defclass everywhere-mixin () ())
-(defclass nowhere-mixin    () ())
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defclass everywhere-mixin () ())
+  (defclass nowhere-mixin    () ())
 
-(defclass nowhere-region    (nowhere-mixin region)    ())
-(defclass everywhere-region (everywhere-mixin region) ())
+  (defclass nowhere-region    (nowhere-mixin region)    ())
+  (defclass everywhere-region (everywhere-mixin region) ())
 
-(defconstant +everywhere+ (make-instance 'everywhere-region))
-(defconstant +nowhere+    (make-instance 'nowhere-region))
+  (defmethod make-load-form ((object everywhere-region) &optional env)
+    (declare (ignore env))
+    `(let ((region (make-instance 'everywhere-region)))
+       (defconstant +everywhere+ region)
+       region))
+
+  (defmethod make-load-form ((object nowhere-region) &optional env)
+    (declare (ignore env))
+    `(let ((region (make-instance 'nowhere-region)))
+       (defconstant +nowhere+ region)
+       region))
+
+  (defmethod region-equal ((r1 everywhere-region) (r2 everywhere-region))
+    (declare (ignore r1 r2))
+    t)
+
+  (defmethod region-equal ((r1 nowhere-region) (r2 nowhere-region))
+    (declare (ignore r1 r2))
+    t))
+
+(defconstant +everywhere+ (make-instance 'everywhere-region)
+  "Everywhere region." #'region-equal)
+
+(defconstant +nowhere+ (make-instance 'nowhere-region)
+  "Nowhere region." #'region-equal)
 
 ;;; Unbounded regions have very general (and very mundane!)
 ;;; methods. They are all defined here.
@@ -74,8 +98,8 @@
 ;;;
 (macrolet
     ((def-method (name e-vs-e e-vs-n e-vs-r
-                       n-vs-e n-vs-n n-vs-r
-                       r-vs-e r-vs-n)
+                  n-vs-e n-vs-n n-vs-r
+                  r-vs-e r-vs-n)
        (let ((bodies (list e-vs-e e-vs-n e-vs-r
                            n-vs-e n-vs-n n-vs-r
                            r-vs-e r-vs-n)))

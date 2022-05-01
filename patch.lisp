@@ -8,10 +8,13 @@
            #:describe-object
            #:interactive-stream-p))
 
-(defmacro clim-lisp-patch:defconstant (symbol value &optional docu)
-  (if (typep value '(or number character))
-      `(cl:defconstant ,symbol ,value ,@(and docu (list docu)))
-      `(defvar ,symbol ,value ,@(and docu (list docu)))))
+;;; Not a DEFCONSTANT that we want, but a DEFCONSTANT that we need.
+;;;
+;;; FIXME what we really want is "our own" macro that defines also a load form
+;;; and such.
+(defmacro clim-lisp-patch:defconstant (symbol value &optional docu (test '(constantly t)))
+  `(alexandria:define-constant ,symbol ,value :test ,test
+     ,@(and docu (list :documentation docu))))
 
 (defvar clim-lisp-patch::*compile-time-clos-names* (make-hash-table))
 

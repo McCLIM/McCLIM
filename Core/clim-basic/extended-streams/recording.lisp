@@ -766,7 +766,7 @@ were added."
       (inserted-nr :initarg :inserted-nr
                    :accessor tree-output-record-entry-inserted-nr)))
 
-(defconstant %infinite-rectangle%
+(defvar %infinite-rectangle%
   (rectangles:make-rectangle)
   "This constant should be used to map over all tree output records.")
 
