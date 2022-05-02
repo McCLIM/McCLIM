@@ -9,8 +9,15 @@
 
 (in-package #:clim-demo)
 
+(defvar *glider*
+  (make-rectangular-tile
+   (make-pattern-from-bitmap-file
+    (merge-pathnames #p"images/glider.png"
+                     (asdf:system-source-directory :clim-examples)))
+   100 100))
+
 (define-application-frame drawing-benchmark ()
-    ()
+  ()
   (:panes
    (canvas :application
            :min-width 600
@@ -20,6 +27,8 @@
     (with-radio-box ()
       (radio-box-current-selection
        (make-pane 'toggle-button :label "rectangle" :id :rectangle))
+      (make-pane 'toggle-button :label "polygon" :id :polygon)
+      (make-pane 'toggle-button :label "ellipse" :id :ellipse)
       (make-pane 'toggle-button :label "text" :id :text)
       (make-pane 'toggle-button :label "text*" :id :text*)))
    (ink
@@ -27,14 +36,16 @@
       (radio-box-current-selection
        (make-pane 'toggle-button :label "random" :id :random))
       (make-pane 'toggle-button :label "red" :id +red+)
-      (make-pane 'toggle-button :label "flipping ink" :id +flipping-ink+))))
+      (make-pane 'toggle-button :label "flipping ink" :id +flipping-ink+)
+      (make-pane 'toggle-button :label "indirect" :id +foreground-ink+)
+      (make-pane 'toggle-button :label "pattern" :id *glider*))))
   (:layouts
    (default
-       (vertically ()
-         (horizontally ()
-           (labelling (:label "Mode") mode)
-           (labelling (:label "Ink") ink))
-         canvas))))
+    (vertically ()
+      (horizontally ()
+        (labelling (:label "Mode") mode)
+        (labelling (:label "Ink") ink))
+      canvas))))
 
 (defmethod run-drawing-benchmark (frame stream)
   (window-clear stream)
@@ -62,6 +73,19 @@
                              10 10 (- width 10) (- height 10)
                              :ink ink
                              :filled t))
+           (:polygon
+            (draw-polygon* stream (list 10 10
+                                        (- width 10) 10
+                                        10 (- height 10))
+                           :ink ink
+                           :closed t))
+           (:ellipse
+            (let ((w/2 (/ width 2))
+                  (h/2 (/ height 2)))
+             (draw-ellipse* stream w/2 h/2
+                            (- w/2 10) 0
+                            0 (- h/2 10)
+                            :ink ink)))
            (:text
             (dotimes (x 10)
               (draw-text* stream
