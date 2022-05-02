@@ -23,8 +23,209 @@ top-left. Useful when we iterate over the same array and mutate its state."
                 for ,dest-i fixnum from ,x2 above ,x1d
                 do (progn ,@body)))))
 
-(declaim (inline %check-coords))
+(defmacro do-regions* (((src-j src-i x1 y1 x2 y2)) &body body)
+  `(loop for ,src-j fixnum from ,y1 below ,y2 do
+    (loop for ,src-i fixnum from ,x1 below ,x2 do
+      (progn ,@body))))
 
+;;; Expected variable: CLIPPING-REGION.
+(defun expand-clip (clip form)
+  (let ((form-clip/false
+          `(macrolet ((with-clip ((x y) form)
+                        (declare (ignore x y))
+                        form))
+             ,form))
+        (form-clip/true
+          `(macrolet ((with-clip ((x y) form)
+                        `(when (region-contains-position-p clipping-region ,x ,y)
+                           ,form)))
+             ,form)))
+    (if clip
+        form-clip/true
+        form-clip/false)))
+
+;;; Expected variable: DESIGN.
+(defun expand-rgba (type form)
+  (case type
+    (color
+     `(let* ((rgba (climi::%rgba-value design))
+             (a.fg #xff) ;; for color #xff
+             (r.fg (ldb (byte 8 16) rgba))
+             (g.fg (ldb (byte 8 8)  rgba))
+             (b.fg (ldb (byte 8 0)  rgba)))
+        (declare (type argb-pixel rgba)
+                 (type octet a.fg r.fg g.fg b.fg)
+                 (ignorable rgba a.fg r.fg g.fg b.fg))
+        (macrolet ((with-rgba ((x y) body-form)
+                     (declare (ignore x y))
+                     body-form))
+          ,form)))
+    ((opacity climi::uniform-compositum)
+     `(let* ((rgba (climi::%rgba-value design))
+             (a.fg (ldb (byte 8 24) rgba))
+             (r.fg (ldb (byte 8 16) rgba))
+             (g.fg (ldb (byte 8 8)  rgba))
+             (b.fg (ldb (byte 8 0)  rgba)))
+        (declare (type argb-pixel rgba)
+                 (type octet a.fg r.fg g.fg b.fg)
+                 (ignorable rgba a.fg r.fg g.fg b.fg))
+        (macrolet ((with-rgba ((x y) body-form)
+                     (declare (ignore x y))
+                     body-form))
+          ,form)))
+    (climi::%rgba-pattern
+     `(let ((design-array (pattern-array design)))
+        (declare (type argb-pixel-array design-array))
+        (macrolet ((with-rgba ((x y) body-form)
+                     `(let* ((rgba (aref design-array ,y ,x))
+                             (a.fg (ldb (byte 8 24) rgba))
+                             (r.fg (ldb (byte 8 16) rgba))
+                             (g.fg (ldb (byte 8 8) rgba))
+                             (b.fg (ldb (byte 8 0) rgba)))
+                        (declare (type argb-pixel rgba)
+                                 (type octet a.fg r.fg g.fg b.fg)
+                                 (ignorable rgba a.fg r.fg g.fg b.fg))
+                        ,body-form)))
+          ,form)))
+    (standard-flipping-ink
+     `(let* ((rgba (logxor (climi::%rgba-value
+                            (slot-value design 'climi::design1))
+                           (climi::%rgba-value
+                            (slot-value design 'climi::design2))))
+             (a.fg #xff))
+        (declare (type argb-pixel rgba)
+                 (ignorable rgba a.fg))
+        (macrolet ((with-rgba ((x y) body-form)
+                     (declare (ignore x y))
+                     body-form))
+          ,form)))
+    (otherwise
+     `(macrolet ((with-rgba ((x y) body-form)
+                   `(let* ((rgba (climi::%rgba-value (climi::design-ink* design ,x ,y)))
+                           (a.fg (ldb (byte 8 24) rgba))
+                           (r.fg (ldb (byte 8 16) rgba))
+                           (g.fg (ldb (byte 8 8) rgba))
+                           (b.fg (ldb (byte 8 0) rgba)))
+                      (declare (type argb-pixel rgba)
+                               (type octet a.fg r.fg g.fg b.fg)
+                               (ignorable rgba a.fg r.fg g.fg b.fg))
+                      ,body-form)))
+        ,form))))
+
+;;; Expected variables: STENCIL, STENCIL-DX, STENCIL-DY
+(defun expand-mask (mask form)
+  (let ((mask-form/false
+          `(macrolet ((if-alpha ((x y) solid-form other-form)
+                        (declare (ignore other-form))
+                        `(with-clip (,x ,y)
+                           (with-rgba (,x ,y)
+                             ,solid-form))))
+             ,form))
+        (mask-form/true
+          `(let ((stencil-max-x (1- (array-dimension stencil-array 1)))
+                 (stencil-max-y (1- (array-dimension stencil-array 0))))
+             (macrolet ((if-alpha ((x y) solid-form other-form)
+                          `(locally
+                               (declare (type stencil-array stencil-array)
+                                        (type image-index-displacement stencil-dx stencil-dy)
+                                        (type image-dimension stencil-max-x stencil-max-y))
+                             (let ((stencil-x (+ stencil-dx ,x))
+                                   (stencil-y (+ stencil-dy ,y)))
+                               (declare (type fixnum stencil-x stencil-y))
+                               (when (and (<= 0 stencil-x stencil-max-x)
+                                          (<= 0 stencil-y stencil-max-y))
+                                 (with-clip (,x ,y)
+                                   (with-rgba (,x ,y)
+                                     (let ((a.fg (octet-mult
+                                                  a.fg
+                                                  (aref stencil-array stencil-y stencil-x))))
+                                       (declare (type octet a.fg))
+                                       (etypecase a.fg
+                                         ((integer #x00 #x00))
+                                         ((integer #x01 #xfe) ,other-form)
+                                         ((integer #xff #xff) ,solid-form))))))))))
+               ,form))))
+    (if mask
+        mask-form/true
+        mask-form/false)))
+
+;;; Expected variable: IMAGE.
+(defun expand-value (type form)
+  (let ((fill-form/flip
+          `(macrolet ((set-value (x y)
+                        `(if-alpha (,x ,y)
+                           (setf (aref image-array ,y ,x)
+                                 (logxor rgba (aref image-array ,y ,x)))
+                           (setf (aref image-array ,y ,x)
+                                 (let* ((rgba/dest (aref image-array ,y ,x))
+                                        (rgba/flip (logxor rgba rgba/dest)))
+                                   (let-rgba ((r.fg g.fg b.fg) rgba/flip)
+                                     (let-rgba ((r.bg g.bg b.bg a.bg) rgba/dest)
+                                       (octet-blend-function* r.fg g.fg b.fg a.fg
+                                                              r.bg g.bg b.bg a.bg))))))))
+             ,form))
+        (fill-form/fill
+          `(macrolet ((set-value (x y)
+                        `(if-alpha (,x ,y)
+                           (setf (aref image-array ,y ,x) rgba)
+                           (setf (aref image-array ,y ,x)
+                                 (let-rgba ((r.bg g.bg b.bg a.bg) (aref image-array ,y ,x))
+                                   (octet-blend-function* r.fg g.fg b.fg a.fg
+                                                          r.bg g.bg b.bg a.bg))))))
+             ,form)))
+    (if (eq type 'standard-flipping-ink)
+        fill-form/flip
+        fill-form/fill)))
+
+;;; This macro assumes that the following variables are bound:
+;;; IMAGE  - target array
+;;; DESIGN - source design
+;;; CLIPPING-REGION - a clipping region or nil
+;;; STENCIL{,-DX,-DY} - drawing stencil or nil
+(defmacro with-brush ((type clip mask) &body body)
+  (expand-rgba type
+    (expand-clip clip
+      (expand-mask mask
+        (expand-value type
+          `(progn ,@body))))))
+
+;;; Expects variables: IMAGE-ARRAY, DESIGN, CLIPPING-REGION, X1, Y1, X2, Y2
+(defmacro with-brushes ((mask) &body body)
+  (let ((designs '(color opacity climi::uniform-compositum
+                   standard-flipping-ink climi::%rgba-pattern otherwise)))
+    `(locally
+         (declare (optimize (speed 3) (safety 0)))
+       (maxf x1 0)
+       (maxf y1 0)
+       (minf x2 (array-dimension image-array 1))
+       (minf y2 (array-dimension image-array 0))
+       (typecase design
+         (bounded-region
+          (with-bounding-rectangle* (a b c d) design
+            (maxf x1 a) (maxf y1 b)
+            (minf x2 c) (minf y2 d)))
+         (indirect-ink
+          (setf design (indirect-ink-ink design))))
+       (when (region-contains-region-p clipping-region (make-rectangle* x1 y1 x2 y2))
+         (setf clipping-region nil))
+       (setf x1 (floor x1)
+             y1 (floor y1)
+             x2 (ceiling x2)
+             y2 (ceiling y2))
+       (locally
+           (declare (optimize (speed 3) (safety 0))
+                    (type image-index x1 y1 x2 y2)
+                    (type (or null region) clipping-region))
+         (typecase design
+           ,@(loop for type in designs
+                   collect `(,type (if (null clipping-region)
+                                       (with-brush (,type nil ,mask)
+                                         ,@body)
+                                       (with-brush (,type t ,mask)
+                                         ,@body)))))
+         (make-rectangle* x1 y1 x2 y2)))))
+
+(declaim (inline %check-coords))
 ;;; Returns T for valid arguments, NIL for malformed width/height and signals an
 ;;; error if coordinates go out of arrays bounds.
 (defun %check-coords (src-array dst-array sx sy dx dy width height)
