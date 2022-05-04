@@ -36,27 +36,14 @@
         (y1 0)
         (x2 (array-dimension image-array 1))
         (y2 (array-dimension image-array 0)))
-    (with-bounding-rectangle* (a b c d) clipping-region
-      (maxf x1 a) (maxf y1 b)
-      (minf x2 c) (minf y2 d))
-    (when (region-contains-region-p clipping-region (make-rectangle* x1 y1 x2 y2))
-      (setf clipping-region nil))
-    (let ((draw-function
-            (typecase design
-              (standard-flipping-ink
-               (aa-render-xor-draw-fn image-array clipping-region design))
-              ;; This path is never executed.
-              #+ (or)
-              (null
-               (aa-render-alpha-draw-fn image-array clipping-region))
-              (otherwise
-               (aa-render-draw-fn image-array clipping-region design)))))
-      (%aa-cells-sweep/rectangle state
-                                 (floor x1)
-                                 (floor y1)
-                                 (ceiling x2)
-                                 (ceiling y2)
-                                 draw-function))))
+    (with-brushes (alpha)
+      (flet ((draw (x y alpha)
+               (declare (type image-index x y)
+                        (type fixnum alpha))
+               (setf alpha (min (abs alpha) 255))
+               (set-value x y)))
+        (declare (dynamic-extent #'draw))
+        (%aa-cells-sweep/rectangle state x1 y1 x2 y2 #'draw)))))
 
 (defun aa-stroke-paths (medium image design paths line-style state transformation clip-region)
   (vectors::state-reset state)
