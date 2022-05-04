@@ -17,38 +17,40 @@
 (defun stroke-path (path line-style medium)
   (let* ((effective-thickness (line-style-effective-thickness line-style medium))
          (effective-dashes (line-style-effective-dashes line-style medium))
-         (dashes-vector (typecase effective-dashes
+         (dashes-vector (etypecase effective-dashes
                           (null nil)
                           (sequence (coerce effective-dashes 'vector))))
          (joint-shape (line-style-joint-shape line-style))
          (cap-shape (line-style-cap-shape line-style)))
+    (when (eq joint-shape :bevel)
+      (setf joint-shape :none))
+    (when (eq cap-shape :no-end-point)
+      (setf cap-shape :butt))
     (when dashes-vector
       (setf path (paths:dash-path path dashes-vector)))
     (paths:stroke-path path (max 1 effective-thickness)
-                       :joint (if (eq joint-shape :bevel)
-                                  :none
-                                  joint-shape)
-                       :caps (if (eq cap-shape :no-end-point)
-                                 :butt
-                                 cap-shape))))
+                       :joint joint-shape :caps cap-shape)))
 
-(defun aa-cells-sweep/rectangle (image ink state clip-region)
-  (with-bounding-rectangle* (x1 y1 x2 y2) image
-    (with-bounding-rectangle* (a b c d) clip-region
+(defun aa-cells-sweep/rectangle (image-array design state clipping-region)
+  (let ((x1 0)
+        (y1 0)
+        (x2 (array-dimension image-array 1))
+        (y2 (array-dimension image-array 0)))
+    (with-bounding-rectangle* (a b c d) clipping-region
       (maxf x1 a) (maxf y1 b)
       (minf x2 c) (minf y2 d))
-    (when (region-contains-region-p clip-region (make-rectangle* x1 y1 x2 y2))
-      (setf clip-region nil))
+    (when (region-contains-region-p clipping-region (make-rectangle* x1 y1 x2 y2))
+      (setf clipping-region nil))
     (let ((draw-function
-            (typecase ink
+            (typecase design
               (standard-flipping-ink
-               (aa-render-xor-draw-fn image clip-region ink))
+               (aa-render-xor-draw-fn image-array clipping-region design))
               ;; This path is never executed.
               #+ (or)
               (null
-               (aa-render-alpha-draw-fn image clip-region))
+               (aa-render-alpha-draw-fn image-array clipping-region))
               (otherwise
-               (aa-render-draw-fn image clip-region ink)))))
+               (aa-render-draw-fn image-array clipping-region design)))))
       (%aa-cells-sweep/rectangle state
                                  (floor x1)
                                  (floor y1)
@@ -62,14 +64,14 @@
                               (stroke-path path line-style medium))
                             paths))))
     (aa-update-state state paths transformation)
-    (aa-cells-sweep/rectangle image design state clip-region)))
+    (aa-cells-sweep/rectangle (pattern-array image) design state clip-region)))
 
 (defun aa-fill-paths (image design paths state transformation clip-region)
   (vectors::state-reset state)
   (dolist (path paths)
     (setf (paths::path-type path) :closed-polyline))
   (aa-update-state state paths transformation)
-  (aa-cells-sweep/rectangle image design state clip-region))
+  (aa-cells-sweep/rectangle (pattern-array image) design state clip-region))
 
 #+ (or)
 (defun aa-fill-alpha-paths (image design paths state transformation clip-region)
@@ -78,7 +80,7 @@
   (dolist (path paths)
     (setf (paths::path-type path) :closed-polyline))
   (aa-update-state state paths transformation)
-  (aa-cells-sweep/rectangle image state clip-region))
+  (aa-cells-sweep/rectangle (pattern-array image) state clip-region))
 
 (defun %aa-scanline-sweep (scanline function start end)
   "Call FUNCTION for each pixel on the polygon covered by
@@ -167,15 +169,15 @@ non-empty region.)"
         ;; at least 2 knots
         (let ((first-knot k1))
           (loop
-             (multiple-value-bind (i2 k2 e2) (vectors::path-iterator-next iterator)
-               (declare (ignore i2))
-               (aa-line-f state mxx mxy myx myy tx ty
-                              (vectors::point-x k1) (vectors::point-y k1)
-                              (vectors::point-x k2) (vectors::point-y k2))
-               (setf k1 k2)
-               (when e2
-                 (return))))
-          (aa-line-f state mxx mxy myx myy tx ty
+            (multiple-value-bind (i2 k2 e2) (vectors::path-iterator-next iterator)
+              (declare (ignore i2))
+              (aa-line-f state mxx mxy myx myy tx ty
                          (vectors::point-x k1) (vectors::point-y k1)
-                         (vectors::point-x first-knot) (vectors::point-y first-knot)))))
+                         (vectors::point-x k2) (vectors::point-y k2))
+              (setf k1 k2)
+              (when e2
+                (return))))
+          (aa-line-f state mxx mxy myx myy tx ty
+                     (vectors::point-x k1) (vectors::point-y k1)
+                     (vectors::point-x first-knot) (vectors::point-y first-knot)))))
     state))
