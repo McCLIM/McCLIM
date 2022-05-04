@@ -44,6 +44,7 @@
                    (octet-mult a.fg alpha)
                    r.bg g.bg b.bg a.bg))))))))
 
+#+ (or)
 (defun aa-render-alpha-draw-fn (image clip-region)
   (let ((pixels (pattern-array image)))
     (lambda (x y alpha)

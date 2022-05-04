@@ -116,10 +116,12 @@ top-left. Useful when we iterate over the same array and mutate its state."
 (defun expand-mask (mask form)
   (let ((mask-form/false
           `(macrolet ((if-alpha ((x y) solid-form other-form)
-                        (declare (ignore other-form))
                         `(with-clip (,x ,y)
                            (with-rgba (,x ,y)
-                             ,solid-form))))
+                             (etypecase a.fg
+                               ((integer #x00 #x00))
+                               ((integer #x01 #xfe) ,other-form)
+                               ((integer #xff #xff) ,solid-form))))))
              ,form))
         (mask-form/true
           `(let ((stencil-max-x (1- (array-dimension stencil-array 1)))
@@ -144,10 +146,21 @@ top-left. Useful when we iterate over the same array and mutate its state."
                                          ((integer #x00 #x00))
                                          ((integer #x01 #xfe) ,other-form)
                                          ((integer #xff #xff) ,solid-form))))))))))
-               ,form))))
-    (if mask
-        mask-form/true
-        mask-form/false)))
+               ,form)))
+        (mask-form/symbol
+          `(macrolet ((if-alpha ((x y) solid-form other-form)
+                        `(with-clip (,x ,y)
+                           (with-rgba (,x ,y)
+                             (let ((a.fg (octet-mult a.fg ,',mask)))
+                               (etypecase a.fg
+                                 ((integer #x00 #x00))
+                                 ((integer #x01 #xfe) ,other-form)
+                                 ((integer #xff #xff) ,solid-form)))))))
+             ,form)))
+    (case mask
+      ((nil)     mask-form/false)
+      ((t)       mask-form/true)
+      (otherwise mask-form/symbol))))
 
 ;;; Expected variable: IMAGE.
 (defun expand-value (type form)
