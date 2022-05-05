@@ -10,8 +10,9 @@
 (defmethod port-set-mirror-geometry :after
     ((port render-port-mixin) (sheet mirrored-sheet-mixin) region)
   (when-let ((mirror (sheet-direct-mirror sheet)))
-    (with-bounding-rectangle* (:width w :height h) region
-      (%set-image-region mirror (make-rectangle* 0 0 w h)))))
+    (with-image-locked (mirror)
+      (with-bounding-rectangle* (:width w :height h) region
+        (%set-image-region mirror (make-rectangle* 0 0 w h))))))
 
 (defmethod realize-mirror ((port render-port-mixin) (sheet mirrored-sheet-mixin))
   (let ((mirror (make-instance 'image-mirror-mixin)))
