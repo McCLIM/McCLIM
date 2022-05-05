@@ -62,23 +62,26 @@
                   (dpb red (byte 8 16) 0)))))
 
 (defun image-mirror-pre-put (width height mirror clx-image xlib-image dirty-r)
+  (unless (and mirror clx-image)
+    (return-from image-mirror-pre-put))
   (let* ((pixels (clime:pattern-array (image-mirror-image mirror)))
-         (fn (etypecase pixels
-               ((simple-array (unsigned-byte 32) 2)
-                #'(lambda (region)
-                    (declare (optimize (speed 3)))
-                    (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-                        (region-intersection region (make-rectangle* 0 0 (1- width) (1- height)))
-                      (declare (type fixnum min-x min-y max-x max-y))
-                      (when (and mirror clx-image)
-                        (locally
-                              (declare (type (simple-array (unsigned-byte 32) (* *))
-                                             pixels
-                                             xlib-image))
-                          (loop for y from min-y upto max-y do
-                            (loop for x from min-x upto max-x do
-                              (setf (aref xlib-image y x) (aref pixels y x))))))))))))
-    (map-over-region-set-regions fn dirty-r)))
+         (w (1- width))
+         (h (1- height)))
+    (declare (type (simple-array (unsigned-byte 32) 2) pixels xlib-image)
+             (type mcclim-render::image-dimension w h)
+             (optimize (speed 3) (safety 1)))
+    (flet ((put-rect (region)
+             (declare (type standard-rectangle region))
+             (climi::with-standard-rectangle* (x1 y1 x2 y2) region
+               (declare (type fixnum x1 y1 x2 y2))
+               (alexandria:maxf x1 0)
+               (alexandria:maxf y1 0)
+               (alexandria:minf x2 w)
+               (alexandria:minf y2 h)
+               (loop for y from y1 upto y2 do
+                 (loop for x from x1 upto x2 do
+                   (setf (aref xlib-image y x) (aref pixels y x)))))))
+      (map-over-region-set-regions #'put-rect dirty-r))))
 
 (defun image-mirror-to-x (mirror)
   (declare (optimize speed))
