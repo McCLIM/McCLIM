@@ -33,7 +33,7 @@
               (ignore-errors
                (xlib:display-force-output display))
               (sleep 1/30)))
-   :name (format nil "~S's event process." port)))
+   :name (format nil "~S's repaint process." port)))
 
 (defparameter *event-mask* '(:exposure
                              :key-press :key-release
