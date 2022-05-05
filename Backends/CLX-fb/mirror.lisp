@@ -96,4 +96,4 @@
           (unless (region-equal dirty-region +nowhere+)
             (setf dirty-xr (region-union dirty-xr dirty-region)
                   (mcclim-render:image-dirty-region mirror) +nowhere+)
-            (image-mirror-pre-put width height mirror clx-image xlib-image dirty-xr)))))))
+            (image-mirror-pre-put width height mirror clx-image xlib-image dirty-region)))))))
