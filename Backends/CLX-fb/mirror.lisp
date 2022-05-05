@@ -54,13 +54,6 @@
                               :height (max 0 (- height (min 0 (- min-y)))))))))
    dirty-r))
 
-(declaim (inline xlib-image-data-set-pixel))
-(defun xlib-image-data-set-pixel (data x y red green blue)
-  (setf (aref data y x)
-        (dpb blue (byte 8 0)
-             (dpb green (byte 8 8)
-                  (dpb red (byte 8 16) 0)))))
-
 (defun image-mirror-pre-put (width height mirror clx-image xlib-image dirty-r)
   (unless (and mirror clx-image)
     (return-from image-mirror-pre-put))
