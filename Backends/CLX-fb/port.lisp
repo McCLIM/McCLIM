@@ -15,25 +15,7 @@
   (setf (slot-value port 'pointer)
         (make-instance 'clim-clx::clx-basic-pointer :port port))
   (initialize-clx port)
-  (initialize-clx-framebuffer port)
   (clim-extensions:port-all-font-families port))
-
-(defun initialize-clx-framebuffer (port)
-  (clim-sys:make-process
-   (lambda ()
-     (loop for display = (clx-port-display port)
-           while display
-           do (handler-case
-                  (dolist (mirror (all-mirrors port))
-                    (if (typep mirror 'clx-fb-mirror)
-                        (image-mirror-to-x mirror)
-                        (error "huh? ~s" (class-of mirror))))
-                (condition (condition)
-                  (format *debug-io* "~A~%" condition)))
-              (ignore-errors
-               (xlib:display-force-output display))
-              (sleep 1/30)))
-   :name (format nil "~S's repaint process." port)))
 
 (defparameter *event-mask* '(:exposure
                              :key-press :key-release
@@ -57,11 +39,11 @@
 (defmethod destroy-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (let* ((mirror (sheet-direct-mirror sheet))
          (window (window mirror)))
-    (with-slots (gcontext clx-image) mirror
-      (xlib:free-gcontext gcontext)
-      ;;(xlib:destroy-image clx-image)
-      (setf gcontext nil
-            clx-image nil))
+    ;; There is no xlib:free-image because it is a lisp structure and it is
+    ;; simply garbage collected.
+    (xlib:free-gcontext (mirror-gcontext mirror))
+    (setf (mirror-clx-image mirror) nil
+          (mirror-gcontext mirror) nil)
     (remf (xlib:window-plist window) 'sheet)
     (alexandria:deletef (all-mirrors port) mirror)
     (xlib:destroy-window window)))
@@ -104,10 +86,7 @@
                  :sheet sheet))
 
 (defmethod port-force-output ((port clx-fb-port))
-  (dolist (mirror (all-mirrors port))
-    (if (typep mirror 'clx-fb-mirror)
-        (%mirror-force-output mirror)
-        (error "huh? ~s" (class-of mirror))))
+  (map nil #'%mirror-force-output (all-mirrors port))
   (xlib:display-force-output (clx-port-display port)))
 
 (defmethod distribute-event :before
