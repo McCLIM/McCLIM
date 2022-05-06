@@ -84,8 +84,8 @@
       (let (reg)
         (with-image-locked (mirror)
           (setf reg dirty-xr)
-          (setf dirty-xr +nowhere+))
-        (image-mirror-put width height mirror gcontext clx-image reg)))))
+          (setf dirty-xr +nowhere+)
+          (image-mirror-put width height mirror gcontext clx-image reg))))))
 
 (defun %mirror-force-output (mirror)
   (with-slots (dirty-xr width height clx-image xlib-image)
