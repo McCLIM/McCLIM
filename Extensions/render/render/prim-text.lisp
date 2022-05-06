@@ -22,7 +22,7 @@
              (:center (let* ((ascent (font-ascent font))
                              (descent (font-descent font))
                              (height (+ ascent descent))
-                             (middle (- ascent (/ height 2.0s0))))
+                             (middle (- ascent (/ height 2.0))))
                         (incf y middle)))
              (:baseline*)
              (:bottom (decf y (font-descent font))))))

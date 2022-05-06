@@ -50,8 +50,8 @@
          (decf left width)
          (decf right width))
         (:center
-         (decf left (/ width 2.0s0))
-         (decf right (/ width 2.0s0)))))
+         (decf left (/ width 2.0))
+         (decf right (/ width 2.0)))))
     (let ((ascent (text-style-ascent text-style medium))
           (descent (text-style-descent text-style medium))
           (height (- bottom top)))
@@ -67,6 +67,6 @@
          (decf top bottom)
          (decf bottom bottom))
         (:center
-         (setf top (- (/ height 2.0s0)))
-         (setf bottom (/ height 2.0s0)))))
+         (setf top (- (/ height 2.0)))
+         (setf bottom (/ height 2.0)))))
     (values left top right bottom)))

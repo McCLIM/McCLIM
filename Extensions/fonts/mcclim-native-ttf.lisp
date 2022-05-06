@@ -247,8 +247,8 @@
   (advance-width 0     :read-only t)
   (advance-height 0    :read-only t)
   ;; untransformed values
-  (advance-width* 0s0  :read-only t)
-  (advance-height* 0s0 :read-only t))
+  (advance-width* 0.0  :read-only t)
+  (advance-height* 0.0 :read-only t))
 
 (defclass cached-truetype-font (truetype-font)
   ((char->glyph-info  :initform (make-hash-table :size 512))))
