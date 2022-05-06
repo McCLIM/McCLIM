@@ -635,6 +635,14 @@
   (check-type command cons)
   (apply (car command) (cdr command)))
 
+(defun schedule-frame-command (frame command delay)
+  (let ((sheet (frame-top-level-sheet frame)))
+    (schedule-event sheet (make-instance 'execute-command-event
+                                         :sheet sheet
+                                         :frame frame
+                                         :command command)
+                    delay)))
+
 (defmethod command-enabled (command-name (frame standard-application-frame))
   (and (command-accessible-in-command-table-p command-name
                                               (frame-command-table frame))
