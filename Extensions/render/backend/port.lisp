@@ -7,7 +7,7 @@
    (mirror->%image :initform (make-hash-table))))
 
 (defun mirror->%image (port mirror)
-  (gethash mirror (slot-value port 'mirror->%image)))
+  (gethash mirror (slot-value port 'mirror->%image) mirror))
 
 (defun (setf mirror->%image) (%image port mirror)
   (check-type %image (or null image-mirror-mixin))
