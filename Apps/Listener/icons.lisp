@@ -45,7 +45,7 @@
   (or (gethash filename *icon-cache*)
       (setf (gethash filename *icon-cache*)
             (make-pattern-from-bitmap-file
-             (merge-pathnames (parse-namestring filename)
+             (merge-pathnames filename
                               *icon-path*)
              :format :xpm))))
 
@@ -70,7 +70,8 @@
                               (cl-fad:list-directory
                                (cl-fad:pathname-directory-pathname *icon-path*)))))
     (dolist (pn pathnames)
-      (standard-icon (namestring (make-pathname :name (pathname-name pn)
+      (standard-icon (namestring (make-pathname :host (pathname-host pn)
+                                                :name (pathname-name pn)
                                                 :type (pathname-type pn)))))))
 
 (eval-when (:load-toplevel :execute)

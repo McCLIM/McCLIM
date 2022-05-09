@@ -25,6 +25,7 @@ experimentation. Present features include:
                (:file "util")
                (:file "icons")
                (:file "file-types")
+               #+(or) ; ASDF commands seems slightly broken
                (:file "asdf")
                (:file "dev-commands")
                (:file "wholine")
