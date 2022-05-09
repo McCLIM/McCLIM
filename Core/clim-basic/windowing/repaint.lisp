@@ -44,47 +44,33 @@
        (letf (((medium-clipping-region medium) region))
          (call-next-method))))))
 
+;;; NOTE the native region may be smaller than the sheet region.
+;;; NOTE see #1280 to learn why SHEET-NATIVE-REGION* is introduced.
+;;; FIXME caching.
+(defgeneric sheet-native-region* (sheet)
+  (:method ((sheet mirrored-sheet-mixin))
+    (sheet-region sheet))
+  (:method ((sheet basic-sheet))
+    (region-intersection
+     (transform-region (sheet-native-transformation sheet) (sheet-region sheet))
+     (sheet-native-region* (sheet-parent sheet)))))
+
+(defun sheet-visible-region (sheet)
+  (if (sheet-direct-mirror sheet)
+      (sheet-native-region* sheet)
+      (untransform-region (sheet-native-transformation sheet)
+                          (sheet-native-region* sheet))))
+
 (defmethod repaint-sheet ((sheet basic-sheet) region)
-  (labels ((effective-native-region (msheet child region)
-             (let ((intersection (region-intersection (sheet-region child) region)))
-               (if (eq msheet child)
-                   (transform-region (%%sheet-native-transformation msheet) intersection)
-                   (effective-native-region msheet
-                                            (sheet-parent child)
-                                            (transform-region (sheet-transformation child)
-                                                              intersection))))))
-    ;; This causes applications which want to do a double-buffered repaint,
-    ;; such as the logic cube, to flicker. On the other hand, it also stops
-    ;; things such as the listener wholine from overexposing their text.
-    (let ((msheet (sheet-mirrored-ancestor sheet)))
-      ;; Do not call bounding-rectangle on region here. For +nowhere+ it gives
-      ;; 0:0 0:0 (disregarding the native region). -- jd 2019-03-23
-      (if (eql msheet sheet)
-          (handle-repaint sheet (region-intersection (sheet-region sheet) region))
-          (handle-repaint sheet (untransform-region
-                                 (sheet-native-transformation sheet)
-                                 (effective-native-region msheet sheet region)))))))
-
-(defmethod repaint-sheet :after ((sheet sheet-parent-mixin) region)
-  ;; propagate repaint to unmirrored sheets
-  (labels ((propagate-repaint-1 (sheet region)
-             (dolist (child (sheet-children sheet))
-               (when (and (sheet-enabled-p child)
-                          (not (sheet-direct-mirror child)))
-                 (let ((child-region (region-intersection
-                                      (untransform-region
-                                       (sheet-transformation child)
-                                       region)
-                                      (sheet-region child))))
-                   (unless (eq child-region +nowhere+)
-                     (handle-repaint child child-region)
-                     (propagate-repaint-1 child child-region)))))))
-    (propagate-repaint-1 sheet region)))
-
-(defmethod repaint-sheet :after ((sheet sheet-with-medium-mixin) region)
-  (declare (ignore region))
-  ;; FIXME: Shouldn't McCLIM always do this?
-  (medium-finish-output sheet))
+  (let* ((visible (sheet-visible-region sheet))
+         (clipped (region-intersection visible region)))
+    (handle-repaint sheet clipped)
+    (loop for child in (sheet-children sheet)
+          for transformation = (sheet-transformation child)
+          for child-region = (untransform-region transformation region)
+          do (repaint-sheet child child-region))
+    (when (typep sheet 'sheet-with-medium-mixin)
+      (medium-finish-output sheet))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -144,9 +130,9 @@
                                     (sheet-native-transformation sheet)
                                     region)))))
 
-(defmethod handle-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (declare (ignore region))
-  nil)
+(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
+  (declare (ignore sheet region))
+  (values))
 
 (defclass clim-repainting-mixin
     (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
@@ -165,28 +151,14 @@
 ;; never repaint the background (only for speed)
 (defclass never-repaint-background-mixin () ())
 
-;;; XXX: check if we can reintroduce with-double-buffering..
 (defmethod handle-repaint :before ((sheet always-repaint-background-mixin) region)
-  #+jd-test(sleep 0.1)                  ; we repaint whole thing around four times!
   (when (typep sheet 'never-repaint-background-mixin)
     (return-from handle-repaint))
-  (labels ((effective-repaint-region (mirrored-sheet sheet region)
-             (if (eq mirrored-sheet sheet)
-                 (region-intersection (sheet-region mirrored-sheet) region)
-                 (effective-repaint-region mirrored-sheet
-                                           (sheet-parent sheet)
-                                           (transform-region (sheet-transformation sheet)
-                                                             (region-intersection region
-                                                                                  (sheet-region sheet)))))))
-    (let* ((parent (sheet-mirrored-ancestor sheet))
-           (native-sheet-region (effective-repaint-region parent sheet region)))
-      (with-sheet-medium (medium parent)
-        (letf (((medium-clipping-region medium) native-sheet-region)
-               ((medium-background medium) (pane-background sheet))
-               ((medium-transformation medium) +identity-transformation+))
-          (with-bounding-rectangle* (left top right bottom)
-              native-sheet-region
-            (medium-clear-area medium left top right bottom)))))))
+  (with-sheet-medium (medium sheet)
+    (with-bounding-rectangle* (x1 y1 x2 y2)
+        (region-intersection region (sheet-visible-region sheet))
+      (letf (((medium-background medium) (pane-background sheet)))
+        (medium-clear-area medium x1 y1 x2 y2)))))
 
 ;;; Integration with region and transformation changes
 
