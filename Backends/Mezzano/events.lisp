@@ -59,7 +59,7 @@
          (modifier-state (compute-modifier-state (mos:key-modifier-state event)))
          (mez-window     (mos:window event))
          (pointer        (port-pointer port))
-         (sheet          (port-lookup-sheet port mez-window)))
+         (sheet          (port-window-sheet port mez-window)))
     (when sheet
       (make-instance (if releasep 'key-release-event 'key-press-event)
                      :sheet (or (frame-properties (pane-frame sheet) 'focus)
@@ -106,7 +106,7 @@
 
 (defun pointer-motion-event (port sheet event)
   (declare (ignore event))
-  (pointer-event port sheet 'pointer-motion-event))
+  (pointer-event port sheet 'pointer-motion-event :button 0))
 
 (defun pointer-button-event (port sheet event)
   (let ((buttons (compute-mouse-buttons (mos:mouse-button-state event)))
@@ -174,8 +174,8 @@
          (mez-window (mos:window event))
          (mouse-x    (mos:mouse-x-position event))
          (mouse-y    (mos:mouse-y-position event))
-         (mez-mirror (port-lookup-mirror port mez-window))
-         (sheet      (port-lookup-sheet port mez-window))
+         (mez-mirror (port-window-mirror port mez-window))
+         (sheet      (port-window-sheet port mez-window))
          (config-event nil))
     (when mez-mirror
       (with-slots (mez-frame dx dy width height) mez-mirror
@@ -204,8 +204,8 @@
 
 (defmethod mez-event->mcclim-event (port (event mezzano.gui.compositor:window-create-event))
   (let* ((mez-window (mos:window event))
-         (mez-mirror (port-lookup-mirror port mez-window))
-         (sheet (port-lookup-sheet port mez-window)))
+         (mez-mirror (port-window-mirror port mez-window))
+         (sheet (port-window-sheet port mez-window)))
     (when mez-mirror
       ;; FIXME: Figure out what exactly is going on here. Two events seem to be needed to
       ;; get frames to actually do their initial paint properly.
@@ -250,9 +250,9 @@
 
 (defmethod mez-event->mcclim-event (port (event mos:window-activation-event))
   (let* ((mez-window (mos:window event))
-         (mez-mirror (port-lookup-mirror port mez-window))
+         (mez-mirror (port-window-mirror port mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (port-lookup-sheet port mez-window)))
+         (sheet (port-window-sheet port mez-window)))
     (when mez-frame
       (setf (mos:activep mez-frame) (mos:state event))
       (mos:draw-frame mez-frame)
@@ -262,7 +262,7 @@
 
 (defmethod mez-event->mcclim-event (port (event mos:quit-event))
   (let* ((mez-window (mos:window event))
-         (sheet (port-lookup-sheet port mez-window)))
+         (sheet (port-window-sheet port mez-window)))
     (when sheet
       (make-instance 'window-manager-delete-event
                      :sheet sheet))))
@@ -277,7 +277,7 @@
 
 (defmethod mez-event->mcclim-event (port (event mos:resize-request-event))
   (let* ((mez-window (mos:window event))
-         (mez-mirror (port-lookup-mirror port mez-window))
+         (mez-mirror (port-window-mirror port mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (fwidth (max *minimum-width* (mos:width event)))
          (fheight (max *minimum-height* (mos:height event))))
@@ -301,9 +301,9 @@
 
 (defmethod mez-event->mcclim-event (port (event mos:resize-event))
   (let* ((mez-window (mos:window event))
-         (mez-mirror (port-lookup-mirror port mez-window))
+         (mez-mirror (port-window-mirror port mez-window))
          (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
-         (sheet (port-lookup-sheet port mez-window)))
+         (sheet (port-window-sheet port mez-window)))
     (when mez-frame
       (list
        (generate-window-configuration-event sheet mez-window mez-frame)

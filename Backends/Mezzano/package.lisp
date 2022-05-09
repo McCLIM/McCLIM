@@ -3,26 +3,17 @@
 (defpackage #:clim-mezzano
     (:use #:clim-lisp #:clim #:clim-backend #:mcclim-render-extensions)
   (:import-from #:climi
-                #:port-lookup-mirror
-                #:port-register-mirror
                 #:port-event-process
                 #:port-grafts
                 #:%%sheet-native-transformation
                 #:%%set-sheet-native-transformation
                 ;;
                 #:get-environment-variable
-                #:pixmap-sheet
-                #:port-lookup-sheet
-                #:port-unregister-mirror
-                #:port-pointer-sheet
-                #:pixmap-mirror
-                #:with-double-buffering
                 #:with-transformed-position
                 #:with-transformed-positions
                 #:with-medium-options
                 ;;
                 #:border-pane
-                #:pixmap
                 #:top-level-sheet-pane
                 #:unmanaged-top-level-sheet-pane
                 #:menu-frame
@@ -33,28 +24,14 @@
                 #:draw-image
                 #:coordinate=
                 #:get-transformation
-                ;;
-                ; #:invoke-with-special-choices
                 #:medium-miter-limit
                 ;; classes:
-                #:mirrored-pixmap
                 #:window-destroy-event
                 ; #:pointer-ungrab-event
                 ; #:pointer-motion-hint-event
                 #:device-font-text-style
                 ;;
                 #:make-medium)
-
-  (:import-from #:mcclim-render-internals
-                #:%create-mirror-image
-                #:render-medium-mixin
-                #:render-port-mixin
-                #:image-mirror-image
-                #:image-sheet-mixin
-                #:image-pixmap-mixin
-                #:image-pixmap-mixin
-                #:image-mirror-mixin)
-
   (:import-from #:clim-internals
                 #:standard-port))
 
@@ -71,7 +48,6 @@
         #:mezzano.gui.compositor
         #:mezzano.gui.widgets
         #:mezzano.sync)
-
   ;; from mezzano.gui
   (:export #:rectangle
            #:make-rectangle
@@ -108,7 +84,6 @@
            #:surface-width
            #:surface-height
            #:surface-pixel)
-
   ;; from mezzano.gui.compositor
   (:export #:window
            #:window-buffer
@@ -156,7 +131,6 @@
            #:force-redisplay
            #:window-x
            #:window-y)
-
   ;; from mezzano.gui.widgets
   (:export #:default-damage-function
            #:default-cursor-function
@@ -177,19 +151,16 @@
            #:in-frame-header-p
            #:in-frame-border-p
            #:set-cursor-function)
-
   ;; select exports from mezzano.supervisor
   (:export #:make-thread
-
+           ;;
            #:debug-print-line
-
            #:panic
-
+           ;; framebuffer
            #:current-framebuffer
            #:framebuffer-blit
            #:framebuffer-width
            #:framebuffer-height)
-
   ;; select exports from mezzano.sync
   (:export #:mailbox
            #:make-mailbox

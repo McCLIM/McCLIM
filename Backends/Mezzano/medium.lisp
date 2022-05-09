@@ -30,7 +30,7 @@
 
 ;;; MEZZANO-MEDIUM class
 
-(defclass mezzano-medium (render-medium-mixin basic-medium)
+(defclass mezzano-medium (mcclim-render-internals::render-medium-mixin basic-medium)
   ())
 
 (defmethod text-style-fixed-width-p (text-style (medium mezzano-medium))

@@ -19,25 +19,7 @@
 
 (defconstant +dots-per-inch+ 96)
 
-(defclass mezzano-graft (graft)
-  ((%width :initarg :width
-           :type (real (0))
-           :accessor %graft-width)
-   (%height :initarg :height
-            :type (real (0))
-            :accessor %graft-height)))
-
-(defmethod sheet-direct-mirror ((sheet mezzano-graft))
-  (port-lookup-mirror (port sheet) sheet))
-
-(defmethod (setf sheet-direct-mirror) (mirror (sheet mezzano-graft))
-  (port-register-mirror (port sheet) sheet mirror))
-
-(defmethod initialize-instance :after ((graft mezzano-graft) &rest args)
-  (declare (ignore args))
-  (let ((framebuffer (mos:current-framebuffer)))
-    (setf (%graft-width graft) (mos:framebuffer-width framebuffer)
-          (%graft-height graft) (mos:framebuffer-height framebuffer))))
+(defclass mezzano-graft (permanent-medium-sheet-output-mixin graft) ())
 
 (flet ((convert (value units)
          (ecase units
@@ -47,7 +29,7 @@
            (:screen-sized 1))))
 
   (defmethod graft-width ((graft mezzano-graft) &key (units :device))
-    (convert (%graft-width graft) units))
+    (convert (bounding-rectangle-width (sheet-region graft)) units))
 
   (defmethod graft-height ((graft mezzano-graft) &key (units :device))
-    (convert (%graft-height graft) units)))
+    (convert (bounding-rectangle-height (sheet-region graft)) units)))

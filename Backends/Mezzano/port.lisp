@@ -27,7 +27,7 @@
   (let ((port (port pointer)))
     (with-port-lock (port)
       (make-instance 'pointer-motion-event
-                     :sheet (port-pointer-sheet port)
+                     :sheet (pointer-sheet pointer)
                      :pointer pointer
                      :graft-x (pointer-x pointer)
                      :graft-y (pointer-y pointer)
@@ -47,7 +47,7 @@
 ;; events are sent to the appropriate sheet using distribute-event
 ;;
 
-(defclass mezzano-port (render-port-mixin
+(defclass mezzano-port (mcclim-render-internals::render-port-mixin
                         ; standard-event-port-mixin
                         standard-port)
   ((pointer            :reader   port-pointer)
@@ -59,14 +59,6 @@
    (mez-window->mirror :initform (make-hash-table :test #'eq))
    (mez-fifo           :reader   mezzano-mez-fifo)
    (lock               :reader   mezzano-port-lock)))
-
-(defmethod port-lookup-sheet ((port mezzano-port) (mez-window mos:window))
-  (with-port-lock (port)
-    (gethash mez-window (slot-value port 'mez-window->sheet))))
-
-(defmethod port-lookup-mirror ((port mezzano-port) (mez-window mos:window))
-  (with-port-lock (port)
-    (gethash mez-window (slot-value port 'mez-window->mirror))))
 
 (defun parse-mezzano-server-path (path)
   (list :mezzano :host       :mezzano
@@ -121,6 +113,14 @@
   ;; destroy the associated frame-manager
   (bt:destroy-thread (mezzano-event-thread port)))
 
+(defun port-window-sheet (port mez-window)
+  (with-port-lock (port)
+    (gethash mez-window (slot-value port 'mez-window->sheet))))
+
+(defun port-window-mirror (port mez-window)
+  (with-port-lock (port)
+    (gethash mez-window (slot-value port 'mez-window->mirror))))
+
 (defmethod port-enable-sheet ((port mezzano-port) (mirror mirrored-sheet-mixin))
   )
 
@@ -133,62 +133,43 @@
 
 (defun create-mezzano-mirror (port sheet title width height top-border
                               &key (close-button-p t) (resizablep t))
-  ;; Assumes left, right and bottom borders are 1, which is the
-  ;; default when creating a frame
-  (let ((mirror-region (climi::%sheet-mirror-region sheet)))
-    (when mirror-region
-      (setf width (round-coordinate (bounding-rectangle-width mirror-region))
-            height (round-coordinate (bounding-rectangle-height mirror-region)))))
-  (setf width (max 5 width))
-  (setf height (max 5 height))
-  (let* ((fwidth (+ width 2))
-         (fheight (+ height 1 top-border))
-         (mirror (make-instance 'mezzano-mirror))
-         (fifo (mezzano-mez-fifo port))
-         (mirror-transformation (climi::%sheet-mirror-transformation sheet))
-         (window (mos:make-window fifo fwidth fheight))
-         (surface (mos:window-buffer window))
-         (frame (make-instance 'mos:frame
-                               :top top-border
-                               :framebuffer surface
-                               :title title
-                               :close-button-p close-button-p
-                               :resizablep resizablep
-                               :damage-function (mos:default-damage-function window)
-                               :set-cursor-function (mos:default-cursor-function window))))
-    (setf (slot-value mirror 'mcclim-render-internals::dirty-region) nil
-          (slot-value mirror 'fwidth) fwidth
-          (slot-value mirror 'fheight) fheight
-          (slot-value mirror 'dx) 1
-          (slot-value mirror 'dy) top-border
-          (slot-value mirror 'width) width
-          (slot-value mirror 'height) height
-          (slot-value mirror 'mez-pixels) (mos:surface-pixels surface)
-          (slot-value mirror 'mez-window) window
-          (slot-value mirror 'mez-frame) frame)
-    (when mirror-transformation
-      (multiple-value-bind (x y)
-          (transform-position mirror-transformation 0 0)
-        (unless (and (zerop x) (zerop y))
-          (mos:move-window window
-                           (round-coordinate x)
-                           (round-coordinate y)))))
-    (port-register-mirror port sheet mirror)
-    (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
-          (gethash window (slot-value port 'mez-window->mirror)) mirror)
-    mirror))
+  (with-bounding-rectangle* (x y :width w :height h) sheet
+    (setf x (max 0 (round-coordinate x))
+          y (max 0 (round-coordinate y))
+          w (max 5 (round-coordinate w))
+          h (max 5 (round-coordinate h)))
+    (let* ((fwidth (+ width 2))
+           (fheight (+ height 1 top-border))
+           (mirror (make-instance 'mezzano-mirror))
+           (fifo (mezzano-mez-fifo port))
+           (window (mos:make-window fifo fwidth fheight))
+           (surface (mos:window-buffer window))
+           (frame (make-instance 'mos:frame
+                                 :top top-border
+                                 :framebuffer surface
+                                 :title title
+                                 :close-button-p close-button-p
+                                 :resizablep resizablep
+                                 :damage-function (mos:default-damage-function window)
+                                 :set-cursor-function (mos:default-cursor-function window))))
+      (setf (slot-value mirror 'mcclim-render-internals::dirty-region) nil
+            (slot-value mirror 'fwidth) fwidth
+            (slot-value mirror 'fheight) fheight
+            (slot-value mirror 'dx) 1
+            (slot-value mirror 'dy) top-border
+            (slot-value mirror 'width) width
+            (slot-value mirror 'height) height
+            (slot-value mirror 'mez-pixels) (mos:surface-pixels surface)
+            (slot-value mirror 'mez-window) window
+            (slot-value mirror 'mez-frame) frame)
+      (unless (and (zerop x) (zerop y))
+        (mos:move-window window x y))
+      (setf (gethash window (slot-value port 'mez-window->sheet)) sheet
+            (gethash window (slot-value port 'mez-window->mirror)) mirror)
+      mirror)))
 
 (defmethod realize-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
-  (%realize-mirror port sheet)
-  (port-lookup-mirror port sheet))
-
-(defmethod realize-mirror ((port mezzano-port) (pixmap pixmap))
-  )
-
-(defmethod %realize-mirror ((port mezzano-port) (sheet basic-sheet))
-  (debug-format "%realize-mirror ((port mezzano-port) (sheet basic-sheet))")
-  (debug-format "    ~S ~S" port sheet)
-  (break))
+  (%realize-mirror port sheet))
 
 (defmethod %realize-mirror ((port mezzano-port) (sheet top-level-sheet-pane))
   (with-port-lock (port)
@@ -211,21 +192,22 @@
 
 (defmethod make-medium ((port mezzano-port) sheet)
   (make-instance 'mezzano-medium
-                 ;; :port port
+                 :port port
                  ;; :graft (find-graft :port port)
                  :sheet sheet))
 
 (defmethod make-graft ((port mezzano-port) &key (orientation :default) (units :device))
   (with-port-lock (port)
-    (let ((graft (make-instance 'mezzano-graft
-                                :port port
-                                :mirror (mezzano-port-window port)
-                                :orientation orientation
-                                :units units)))
-      (climi::%%set-sheet-region
-       (make-bounding-rectangle 0 0 (graft-width graft) (graft-height graft))
-       graft)
-      graft)))
+    (let* ((framebuffer (mos:current-framebuffer))
+           (w (mos:framebuffer-width framebuffer))
+           (h (mos:framebuffer-height framebuffer))
+           (region (make-bounding-rectangle 0 0 w h)))
+      (make-instance 'mezzano-graft
+                     :port port
+                     :region region
+                     :mirror (mezzano-port-window port)
+                     :orientation orientation
+                     :units units))))
 
 (defmethod graft ((port mezzano-port))
   (with-port-lock (port)
@@ -233,11 +215,10 @@
 
 (defmethod port-force-output ((port mezzano-port))
   (with-port-lock (port)
-    (maphash (lambda (sheet mirror)
-               (when (typep sheet 'mezzano-mirrored-sheet-mixin)
-                 (mcclim-render-internals::%mirror-force-output mirror)
-                 (image-mirror-to-mezzano mirror)))
-             (slot-value port 'climi::sheet->mirror))))
+    (maphash (lambda (window mirror)
+               (mcclim-render-internals::%mirror-force-output mirror)
+               (image-mirror-to-mezzano mirror))
+             (slot-value port 'mez-window->mirror))))
 
 ;; TODO: Implement WAIT-FUNCTION.
 (defmethod process-next-event ((port mezzano-port) &key wait-function (timeout nil))
@@ -270,12 +251,15 @@
                                 (mcclim-events))))))))))
     (let ((event (pop-event)))
       (cond (event
-             ;; Not sure if this is correct. SYNTHESIZE-BOUNDARY-EVENTS
-             ;; seems to maintain PORT-POINTER-SHEET except when it is NIL, in
-             ;; which case it doesn't do anything and breaks all mouse input!
-             (when (and (typep event 'pointer-event)
-                        (not (port-pointer-sheet port)))
-               (setf (port-pointer-sheet port) (event-sheet event)))
+             ;; Not sure if this is correct. SYNTHESIZE-BOUNDARY-EVENTS seems to
+             ;; maintain POINTER-SHEET except when it is NIL, in which case it
+             ;; doesn't do anything and breaks all mouse input!
+             ;;
+             ;; -- is this still correct? --jd
+             (let ((pointer (port-pointer port)))
+               (when (and (typep event 'pointer-event)
+                          (not (pointer-sheet pointer)))
+                 (setf (pointer-sheet pointer) (event-sheet event))))
              (distribute-event port event)
              t)
             (t
@@ -283,28 +267,14 @@
 
 ;;; Pixmap
 
-(defmethod destroy-mirror ((port mezzano-port) (pixmap mcclim-render-internals:image-pixmap-mixin))
-  (when (port-lookup-mirror port pixmap)
-    (port-unregister-mirror port pixmap (port-lookup-mirror port pixmap))))
-
-(defmethod realize-mirror ((port mezzano-port) (pixmap image-pixmap-mixin))
-  (let ((mirror (make-instance 'image-mirror-mixin)))
-    (port-register-mirror port pixmap mirror)
-    (mcclim-render-internals::%make-image mirror pixmap)))
+(defclass mezzano-pixmap (image-pixmap-mixin permanent-medium-sheet-output-mixin)
+  ())
 
 (defmethod port-allocate-pixmap ((port mezzano-port) sheet width height)
-  (let ((pixmap (make-instance 'mezzano-pixmap
-			       :sheet sheet
-			       :width width
-			       :height height
-			       :port port)))
-    (when (sheet-grafted-p sheet)
-      (realize-mirror port pixmap))
-    pixmap))
+  (make-instance 'mezzano-pixmap :sheet sheet :width width :height height :port port))
 
 (defmethod port-deallocate-pixmap ((port mezzano-port) pixmap)
-  (when (port-lookup-mirror port pixmap)
-    (destroy-mirror port pixmap)))
+  (declare (ignore port pixmap)))
 
 (defmethod set-sheet-pointer-cursor
     ((port mezzano-port) (sheet mirrored-sheet-mixin) cursor)
