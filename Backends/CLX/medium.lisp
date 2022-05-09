@@ -435,7 +435,7 @@ translated, so they begin at different position than [0,0])."))
     pm))
 
 (defmethod design-gcontext ((medium clx-medium) (ink clime:pattern))
-  (with-bounding-rectangle* (x y width height) ink
+  (with-bounding-rectangle* (x y :width width :height height) ink
     (let* ((source-ink (clime:transformed-design-design ink))
            (drawable (clx-drawable medium))
            (rgba-pattern (climi::%collapse-pattern ink x y width height))
