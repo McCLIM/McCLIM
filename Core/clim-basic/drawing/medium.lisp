@@ -168,7 +168,7 @@
          :accessor port)
    (drawable :initform nil
              :accessor %medium-drawable)
-   (buffering-p :initform t
+   (buffering-p :initform nil
                 :accessor medium-buffering-output-p))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
@@ -348,18 +348,26 @@
 ;;; Misc ops
 
 (defmethod invoke-with-output-buffered
-    ((sheet sheet) continuation &optional (buffered-p t))
-  (with-sheet-medium (medium sheet)
-    (invoke-with-output-buffered medium continuation buffered-p)))
-
-(defmethod invoke-with-output-buffered
     ((medium basic-medium) continuation &optional (buffered-p t))
   (unwind-protect
        (letf (((medium-buffering-output-p medium) buffered-p))
          (unless buffered-p
            (medium-force-output medium))
          (funcall continuation))
-    (medium-force-output medium)))
+    (unless (medium-buffering-output-p medium)
+      (medium-force-output medium))))
+
+;;; Trampoline.
+(defmethod invoke-with-output-buffered
+    ((sheet sheet-with-medium-mixin) continuation &optional (buffered-p t))
+  (with-sheet-medium (medium sheet)
+    (invoke-with-output-buffered medium continuation buffered-p)))
+
+;;; Default method.
+(defmethod invoke-with-output-buffered
+    (sheet continuation &optional (buffered-p t))
+  (declare (ignore buffered-p))
+  (funcall continuation))
 
 
 ;;; Pixmaps
