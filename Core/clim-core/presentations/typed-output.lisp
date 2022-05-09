@@ -40,11 +40,10 @@
                    (,continuation)))
                (,continuation)))))))
 
-;;; XXX The spec calls out that the presentation generic function has
-;;; keyword arguments acceptably and for-context-type, but the
-;;; examples I've seen don't mention them at all in the methods
-;;; defined for present.  So, leave them out of the generic function
-;;; lambda list...
+;;; XXX The spec calls out that the presentation generic function has keyword
+;;; arguments ACCEPTABLY and FOR-CONTEXT-TYPE, but the examples I've seen don't
+;;; mention them at all in the methods defined for present.  So, leave them out
+;;; of the generic function lambda list...
 (define-presentation-generic-function %present present
   (type-key parameters options object type stream view
    &key &allow-other-keys))

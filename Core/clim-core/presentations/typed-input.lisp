@@ -130,9 +130,13 @@
           nil))))
 
 
+
+;;; XXX The spec calls out that the presentation generic function has keyword
+;;; arguments DEFAULT and DEFAULT-TYPE, but for some methods they are not used.
+;;; So, leave them out of the generic function lambda list, like we do in the
+;;; generic function %PRESENT. -- jd 2022-05-09
 (define-presentation-generic-function %accept accept
-  (type-key parameters options type stream view
-   &key default default-type &allow-other-keys))
+  (type-key parameters options type stream view &key &allow-other-keys))
 
 (define-presentation-generic-function %accept-present-default
   accept-present-default
