@@ -1,4 +1,4 @@
-(in-package :clim-mezzano)
+(in-package #:clim-mezzano)
 
 (defvar *debug-format-control* nil)
 (defvar *debug-format-messages* NIL)

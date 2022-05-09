@@ -1,4 +1,4 @@
-(in-package :clim-mezzano)
+(in-package #:clim-mezzano)
 
 ;; minimum mezzano frame size for resize events
 (defparameter *minimum-width* 100)
@@ -83,10 +83,7 @@
     (,(byte 1 1) . ,+pointer-right-button+)
     (,(byte 1 2) . ,+pointer-middle-button+)
     (,(byte 1 3) . ,+pointer-wheel-up+)
-    (,(byte 1 4) . ,+pointer-wheel-down+)
-    ;; (,(byte 1 ???) . ,+pointer-wheel-left+)
-    ;; (,(byte 1 ???) . , +pointer-wheel-right+)
-    ))
+    (,(byte 1 4) . ,+pointer-wheel-down+)))
 
 (defun compute-mouse-buttons (buttons)
   (let ((result 0))
@@ -131,8 +128,8 @@
     (make-instance 'climi::pointer-scroll-event
                    :pointer 0
                    :delta-y (case change
-			      (8   2)
-			      (16 -2))
+                              (8   2)
+                              (16 -2))
                    :x *last-mouse-x*
                    :y *last-mouse-y*
                    :graft-x *last-graft-x*
@@ -191,22 +188,22 @@
                     (or (mos:in-frame-header-p mez-frame mouse-x mouse-y)
                         (mos:in-frame-border-p mez-frame mouse-x mouse-y)))
                (or (frame-mouse-event sheet mez-frame event)
-		   (when (plusp (mos:mouse-button-change event))
-		     (make-instance 'window-configuration-event
-				    :sheet sheet
-				    :region nil
-				    :width (mos:width mez-window)
-				    :height (mos:height mez-window)
-				    :x (mos:window-x mez-window)
-				    :y (mos:window-y mez-window)))))
+                   (when (plusp (mos:mouse-button-change event))
+                     (make-instance 'window-configuration-event
+                                    :sheet sheet
+                                    :region nil
+                                    :width (mos:width mez-window)
+                                    :height (mos:height mez-window)
+                                    :x (mos:window-x mez-window)
+                                    :y (mos:window-y mez-window)))))
 
               ((= (mos:mouse-button-change event) 0)
                (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
                         :default)
                (pointer-motion-event sheet event))
 
-	      ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(8 16))
-	       (pointer-scroll-event sheet event))
+              ((member (compute-mouse-buttons (mos:mouse-button-change event)) '(8 16))
+               (pointer-scroll-event sheet event))
 
               (t
                (pointer-button-event sheet event)))))))
