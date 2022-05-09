@@ -16,11 +16,15 @@
 ;;; port-specific implementation to list "system" fonts.
 (defparameter *truetype-font-path*
   (find-if #'probe-file
+           #+mezzano
+           '(#p"LOCAL:>Fonts>")
+           #-mezzano
            '(#p"/usr/share/fonts/truetype/ttf-dejavu/"
              #p"/usr/share/fonts/truetype/dejavu/"
              #p"/usr/share/fonts/dejavu/"
              #p"/usr/share/fonts/truetype/"
              #p"/usr/share/fonts/TTF/"
+             #p"/usr/share/fonts/dejavu/"
              #p"/usr/share/fonts/"
              #p"/usr/local/share/fonts/dejavu/"
              #p"/usr/X11R6/lib/X11/fonts/TTF/"
@@ -95,6 +99,37 @@
                         :force-shell t :ignore-error-status t)
     (declare (ignore errors))
     (if (not (zerop code))
-        (warn "~&fc-match failed with code ~D.~%" code)
-        (with-input-from-string (stream output)
-          (parse-fontconfig-output stream)))))
+	(warn "~&fc-match failed with code ~D.~%" code)
+	(with-input-from-string (stream output)
+	  (parse-fontconfig-output stream)))))
+
+(defun fontconfig-name (family face)
+  (format nil "~A:~A" family face))
+
+(defun build-font/family-map (&optional (families *family-names*))
+  (loop for family in families nconcing
+    (loop for face in *fontconfig-faces*
+          as filename = (find-fontconfig-font (fontconfig-name (cdr family) (cdr face)))
+          when (null filename) do (return-from build-font/family-map nil)
+          collect
+          (cons (list (car family) (car face)) filename))))
+
+
+;;; configure fonts
+
+(defun autoconfigure-fonts ()
+  (invoke-with-truetype-path-restart
+   (lambda ()
+     (check-type *truetype-font-path* pathname)
+     (if-let ((map (or (support-map-p (default-font/family-map))
+                       (support-map-p (build-font/family-map)))))
+       (setf *families/faces* map)
+       (warn-about-unset-font-path)))))
+
+(defun support-map-p (font-map)
+  (handler-case
+      (when (every #'(lambda (font)
+                       (zpb-ttf:with-font-loader (ignored (cdr font)) t))
+                   font-map)
+        font-map)
+    (zpb-ttf::bad-magic () nil)))

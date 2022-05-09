@@ -70,6 +70,7 @@ interface management system."
                "mcclim-clx"                                          #| truetype clx backend |#
                (:feature :mcclim-ffi-freetype "mcclim-clx/freetype") #| adds freetype        |#
                "mcclim-clx-fb"                                       #| experimental backend |#
+               (:feature :mezzano "mcclim-mezzano")                  #| Mezzano (a LISP OS)  |#
                ;; null backend
                "mcclim-null"))
 

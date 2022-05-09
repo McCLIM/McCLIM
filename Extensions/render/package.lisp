@@ -48,7 +48,25 @@
                 #:ensure-gethash)
   (:import-from #:clim-internals
                 #:standard-color
-                #:standard-flipping-ink)
+                #:named-color
+                #:standard-flipping-ink
+                #:%transparent-ink
+                #:standard-opacity
+                #:opacity-value
+                #:pattern
+                #:indexed-pattern
+                #:rectangular-tile
+                #:rectangular-tile-design
+                #:transformed-design
+                #:transformed-design-design
+                #:transformed-design-transformation
+                #:in-compositum
+                #:out-compositum
+                #:over-compositum
+                #:compositum-ink
+                #:compositum-mask
+                #:compositum-foreground
+                #:compositum-background)
   (:import-from #:clim-backend
                 #:port-set-mirror-geometry
                 #:medium-native-transformation

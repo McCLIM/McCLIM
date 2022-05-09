@@ -25,7 +25,8 @@
 ;;;   default.  Put it after CLX, so that it won't actually be
 ;;;   reached.
 (defvar *server-path-search-order*
-  '(#.(cond ((member :mcclim-ffi-freetype *features*) :clx-ff)
+  '(:mezzano
+    #.(cond ((member :mcclim-ffi-freetype *features*) :clx-ff)
             ((member :mcclim-clx-fb       *features*) :clx-fb)
             ((member :mcclim-ugly         *features*) :clx)
             (t :clx-ttf))

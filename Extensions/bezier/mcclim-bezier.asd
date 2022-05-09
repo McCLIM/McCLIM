@@ -16,8 +16,7 @@
 
 (defsystem "mcclim-bezier"
   :description "Support for various bezier curves in McCLIM."
-  :depends-on ("mcclim-bezier/core"
-               "mcclim-bezier/clx"))
+  :depends-on ("mcclim-bezier/core"))
 
 (defsystem "mcclim-bezier/core"
   :description "core bezier routines"
