@@ -182,40 +182,41 @@
          (mouse-y    (mezzano.gui.compositor::mouse-y-position event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
          (sheet      (port-lookup-sheet *port* mez-window)))
-    (with-slots (mez-frame dx dy width height) mez-mirror
-      (cond ((or (null mez-frame)
-                 (mezzano.gui.widgets::in-frame-header-p mez-frame mouse-x mouse-y)
-                 (mezzano.gui.widgets::in-frame-border-p mez-frame mouse-x mouse-y))
-                 ;; (<= mouse-x dx) (>= mouse-x width)
-                 ;; (<= mouse-y dy) (>= mouse-y height))
-             (setf *last-mouse-x* mouse-x
-                   *last-mouse-y* mouse-y)
-             (when *last-mouse-sheet*
-               (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
-               (setf *last-mouse-sheet* nil))
-             (frame-mouse-event mcclim-fifo sheet mez-frame event))
-
-            ((= (mezzano.gui.compositor::mouse-button-change event) 0)
-             (setf *last-mouse-x* (- mouse-x dx)
-                   *last-mouse-y* (- mouse-y dy))
-             (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
-                      :default)
-             (cond ((eq sheet *last-mouse-sheet*)
-                    (pointer-motion-event mcclim-fifo sheet event))
-                   (T
-                    (when *last-mouse-sheet*
-                      (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
-                    (mouse-enter-event mcclim-fifo sheet event)
-                    (setf *last-mouse-sheet* sheet))))
-            (T
-             (setf *last-mouse-x* (- mouse-x dx)
-                   *last-mouse-y* (- mouse-y dy))
-             (unless (eq sheet *last-mouse-sheet*)
+    (when mez-mirror
+      (with-slots (mez-frame dx dy width height) mez-mirror
+        (cond ((or (null mez-frame)
+                   (mezzano.gui.widgets::in-frame-header-p mez-frame mouse-x mouse-y)
+                   (mezzano.gui.widgets::in-frame-border-p mez-frame mouse-x mouse-y))
+               ;; (<= mouse-x dx) (>= mouse-x width)
+               ;; (<= mouse-y dy) (>= mouse-y height))
+               (setf *last-mouse-x* mouse-x
+                     *last-mouse-y* mouse-y)
                (when *last-mouse-sheet*
-                 (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
-               (mouse-enter-event mcclim-fifo sheet event)
-               (setf *last-mouse-sheet* sheet))
-             (pointer-button-event mcclim-fifo sheet event))))))
+                 (mouse-exit-event mcclim-fifo *last-mouse-sheet* event)
+                 (setf *last-mouse-sheet* nil))
+               (frame-mouse-event mcclim-fifo sheet mez-frame event))
+
+              ((= (mezzano.gui.compositor::mouse-button-change event) 0)
+               (setf *last-mouse-x* (- mouse-x dx)
+                     *last-mouse-y* (- mouse-y dy))
+               (funcall (mezzano.gui.widgets::set-cursor-function mez-frame)
+                        :default)
+               (cond ((eq sheet *last-mouse-sheet*)
+                      (pointer-motion-event mcclim-fifo sheet event))
+                     (T
+                      (when *last-mouse-sheet*
+                        (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
+                      (mouse-enter-event mcclim-fifo sheet event)
+                      (setf *last-mouse-sheet* sheet))))
+              (T
+               (setf *last-mouse-x* (- mouse-x dx)
+                     *last-mouse-y* (- mouse-y dy))
+               (unless (eq sheet *last-mouse-sheet*)
+                 (when *last-mouse-sheet*
+                   (mouse-exit-event mcclim-fifo *last-mouse-sheet* event))
+                 (mouse-enter-event mcclim-fifo sheet event)
+                 (setf *last-mouse-sheet* sheet))
+               (pointer-button-event mcclim-fifo sheet event)))))))
 
 ;;;======================================================================
 ;;; Activation Events
@@ -234,7 +235,8 @@
 
     (when mez-frame
       (setf (mezzano.gui.widgets:activep mez-frame)
-            (mezzano.gui.compositor::state event)))
+            (mezzano.gui.compositor::state event))
+      (mezzano.gui.widgets:draw-frame mez-frame))
     (setf *current-focus* focus)))
 
 (defmethod mez-event->mcclim-event (mcclim-fifo (event quit-event))
@@ -257,14 +259,15 @@
 (defmethod mez-event->mcclim-event (mcclim-fifo (event resize-request-event))
   (let* ((mez-window (mezzano.gui.compositor::window event))
          (mez-mirror (port-lookup-mirror *port* mez-window))
-         (mez-frame (slot-value mez-mirror 'mez-frame))
+         (mez-frame (and mez-mirror (slot-value mez-mirror 'mez-frame)))
          (sheet (mez-window->sheet mez-window))
          (old-width (mezzano.gui.compositor:width mez-window))
          (old-height (mezzano.gui.compositor:height mez-window))
          (new-width (max *minimum-width* (mezzano.gui.compositor:width event)))
          (new-height (max *minimum-height* (mezzano.gui.compositor:height event))))
-    (when (or (not (eql old-width new-width))
-              (not (eql old-height new-height)))
+    (when (and mez-frame
+               (or (not (eql old-width new-width))
+                   (not (eql old-height new-height))))
       (let* ((surface (mezzano.gui:make-surface new-width new-height))
              (pixels (mezzano.gui::surface-pixels surface)))
         (mezzano.gui.widgets:resize-frame mez-frame surface)
