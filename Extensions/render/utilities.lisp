@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package :mcclim-render-internals)
 
 (defmacro do-regions (((src-j dest-j y1s y1d y2)
                        (src-i dest-i x1s x1d x2)
@@ -23,6 +23,45 @@ top-left. Useful when we iterate over the same array and mutate its state."
                 for ,dest-i fixnum from ,x2 downto ,x1d
                 do (progn ,@body)))))
 
+(defmacro do-region-pixels ((&rest clauses) &body body)
+  (let ((outer-clauses '())
+        (inner-clauses '()))
+    (flet ((do-clause (clause)
+             (climi::with-current-source-form (clause)
+               (destructuring-bind (width pixel-and-coordinates
+                                    &key (x1 0) x2 (x-step 1)
+                                         (y1 0) y2 (y-step 1))
+                   clause
+                 (destructuring-bind (index-var &optional (x-var (gensym "X"))
+                                                          (y-var (gensym "Y")))
+                     (alexandria:ensure-list pixel-and-coordinates)
+                   (alexandria:with-unique-names (width-var base)
+                     (when index-var
+                       (push `(with ,width-var :of-type (unsigned-byte 20) = ,width)
+                             outer-clauses))
+                     (push `(for ,y-var :of-type (or (eql -1) (unsigned-byte 20))
+                                 from ,y1
+                                 ,@(when y2 `(to ,y2))
+                                 by ,y-step)
+                           outer-clauses)
+                     (when index-var
+                       (push `(with ,base :of-type alexandria:array-index
+                                    = (* ,y-var ,width-var))
+                             inner-clauses))
+                     (push `(for ,x-var :of-type (or (eql -1) alexandria:array-index)
+                                 from ,x1
+                                 ,@(when x2 `(to ,x2))
+                                 by ,x-step)
+                           inner-clauses)
+                     (when index-var
+                       (push `(for ,index-var :of-type (or (eql -1) alexandria:array-index)
+                                   from (+ ,base ,x1) by ,x-step)
+                             inner-clauses))))))))
+      (map nil #'do-clause clauses)
+      `(loop ,@(reduce #'append (reverse outer-clauses))
+             do (loop ,@(reduce #'append (reverse inner-clauses))
+                      do (progn ,@body))))))
+
 (declaim (inline %check-coords))
 
 ;;; Returns T for valid arguments, NIL for malformed width/height and signals an
@@ -37,29 +76,33 @@ top-left. Useful when we iterate over the same array and mutate its state."
     (error "mcclim-render operation: some coordinates are out of image bounds:~@
              src array ~s, P1 ~s, P2 ~s,~@
              dst array ~s, P1 ~s, P2 ~s."
-           (reverse (array-dimensions src-array)) (cons sx sy) (cons (+ sx width) (+ sy height))
-           (reverse (array-dimensions dst-array)) (cons dx dy) (cons (+ dx width) (+ dy height))))
-  t)
+           (nreverse (array-dimensions src-array)) (cons sx sy) (cons (+ sx width) (+ sy height))
+           (nreverse (array-dimensions dst-array)) (cons dx dy) (cons (+ dx width) (+ dy height))))
+  T)
 
+;;;
 ;;; color functions
+;;;
 
-(defmacro let-rgba (((r g b &optional (a nil a-supplied-p)) rgba-integer)
-                    &body body)
-  (alexandria:once-only (rgba-integer)
-    `(let (,@(when a-supplied-p
-               `((,a (ldb (byte 8 24) ,rgba-integer))))
-           (,r (ldb (byte 8 16) ,rgba-integer))
-           (,g (ldb (byte 8  8) ,rgba-integer))
-           (,b (ldb (byte 8  0) ,rgba-integer)))
+(deftype octet ()
+  '(unsigned-byte 8))
+
+(defmacro let-rgba (((r g b a) elt) &body body)
+  (alexandria:once-only (elt)
+    `(let (,@(when a
+               `((,a (ldb (byte 8 24) ,elt))))
+           (,r (ldb (byte 8 16) ,elt))
+           (,g (ldb (byte 8 08) ,elt))
+           (,b (ldb (byte 8 00) ,elt)))
        ,@body)))
 
 (declaim (inline color-value->octet)
-         (ftype (function (color-value) octet) color-value->octet))
+         (ftype (function (real) octet) color-value->octet))
 (defun color-value->octet (v)
   (round (* 255 v)))
 
 (declaim (inline color-octet->value)
-         (ftype (function (octet) color-value) color-octet->value))
+         (ftype (function (octet) real) color-octet->value))
 (defun color-octet->value (o)
   (/ o 255))
 
@@ -68,50 +111,88 @@ top-left. Useful when we iterate over the same array and mutate its state."
 (defun color-octet-xor (d1 d2)
   (logxor d1 d2))
 
+(declaim (type (simple-array (integer -255 255) (#.(* 256 (+ 256 256)))) +octet-mult-table+))
+(defvar +octet-mult-table+
+    (loop :with result = '()
+          :for a :from 0 :to 255
+          :do (loop :for b :from -256 :to 255
+                    :do (push (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256)
+                              result))
+          :finally (return (coerce (reverse result)
+                                   `(simple-array (integer -255 255) (,(* 256 (+ 256 256))))))))
 (declaim (inline octet-mult)
-         (ftype (function (octet octet) octet) octet-mult))
+         (ftype (function (octet (integer -255 255)) (integer -255 255)) octet-mult))
 (defun octet-mult (a b)
-  (let ((temp (+ (* a b) #x80)))
-    (logand #xFF (ash (+ (ash temp -8) temp) -8))))
+  (declare (optimize speed))
+  #+no (truncate (* a (+ b (logxor #x1 (ldb (byte 1 8) b)))) 256)
+  (aref +octet-mult-table+ (+ (ash a 9) b 256)))
 
 ;;; blend functions
 
 (declaim (inline %lerp)
          (ftype (function (octet octet octet) octet) %lerp))
 (defun %lerp (p q a)
-  (logand #xFF (if (>= q p)
-                   (+ p (octet-mult a (- q p)))
-                   (- p (octet-mult a (- p q))))))
+  (declare (optimize speed))
+  (logand #xFF (+ p (octet-mult a (- q p)))))
 
 (declaim (inline %prelerp)
          (ftype (function (octet octet octet) octet) %prelerp))
 (defun %prelerp (p q a)
   (logand #xFF (- (+ p q) (octet-mult a p))))
 
+(declaim (type (simple-array (integer 0 65535) (#. (* 256 256))) +byte-blend-value-table+))
+(defvar +byte-blend-value-table+
+    (loop :with result = '()
+          :for value :from 0 :to 255
+          :do (loop :for gamma :from 0 :to 255
+                    :do (push (if (<= gamma 1)
+                                  (* 255 value)
+                                  (truncate (* 255 value) gamma))
+                              result))
+          :finally (return (coerce (reverse result)
+                                   `(simple-array (integer 0 65535) (,(* 256 256)))))))
+
 (declaim (inline %byte-blend-value)
          (ftype (function (octet octet octet octet) octet) %byte-blend-value))
 (defun %byte-blend-value (fg bg a.fg a.bg)
-  (let ((gamma (%prelerp a.fg a.bg a.bg)))
-    (when (= gamma 0)
-      (setf gamma 1))
-    (let ((value (%lerp (octet-mult bg a.bg) fg a.fg)))
-      (floor (* 255 value) gamma))))
+  (declare (optimize speed))
+  (let ((gamma (%prelerp a.fg a.bg a.bg))
+        (value (%lerp (octet-mult bg a.bg) fg a.fg)))
+    #+no (if (<= gamma 1) ; TODO values are not octets
+        (* 255 value)
+        (truncate (* 255 value) gamma))
+    (aref +byte-blend-value-table+ (+ (ash value 8) gamma))))
 
-(declaim (inline octet-blend-function)
-         (ftype (function (octet octet octet octet octet octet octet octet)
+(declaim (inline %byte-blend-value2)
+         (ftype (function (octet octet octet octet octet) octet) %byte-blend-value2))
+(defun %byte-blend-value2 (fg bg a.fg a.bg gamma)
+  (declare (optimize speed))
+  (let ((value (%lerp (octet-mult bg a.bg) fg a.fg)))
+    (if (<= gamma 1)			; TODO values are not octets
+        (* 255 value)
+        (truncate (* 255 value) gamma))
+    #+no (aref +byte-blend-value-table+ (+ (ash value 8) gamma))))
+
+(declaim (inline octet-blend-function octet-blend-function*)
+         (ftype (function #1=(octet octet octet octet octet octet octet octet)
                           (values octet octet octet octet))
-                octet-blend-function))
+                octet-blend-function)
+         (ftype (function #1# argb-pixel)
+                octet-blend-function*))
 (defun octet-blend-function (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
-  (values (%byte-blend-value r.fg r.bg a.fg a.bg)
-          (%byte-blend-value g.fg g.bg a.fg a.bg)
-          (%byte-blend-value b.fg b.bg a.fg a.bg)
-          (%prelerp a.fg a.bg a.bg)))
+  (let ((gamma (%prelerp a.fg a.bg a.bg)))
+    (values (%byte-blend-value2 r.fg r.bg a.fg a.bg gamma)
+            (%byte-blend-value2 g.fg g.bg a.fg a.bg gamma)
+            (%byte-blend-value2 b.fg b.bg a.fg a.bg gamma)
+            gamma)))
 
 (defun octet-blend-function* (r.fg g.fg b.fg a.fg r.bg g.bg b.bg a.bg)
-  (logior (ash (%prelerp a.fg a.bg a.bg)               24)
-          (ash (%byte-blend-value r.fg r.bg a.fg a.bg) 16)
-          (ash (%byte-blend-value g.fg g.bg a.fg a.bg)  8)
-          (ash (%byte-blend-value b.fg b.bg a.fg a.bg)  0)))
+  (declare (optimize speed))
+  (let ((gamma (%prelerp a.fg a.bg a.bg)))
+    (logior (ash gamma                                          24)
+            (ash (%byte-blend-value2 r.fg r.bg a.fg a.bg gamma) 16)
+            (ash (%byte-blend-value2 g.fg g.bg a.fg a.bg gamma) 8)
+            (ash (%byte-blend-value2 b.fg b.bg a.fg a.bg gamma) 0))))
 
 (declaim (inline octet-rgba-blend-function)
          (ftype (function (octet octet octet octet octet octet octet octet)
@@ -145,7 +226,7 @@ top-left. Useful when we iterate over the same array and mutate its state."
 
 (defgeneric color->octets (color)
   (:method ((color standard-color))
-    (multiple-value-bind (r g b) (color-rgb color)
+    (multiple-value-bind (r g b) (climi::color-rgb color)
       (values (color-value->octet r)
               (color-value->octet g)
               (color-value->octet b)))))
@@ -217,14 +298,13 @@ top-left. Useful when we iterate over the same array and mutate its state."
   gray)
 
 (declaim (inline %rgba->vals %vals->rgba))
-
 (defun %vals->rgba (r g b &optional (a #xff))
   (declare (type octet r g b a)
            (optimize (speed 3) (safety 0)))
   (logior (ash a 24) (ash r 16) (ash g 8) (ash b 0)))
 
 (defun %rgba->vals (rgba)
-  (declare (type argb-pixel rgba)
+  (declare (type (unsigned-byte 32) rgba)
            (optimize (speed 3) (safety 0)))
   (values (ldb (byte 8 16) rgba)
           (ldb (byte 8 08) rgba)

@@ -139,7 +139,7 @@
                                      stencil (stencil-dx 0) (stencil-dy 0)
                                      clip-region)
   "Blends DESIGN onto IMAGE with STENCIL and a CLIP-REGION."
-  (declare (optimize (speed 3))
+  (declare (optimize (speed 3) (safety 0) (debug 0))
            (type image-index x y width height)
            (type (signed-byte 33) stencil-dx stencil-dy))
   ;; Disregard CLIP-REGION if x,y,width,height is entirely contained.
@@ -152,26 +152,33 @@
                  (region-intersection clip-region region)
                (setf x (floor x1) y (floor y1) width (ceiling (- x2 x1)) height (ceiling (- y2 y1))
                      clip-region nil))))))
-  (let ((dst-array (climi::pattern-array image))
-        (stencil-array (and stencil (climi::pattern-array stencil)))
-        (x2 (+ x width -1))
-        (y2 (+ y height -1))
-        old-alpha alpha
-        old-ink ink (ink-rgba 0)
-        (static-ink-p t #+TODO (static-ink-p design))
-        mode
-        source-rgba source-r source-g source-b source-a)
+  (let* ((dst-array (climi::pattern-array image))
+         (dst-width (array-dimension dst-array 1))
+         (stencil-array (and stencil (climi::pattern-array stencil)))
+         (stencil-height (when stencil-array
+                           (array-dimension stencil-array 0)))
+         (stencil-width (when stencil-array
+                          (array-dimension stencil-array 1)))
+         (X2 (+ x width -1))
+         (y2 (+ y height -1))
+         old-alpha alpha
+         old-ink ink (ink-rgba 0)
+         (static-ink-p t #+TODO (static-ink-p design))
+         mode
+         source-rgba source-r source-g source-b source-a)
     (declare (type argb-pixel-array dst-array)
              (type argb-pixel       ink-rgba))
     (flet ((update-alpha (x y)
              ;; Set ALPHA according to STENCIL-ARRAY. Set to NIL
              ;; (transparent) if x,y is outside STENCIL-ARRAY or the
              ;; array element is #xff, indicating full transparency.
-             (locally (declare (type stencil-array stencil-array))
+             (locally (declare (type stencil-array stencil-array)
+                               (type fixnum stencil-width stencil-height))
                (let ((stencil-x (+ stencil-dx x))
                      (stencil-y (+ stencil-dy y)))
                  (setf alpha
-                       (if (array-in-bounds-p stencil-array stencil-y stencil-x)
+                       (if (and (<= 0 stencil-y stencil-height)
+                                (<= 0 stencil-x stencil-width))
                            (let ((value (aref stencil-array stencil-y stencil-x)))
                              (if (= #xff value)
                                  nil
@@ -228,34 +235,34 @@
                                         :copy)
                                        (t
                                         :blend))))))))
-      (do-regions ((src-j j y y y2)
-                   (src-i i x x x2))
+      (do-region-pixels ((dst-width (di  dx dy) :x1 x :x2 x2 :y1 y :y2 y2)
+                         (nil       (nil sx sy) :x1 x        :y1 y))
         (when (or (null clip-region)
-                  (region-contains-position-p clip-region src-i src-j))
+                  (region-contains-position-p clip-region sx sy))
           (when stencil-array
-            (update-alpha i j))
-          (update-ink i j)
+            (update-alpha sx sy))
+          (update-ink sx sy)
           (setf old-alpha alpha
                 old-ink   ink)
 
           (case mode
             (:flipping
-             (setf (aref dst-array j i) (logxor source-rgba
-                                                (aref dst-array j i))))
+             (setf (row-major-aref dst-array di)
+                   (logxor source-rgba (row-major-aref dst-array di))))
             (:flipping/blend
-             (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
-               (setf (aref dst-array j i)
-                     (octet-blend-function*
-                      (color-octet-xor source-r r.bg)
-                      (color-octet-xor source-g b.bg)
-                      (color-octet-xor source-b g.bg)
-                      source-a
-                      r.bg g.bg b.bg a.bg))))
+             (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+                       (setf (row-major-aref dst-array di)
+                             (octet-blend-function*
+                              (color-octet-xor source-r r.bg)
+                              (color-octet-xor source-g b.bg)
+                              (color-octet-xor source-b g.bg)
+                              source-a
+                              r.bg g.bg b.bg a.bg))))
             (:copy
-             (setf (aref dst-array j i) source-rgba))
+             (setf (row-major-aref dst-array di) source-rgba))
             (:blend
-             (let-rgba ((r.bg g.bg b.bg a.bg) (aref dst-array j i))
-               (setf (aref dst-array j i)
+             (let-rgba ((r.bg g.bg b.bg a.bg) (row-major-aref dst-array di))
+               (setf (row-major-aref dst-array di)
                      (octet-blend-function*
                       source-r source-g source-b source-a
                       r.bg     g.bg     b.bg     a.bg)))))))))
