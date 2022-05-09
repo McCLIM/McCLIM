@@ -32,5 +32,4 @@
   ())
 
 (defmethod text-style-fixed-width-p (text-style (medium mezzano-medium))
-  (debug-format "text-style ~S" (text-style-family text-style))
   (eql (text-style-family text-style) :fixed))

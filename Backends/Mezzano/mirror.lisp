@@ -51,30 +51,30 @@
   (when mez-window
     ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
     ;;               mez-window dx dy width height)
-    (mos:damage-window
-     mez-window
-     dx
-     dy
-     width
-     height)
-    ;; (map-over-region-set-regions
-    ;;  #'(lambda (region)
-    ;;      (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
-    ;;          (region-intersection region (make-rectangle* 0 0 width height))
-    ;;        (let ((width (round (- max-x min-x)))
-    ;;              (height (round (- max-y min-y))))
-    ;;          ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
-    ;;          ;;               mez-window
-    ;;          ;;               (max 0 (- width (min 0 (- min-x))))
-    ;;          ;;               (max 0 (- height (min 0 (- min-y))))
-    ;;          ;;               width height)
-    ;;          (mos:damage-window
-    ;;           mez-window
-    ;;           (+ dx (max 0 (- width (min 0 (- min-x)))))
-    ;;           (+ dy (max 0 (- height (min 0 (- min-y)))))
-    ;;           width
-    ;;           height))))
-    ;;  dirty-r)
+    ;; (mos:damage-window
+    ;;  mez-window
+    ;;  dx
+    ;;  dy
+    ;;  width
+    ;;  height)
+    (map-over-region-set-regions
+     #'(lambda (region)
+         (clim:with-bounding-rectangle* (min-x min-y max-x max-y)
+             (region-intersection region (make-rectangle* 0 0 width height))
+           (let ((width (round (- max-x min-x)))
+                 (height (round (- max-y min-y))))
+             ;; (debug-format "image-mirror-put ~S ~S ~S ~S ~S"
+             ;;               mez-window
+             ;;               (max 0 min-x)
+             ;;               (max 0 min-y)
+             ;;               width height)
+             (mos:damage-window
+              mez-window
+              (+ dx (round (max 0 min-x)))
+              (+ dy (round (max 0 min-y)))
+              width
+              height))))
+     dirty-r)
     ))
 
 (declaim (inline mez-pixels-data-set-pixel))
@@ -128,15 +128,8 @@
 (defmethod port-set-mirror-transformation
     ((port mezzano-port) (mirror mezzano-mirror) mirror-transformation)
   (unless (slot-value mirror 'top-levelp)
-    (let ((mez-window (slot-value mirror 'mez-window))
-          (mez-frame (slot-value mirror 'mez-frame)))
-      (multiple-value-bind (x y) (transform-position mirror-transformation 0 0)
-        ;; Don't know why this delay is required but without it menus
-        ;; are not displayed near the menu bar. 25 Mar. 2018 fittestbits
-        (sleep 0.001)
-        (setf (mos:window-x mez-window) (floor x)
-              (mos:window-y mez-window) (floor y))
-        (mos:draw-frame mez-frame)))))
+    (multiple-value-bind (x y) (transform-position mirror-transformation 0 0)
+      (mos:move-window (slot-value mirror 'mez-window) (floor x) (floor y)))))
 
 (defmethod destroy-mirror ((port mezzano-port) (sheet mirrored-sheet-mixin))
   (let ((mirror (sheet-mirror sheet)))
