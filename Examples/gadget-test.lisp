@@ -207,6 +207,8 @@
   (clime:schedule-event sheet (make-instance 'timer-event :sheet sheet) 0.1))
 
 (defmethod handle-event ((pane radar-pane) (event timer-event))
+  (unless (sheet-grafted-p pane)
+    (return-from handle-event))
   (with-slots (points) pane
     (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
       (let ((xf (- x2 x1))
@@ -239,5 +241,4 @@
                                  0 ry
                                  rx 0
                                  :ink +black+ :filled nil)))))))))
-  (when (sheet-grafted-p pane)
-    (clime:schedule-event pane (make-instance 'timer-event :sheet pane) 0.1)))
+  (clime:schedule-event pane (make-instance 'timer-event :sheet pane) 0.1))
