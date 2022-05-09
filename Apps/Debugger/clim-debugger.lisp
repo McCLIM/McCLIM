@@ -203,6 +203,7 @@
   (let ((pane (find-pane-named *application-frame* 'debugger-pane)))
     (setf #1=(active-frame pane) (max (1- #1#) 0))))
 
+#+(or) ; there's something really wonky with the way it reads the form
 (define-clim-debugger-command (com-eval :name "Eval in frame" :menu t
                                         :keystroke :eval)
     ((form 'clim:string))
