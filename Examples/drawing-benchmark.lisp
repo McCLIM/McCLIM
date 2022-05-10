@@ -16,6 +16,9 @@
                      (asdf:system-source-directory :clim-examples)))
    100 100))
 
+(defvar *transformed-glider*
+  (transform-region (make-rotation-transformation* (/ pi 4)) *glider*))
+
 (define-application-frame drawing-benchmark ()
   ()
   (:panes
@@ -38,7 +41,8 @@
       (make-pane 'toggle-button :label "red" :id +red+)
       (make-pane 'toggle-button :label "flipping ink" :id +flipping-ink+)
       (make-pane 'toggle-button :label "indirect" :id +foreground-ink+)
-      (make-pane 'toggle-button :label "pattern" :id *glider*))))
+      (make-pane 'toggle-button :label "pattern" :id *glider*)
+      (make-pane 'toggle-button :label "pattern*" :id *transformed-glider*))))
   (:layouts
    (default
     (vertically ()
