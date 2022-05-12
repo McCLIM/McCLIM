@@ -87,7 +87,7 @@
   (queue-repaint sheet event))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (when (sheet-mirror sheet)            ;only dispatch repaints, when the sheet has a mirror
+  (when (sheet-mirror sheet) ;only dispatch repaints, when the sheet has a mirror
     (queue-repaint sheet (make-instance 'window-repaint-event
                                         :sheet sheet
                                         :region (transform-region
@@ -161,47 +161,41 @@
         (medium-clear-area medium x1 y1 x2 y2)))))
 
 ;;; Integration with region and transformation changes
+(defparameter *skip-repaint-p* nil)
 
-(defmethod (setf sheet-region) :around (region (sheet basic-sheet))
+(defun dispatch-repaint-region (sheet old-region new-region)
+  (when (and (not *skip-repaint-p*)
+             (sheet-viewable-p sheet))
+    (dispatch-repaint sheet
+                      (if (or (region-equal new-region +everywhere+)
+                              (region-equal old-region +everywhere+))
+                          +everywhere+
+                          (region-union (rounded-bounding-rectangle new-region)
+                                        (rounded-bounding-rectangle old-region))))))
+
+(defmethod (setf sheet-region) :around (new-region (sheet basic-sheet))
   (let ((old-region (sheet-region sheet)))
-    (unless (region-equal region old-region)
-      (call-next-method)
-      (when (sheet-viewable-p sheet)
-        (let* ((tr (sheet-transformation sheet))
-               (r1 (rounded-bounding-rectangle (transform-region tr old-region)))
-               (r2 (rounded-bounding-rectangle (transform-region tr region))))
-          (unless (region-equal r1 r2)
-            (repaint-sheet (sheet-parent sheet)
-                           (region-union r1 r2))))))))
+    (unless (region-equal new-region old-region)
+      (let ((*skip-repaint-p* t))
+        (call-next-method))
+      (dispatch-repaint-region sheet old-region new-region)))
+  new-region)
 
-(defmethod (setf sheet-transformation) :around (transformation (sheet basic-sheet))
+(defmethod (setf sheet-transformation) :around (new-transformation (sheet basic-sheet))
   (let ((old-transformation (sheet-transformation sheet)))
-    (unless (transformation-equal transformation old-transformation)
-      (call-next-method)
-      (when (sheet-viewable-p sheet)
-        (let* ((region (sheet-region sheet))
-               (new-transformation (sheet-transformation sheet))
-               (new-region (transform-region new-transformation region))
-               (old-region (transform-region old-transformation region)))
-          (unless (region-equal new-region old-region)
-            (if (or (region-equal new-region +everywhere+)
-                    (region-equal old-region +everywhere+))
-                (repaint-sheet (sheet-parent sheet) +everywhere+)
-                (repaint-sheet (sheet-parent sheet)
-                               (region-union
-                                (rounded-bounding-rectangle new-region)
-                                (rounded-bounding-rectangle old-region))))))))))
+    (unless (transformation-equal new-transformation old-transformation)
+      (let ((*skip-repaint-p* t))
+        (call-next-method))
+      (let ((region (sheet-region sheet)))
+        (dispatch-repaint-region sheet region region))))
+  new-transformation)
 
-(defun %set-sheet-region-and-transformation (sheet region transformation)
+(defun %set-sheet-region-and-transformation (sheet new-region new-transformation)
   (let ((old-transformation (sheet-transformation sheet))
         (old-region (sheet-region sheet)))
-    (setf (sheet-region sheet) region
-          (sheet-transformation sheet) transformation)
-    (when (sheet-viewable-p sheet)
-      (let ((new-region (transform-region (sheet-transformation sheet)
-                                          (sheet-region sheet)))
-            (old-region (transform-region old-transformation old-region)))
-        (repaint-sheet (sheet-parent sheet)
-                       (region-union
-                        (rounded-bounding-rectangle new-region)
-                        (rounded-bounding-rectangle old-region)))))))
+    (unless (and (region-equal new-region old-region)
+                 (transformation-equal new-transformation old-transformation))
+      (let ((*skip-repaint-p* t))
+        (setf (sheet-region sheet) new-region
+              (sheet-transformation sheet) new-transformation))
+      (dispatch-repaint-region sheet old-region new-region))))
