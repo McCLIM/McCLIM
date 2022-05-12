@@ -244,7 +244,7 @@
                         :sheet sheet
                         :modifier-state modifier-state
                         :timestamp time)))
-      ((:exposure :display :graphics-exposure)
+      ((:exposure :graphics-exposure)
        ;; Notes:
        ;; . Do not compare count with 0 here, last rectangle in an
        ;;   :exposure event sequence does not cover the whole region.
@@ -253,11 +253,6 @@
        ;;   WINDOW-EVENT-REGION does it already. And rightfully so.
        ;;   (think about changing a sheet's native transformation).
        ;;--GB
-       ;;
-       ;; Mike says:
-       ;;   One of the lisps is bogusly sending a :display event instead of an
-       ;; :exposure event. I don't remember if it's CMUCL or SBCL. So the
-       ;; :display event should be left in.
        ;;
        (make-instance 'window-repaint-event
                       :timestamp time
