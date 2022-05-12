@@ -346,11 +346,6 @@
 
 
 ;;; Misc ops
-(defmacro with-output-buffered ((medium &optional (buffer-p t)) &body body)
-  (with-gensyms (cont)
-    `(flet ((,cont () ,@body))
-       (declare (dynamic-extent (function ,cont)))
-       (invoke-with-output-buffered ,medium (function ,cont) ,buffer-p))))
 
 (defmethod invoke-with-output-buffered
     ((sheet sheet) continuation &optional (buffered-p t))

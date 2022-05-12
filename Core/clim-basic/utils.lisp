@@ -334,17 +334,6 @@ sequence.  The iteration is then \"stepped\" by the specified number."
 (define-modify-macro orf (&rest args) or)
 (define-modify-macro clampf (min max) clamp)
 
-;;; Move this early so it can be used in presentations.lisp, which
-;;; comes before commands.lisp.
-
-(defmacro do-command-table-inheritance ((command-table-var command-table)
-                                        &body body)
-  `(apply-with-command-table-inheritance
-    #'(lambda (,command-table-var)
-        ,@body)
-    (find-command-table ,command-table)))
-
-
 (defun parse-method (description)
   (loop
      for (qualifier-or-ll . body) on description
