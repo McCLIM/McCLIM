@@ -24,9 +24,13 @@
    (clim:make-application-frame 'coordinate-swizzling)))
 
 (define-coordinate-swizzling-command (com-fill :name t) ()
-  (let ((pane (clim:find-pane-named clim:*application-frame* 'app)))
+  (let ((pane (clim:find-pane-named clim:*application-frame* 'app))
+        (time (get-universal-time)))
     (loop for i from 0 to 4400
-          do (format pane "~4,'0d~%" i))))
+          do (format pane "~4,'0d~%" i))
+    (setf time (- (get-universal-time) time))
+    (let ((output (make-broadcast-stream *standard-input* *debug-io*)))
+      (format output "Fill took ~Ds.~%" time))))
 
 (define-coordinate-swizzling-command (com-quit :name t) ()
   (clim:frame-exit clim:*application-frame*))
