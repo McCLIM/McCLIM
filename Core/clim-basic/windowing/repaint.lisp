@@ -64,13 +64,13 @@
 (defmethod repaint-sheet ((sheet basic-sheet) region)
   (let* ((visible (sheet-visible-region sheet))
          (clipped (region-intersection visible region)))
-    (handle-repaint sheet clipped)
-    (loop for child in (sheet-children sheet)
-          for transformation = (sheet-transformation child)
-          for child-region = (untransform-region transformation region)
-          do (repaint-sheet child child-region))
-    (when (typep sheet 'sheet-with-medium-mixin)
-      (medium-finish-output sheet))))
+    (unless (region-equal clipped +nowhere+)
+      (with-output-buffered (sheet)
+        (handle-repaint sheet clipped)
+        (loop for child in (sheet-children sheet)
+              for transformation = (sheet-transformation child)
+              for child-region = (untransform-region transformation region)
+              do (repaint-sheet child child-region))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

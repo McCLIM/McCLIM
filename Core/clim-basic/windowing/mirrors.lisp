@@ -82,6 +82,15 @@
 ;;;     this case we just blittered pixels which were considered dirty into
 ;;;     R_2. Redrawing R_1 now does not repair the defect, since R_2 now also
 ;;;     contains dirty pixels. => oops, redraw error.
+;;;
+;;;  XXX this is not true - we need to repaint the sheet always when its
+;;;  region changes (i.e due to a change to the transformation) - we need to
+;;;  redraw it even if the native transformation stays the same. On the other
+;;;  hand the native transformation never changes when the sheet region and
+;;;  the sheet transformation are constant. In other words - don't redraw,
+;;;  because the (SETF SHEET-TRANSFORMATION) :AROUND method already does that.
+;;;  -- jd 2022-05-12
+;;;
 ;;
 ;;;  b. Since the above above calculation took the parent's native
 ;;;     transformation into account, (and even the naively wanted mirror
