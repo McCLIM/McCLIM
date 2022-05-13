@@ -1004,9 +1004,9 @@
 
 (defclass spacing-pane (;;standard-space-requirement-options-mixin
                         single-child-composite-pane)
-  ((border-width :initarg :thickness
-                 :initform 1))
-  (:documentation "Never trust a random documentation string."))
+  ((border-width :initarg :thickness))
+  (:documentation "Never trust a random documentation string.")
+  (:default-initargs :thickness 1))
 
 (defmacro spacing ((&rest options) &body contents)
   `(make-pane 'spacing-pane ,@options :contents (list ,@contents)))
@@ -1055,9 +1055,9 @@
 
 (defclass border-pane (outlined-pane)
   ((border-width :initarg :border-width
-                 :initform 1
                  :reader border-pane-width))
-  (:documentation ""))
+  (:documentation "")
+  (:default-initargs :border-width 1))
 
 (defmacro bordering ((&rest options) &body contents)
   `(make-pane 'border-pane ,@options :contents (list ,@contents)))
@@ -1590,19 +1590,20 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 ;;; LABEL PANE
 
 (defclass label-pane (single-child-composite-pane)
-  ((label :type string
-          :initarg :label
-          :accessor clime:label-pane-label
-          :initform "")
-   (alignment :type (member :bottom :top)
-              :initform :top
-              :initarg :label-alignment
-              :reader label-pane-label-alignment)
-   (background :initform *3d-normal-color*))
+  ((label
+    :type string
+    :initarg :label
+    :accessor clime:label-pane-label)
+   (alignment
+    :type (member :bottom :top)
+    :initarg :label-alignment
+    :reader label-pane-label-alignment))
   (:default-initargs
+   :background *3d-normal-color*
    :align-y    :center
-   :text-style (make-text-style :sans-serif nil nil))
-  (:documentation ""))
+   :text-style (make-text-style :sans-serif nil nil)
+   :label-alignment :top
+   :label ""))
 
 (defmethod reinitialize-instance :after ((instance label-pane)
                                          &key (label nil label-supplied-p))
@@ -1698,8 +1699,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                       (:right (- text-width))
                       (:center (- (/ text-width 2)))))
           ;; Draw label.
-          (draw-rectangle* pane x1 text-pivot-y x2 (+ text-pivot-y text-height)
-                           :ink (pane-background pane))
           (draw-text* pane label text-pivot-x text-pivot-y
                       :align-x align-x :align-y :top)
           ;; Draw border around child without drawing over the label text.
