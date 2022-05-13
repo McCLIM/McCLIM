@@ -1199,8 +1199,8 @@
 ;;; The scroll-bar's min/max values match the min/max arguments to
 ;;; scroll-extent. The thumb-size is then calculated accordingly.
 
-(defparameter *scrollbar-thickness* 20)
-(defparameter *minimum-thumb-size* 36)
+(defparameter *scrollbar-thickness* 16)
+(defparameter *minimum-thumb-size* 24)
 
 (defvar clim-extensions:*default-vertical-scroll-bar-position*
   :right
