@@ -1125,8 +1125,21 @@ on `region' and call the default method, which will in turn call
   (:method ((pane drei-pane) (view drei-view) (region region))
     (display-drei pane)))
 
-(defmethod handle-repaint ((pane drei-pane) region)
-  (handle-redisplay pane (view pane) region))
+(defmethod handle-repaint ((drei-pane drei-pane) region)
+  (let ((frame (pane-frame drei-pane))
+        (view (view drei-pane)))
+    (with-accessors ((buffer buffer)) view
+      (when (typep view 'point-mark-view)
+        (when (full-redisplay-p view)
+          (fully-redisplay-pane drei-pane view)))
+      (setf (stream-cursor-position drei-pane) (values 0 0))
+      (display-drei-view-contents drei-pane view)
+      (if (adjust-pane drei-pane)
+          (display-drei-pane frame drei-pane)
+          ;; Point must be on top of all other cursors.
+          (dolist (cursor (cursors drei-pane)
+                          (fix-pane-viewport drei-pane (view drei-pane)))
+            (replay cursor drei-pane))))))
 
 (defmethod handle-redisplay ((pane drei-pane) (view drei-buffer-view) (region region))
   (invalidate-all-strokes (view pane) :cleared t)
