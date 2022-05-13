@@ -88,12 +88,15 @@
   (queue-repaint sheet event))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (when (sheet-mirror sheet) ;only dispatch repaints, when the sheet has a mirror
-    (queue-repaint sheet (make-instance 'window-repaint-event
-                                        :sheet sheet
-                                        :region (transform-region
-                                                 (sheet-native-transformation sheet)
-                                                 region)))))
+  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
+    ;; Only dispatch repaints, when the sheet has a mirror. Dispatch to the
+    ;; mirror sheet to ensure that translucent backgrounds render correctly.
+    ;; This also improves performance thanks to the better compression of the
+    ;; repaint events in the queue.
+    (let* ((reg (transform-region (sheet-native-transformation sheet)
+                                  (region-intersection (sheet-region sheet) region)))
+           (evt (make-instance 'window-repaint-event :sheet msheet :region reg)))
+      (queue-repaint msheet evt))))
 
 (defmethod handle-event ((sheet standard-repainting-mixin)
                          (event window-repaint-event))
