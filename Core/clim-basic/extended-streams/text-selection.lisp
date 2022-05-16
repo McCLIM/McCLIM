@@ -313,7 +313,7 @@
       (map nil
            (lambda (m)
              (with-slots (record styled-string start end) m
-               (with-standard-rectangle* (x1 x2 y1 y2) record
+               (with-standard-rectangle* (x1 y1 x2 y2) record
                    (cond ((and old-y2 (>= y1 old-y2))
                           (setf old-y2 nil
                                 old-x2 0 ;<-- ### we should use the minimum of all x1 coordinates.
