@@ -71,7 +71,8 @@
                                (cl-fad:pathname-directory-pathname *icon-path*)))))
     (dolist (pn pathnames)
       (standard-icon (namestring (make-pathname :name (pathname-name pn)
-                                                :type (pathname-type pn)))))))
+                                                :type (pathname-type pn)
+                                                :defaults *icon-path*))))))
 
 (eval-when (:load-toplevel :execute)
   (precache-icons))

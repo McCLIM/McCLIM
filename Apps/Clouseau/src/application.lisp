@@ -36,6 +36,7 @@
                (merge-pathnames
                 ,(make-pathname :name (pathname-name name)
                                 :type (pathname-type name)
+                                :host nil :device nil
                                 :directory '(:relative :up :up :up "data" "icons"))
                 #.(or *compile-file-pathname*
                       *load-pathname*)))))

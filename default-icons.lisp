@@ -6,7 +6,9 @@
                 (icon-pathname (merge-pathnames
                                 (make-pathname :directory '(:relative "data" "icons")
                                                :name name
-                                               :type "png")
+                                               :type "png"
+                                               :host nil
+                                               :device nil)
                                 file-pathname)))
            (make-pattern-from-bitmap-file icon-pathname :format :png))))
   (unless *default-icon-large*
