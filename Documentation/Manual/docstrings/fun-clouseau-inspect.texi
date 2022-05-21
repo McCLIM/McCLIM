@@ -1,5 +1,5 @@
 @anchor{Function clouseau:inspect}
-@deffn {Function} {@symbol{inspect,clouseau}} object &key new-process
+@deffn {Function} {@symbol{inspect,clouseau}} object &key new-process handle-errors
 Inspect @var{object} in a new inspector window.
 
 Return two values: 1) @var{object} 2) the created inspector application

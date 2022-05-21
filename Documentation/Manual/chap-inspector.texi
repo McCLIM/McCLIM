@@ -48,7 +48,7 @@ potentially after manually loading
 @file{mcclim/Apps/Clouseau/clouseau.asd}.
 
 @item
-Inspect an object with @cl{(@funref{clouseau:inspect} @var{object})} where
+Inspect an object with @cl{(@codefunref{clouseau:inspect} @var{object})} where
 @var{object} can be any Lisp object.  If you use a multithreaded Lisp
 implementation, you can also include the @cl{:new-process} keyword
 argument.  If it is true, then Clouseau is started in a separate thread,
@@ -474,7 +474,7 @@ do we take advantage of it?
 Let us start by taking a closer look at how the inspector presents
 inspected objects.  Each occurrence of an inspected object on the screen
 @footnote{There can be more than one occurrence.  For example,
-@emph{the} class @class{class} occurs twice in the following
+the class @class{class} occurs twice in the following
 @class{list}: @cl{(list (find-class 'class) (find-class 'class))}.} has
 an associated @emph{state} which in turn stores a presentation
 @emph{style} for the object.  The state and style control how an object
