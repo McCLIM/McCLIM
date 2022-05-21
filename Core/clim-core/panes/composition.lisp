@@ -299,8 +299,8 @@
                     (clamp height (sr-min-height pane) (sr-max-height pane)))))
 
 (defmethod note-sheet-region-changed :after ((pane top-level-sheet-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-    (allocate-space pane (- x2 x1) (- y2 y1))))
+  (with-bounding-rectangle* (:width w :height h) (sheet-region pane)
+    (allocate-space pane w h)))
 
 (defmethod handle-event ((sheet top-level-sheet-pane)
                          (event window-configuration-event))
