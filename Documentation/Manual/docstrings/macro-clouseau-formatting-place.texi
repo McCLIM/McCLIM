@@ -1,5 +1,5 @@
 @anchor{Macro clouseau:formatting-place}
-@deffn {Macro} {@symbol{formatting-place,clouseau}} (object place-class cell present-place present-object &key place-var) &body
+@deffn {Macro} {@symbol{formatting-place,clouseau}} (container place-class cell present-place present-object &key place-var) &body
 Execute @var{body} with @var{present-place} and @var{present-object}
 bound to print functions.
 
@@ -7,6 +7,16 @@ Before @var{body} is executed, an instance of @var{place-class}
 representing the child of @var{container} selected by @var{place-class}
 and @var{cell} is created and stored in the place associated with
 @var{container} unless such an instance already exists.
+
+@var{place-class} must be a symbol naming a class or a class object and
+is passed to @code{make-instance} to create the object which represents
+the place.
+
+@var{cell} indicates the cell within the place that is being
+formatted. For example, if @var{container} is a one-dimensional array
+and @var{place-class} designates (a subclass of)
+@code{array-element-place}, a suitable value for @var{cell} is any array
+index that is valid for @var{container}.
 
 @var{present-place} is bound to a function that, when called with a
 stream as its sole argument, outputs a presentation corresponding to the
@@ -30,12 +40,17 @@ This application of the macro
   (present-object stream))            ; Write value presentation
 @end lisp
 
-outputs the name of @code{symbol} as an immutable place to @code{stream}
-like this:
+outputs the name of the symbol @code{object} as an immutable place to
+@code{stream} like this:
 
 @example
 Symbol name → <value>
 ^ Label       ^ Value presentation
             ^ Place presentation
 @end example
+
+In the above example a place of type @code{clouseau:reader-place} is
+created and the cell for that place is the symbol
+@code{symbol-name}. For this combination, the value of the place is
+the result of evaluating @code{(symbol-value object)}.
 @end deffn

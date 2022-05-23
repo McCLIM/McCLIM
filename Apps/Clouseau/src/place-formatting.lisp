@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -14,10 +14,9 @@
 (defun ensure-place (container cell place-class)
   (let ((parent *parent-place*))
     (labels ((make-place ()
-               (make-instance place-class
-                              :parent    parent
-                              :container container
-                              :cell      cell)))
+               (make-instance place-class :parent    parent
+                                          :container container
+                                          :cell      cell)))
       (declare (dynamic-extent #'make-place))
       (ensure-child container cell place-class parent #'make-place))))
 
@@ -40,6 +39,15 @@ child of CONTAINER selected by PLACE-CLASS and CELL is created and
 stored in the place associated with CONTAINER unless such an instance
 already exists.
 
+PLACE-CLASS must be a symbol naming a class or a class object and is
+passed to `make-instance' to create the object which represents the
+place.
+
+CELL indicates the cell within the place that is being formatted. For
+example, if CONTAINER is a one-dimensional array and PLACE-CLASS
+designates (a subclass of) `array-element-place', a suitable value for
+CELL is any array index that is valid for CONTAINER.
+
 PRESENT-PLACE is bound to a function that, when called with a stream
 as its sole argument, outputs a presentation corresponding to the
 created place to the stream. The produced presentation will be of
@@ -59,7 +67,8 @@ This application of the macro
     (present-place stream)              ; Write place presentation
     (present-object stream))            ; Write value presentation
 
-outputs the name of SYMBOL as an immutable place to STREAM like this:
+outputs the name of the symbol OBJECT as an immutable place to STREAM
+like this:
 
   Symbol name → <value>
   ^ Label       ^ Value presentation
