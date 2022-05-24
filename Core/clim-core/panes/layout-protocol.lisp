@@ -269,60 +269,33 @@
 
 (defgeneric spacing-value-to-device-units (pane x))
 
-(defun merge-one-option
-    (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
-
-
-  ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
-  ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
-  ;;       While user space requirements has &key foo (min-foo foo) (max-foo foo).
-  ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
-  ;;       following route:
-  ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
-  ;;
-  ;; old code:
-  ;;
-  ;; ;; Then we resolve defaulting. sec 29.3.1 says:
-  ;; ;; | If either of the :max-width or :min-width options is not
-  ;; ;; | supplied, it defaults to the value of the :width option. If
-  ;; ;; | either of the :max-height or :min-height options is not
-  ;; ;; | supplied, it defaults to the value of the :height option.
-  ;; (setf user-max-foo  (or user-max-foo user-foo)
-  ;;       user-min-foo  (or user-min-foo user-foo))
-  ;;       --GB 2003-01-23
-
-  (when (and (null user-max-foo) (not (null user-foo)))
-    (setf user-max-foo (space-requirement-max-width
-                        (make-space-requirement
-                         :width (spacing-value-to-device-units pane foo)))))
-  (when (and (null user-min-foo) (not (null user-foo)))
-    (setf user-min-foo (space-requirement-min-width
-                        (make-space-requirement
-                         :width (spacing-value-to-device-units pane foo)))))
-
-  ;; when the user has no idea about the preferred size just take the
-  ;; panes preferred size.
-  (setf user-foo (or user-foo foo))
-  (setf user-foo (spacing-value-to-device-units pane user-foo))
-
-  ;; dito for min/max
-  (setf user-min-foo (or user-min-foo min-foo)
-        user-max-foo (or user-max-foo max-foo))
-
-  ;; | :max-width, :min-width, :max-height, and :min-height can
-  ;; | also be specified as a relative size by supplying a list of
-  ;; | the form (number :relative). In this case, the number
-  ;; | indicates the number of device units that the pane is
-  ;; | willing to stretch or shrink.
-  (labels ((resolve-relative (dimension sign base)
-             (if (and (consp dimension) (eq (car dimension) :relative))
-                 (+ base (* sign (cadr dimension)))
-                 (spacing-value-to-device-units pane dimension))))
-    (setf user-min-foo (and user-min-foo
-                            (resolve-relative user-min-foo  -1 user-foo))
-          user-max-foo (and user-max-foo
-                            (resolve-relative user-max-foo  +1 user-foo))))
-
+(defun merge-one-option (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
+  (macrolet ((frob (user-val pane-val null-val)
+               `(setf ,user-val
+                      (cond ((eq ,user-val :compute)
+                             (spacing-value-to-device-units pane ,pane-val))
+                            ((eq ,user-val nil)
+                             (spacing-value-to-device-units pane ,null-val))
+                            (t
+                             (spacing-value-to-device-units pane ,user-val))))))
+    (frob user-foo foo foo)
+    ;; MIN and MAX when NIL are defaulting to 0 and +FILL+ - this is for
+    ;; consistency with MAKE-SPACE-REQUIREMENT.
+    ;;
+    ;; When the value is (:RELATIVE NUMBER), then it indicates the mumber of
+    ;; device units that the pane is willing to stretch or shrink.
+    ;;
+    ;; -- jd 2022-05-24
+    (if (typep user-min-foo '(cons (eql :relative)))
+        (destructuring-bind (key val) user-min-foo
+          (assert (eq key :relative))
+          (setf user-min-foo (- user-foo val)))
+        (frob user-min-foo min-foo 0))
+    (if (typep user-max-foo '(cons (eql :relative)))
+        (destructuring-bind (key val) user-max-foo
+          (assert (eq key :relative))
+          (setf user-max-foo (+ user-foo val)))
+        (frob user-max-foo max-foo +fill+)))
   ;; Now we have two space requirements which need to be 'merged'.
   (setf min-foo (clamp user-min-foo min-foo max-foo)
         max-foo (clamp user-max-foo min-foo max-foo)
@@ -331,9 +304,9 @@
 
 (defun merge-user-specified-options (pane sr)
   (check-type pane space-requirement-options-mixin)
-  ;; ### I want proper error checking and in case there is an error we
-  ;;     should just emit a warning and move on. CLIM should not die from
-  ;;     garbage passed in here.
+  ;; I want proper error checking and in case there is an error we should just
+  ;; emit a warning and move on. CLIM should not die from garbage passed in
+  ;; here. -- gb 2003-03-14
   (multiple-value-bind (width min-width max-width height min-height max-height)
       (space-requirement-components sr)
     (multiple-value-bind (new-width new-min-width new-max-width)
