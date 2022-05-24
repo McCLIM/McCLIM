@@ -120,7 +120,22 @@
     (xlib:map-window
      (window (sheet-direct-mirror (slot-value frame 'top-level-sheet))))))
 
-(defgeneric tell-window-manager-about-space-requirements (pane))
+(defun tell-window-manager-about-space-requirements (pane)
+  (unless (typep pane 'top-level-sheet-pane)
+    (return-from tell-window-manager-about-space-requirements nil))
+  (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
+    (let ((q (compose-space pane :width w :height h)))
+      (let ((window (window (sheet-direct-mirror pane))))
+        (setf (xlib:wm-normal-hints window)
+              (xlib:make-wm-size-hints
+               :user-specified-position-p (and x y)
+               :x x :y y
+               :width  (round (space-requirement-width q))
+               :height (round (space-requirement-height q))
+               :max-width (min 65535 (round (space-requirement-max-width q)))
+               :max-height (min 65535 (round (space-requirement-max-height q)))
+               :min-width (round (space-requirement-min-width q))
+               :min-height (round (space-requirement-min-height q))))))))
 
 (defmethod adopt-frame :after
     ((fm clx-frame-manager) (frame standard-application-frame))
@@ -143,51 +158,13 @@
                 (xlib:drawable-y window) y))
         (tell-window-manager-about-space-requirements top-level-sheet))
       ;; Care for calling-frame, be careful not to trip on missing bits
-      (let* ((calling-frame (frame-calling-frame frame))
-             (tls (and calling-frame (frame-top-level-sheet calling-frame)))
-             (calling-mirror (and tls (sheet-mirror tls))))
-        (when calling-mirror
-          (setf (xlib:transient-for window) (window calling-mirror))))
+      (when-let* ((calling-frame (frame-calling-frame frame))
+                  (tls (frame-top-level-sheet calling-frame))
+                  (calling-mirror (sheet-mirror tls)))
+        (setf (xlib:transient-for window) (window calling-mirror)))
       ;;
       (when (sheet-enabled-p sheet)
         (xlib:map-window window)))))
 
-(defmethod tell-window-manager-about-space-requirements ((pane top-level-sheet-pane))
-  (multiple-value-bind (w h x y) (climi::frame-geometry* (pane-frame pane))
-    (declare (ignore w h))
-    (let ((q (compose-space pane)))
-      (let ((window (window (sheet-direct-mirror pane))))
-        (setf (xlib:wm-normal-hints window)
-              (xlib:make-wm-size-hints
-               :user-specified-position-p (and x y)
-               :x x :y y
-               :width  (round (space-requirement-width q))
-               :height (round (space-requirement-height q))
-               :max-width (min 65535 (round (space-requirement-max-width q)))
-               :max-height (min 65535 (round (space-requirement-max-height q)))
-               :min-width (round (space-requirement-min-width q))
-               :min-height (round (space-requirement-min-height q))))))))
-
-(defmethod tell-window-manager-about-space-requirements ((pane t))
-  ;; hmm
-  nil)
-
 (defmethod note-space-requirements-changed :after ((graft clx-graft) pane)
   (tell-window-manager-about-space-requirements pane))
-
-#+nil
-(defmethod (setf clim:sheet-transformation) :around (transformation (sheet clx-pane-mixin))
-  (log:info "transforming clx sheet: ~s" sheet)
-  (unless (transformation-equal transformation (sheet-transformation sheet))
-    (let ((old-transformation (sheet-transformation sheet)))
-      (let ((climi::*inhibit-dispatch-repaint* nil))
-        (call-next-method))
-      #+nil
-      (when (sheet-viewable-p sheet)
-        (let* ((sheet-region (sheet-region sheet))
-               (new-region (transform-region (sheet-transformation sheet) sheet-region))
-               (old-region (transform-region old-transformation sheet-region)))
-          (log:info "OLD: ~s    NEW: ~s" old-region new-region)
-          #+nil
-          (dispatch-repaint (sheet-parent sheet)
-                            (region-union new-region old-region)))))))
