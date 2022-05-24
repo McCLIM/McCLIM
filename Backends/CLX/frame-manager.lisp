@@ -142,12 +142,6 @@
           (setf (xlib:drawable-x window) x
                 (xlib:drawable-y window) y))
         (tell-window-manager-about-space-requirements top-level-sheet))
-      ;; :structure-notify events were not yet turned on, turn them
-      ;; on now, so that we get informed about the windows position
-      ;; (and possibly size), when the window gets maped.
-      (setf (xlib:window-event-mask window)
-            (logior (xlib:window-event-mask window)
-                    (xlib:make-event-mask :structure-notify)))
       ;; Care for calling-frame, be careful not to trip on missing bits
       (let* ((calling-frame (frame-calling-frame frame))
              (tls (and calling-frame (frame-top-level-sheet calling-frame)))

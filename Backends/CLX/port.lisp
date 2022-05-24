@@ -111,6 +111,22 @@
                 :host (xlib:display-host display)
                 :display-id (xlib:display-display display))))))
 
+(defvar *window-event-mask*
+  `(:exposure
+    :key-press :key-release
+    :button-press :button-release
+    :owner-grab-button
+    :enter-window :leave-window
+    :structure-notify
+    :pointer-motion :button-motion))
+
+(defvar *sheet-event-mask*
+  `(:exposure
+    :key-press :key-release
+    :button-press :button-release
+    :owner-grab-button
+    :enter-window :leave-window
+    :pointer-motion :button-motion))
 
 (defun realize-mirror-aux (port sheet
                            &key (width nil) (height nil) (x nil) (y nil)
@@ -118,14 +134,7 @@
                                 (map t)
                                 (backing-store :not-useful)
                                 (save-under :off)
-                                (event-mask `(:exposure
-                                              :key-press :key-release
-                                              :button-press :button-release
-                                              :owner-grab-button
-                                              :enter-window :leave-window
-                                              :structure-notify
-                                              :pointer-motion
-                                              :button-motion)))
+                                (event-mask *window-event-mask*))
   (assert (null (sheet-direct-mirror sheet)))
   (with-standard-rectangle* (mx my :width mw :height mh)
       (sheet-mirror-geometry sheet)
@@ -180,14 +189,16 @@
     (make-instance 'clx-mirror :window window)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
-  (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)))
+  (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)
+                                 :event-mask *sheet-event-mask*))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
   (let* ((window (realize-mirror-aux
                   port sheet
                   :map nil
                   :width (bounding-rectangle-width sheet)
-                  :height (bounding-rectangle-height sheet)))
+                  :height (bounding-rectangle-height sheet)
+                  :event-mask *window-event-mask*))
          (name (clime:sheet-name sheet))
          (instance-name (string-downcase name))
          (class-name (string-capitalize name))

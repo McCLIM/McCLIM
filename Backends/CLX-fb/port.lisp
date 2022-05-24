@@ -17,14 +17,6 @@
   (initialize-clx port)
   (clim-extensions:port-all-font-families port))
 
-(defparameter *event-mask* '(:exposure
-                             :key-press :key-release
-                             :button-press :button-release
-                             :owner-grab-button
-                             :enter-window :leave-window
-                             :structure-notify
-                             :pointer-motion :button-motion))
-
 (defmethod realize-mirror ((port clx-fb-port) (sheet mirrored-sheet-mixin))
   (let* ((window (clim-clx::%realize-mirror port sheet))
          (mirror (make-instance 'clx-fb-mirror :window window)))
@@ -48,15 +40,9 @@
     (alexandria:deletef (all-mirrors port) mirror)
     (xlib:destroy-window window)))
 
-(defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet basic-sheet))
-  (clim-clx::realize-mirror-aux port sheet
-                                :event-mask *event-mask*
-                                :map (sheet-enabled-p sheet)))
-
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet top-level-sheet-mixin))
   (let ((frame (pane-frame sheet))
         (window (clim-clx::realize-mirror-aux port sheet
-                                              :event-mask *event-mask*
                                               :map nil
                                               :width (bounding-rectangle-width sheet)
                                               :height (bounding-rectangle-height sheet))))
@@ -74,10 +60,7 @@
     window))
 
 (defmethod clim-clx::%realize-mirror ((port clx-fb-port) (sheet unmanaged-sheet-mixin))
-  (clim-clx::realize-mirror-aux port sheet
-                      :event-mask *event-mask*
-                      :override-redirect :on
-                      :map nil))
+  (clim-clx::realize-mirror-aux port sheet :override-redirect :on :map nil))
 
 (defmethod make-medium ((port clx-fb-port) sheet)
   (make-instance 'clx-fb-medium
