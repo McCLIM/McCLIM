@@ -421,10 +421,6 @@
   (declare (ignore pane force-p))
   nil)
 
-(defmacro with-possible-double-buffering ((frame pane) &body body)
-  (declare (ignore frame pane))
-  `(progn ,@body))
-
 (defmethod redisplay-frame-pane :around ((frame application-frame) pane
                                          &key force-p)
   (let ((pane-object (if (typep pane 'pane)
@@ -437,15 +433,16 @@
             (setq redisplayp (or redisplayp t)
                   clearp t))
           (when redisplayp
-            (when-let ((highlited (frame-highlited-presentation frame)))
-              (highlight-presentation-1 (car highlited)
-                                        (cdr highlited)
-                                        :unhighlight)
-              (setf (frame-highlited-presentation frame) nil))
-            (with-possible-double-buffering (frame pane-object)
-              (when clearp
-                (window-clear pane-object))
-              (call-next-method))
+            (changing-space-requirements ()
+              (with-output-buffered (pane-object)
+                (when-let ((highlited (frame-highlited-presentation frame)))
+                  (highlight-presentation-1 (car highlited)
+                                            (cdr highlited)
+                                            :unhighlight)
+                  (setf (frame-highlited-presentation frame) nil))
+                (when clearp
+                  (window-clear pane-object))
+                (call-next-method)))
             (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
               (setf (pane-needs-redisplay pane-object) nil))))
       (clear-pane-try-again ()
