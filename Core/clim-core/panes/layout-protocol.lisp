@@ -412,9 +412,8 @@
   "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
 
 (defvar *changed-space-requirements* nil
-  "A list of (frame pane resize-frame) tuples recording frames and their panes
-which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
-[This is expected to change]")
+  "A list of (FRAMES . PANES) tuples recording frames and panes which changed
+during the current execution of CHANGING-SPACE-REQUIREMENTS.")
 
 (defmethod change-space-requirements :before ((pane layout-protocol-mixin)
                                               &rest space-req-keys
@@ -459,49 +458,61 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 ;;; CHANGING-SPACE-REQUIREMENTS macro
 
 (defmacro changing-space-requirements ((&key resize-frame layout) &body body)
-  `(invoke-with-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
+  `(invoke-with-changing-space-requirements
+    (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
 
-(defun invoke-with-changing-space-requirements (continuation
-                                                &key resize-frame layout)
-  (cond (*changed-space-requirements*
-         ;; We are already within changing-space-requirements, so just
-         ;; call the body. This might however lead to surprising
-         ;; behavior in case the outer changing-space-requirements has
-         ;; resize-frame = NIL while the inner has resize-frame = T.
-         (funcall continuation))
-        (t
-         (let ((*changed-space-requirements* nil))
-           (let ((*changing-space-requirements* t))
-             (funcall continuation))
-           ;;
-           ;; Note: That 'resize-frame' and especially 'layout' are
-           ;; options to this strongly suggests that the authors of
-           ;; the clim specification may have meant that
-           ;; changing-space-requirements records space requirements
-           ;; of the *application-frame* only.
-           ;;
-           ;; We solve this by recording all frames but applying
-           ;; resize-frame and layout only to *application-frame*.
-           ;;
-           (dolist (q *changed-space-requirements*)
-             (destructuring-bind (frame pane resize-frame-2) q
-               (cond ((eq frame *application-frame*)
-                      (when layout
-                        (setf (frame-current-layout frame) layout))
-                      (cond (resize-frame
-                             (layout-frame frame))
-                            (t
-                             (if (frame-resize-frame frame)
-                                 (layout-frame frame)
-                                 (multiple-value-bind (width height)
-                                     (bounding-rectangle-size pane)
-                                   (layout-frame frame width height))))))
+;;; Invalidates space requirements up to the top-level sheet forcing them to
+;;; be recomputed when the frame is laid out.
+(defun invalidate-space-requirements (pane)
+  (loop for sheet = pane then (sheet-parent sheet)
+        while (panep sheet)
+        do (setf (pane-space-requirement sheet) nil)))
+
+(defmethod change-space-requirements :around
+    ((pane layout-protocol-mixin) &rest space-req-keys
+     &key resize-frame &allow-other-keys)
+  (declare (ignore space-req-keys))
+  (if *changing-space-requirements*
+      (let ((frame (pane-frame pane)))
+        ;; FIXME we should not eagerly invalidate all requirements when
+        ;; RESIZE-FRAME is NIL, but this requires some deeper changes to
+        ;; NOTE-SPACE-REQUIREMENTS-CHANGED, ALLOCATE-SPACE etc; so we retain
+        ;; the old behavior for now. -- jd 2022-05-27
+        (invalidate-space-requirements pane)
+        (if (or resize-frame (frame-resize-frame frame))
+            (pushnew frame (car *changed-space-requirements*))
+            (pushnew pane  (cdr *changed-space-requirements*))))
+      (call-next-method)))
+
+(defmethod note-space-requirements-changed :around (sheet pane)
+  (unless *changing-space-requirements*
+    (call-next-method)))
+
+(defun invoke-with-changing-space-requirements
+    (continuation &key resize-frame layout)
+  (when *changing-space-requirements*
+    (return-from invoke-with-changing-space-requirements
+      (funcall continuation)))
+  (let ((*changed-space-requirements* (cons nil nil)))
+    (multiple-value-prog1 (let ((*changing-space-requirements* t))
+                            (funcall continuation))
+      (let ((frames (car *changed-space-requirements*))
+            (panes (cdr *changed-space-requirements*)))
+        (loop for frame in frames do
+          (layout-frame frame))
+        (loop for pane in panes
+              for frame = (pane-frame pane)
+              unless (or (member frame frames)
+                         (some (lambda (p)
+                                 (and (not (eq p pane))
+                                      (sheet-ancestor-p pane p)))
+                               panes))
+                do (cond
+                     (resize-frame
+                      (layout-frame frame))
+                     (layout
+                      (with-bounding-rectangle* (:width width :height height)
+                          (frame-top-level-sheet frame)
+                        (layout-frame frame width height)))
                      (t
-                      (cond (resize-frame-2
-                             (layout-frame frame))
-                            (t
-                             (if (frame-resize-frame frame)
-                                 (layout-frame frame)
-                                 (multiple-value-bind (width height)
-                                     (bounding-rectangle-size pane)
-                                   (layout-frame frame width height)))))))))))))
+                      (note-space-requirements-changed (sheet-parent pane) pane))))))))

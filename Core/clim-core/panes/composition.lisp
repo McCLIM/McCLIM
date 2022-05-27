@@ -270,24 +270,12 @@
                                       &rest space-req-keys
                                       &key resize-frame &allow-other-keys)
   (declare (ignore space-req-keys))
-  (cond (*changing-space-requirements*
-         ;; Record changed space requirements.
-         ;; What happens if we change the requirements successively
-         ;; with different values? Only the first takes effect?
-         ;; -Hefner
-         (unless (find pane *changed-space-requirements* :key #'second)
-           (push (list (pane-frame pane) pane resize-frame)
-                 *changed-space-requirements*)))
-        (t
-         (let ((frame (pane-frame pane)))
-           (cond (resize-frame
-                  (layout-frame frame))
-                 (t
-                  (if (frame-resize-frame frame)
-                      (layout-frame frame)
-                      (multiple-value-bind (width height)
-                          (bounding-rectangle-size pane)
-                        (layout-frame frame width height)))))))))
+  (let ((frame (pane-frame pane)))
+    (if (or resize-frame (frame-resize-frame frame))
+        (layout-frame frame)
+        (multiple-value-bind (width height)
+            (bounding-rectangle-size pane)
+          (layout-frame frame width height)))))
 
 (defmethod allocate-space ((pane top-level-sheet-pane) width height)
   (unless (pane-space-requirement pane)
