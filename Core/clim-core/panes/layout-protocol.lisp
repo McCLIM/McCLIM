@@ -9,7 +9,7 @@
 ;;;  (c) copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
 ;;;  (c) copyright 2001-2002, 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;  (c) copyright 2002-2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2020-2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -175,20 +175,6 @@
 (deftype spacing-value ()
   ;; just for documentation
   `(satisfies spacing-value-p))
-
-;; Macros for quick access to space-requirement slots.
-(defmacro sr-width (pane)
-  `(space-requirement-width (pane-space-requirement ,pane)))
-(defmacro sr-height (pane)
-  `(space-requirement-height (pane-space-requirement ,pane)))
-(defmacro sr-max-width (pane)
-  `(space-requirement-max-width (pane-space-requirement ,pane)))
-(defmacro sr-max-height (pane)
-  `(space-requirement-max-height (pane-space-requirement ,pane)))
-(defmacro sr-min-width (pane)
-  `(space-requirement-min-width (pane-space-requirement ,pane)))
-(defmacro sr-min-height (pane)
-  `(space-requirement-min-height (pane-space-requirement ,pane)))
 
 
 ;;; User space requirements

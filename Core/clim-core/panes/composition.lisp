@@ -294,9 +294,14 @@
     (setf (pane-space-requirement pane)
           (compose-space pane)))
   (when-let ((child (sheet-child pane)))
-    (allocate-space child
-                    (clamp width  (sr-min-width pane)  (sr-max-width pane))
-                    (clamp height (sr-min-height pane) (sr-max-height pane)))))
+    (let ((req (pane-space-requirement pane)))
+      (allocate-space child
+                      (clamp width
+                             (space-requirement-min-width req)
+                             (space-requirement-max-width req))
+                      (clamp height
+                             (space-requirement-min-height req)
+                             (space-requirement-max-height req))))))
 
 (defmethod note-sheet-region-changed :after ((pane top-level-sheet-pane))
   (with-bounding-rectangle* (:width w :height h) (sheet-region pane)
@@ -358,7 +363,6 @@
   ;;
   ;; --GB 2003-03-16
   (declare (ignore space-req-keys resize-frame))
-
   (let* ((space-requirements (compose-space pane))
          (width (space-requirement-width space-requirements))
          (height (space-requirement-height space-requirements)))
@@ -963,29 +967,34 @@
   (declare (ignore width height))
   (mapc #'compose-space (sheet-children grid))
   (with-slots (array) grid
-    (loop with nb-children-pl = (array-dimension array 1) ;(table-pane-number grid)
-          with nb-children-pc = (array-dimension array 0) ;(/ (length (sheet-children grid)) nb-children-pl)
+    (loop with nb-children-pl = (array-dimension array 1)
+          with nb-children-pc = (array-dimension array 0)
           for child in (sheet-children grid)
-          and width = 0 then (max width (sr-width child))
-          and height = 0 then (max height (sr-height child))
-          and max-width = 5000000 then (max width (min max-width (sr-min-width child)))
-          and max-height = 5000000 then (max height (min max-height (sr-max-height child)))
-          and min-width = 0 then (max min-width (sr-min-width child))
-          and min-height = 0 then (max min-height (sr-min-height child))
-          finally (return
-                    (make-space-requirement
-                     :width (* width nb-children-pl)
-                     :height (* height nb-children-pc)
-                     :max-width (* width nb-children-pl)
-                     :max-height (* max-height nb-children-pc)
-                     :min-width (* min-width nb-children-pl)
-                     :min-height (* min-height nb-children-pc))))))
+          for req = (pane-space-requirement child)
+          maximizing (space-requirement-width      req) into width
+          maximizing (space-requirement-height     req) into height
+          maximizing (space-requirement-min-width  req) into min-width
+          maximizing (space-requirement-min-height req) into min-height
+          minimizing (space-requirement-max-width  req) into max-width
+          minimizing (space-requirement-max-height req) into max-height
+          finally (let ((max-width (max width max-width))
+                        (max-height (max height max-height)))
+                    (clampf width min-width max-width)
+                    (clampf height min-height max-height)
+                    (return
+                      (make-space-requirement
+                       :width      (* width      nb-children-pl)
+                       :height     (* height     nb-children-pc)
+                       :max-width  (* max-width  nb-children-pl)
+                       :max-height (* max-height nb-children-pc)
+                       :min-width  (* min-width  nb-children-pl)
+                       :min-height (* min-height nb-children-pc)))))))
 
 (defmethod allocate-space ((pane grid-pane) width height)
   (resize-sheet pane width height)
   (with-slots (array) pane
-    (loop with nb-kids-p-l = (array-dimension array 1) ;(table-pane-number pane)
-          with nb-kids-p-c = (array-dimension array 0) ;(/ (length (sheet-children pane)) nb-kids-p-l)
+    (loop with nb-kids-p-l = (array-dimension array 1)
+          with nb-kids-p-c = (array-dimension array 0)
           for c from nb-kids-p-c downto 1
           for row-index from 0 by 1
           for tmp-height = height then (decf tmp-height new-height)
@@ -1003,8 +1012,7 @@
 
 ;;; SPACING PANE
 
-(defclass spacing-pane (;;standard-space-requirement-options-mixin
-                        single-child-composite-pane)
+(defclass spacing-pane (single-child-composite-pane)
   ((border-width :initarg :thickness))
   (:documentation "Never trust a random documentation string.")
   (:default-initargs :thickness 1))
