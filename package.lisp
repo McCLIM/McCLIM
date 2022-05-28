@@ -2145,6 +2145,7 @@
                 #:clamp
                 #:make-keyword
                 #:ensure-gethash
+                #:emptyp
                 #:last-elt
                 #:with-gensyms
                 #:once-only
