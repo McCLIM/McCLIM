@@ -141,20 +141,20 @@ the available actions for the object currently under the pointer.
 @end indentedblock
 
 An expanded object is related to its children through ``places''.  For
-example, an instance has a place for each of its slots and a child
+example, a standard object has a place for each of its slots and a child
 object for each of its @emph{bound} slots.  Other examples of places
 include:
 
 @itemize
 @item
-Elements of lists (including "key" and "value" places in association
-lists)
+Elements of lists (including ``key'' and ``value'' places in association
+lists and property lists)
 
 @item
 Elements of arrays
 
 @item
-"Key" and "value" places in hash-tables
+``Key'' and ``value'' places in hash-tables
 
 @item
 Fill pointer and length of a vector
@@ -201,7 +201,8 @@ support this.  Here are some examples of places that do:
 
 @itemize
 @item
-If the place corresponds to an instance slot, the slot is made unbound.
+If the place corresponds to a slot in a standard object or structure
+object, the slot is made unbound.
 
 @item
 If the slot corresponds to the symbol function of a symbol, the symbol
@@ -254,10 +255,10 @@ button while the cursor is positioned over any part of the object that
 is not associated with a more specific command.
 
 Some types of objects provide additional display styles.  For example,
-the slots of instances can be displayed as a ``flat'' list or they can
-be grouped according to the superclass containing the direct slot.
-These additional display styles can be selected in the context menu of
-the object.
+the slots of standard object and structure objects can be displayed as a
+``flat'' list or they can be grouped according to the superclass
+containing the direct slot.  These additional display styles can be
+selected in the context menu of the object.
 
 @item Replacing the object tree
 
@@ -285,7 +286,7 @@ some handy features you might miss if you don't know to look for them:
 
 Standard objects have their slots shown, either grouped by superclass or
 as a ``flat'' list.  The @command{Change Class} command can be used to
-change the class of the inspected instance.
+change the class of the inspected object.
 
 @item Structures
 
