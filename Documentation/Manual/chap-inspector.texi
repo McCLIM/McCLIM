@@ -486,9 +486,9 @@ associated with other occurrences of the same object.
 The state characterizes the object and the class of the state can depend
 on the particular object.  State classes are generally subclasses of
 @class{clouseau:inspected-object}.  Objects are presented with
-@genfun{clim:present} using the state as the presentation type.  The
-class of the state therefore determines which commands are applicable to
-a given object.
+@genfun{clim:present} using the name of the class of the state as the
+presentation type.  The class of the state therefore determines which
+commands are applicable to a given object.
 
 The style indicates how the object or certain parts of the object should
 @emph{currently} be presented.  The style is stored in the state and can
