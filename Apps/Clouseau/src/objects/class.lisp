@@ -68,8 +68,22 @@
   (def subclass-list-place         c2mop:class-direct-subclasses)
   (def superclass-list-place       c2mop:class-direct-superclasses)
   (def class-precedence-list-place c2mop:class-precedence-list
-    :relation                 c2mop:class-direct-superclasses
-    :default-class-list-style list))
+       :relation                 c2mop:class-direct-superclasses
+       :default-class-list-style list))
+
+(defmethod valuep ((place class-precedence-list-place))
+  (c2mop:class-finalized-p (container place)))
+
+;;; `prototype-place'
+
+(defclass prototype-place (read-only-place)
+  ())
+
+(defmethod value ((place prototype-place))
+  (c2mop:class-prototype (container place)))
+
+(defmethod valuep ((place prototype-place))
+  (c2mop:class-finalized-p (container place)))
 
 
 ;;;; Object states
@@ -97,8 +111,11 @@
           (class-list-style (default-class-list-style place)))
   (setf (class-list-style instance) class-list-style))
 
-(defmethod object-state-class ((object cons)
-                               (place  class-list-place))
+;;; See comment about two methods for `package-nicknames-place'.
+(defmethod object-state-class ((object null) (place class-list-place))
+  'inspected-class-list)
+
+(defmethod object-state-class ((object cons) (place class-list-place))
   'inspected-class-list)
 
 ;;; `inspected-class'
@@ -303,12 +320,11 @@
                               :label "Superclasses")
           (format-place-cells stream object 'subclass-list-place nil
                               :label "Subclasses"))
-        (when finalizedp ; TODO else display placeholders
-          (formatting-row (stream)
-            (format-place-cells stream object 'class-precedence-list-place nil
-                                :label "Precedence List")
-            (format-place-cells stream object 'reader-place 'c2mop:class-prototype
-                                :label "Prototype")))))
+        (formatting-row (stream)
+          (format-place-cells stream object 'class-precedence-list-place nil
+                              :label "Precedence List")
+          (format-place-cells stream object 'prototype-place nil
+                              :label "Prototype"))))
 
     (print-documentation object stream)
 
