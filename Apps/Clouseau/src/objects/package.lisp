@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -55,6 +55,10 @@
   (let ((package (container place)))
     (rename-package package (package-name package) new-value)))
 
+;;; The following two methods cannot be replaced by a single method in
+;;; which the OBJECT parameter is specialized to `list' because then
+;;; other methods such as the one specialized to `cons' and `t' would
+;;; be more specific even for PLACE being a `package-nicknames-place'.
 (defmethod object-state-class ((object null) (place package-nicknames-place))
   'inspected-symbol-list)
 
@@ -66,6 +70,7 @@
 (defclass package-list-place-mixin ()
   ())
 
+;;; See comment about two methods for `package-nicknames-place'.
 (defmethod object-state-class ((object null) (place package-list-place-mixin))
   'inspected-package-list)
 
