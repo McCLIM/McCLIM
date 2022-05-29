@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -131,7 +131,7 @@
                                        (state  inspected-function)
                                        (style  (eql :expanded-header))
                                        (stream t))
-  (inspect-class-as-name (class-of object) stream)
+  (inspect-class-as-name (class-of object) stream :context-object object)
 
   (write-char #\Space stream)
   (let ((name (function-name object)))
@@ -256,7 +256,7 @@
                                       (when specializer
                                         (with-print-error-handling (stream)
                                           (typecase specializer
-                                            (class (inspect-class-as-name specializer stream))
+                                            (class (inspect-class-as-name specializer stream :context-object generic-function))
                                             (t     (prin1 `(eql ,(c2mop:eql-specializer-object specializer)) stream))))))) ; TODO should be inspectable
                               (append specializers (make-list missing)))))
                      (formatting-cell (stream)

@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -78,10 +78,10 @@
                    :context-package package
                    :style           :name-only)))
 
-(defun inspect-class-as-name (class stream &key context-instance)
+(defun inspect-class-as-name (class stream &key context-object)
   ;; This presents the name of CLASS as a collapsed inspectable object
   ;; that expands into CLASS.
-  (formatting-place (context-instance 'class-of-place class nil present-value)
+  (formatting-place (context-object 'class-of-place class nil present-value)
     (present-value stream)))
 
 ;;; `slot-definition-of-place'
@@ -130,7 +130,7 @@
                                        (state  inspected-instance)
                                        (style  (eql :expanded-header))
                                        (stream t))
-  (inspect-class-as-name (class-of object) stream))
+  (inspect-class-as-name (class-of object) stream :context-object object))
 
 (defun inspect-slot (slot object stream &key (place-class 'mutable-slot-place))
   (formatting-place (object place-class slot present inspect :place-var place)
@@ -176,7 +176,7 @@
                           (t
                            (write-string "Inherited from " stream)
                            (inspect-class-as-name
-                            super stream :context-instance object))))
+                            super stream :context-object object))))
                 (formatting-table (stream)
                   (map nil (rcurry #'inspect-slot object stream) super-slots))))
     (when (zerop (hash-table-count slots))

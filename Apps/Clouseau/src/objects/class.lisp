@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -149,12 +149,12 @@
      (lambda (other-class stream)
        (cond ((eq other-class class)
               (with-style (stream :header)
-                (inspect-class-as-name other-class stream)))
+                (inspect-class-as-name other-class stream :context-object object)))
              ((find other-class object :test #'eq)
-              (inspect-class-as-name other-class stream))
+              (inspect-class-as-name other-class stream :context-object object))
              (t
               (with-style (stream :unbound)
-                (inspect-class-as-name other-class stream)))))
+                (inspect-class-as-name other-class stream :context-object object)))))
      (relation (place state))
      :stream stream :orientation :vertical
      :graph-type :dag :merge-duplicates t :maximize-generations t)))
@@ -266,14 +266,13 @@
         (princ (c2mop:slot-definition-initform slot) stream))
       (formatting-cell (stream)
         (loop :for firstp = t :then nil
-              :for (class . slot) :in contributing
+              :for (superclass . slot) :in contributing
               :unless firstp :do (write-string ", " stream)
               :do (formatting-place
-                      (class 'slot-definition-place slot nil present-object
-                             :place-var place)
+                      (superclass 'slot-definition-place slot nil present-object)
                     (present-object stream))
                   (write-string " in " stream)
-                  (inspect-class-as-name class stream)))
+                  (inspect-class-as-name superclass stream :context-object class)))
       (formatting-cell (stream)
         (formatting-place
             (class 'slot-definition-place slot present-place present-object)
