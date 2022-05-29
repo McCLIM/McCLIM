@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -85,7 +85,14 @@
       (with-preserved-cursor-x (stream)
         (surrounding-output-with-border (stream :shape       :rectangle
                                                 :padding     2
-                                                :background  +beige+
-                                                :outline-ink +light-goldenrod+
+                                                :background  (if (emptyp clean)
+                                                                 +pink+
+                                                                 +beige+)
+                                                :outline-ink (if (emptyp clean)
+                                                                 +dark-red+
+                                                                 +light-goldenrod+)
                                                 :filled      t)
-          (write-string clean stream))))))
+          (if (emptyp clean)
+              (with-style (stream :note)
+                (write-string "Documentation is an empty string" stream))
+              (write-string clean stream)))))))
