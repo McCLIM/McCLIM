@@ -497,39 +497,6 @@ be replaced with a different style via certain commands such as
 hierarchy of styles:
 
 @c Code for creating the figure:
-@c (defmethod clouseau:inspect-object-using-state :around ((object t)
-@c                                                 (state  clouseau:inspected-object)
-@c                                                 (style  (eql :expanded-header))
-@c                                                 (stream t))
-@c   (surrounding-output-with-border (stream :ink (make-contrasting-inks 8 0)
-@c                                           :line-thickness 2)
-@c     (call-next-method)))
-@c
-@c (defmethod clouseau:inspect-object-using-state :around ((object t)
-@c                                                         (state  clouseau:inspected-object)
-@c                                                         (style  (eql :badges))
-@c                                                         (stream t))
-@c   (clouseau:with-preserved-cursor-y (stream)
-@c     (surrounding-output-with-border (stream :ink (make-contrasting-inks 8 1)
-@c                                             :line-thickness 2)
-@c       (call-next-method))))
-@c
-@c (defmethod clouseau:inspect-object-using-state :around ((object t)
-@c                                                         (state  clouseau:inspected-object)
-@c                                                         (style  (eql :object-identity))
-@c                                                         (stream t))
-@c   (surrounding-output-with-border (stream :ink (make-contrasting-inks 8 2)
-@c                                           :line-thickness 2)
-@c     (call-next-method)))
-@c
-@c (defmethod clouseau:inspect-object-using-state :around ((object t)
-@c                                                         (state  clouseau:inspected-object)
-@c                                                         (style  (eql :expanded-body))
-@c                                                         (stream t))
-@c   (surrounding-output-with-border (stream :ink (make-contrasting-inks 8 3)
-@c                                           :line-thickness 2)
-@c     (call-next-method)))
-@c
 @c (clim:with-room-for-graphics (*standard-output*)
 @c   (clim:format-graph-from-root
 @c    '(:style (:collapsed)
@@ -548,7 +515,50 @@ hierarchy of styles:
 @c                                    (t clim:+black+)))
 @c        (princ (first object) stream)))
 @c    #'rest :stream *standard-output*))
-@center @image{figures/clouseau-object-styles,8cm,,Included object presentations styles}
+@center @image{figures/clouseau-object-styles-hierarchy,8cm,,Included object presentations styles}
+
+The figure below illustrates for a @code{vector} as an example of an
+inspected object which parts of the visible output are produced by the
+@genfunref{clouseau:inspect-object-using-state} methods specialized to
+the respective style keywords.  The colors of the borders correspond the
+colors in the previous figure.
+
+@c Code for creating the figure:
+@c (defmethod clouseau:inspect-object-using-state :around ((object t)
+@c                                                 (state  clouseau:inspected-object)
+@c                                                 (style  (eql :expanded-header))
+@c                                                 (stream t))
+@c   (clim:surrounding-output-with-border (stream :ink (clim:make-contrasting-inks 8 0)
+@c                                                :line-thickness 2)
+@c     (call-next-method)))
+@c
+@c (defmethod clouseau:inspect-object-using-state :around ((object t)
+@c                                                         (state  clouseau:inspected-object)
+@c                                                         (style  (eql :badges))
+@c                                                         (stream t))
+@c   (clouseau:with-preserved-cursor-y (stream)
+@c     (clim:surrounding-output-with-border (stream :ink (clim:make-contrasting-inks 8 1)
+@c                                                  :line-thickness 2)
+@c       (call-next-method))))
+@c
+@c (defmethod clouseau:inspect-object-using-state :around ((object t)
+@c                                                         (state  clouseau:inspected-object)
+@c                                                         (style  (eql :object-identity))
+@c                                                         (stream t))
+@c   (clim:surrounding-output-with-border (stream :ink (clim:make-contrasting-inks 8 2)
+@c                                                :line-thickness 2)
+@c     (call-next-method)))
+@c
+@c (defmethod clouseau:inspect-object-using-state :around ((object t)
+@c                                                         (state  clouseau:inspected-object)
+@c                                                         (style  (eql :expanded-body))
+@c                                                         (stream t))
+@c   (clim:surrounding-output-with-border (stream :ink (clim:make-contrasting-inks 8 3)
+@c                                                :line-thickness 2)
+@c     (call-next-method)))
+@c
+@c (clouseau:inspect (vector :a :b :c :d))
+@center @image{figures/clouseau-object-styles-example,8cm,,Included object presentations styles}
 
 @node Defining Inspection Methods for Objects
 @subsubsection Defining Inspection Methods for Objects
