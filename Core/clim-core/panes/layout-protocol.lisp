@@ -494,6 +494,7 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 
 (defmethod note-space-requirements-changed (pane client)
   "Just a no-op fallback method."
+  (declare (ignore pane client))
   nil)
 
 ;;; CHANGING-SPACE-REQUIREMENTS macro

@@ -412,14 +412,14 @@ y2."
                      for (point chain) = (pop points)
                      for (top top-chain) = (car stack)
                      do (if (eq chain top-chain)
-                            (loop for ((n-1 c-1) (n-2 c-2)) on stack
+                            (loop for ((n-1 nil) (n-2 nil)) on stack
                                   while n-2
                                   while (valid-triangle-p chain point n-1 n-2)
                                   unless (colinear-p point n-1 n-2)
                                     do (triangles point n-1 n-2)
                                   do (pop stack)
                                   finally (push (list point chain) stack))
-                            (loop for ((n-1 c-1) (n-2 c-2)) on stack
+                            (loop for ((n-1 nil) (n-2 nil)) on stack
                                   while n-2
                                   unless (colinear-p point n-1 n-2)
                                     do (triangles point n-1 n-2)

@@ -158,7 +158,7 @@
              (make-define-gesture-translator (gesture-arg name ptype gesture)
                (let ((command-args
                        (loop for arg in args
-                             for (name ptype . options) = arg
+                             for (nil nil . options) = arg
                              collect (if (eq arg gesture-arg)
                                          'object
                                          (getf options :default

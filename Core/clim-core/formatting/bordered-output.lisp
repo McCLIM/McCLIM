@@ -112,7 +112,7 @@
 
 (defmethod recompute-extent-for-changed-child
     ((record bordered-output-record) child x1 y1 x2 y2)
-  (declare (ignore x1 y1 x2 y2))
+  (declare (ignore child x1 y1 x2 y2))
   (with-bounding-rectangle* (ox1 oy1 ox2 oy2) record
     (clear-output-record record)
     (%prepare-bordered-output-record record)
@@ -190,7 +190,7 @@
 
 (defmethod draw-output-border-under
     (shape stream record &rest drawing-options &key &allow-other-keys)
-  (declare (ignore drawing-options))
+  (declare (ignore shape stream record drawing-options))
   (values))
 
 (defmacro %%line-style-for-method ()

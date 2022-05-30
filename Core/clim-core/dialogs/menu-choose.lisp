@@ -344,6 +344,7 @@ maximum size according to `frame')."
                           (max left 0) (max top 0)))))))))
 
 (defmethod adjust-menu-size-and-position (menu &key &allow-other-keys)
+  (declare (ignore menu))
   ;; Nothing.
   nil)
 

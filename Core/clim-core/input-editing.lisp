@@ -332,9 +332,11 @@ longer supposed to be used for editing, like turning off the
 cursor, etc."))
 
 (defmethod finalize ((stream t) input-sensitizer)
+  (declare (ignore stream input-sensitizer))
   nil)
 
 (defmethod finalize ((stream input-editing-stream) input-sensitizer)
+  (declare (ignore input-sensitizer))
   (clear-typeout stream)
   (redraw-input-buffer stream))
 
@@ -351,6 +353,7 @@ the class of the input-editing stream to create, if necessary."))
 (defmethod invoke-with-input-editing ((stream input-editing-stream)
                                       continuation input-sensitizer
                                       initial-contents class)
+  (declare (ignore continuation input-sensitizer class))
   (unless (stream-rescanning-p stream)
     (if (stringp initial-contents)
         (replace-input stream initial-contents)
@@ -369,12 +372,9 @@ the class of the input-editing stream to create, if necessary."))
   (letf (((cursor-visibility (stream-text-cursor stream)) nil))
     (call-next-method)))
 
-(defmethod invoke-with-input-editing :around (stream
-                                              continuation
-                                              input-sensitizer
-                                              initial-contents
-                                              class)
-  (declare (ignore continuation input-sensitizer initial-contents class))
+(defmethod invoke-with-input-editing :around
+    (stream continuation input-sensitizer initial-contents class)
+  (declare (ignore stream continuation input-sensitizer initial-contents class))
   (with-activation-gestures (*standard-activation-gestures*)
     (call-next-method)))
 
@@ -1098,11 +1098,11 @@ protocol retrieving gestures from a provided string."))
 
 (defmethod invoke-with-input-editor-typeout ((stream string-input-editing-stream) continuation
                                              &key erase)
-  (declare (ignore erase)))
+  (declare (ignore stream continuation erase)))
 
 (defmethod input-editor-format ((stream string-input-editing-stream) format-string
                                 &rest args)
-  (declare (ignore args)))
+  (declare (ignore stream format-string args)))
 
 (defmethod stream-rescanning-p ((stream string-input-editing-stream))
   t)
@@ -1147,6 +1147,7 @@ protocol retrieving gestures from a provided string."))
             (incf (stream-scan-pointer stream)))))))
 
 (defmethod stream-unread-gesture ((stream string-input-editing-stream) gesture)
+  (declare (ignore gesture))
   (decf (stream-scan-pointer stream)))
 
 (defun accept-1 (stream type
@@ -1415,4 +1416,5 @@ protocol retrieving gestures from a provided string."))
 
 (define-default-presentation-method accept
     (type stream view &rest args)
+  (declare (ignore view))
   (apply #'accept-using-read stream type :read-eval t args))

@@ -436,4 +436,5 @@
   (text-style-character-width text-style medium #\M))
 
 (defmethod text-style-fixed-width-p (text-style medium)
+  (declare (ignore medium))
   (eql (text-style-family text-style) :fix))

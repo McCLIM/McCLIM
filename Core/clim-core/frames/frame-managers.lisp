@@ -11,8 +11,6 @@
 
 (in-package #:clim-internals)
 
-(defvar *default-frame-manager* nil)
-
 ;; FIXME: The spec says the port must "conform to options".  I've added a check
 ;; that the ports match, but we've no protocol for testing the other
 ;; options. -Hefner
@@ -62,10 +60,10 @@
   (declare (ignore fm frame)))
 
 (defmethod note-command-enabled (fm frame new-value)
-  (declare (ignore fm frame command-name)))
+  (declare (ignore fm frame new-value)))
 
 (defmethod note-command-disabled (fm frame new-value)
-  (declare (ignore fm frame command-name)))
+  (declare (ignore fm frame new-value)))
 
 (defmethod note-frame-pretty-name-changed (fm frame new-value)
   (declare (ignore fm frame new-value)))
@@ -148,19 +146,11 @@
   frame)
 
 (defmethod make-pane-1
-    ((fm standard-frame-manager) (frame standard-application-frame)
-     type &rest args)
-  (apply #'make-instance (find-concrete-pane-class fm type)
-         :frame frame :manager fm :port (port fm) args))
-
-(defmethod make-pane-1
-    ((fm standard-frame-manager) (frame standard-application-frame)
-     (type class) &rest args)
+    ((fm standard-frame-manager) (frame standard-application-frame) (type class) &rest args)
   (apply #'make-instance type :frame frame :manager fm :port (port fm) args))
 
 (defmethod make-pane-1
-    ((fm standard-frame-manager) (frame standard-application-frame)
-     type &rest args)
+    ((fm standard-frame-manager) (frame standard-application-frame) type &rest args)
   (apply #'make-pane-1 fm frame (find-concrete-pane-class fm type) args))
 
 (defmethod make-pane-1 :around

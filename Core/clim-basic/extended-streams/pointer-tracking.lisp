@@ -96,6 +96,7 @@
 
 (defgeneric sheet-find-presentation (sheet context-type x y event)
   (:method (sheet context-type x y event)
+    (declare (ignore sheet context-type x y event))
     nil)
   (:method ((stream output-recording-stream) context-type x y event)
     (labels ((matches-context-p (presentation)
@@ -114,6 +115,7 @@
 ;;; tracking-pointer macro.
 (defgeneric track-event (state event x y)
   (:method ((state tracking-pointer-state) event x y)
+    (declare (ignore x y))
     (default-tracking-handler :event event))
   (:method ((state tracking-pointer-state) (event keyboard-event) x y)
     (funcall (keyboard-handler state) :gesture event :event event :x x :y y)))

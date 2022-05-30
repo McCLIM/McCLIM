@@ -143,6 +143,7 @@ alive.")
 
 (defmethod frame-print-pointer-documentation
     ((frame standard-application-frame) input-context stream state event)
+  (declare (ignore input-context))
   (unless state
     (return-from frame-print-pointer-documentation nil))
   (destructuring-bind (current-modifier new-translators other-modifiers) state
@@ -281,10 +282,12 @@ have a `pointer-documentation-pane' as pointer documentation,
 
 (defmethod frame-compute-pointer-documentation-state
     ((frame standard-application-frame) (input-context null) stream event)
+  (declare (ignore stream))
   (list :string event))
 
 (defmethod frame-print-pointer-documentation
     ((frame standard-application-frame) (input-context null) stream state event)
+  (declare (ignore stream event))
   (unless state
     (return-from frame-print-pointer-documentation nil))
   (let ((pstream *pointer-documentation-output*))

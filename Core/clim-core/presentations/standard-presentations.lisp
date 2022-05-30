@@ -55,7 +55,7 @@
   (write-string "None" stream))
 
 (define-presentation-method accept ((type null) stream (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (values (completing-from-suggestions (stream)
             (suggest "None" nil)
             (suggest "" nil))))
@@ -75,7 +75,7 @@
   (write-string (if object "Yes" "No") stream))
 
 (define-presentation-method accept ((type boolean) stream (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (accept-using-completion
    type stream (lambda (input-string mode)
                  (complete-from-possibilities
@@ -544,6 +544,7 @@
     ((stream input-editing-stream)
      (object pathname) (type (eql 'pathname))
      view &rest args &key &allow-other-keys)
+  (declare (ignore view))
   ;; This is fully valid and compliant, but it still smells slightly
   ;; like a hack.
   (let ((name (pathname-name object))
@@ -651,7 +652,7 @@
 (define-presentation-method accept ((type completion)
                                     stream
                                     (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (let ((type (apply #'make-presentation-type-specifier
                      `(completion ,@parameters)
                      options)))
@@ -840,7 +841,7 @@
         (write-char separator stream)))))
 
 (define-presentation-method accept ((type sequence) stream (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (loop with separators = (list separator)
         for element = (accept element-type
                               :stream stream
@@ -915,10 +916,10 @@
 (define-presentation-method accept ((type sequence-enumerated)
                                     stream
                                     (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (loop with separators = (list separator)
         for (first-type . rest-types) on types
-        for (element element-type)
+        for (element nil)
            = (multiple-value-list
               (accept first-type :stream stream :view view
                                  :prompt t :display-default nil
@@ -963,7 +964,7 @@
 (define-presentation-method accept ((type or)
                                     (stream input-editing-stream)
                                     (view textual-view)
-                                    &key)
+                                    &key &allow-other-keys)
   (with-input-context (type) (object type-var)
       (loop with string = (read-token stream)
             for or-type in types
@@ -1007,7 +1008,7 @@
            :acceptably acceptably :for-context-type for-context-type))
 
 (define-presentation-method accept
-    ((type and) (stream input-editing-stream) (view textual-view) &rest args &key)
+    ((type and) (stream input-editing-stream) (view textual-view) &rest args)
   (let ((subtype (first types)))
     (multiple-value-bind (obj ptype)
         (apply-presentation-generic-function accept subtype stream view args)

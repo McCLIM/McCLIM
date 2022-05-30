@@ -49,6 +49,7 @@
       (values max-x max-y))))
 
 (defmethod slot-unbound (class (stream standard-page-layout) (slot (eql '%page-region)))
+  (declare (ignore class))
   (let* ((page (or (and (panep stream)
                         (pane-viewport stream))
                    stream))

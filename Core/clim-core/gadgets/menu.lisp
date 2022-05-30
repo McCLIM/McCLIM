@@ -227,6 +227,7 @@
                               :max-height (max max-height total-height))))
 
   (defmethod handle-repaint ((gadget menu-button-submenu-pane) region)
+    (declare (ignore region))
     (call-next-method)
     (when (typep (sheet-parent gadget) 'hmenu-pane)
       (return-from handle-repaint))
@@ -260,6 +261,7 @@
     (make-space-requirement :min-width 1 :min-height 1)))
 
 (defmethod handle-repaint ((pane menu-divider-leaf-pane) region)
+  (declare (ignore region))
   (call-next-method)
   (let ((orientation (box-layout-orientation (sheet-parent pane)))
         (line-ink +dark-grey+))
