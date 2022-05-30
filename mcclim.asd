@@ -71,6 +71,7 @@ interface management system."
                "mcclim-clx"                                          #| truetype clx backend |#
                (:feature :mcclim-ffi-freetype "mcclim-clx/freetype") #| adds freetype        |#
                "mcclim-clx-fb"                                       #| experimental backend |#
+               "mcclim-wayland"         ; Wayland FFI backend
                ;; null backend
                "mcclim-null"))
 

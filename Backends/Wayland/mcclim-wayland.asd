@@ -11,4 +11,6 @@
   :components
   ((:module "core" :pathname "" :components
             ((:file "package")
-             (:file "port" :depends-on ("package"))))))
+             (:file "port" :depends-on ("package"))
+             (:file "mirror" :depends-on ("port"))))
+   (:file "input")))
