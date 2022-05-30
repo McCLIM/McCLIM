@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -68,8 +68,22 @@
   (def subclass-list-place         c2mop:class-direct-subclasses)
   (def superclass-list-place       c2mop:class-direct-superclasses)
   (def class-precedence-list-place c2mop:class-precedence-list
-    :relation                 c2mop:class-direct-superclasses
-    :default-class-list-style list))
+       :relation                 c2mop:class-direct-superclasses
+       :default-class-list-style list))
+
+(defmethod valuep ((place class-precedence-list-place))
+  (c2mop:class-finalized-p (container place)))
+
+;;; `prototype-place'
+
+(defclass prototype-place (read-only-place)
+  ())
+
+(defmethod value ((place prototype-place))
+  (c2mop:class-prototype (container place)))
+
+(defmethod valuep ((place prototype-place))
+  (c2mop:class-finalized-p (container place)))
 
 
 ;;;; Object states
@@ -97,8 +111,11 @@
           (class-list-style (default-class-list-style place)))
   (setf (class-list-style instance) class-list-style))
 
-(defmethod object-state-class ((object cons)
-                               (place  class-list-place))
+;;; See comment about two methods for `package-nicknames-place'.
+(defmethod object-state-class ((object null) (place class-list-place))
+  'inspected-class-list)
+
+(defmethod object-state-class ((object cons) (place class-list-place))
   'inspected-class-list)
 
 ;;; `inspected-class'
@@ -149,12 +166,12 @@
      (lambda (other-class stream)
        (cond ((eq other-class class)
               (with-style (stream :header)
-                (inspect-class-as-name other-class stream)))
+                (inspect-class-as-name other-class stream :context-object object)))
              ((find other-class object :test #'eq)
-              (inspect-class-as-name other-class stream))
+              (inspect-class-as-name other-class stream :context-object object))
              (t
               (with-style (stream :unbound)
-                (inspect-class-as-name other-class stream)))))
+                (inspect-class-as-name other-class stream :context-object object)))))
      (relation (place state))
      :stream stream :orientation :vertical
      :graph-type :dag :merge-duplicates t :maximize-generations t)))
@@ -266,14 +283,13 @@
         (princ (c2mop:slot-definition-initform slot) stream))
       (formatting-cell (stream)
         (loop :for firstp = t :then nil
-              :for (class . slot) :in contributing
+              :for (superclass . slot) :in contributing
               :unless firstp :do (write-string ", " stream)
               :do (formatting-place
-                      (class 'slot-definition-place slot nil present-object
-                             :place-var place)
+                      (superclass 'slot-definition-place slot nil present-object)
                     (present-object stream))
                   (write-string " in " stream)
-                  (inspect-class-as-name class stream)))
+                  (inspect-class-as-name superclass stream :context-object class)))
       (formatting-cell (stream)
         (formatting-place
             (class 'slot-definition-place slot present-place present-object)
@@ -304,12 +320,11 @@
                               :label "Superclasses")
           (format-place-cells stream object 'subclass-list-place nil
                               :label "Subclasses"))
-        (when finalizedp ; TODO else display placeholders
-          (formatting-row (stream)
-            (format-place-cells stream object 'class-precedence-list-place nil
-                                :label "Precedence List")
-            (format-place-cells stream object 'reader-place 'c2mop:class-prototype
-                                :label "Prototype")))))
+        (formatting-row (stream)
+          (format-place-cells stream object 'class-precedence-list-place nil
+                              :label "Precedence List")
+          (format-place-cells stream object 'prototype-place nil
+                              :label "Prototype"))))
 
     (print-documentation object stream)
 

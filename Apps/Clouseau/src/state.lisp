@@ -2,20 +2,21 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; State for one inspector instance (Basically the model in a model
 ;;; view controller architecture).
-;;;
 
 (cl:in-package #:clouseau)
 
 ;;; `inspector-state'
 ;;;
-;;; The state is just the tree of inspected places and objects,
-;;; starting at the root place.
+;;; The state is just a container for the tree of inspected places and
+;;; objects, starting at the root place. The tree consists of place
+;;; objects as its nodes and the set of place objects contained in
+;;; (children NODE) as the outgoing edges of a given node.
 
 (defvar *old-root-place* nil)
 

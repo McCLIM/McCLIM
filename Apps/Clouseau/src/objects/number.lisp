@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -63,7 +63,7 @@
                                        (stream t))
   (let ((class (class-of object))
         (type  (type-of object)))
-    (inspect-class-as-name class stream)
+    (inspect-class-as-name class stream :context-object object)
     (when (and (not (consp type))
                (not (eql type (class-name class))))
       (write-char #\space stream)

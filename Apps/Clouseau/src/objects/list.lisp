@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -151,7 +151,7 @@
     (format stream "~:A" object)))
 
 (flet ((print-class-and-sequence-header (object state stream)
-         (inspect-class-as-name (find-class 'list) stream)
+         (inspect-class-as-name (find-class 'list) stream :context-object object)
          (write-char #\Space stream)
          (with-output-as-presentation (stream state 'sequence-range)
            (print-sequence-header
@@ -184,9 +184,9 @@
                                        (stream t))
   (cond ((listp (cdr object))
          (write-string "Improper " stream)
-         (inspect-class-as-name (find-class 'list) stream))
+         (inspect-class-as-name (find-class 'list) stream :context-object object))
         (t
-         (inspect-class-as-name (class-of object) stream))))
+         (inspect-class-as-name (class-of object) stream :context-object object))))
 
 (defmethod inspect-object-using-state :after ((object cons)
                                               (state  inspected-improper-list)

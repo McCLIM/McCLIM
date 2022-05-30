@@ -2,7 +2,7 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) copyright 2018-2020 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
+;;;  (c) copyright 2018-2022 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -52,7 +52,7 @@
                                        (state  inspected-sequence)
                                        (style  (eql :expanded-header))
                                        (stream t))
-  (inspect-class-as-name (class-of object) stream)
+  (inspect-class-as-name (class-of object) stream :context-object object)
   (write-char #\Space stream)
   (with-output-as-presentation (stream state 'sequence-range)
     (print-sequence-header stream (length object) (start state) (end state))))
