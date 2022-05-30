@@ -162,10 +162,14 @@
 
 (defmethod destroy-port :before ((port wayland-port))
   (alx:when-let ((display (wayland-port-display port)))
-    (wlc:wayland-destroy (%wayland-wm-base port))
-    (wlc:wayland-destroy (wayland-port-window port))
-    (wlc:wayland-destroy (wayland-port-compositor port))
-    (wlc:wayland-destroy (wayland-port-registry port))
+    (with-accessors ((wm-base %wayland-wm-base)
+                     (window wayland-port-window)
+                     (compositor wayland-port-compositor)
+                     (registry wayland-port-registry))
+        port
+      (loop for wayland-object in (list wm-base window compositor registry)
+            when wayland-object
+              do (wlc:wayland-destroy wayland-object)))
 
     (setf (wayland-port-display port) nil)
     (wlc:wl-display-disconnect display)))
