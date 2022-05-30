@@ -13,9 +13,6 @@
 
 (in-package #:clim-internals)
 
-(define-protocol-class polybezier (path) ())
-(define-protocol-class bezigon    (area) ())
-
 ;;; Basically, when the region protocol is truly integrated, the protocol class
 ;;; polyline should be a subclass of the protocol class polybezier and the
 ;;; protocol class polygon should be a subclass of the protocol class bezigon.
@@ -26,31 +23,21 @@
     :initarg :points
     :initform '())))
 
-(defgeneric bezigon-points (object)
-  (:method ((object polyline))
-    (polygon-points object))
-  (:method ((object polygon))
-    (polygon-points object))
-  (:method ((object bezier-thing))
-    (slot-value object 'points)))
+(defmethod bezigon-points ((object bezier-thing))
+  (slot-value object 'points))
 
-(defgeneric bezigon-order (object)
-  (:method ((object polyline))     2)
-  (:method ((object polygon))      2)
-  (:method ((object bezier-thing)) 4))
 
-(defgeneric map-over-bezigon-segments (function bezigon-or-polybezier)
-  (:method (function (object polyline))
-    (map-over-polygon-segments function object))
-  (:method (function (object polygon))
-    (map-over-polygon-segments function object))
-  (:method (function (object bezier-thing))
-    (do-sequence* ((p0 p1 p2 p3) (bezigon-points object) 3)
-      (funcall function
-               (point-x p0) (point-y p0)
-               (point-x p1) (point-y p1)
-               (point-x p2) (point-y p2)
-               (point-x p3) (point-y p3)))))
+(defmethod bezigon-order ((object bezier-thing))
+  (declare (ignore object))
+  4)
+
+(defmethod map-over-bezigon-segments (function (object bezier-thing))
+  (do-sequence* ((p0 p1 p2 p3) (bezigon-points object) 3)
+    (funcall function
+             (point-x p0) (point-y p0)
+             (point-x p1) (point-y p1)
+             (point-x p2) (point-y p2)
+             (point-x p3) (point-y p3))))
 
 (defun map-over-bezigon-segments* (function coord-seq order)
   (assert (= 4 order))
@@ -73,8 +60,8 @@
   (make-instance 'standard-bezigon :points point-seq))
 
 (defun make-bezigon* (coord-seq)
-  (assert (and (climi::coordinate= (car coord-seq) (car (last coord-seq 2)))
-               (climi::coordinate= (cadr coord-seq) (car (last coord-seq)))))
+  (assert (and (coordinate= (car coord-seq) (car (last coord-seq 2)))
+               (coordinate= (cadr coord-seq) (car (last coord-seq)))))
   (make-bezigon (coord-seq->point-seq coord-seq)))
 
 #+ (or)

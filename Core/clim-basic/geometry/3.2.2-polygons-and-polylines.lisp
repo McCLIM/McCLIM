@@ -107,6 +107,26 @@
   (with-slots (closed) region
     closed))
 
+(defmethod bezigon-points ((object polyline))
+  (polygon-points object))
+
+(defmethod bezigon-points ((object polygon))
+  (polygon-points object))
+
+(defmethod bezigon-order ((object polyline))
+  (declare (ignore object))
+  2)
+
+(defmethod bezigon-order ((object polygon))
+  (declare (ignore object))
+  2)
+
+(defmethod map-over-bezigon-segments (function (object polyline))
+  (map-over-polygon-segments function object))
+
+(defmethod map-over-bezigon-segments (function (object polygon))
+  (map-over-polygon-segments function object))
+
 (defmethod region-contains-position-p ((region polyline) x y)
   (setf x (coordinate x)
         y (coordinate y))
