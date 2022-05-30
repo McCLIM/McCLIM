@@ -68,6 +68,7 @@
   (type-class type))
 
 (define-default-presentation-method presentation-type-specifier-p (type)
+  (declare (ignore type))
   t)
 
 (defun presentation-type-specifier-p (object)

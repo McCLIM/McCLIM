@@ -413,11 +413,13 @@ use condition-variables nor locks."))
             (condition-wait cv lock decay)))))
 
 (defmethod event-queue-append ((queue concurrent-event-queue) item)
+  (declare (ignore item))
   (with-lock-held ((event-queue-lock queue))
     (call-next-method)
     (condition-notify (event-queue-processes queue))))
 
 (defmethod event-queue-prepend ((queue concurrent-event-queue) item)
+  (declare (ignore item))
   (with-lock-held ((event-queue-lock queue))
     (call-next-method)
     (condition-notify (event-queue-processes queue))))
@@ -469,6 +471,7 @@ use condition-variables nor locks."))
     (call-next-method)))
 
 (defmethod schedule-event-queue :around ((queue concurrent-event-queue) event delay)
+  (declare (ignore event delay))
   (with-lock-held ((event-queue-schedule-lock queue))
     (call-next-method)))
 

@@ -83,7 +83,7 @@ call-next-method to get the \"real\" answer based on the stream type."))
 
 (define-default-presentation-method presentation-type-history-for-stream
     (type stream)
-  (declare (ignore stream))
+  (declare (ignore type stream))
   nil)
 
 ;;; method for clim-stream-pane in panes.lisp

@@ -1179,6 +1179,7 @@
   (note-input-focus-changed (sheet-child pane) state))
 
 (defmethod note-space-requirements-changed ((pane viewport-pane) child)
+  (declare (ignore child))
   (multiple-value-bind (width height) (bounding-rectangle-size pane)
     (allocate-space pane width height)))
 
@@ -1609,6 +1610,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     (setf (clime:label-pane-label instance) label)))
 
 (defmethod (setf clime:label-pane-label) :after (new-value (pane label-pane))
+  (declare (ignore new-value))
   (when (if-let ((requirements (pane-space-requirement pane)))
           (progn
             (setf (pane-space-requirement pane) nil)
@@ -1725,7 +1727,10 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defparameter *mouse-scroll-distance* 4
   "Number of lines by which to scroll the window in response to the scroll wheel")
 
-(defmethod scroll-quantum (pane) 10)	; TODO: Connect this with the scroller-pane motion
+;;; TODO: Connect this with the scroller-pane motion
+(defmethod scroll-quantum (pane)
+  (declare (ignore pane))
+  10)
 
 (defun find-viewport-for-scroll (pane)
   "Find a viewport in the chain of parents which contains 'pane',

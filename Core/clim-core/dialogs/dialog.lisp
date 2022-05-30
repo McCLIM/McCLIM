@@ -636,6 +636,7 @@ is called. Used to determine if any editing has been done by user")))
 ;;; If the query has not been changed (i.e., ACCEPT didn't return) and there is
 ;;; no error, act as if the user activated the query.
 (defmethod deselect-query (stream query (record av-text-record))
+  (declare (ignore stream))
   (let ((estream (editing-stream record)))
     (setf (cursor-visibility estream) nil)
     (when (not (or (changedp query) (accept-condition query)))
@@ -756,27 +757,28 @@ is called. Used to determine if any editing has been done by user")))
      &key (documentation prompt)
        (query-identifier `(:command-button ,prompt)) (cache-value t)
        (cache-test #'eql) resynchronize)
+  (declare (ignore view))
   (let ((stream (encapsulating-stream-stream stream)))
-      (updating-output (stream
-                        :cache-value cache-value
-                        :cache-test cache-test
-                        :unique-id query-identifier
-                        :id-test #'equal
-                        :record-type 'accepting-values-record)
-        (with-output-as-presentation
-            (stream
-             (make-instance 'command-button-state
-                            :continuation continuation
-                            :query-identifier query-identifier
-                            :documentation documentation
-                            :resynchronize resynchronize)
-             'command-button-state)
-          (surrounding-output-with-border
-              (stream :shape :rounded :radius 6
-                      :background +gray80+ :highlight-background +gray90+)
-            (if (functionp prompt)
-                (funcall prompt stream)
-                (princ prompt stream)))))))
+    (updating-output (stream
+                      :cache-value cache-value
+                      :cache-test cache-test
+                      :unique-id query-identifier
+                      :id-test #'equal
+                      :record-type 'accepting-values-record)
+      (with-output-as-presentation
+          (stream
+           (make-instance 'command-button-state
+                          :continuation continuation
+                          :query-identifier query-identifier
+                          :documentation documentation
+                          :resynchronize resynchronize)
+           'command-button-state)
+        (surrounding-output-with-border
+            (stream :shape :rounded :radius 6
+                    :background +gray80+ :highlight-background +gray90+)
+          (if (functionp prompt)
+              (funcall prompt stream)
+              (princ prompt stream)))))))
 
 (define-command (com-do-command-button :command-table accept-values
                                        :name nil

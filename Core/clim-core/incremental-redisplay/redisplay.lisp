@@ -439,6 +439,7 @@ in an equalp hash table")
 (defgeneric propagate-to-updating-output
     (record child mode old-bounding-rectangle)
   (:method ((record updating-output-record-mixin) child mode old-bbox)
+    (declare (ignore child old-bobox))
     (when (and (eq mode :move)
                (eq (output-record-dirty record) :clean))
       (mark-updating-output-changed record)))

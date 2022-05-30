@@ -16,7 +16,7 @@
 
 (defmethod propagate-output-record-changes-p
     (record child mode old-position old-bounding-rectangle)
-  (declare (ignore old-position))
+  (declare (ignore mode old-position))
   (and record
        (or (null old-bounding-rectangle)
            (not (region-equal child old-bounding-rectangle)))))

@@ -55,7 +55,7 @@
       (record-type standard-record-type arguments valid-keywords)
     (when (and (constantp record-type)
                (eq (eval record-type) standard-record-type))
-      (loop for (key value) on arguments by #'cddr
+      (loop for (key nil) on arguments by #'cddr
             when (constantp key)
             do (let ((key (eval key)))
                  (unless (or (eq key :record-type)

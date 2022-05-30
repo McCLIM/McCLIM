@@ -586,6 +586,7 @@
 (define-presentation-method accept
     ((type output-destination) stream (view textual-view)
      &key (default "Stream") (prompt nil))
+  (declare (ignore type))
   (let ((type (accept `(member-alist ,*output-destination-types*)
                       :stream stream :view view
                       :default default :prompt prompt

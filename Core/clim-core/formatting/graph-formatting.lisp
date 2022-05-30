@@ -310,6 +310,7 @@
                                  stream root-objects
                                  object-printer inferior-producer
                                  &key &allow-other-keys)
+  (declare (ignore stream root-objects object-printer inferior-producer))
   #+ (or)
   (with-slots (merge-duplicates) graph-output-record
     (when merge-duplicates
@@ -328,6 +329,7 @@
                                  stream root-objects
                                  object-printer inferior-producer
                                  &key &allow-other-keys)
+  (declare (ignore stream root-objects object-printer inferior-producer))
   (with-slots (merge-duplicates) graph-output-record
     ;; This case is more serious than the converse above. If we're not allowed
     ;; to merge duplicate nodes then we can't output a DAG... get the user to
@@ -342,6 +344,7 @@
                                  stream root-objects
                                  object-printer inferior-producer
                                  &key &allow-other-keys)
+  (declare (ignore stream root-objects object-printer inferior-producer))
   (with-slots (merge-duplicates) graph-output-record
     (unless merge-duplicates
       (cerror "Set to T and continue?"

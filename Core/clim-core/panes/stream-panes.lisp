@@ -248,6 +248,7 @@
   (funcall-presentation-generic-function presentation-type-history type))
 
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
+  (declare (ignore action))
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
     (unless (eq :allow (stream-end-of-page-action stream))
@@ -271,6 +272,7 @@
 ;;; DISPATCH-EVENT, just in a slightly different place.
 (defmethod frame-input-context-button-press-handler :before
     ((frame application-frame) (stream interactor-pane) button-press-event)
+  (declare (ignore button-press-event))
   (let ((previous (stream-set-input-focus stream)))
     (when (and previous (typep previous 'gadget))
       (let ((client (gadget-client previous))
@@ -341,14 +343,14 @@ current background message was set."))
 
 (defmethod stream-accept :before ((stream pointer-documentation-pane) type
                                   &rest args)
-  (declare (ignore args))
+  (declare (ignore type args))
   (window-clear stream)
   (when (background-message stream)
     (setf (background-message stream) nil)
     (redisplay-frame-pane (pane-frame stream) stream)))
 
 (defmethod stream-accept :around ((pane pointer-documentation-pane) type &rest args)
-  (declare (ignore args))
+  (declare (ignore type args))
   (unwind-protect (loop
                     (handler-case
                         (with-input-focus (pane)

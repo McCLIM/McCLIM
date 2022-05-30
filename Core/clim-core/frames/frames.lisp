@@ -21,6 +21,7 @@
 (declaim (type (or null pattern) *default-icon-large* *default-icon-small*))
 (defvar *default-icon-large* nil)
 (defvar *default-icon-small* nil)
+(defvar *default-frame-manager* nil)
 
 (defclass frame-geometry-mixin ()
   ((geometry-left :initarg :left :initform nil)
@@ -257,6 +258,7 @@
 (defmethod shared-initialize :after
     ((obj standard-application-frame) slot-names
      &key (icon nil icon-supplied-p) &allow-other-keys)
+  (declare (ignore slot-names))
   (labels ((coerce-to-icon (thing)
              (typecase thing
                ((or string pathname)
@@ -274,7 +276,9 @@
                  (coerce-to-icon icon))))))
 
 (defgeneric reinitialize-panes-and-layouts (frame)
-  (:method (frame) nil))
+  (:method (frame)
+    (declare (ignore frame))
+    nil))
 
 (defmethod reinitialize-instance :after
     ((frame standard-application-frame)
@@ -893,7 +897,9 @@ frames and will not have focus.
 
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation stream
-     initial-x initial-y x y state))
+     initial-x initial-y x y state)
+  (declare (ignore frame from-presentation stream initial-x initial-y x y state))
+  (values))
 
 (defmethod frame-drag-and-drop-feedback
     ((frame standard-application-frame) from-presentation (stream encapsulating-stream)

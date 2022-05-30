@@ -265,6 +265,7 @@
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
   (:method (stream action new-height)
+    (declare (ignore stream action new-height))
     nil))
 
 (defgeneric seos-write-newline (stream &optional soft-newline-p)

@@ -556,6 +556,7 @@
         (funcall function pane (gadget-client pane) (gadget-id pane))))))
 
 (defmethod handle-repaint ((pane scroll-bar-pane) region)
+  (declare (ignore region))
   (with-slots (all-new-p) pane
     (setf all-new-p t)
     (scroll-bar/update-display pane)))
@@ -1242,6 +1243,7 @@ if INVOKE-CALLBACK is given."))
 
 (defmethod (setf list-pane-items) :after
     (newval (pane meta-list-pane) &key invoke-callback)
+  (declare (ignore newval))
   (when (slot-boundp pane 'value)
     (let ((value (gadget-value pane))
           (new-values (coerce (generic-list-pane-item-values pane) 'list))
@@ -1575,6 +1577,7 @@ if INVOKE-CALLBACK is given."))
   (disarm-gadget pane))
 
 (defmethod handle-repaint ((pane generic-option-pane) region)
+  (declare (ignore region))
   (with-bounding-rectangle* (x0 y0 x1 y1) (sheet-region pane)
     (multiple-value-bind (widget-width widget-height)
         (generic-option-pane-widget-size pane)

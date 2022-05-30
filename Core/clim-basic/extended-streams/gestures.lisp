@@ -209,6 +209,7 @@
 
 (defgeneric event-matches-gesture-p (event physical-gestures)
   (:method (event physical-gestures)
+    (declare (ignore event physical-gestures))
     nil)
   (:method ((event character) physical-gestures)
     (event-data-matches-gesture-p :keyboard event 0 physical-gestures))

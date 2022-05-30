@@ -92,7 +92,7 @@
           (loop for (record bbox) in erase-overlapping
                 do (note-output-record-lost-sheet record stream)
                    (setf regions (region-union regions bbox)))
-          (loop for (record bbox) in move-overlapping
+          (loop for (nil bbox) in move-overlapping
                 do (setf regions (region-union regions bbox)))
           (map-over-region-set-regions #'clear-bbox regions)
           (replay history stream regions))))))

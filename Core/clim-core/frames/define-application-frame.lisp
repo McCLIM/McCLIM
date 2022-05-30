@@ -74,7 +74,7 @@
 (defun generate-panes-for-layout-form (panes reinitialize)
   `(list
     ,@(loop for spec in panes
-            for (name . form) = spec
+            for (name . nil) = spec
             collect `(cons ',name ,(generate-ensure-pane spec reinitialize)))))
 
 (defun generate-panes-constructor (panes)
@@ -88,7 +88,7 @@
   `(lambda (fm frame)
      (disown-frame-panes fm frame)
      (let ((named-panes (frame-panes-for-layout frame)))
-       (let ,(loop for (name . form) in panes
+       (let ,(loop for (name . nil) in panes
                    collect `(,name (assoc-value named-panes ',name :test #'eq)))
          (setf (frame-panes frame)
                (ecase (frame-current-layout frame)
@@ -128,7 +128,7 @@
 (defun geometry-specification-p (thing)
   (and (alexandria:proper-list-p thing)
        (evenp (length thing))
-       (loop for (key value) on thing by #'cddr
+       (loop for (key nil) on thing by #'cddr
              always (member key '(:left :top :right :bottom :width :height)))))
 
 (defun panes-or-layouts-specification-p (thing)

@@ -82,6 +82,7 @@
     (propagate-repaint-1 sheet region)))
 
 (defmethod repaint-sheet :after ((sheet sheet-with-medium-mixin) region)
+  (declare (ignore region))
   ;; FIXME: Shouldn't McCLIM always do this?
   (medium-finish-output sheet))
 

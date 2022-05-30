@@ -53,6 +53,7 @@
   (define-gadget-view option-pane))
 
 (defmethod make-gadget-pane-from-view ((view gadget-view) stream &rest initargs)
+  (declare (ignore stream))
   (let ((frame *application-frame*)
         (initargs (append initargs (view-gadget-initargs view))))
     (with-look-and-feel-realization ((frame-manager frame) frame)
@@ -111,6 +112,7 @@
 (define-presentation-method accept-present-default
     ((type boolean) stream (view toggle-button-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore present-p))
   (unless default-supplied-p
     (setq default nil))
   (make-output-record-from-view view stream query-identifier
@@ -123,6 +125,7 @@
 (define-presentation-method accept-present-default
     ((type completion) stream (view radio-box-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (let* ((buttons (loop for choice in sequence
                         collect (make-pane 'toggle-button
                                            :indicator-type :one-of
@@ -141,11 +144,12 @@
 (define-presentation-method accept-present-default
     ((type subset-completion) stream (view check-box-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (let* ((buttons (loop for choice in sequence collect
-                      (make-pane 'toggle-button
-                                 :indicator-type :some-of
-                                 :id (funcall value-key choice)
-                                 :label (funcall name-key choice))))
+                                               (make-pane 'toggle-button
+                                                          :indicator-type :some-of
+                                                          :id (funcall value-key choice)
+                                                          :label (funcall name-key choice))))
          (selection (remove-if-not (lambda (x)
                                      (find (gadget-id x) default :test test))
                                    buttons)))
@@ -162,6 +166,7 @@
 (define-presentation-method accept-present-default
     ((type completion) stream (view option-pane-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (flet ((generate-callback (query-identifier)
            (lambda (pane item)
              (declare (ignore pane))
@@ -185,6 +190,7 @@
 (define-presentation-method accept-present-default
     ((type completion) stream (view list-pane-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (make-output-record-from-view view stream query-identifier
                                 :mode :exclusive
                                 :test test
@@ -198,6 +204,7 @@
 (define-presentation-method accept-present-default
     ((type subset-completion) stream (view list-pane-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (make-output-record-from-view view stream query-identifier
                                 :mode :nonexclusive
                                 :test test
@@ -213,20 +220,22 @@
 (define-presentation-method accept-present-default
     ((type real) stream (view slider-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (make-output-record-from-view view stream query-identifier
                                 :value default
                                 :max-value high ; presentation parameter
-                                :min-value low ; presentation parameter
+                                :min-value low  ; presentation parameter
                                 :show-value-p t
                                 :value-changed-callback (%standard-value-changed-callback query-identifier)))
 
 (define-presentation-method accept-present-default
     ((type integer) stream (view slider-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore default-supplied-p present-p))
   (make-output-record-from-view view stream query-identifier
                                 :value default
                                 :max-value high ; presentation parameter
-                                :min-value low ; presentation parameter
+                                :min-value low  ; presentation parameter
                                 :show-value-p t
                                 :number-of-quanta (- high low)
                                 :value-changed-callback
@@ -237,6 +246,7 @@
 (define-presentation-method accept-present-default
     ((type string) stream (view text-field-view) default default-supplied-p
                    present-p query-identifier)
+  (declare (ignore present-p))
   (unless default-supplied-p
     (setf default ""))
   (let* ((width (or (getf (view-gadget-initargs view) :width)
@@ -265,6 +275,7 @@
 (define-presentation-method accept-present-default
     ((type string) stream (view text-editor-view) default default-supplied-p
      present-p query-identifier)
+  (declare (ignore present-p))
   (unless default-supplied-p
     (setf default ""))
   (let ((gadget (make-gadget-pane-from-view view stream
