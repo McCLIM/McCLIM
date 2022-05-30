@@ -440,10 +440,8 @@ specializable generic function:
 
 @anchor{Macro clime:with-output-to-drawing-stream}
 @anchor{Generic Function clime:invoke-with-output-to-drawing-stream}
-@deffn {Macro} {@symbol{with-output-to-drawing-stream,clime}}
-        (stream-var backend destination &rest options) &body body
-@deffnx {Generic Function} {@symbol{invoke-with-output-to-drawing-stream,clime}}
-        (continuation backend destination &rest options)
+@deffn {Macro} {@symbol{with-output-to-drawing-stream,clime}} (stream-var backend destination &rest options) &body body
+@deffnx {Generic Function} {@symbol{invoke-with-output-to-drawing-stream,clime}} (continuation backend destination &rest options)
 
 Within @code{body}, @code{stream-var} is bound to a stream that implements the
 output protocols so it is suitable as a stream or medium argument to any @clim{}
