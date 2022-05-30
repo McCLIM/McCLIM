@@ -137,7 +137,11 @@
 
             port-top-level (xdg:xdg-surface-get-toplevel
                             port-surface
-                            (make-instance 'xdg:xdg-toplevel))))))
+                            (make-instance 'xdg:xdg-toplevel))))
+
+    ;; Make one more round trip to handle events triggered by bindings above
+    ;; before the main event loop is started
+    (roundtrip (wayland-port-display port))))
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
   (with-slots (frame-managers) port
