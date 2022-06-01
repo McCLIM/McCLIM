@@ -207,12 +207,16 @@ use condition-variables nor locks."))
 
 (defmethod event-queue-append ((queue simple-event-queue) item)
   (labels ((append-event ()
-             (cond ((null (event-queue-tail queue))
-                    (setf (event-queue-head queue) (cons item nil)
-                          (event-queue-tail queue) (event-queue-head queue)))
-                   (t
-                    (setf (event-queue-tail queue)
-                          (setf (cdr (event-queue-tail queue)) (cons item nil))))))
+             (if (null (event-queue-head queue))
+                 (setf (event-queue-tail queue)
+                       (setf (event-queue-head queue) (cons item nil)))
+                 (setf (event-queue-tail queue)
+                       (setf (cdr (event-queue-tail queue)) (cons item nil)))))
+           (prepend-event ()
+             (if (null (event-queue-head queue))
+                 (setf (event-queue-tail queue)
+                       (setf (event-queue-head queue) (cons item nil)))
+                 (push item (event-queue-head queue))))
            (event-delete-if (predicate)
              (when (not (null (event-queue-head queue)))
                (setf (event-queue-head queue)
@@ -240,6 +244,12 @@ use condition-variables nor locks."))
       ;;
       ;; Resize event compression
       ;;
+      ;; Configuration events must be prepended to the queue to ensure that
+      ;; they are always before repaint events. Otherwise compressed repaint
+      ;; could go before its window resize event and be clipped by the old
+      ;; region (leaving part of the dirty region intact). When a separate
+      ;; repaint queue is introduced, then do append again. -- jd 2022-06-01
+      ;;
       (window-configuration-event
        (when (typep (event-sheet item) 'top-level-sheet-mixin)
          (let ((sheet (event-sheet item)))
@@ -247,7 +257,7 @@ use condition-variables nor locks."))
             #'(lambda (ev)
                 (and (typep ev 'window-configuration-event)
                      (eq (event-sheet ev) sheet)))))
-         (append-event)))
+         (prepend-event)))
       ;;
       ;; Repaint event compression
       ;;
