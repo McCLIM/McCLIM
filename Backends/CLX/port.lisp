@@ -189,8 +189,13 @@
     (make-instance 'clx-mirror :window window)))
 
 (defmethod %realize-mirror ((port clx-port) (sheet basic-sheet))
-  (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)
-                                 :event-mask *sheet-event-mask*))
+  (with-bounding-rectangle* (:width w :height h) sheet
+    (let ((width (if (> w 0) w nil))
+          (height (if (> h 0) h nil)))
+      (realize-mirror-aux port sheet :map (sheet-enabled-p sheet)
+                                     :event-mask *sheet-event-mask*
+                                     :width width
+                                     :height height))))
 
 (defmethod %realize-mirror ((port clx-port) (sheet top-level-sheet-mixin))
   (let* ((window (realize-mirror-aux
