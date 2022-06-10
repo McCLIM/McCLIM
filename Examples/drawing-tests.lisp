@@ -182,8 +182,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-backend-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (render-pane
     (labelling (:label "Render")
       (scrolling ()
@@ -193,8 +193,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-render-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
@@ -243,8 +243,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-backend-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
