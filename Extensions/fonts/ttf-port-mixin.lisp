@@ -26,7 +26,7 @@
    ;; DPI (for font scaling)
    (font-dpi :initform *dpi* :initarg :dpi :reader font-dpi)))
 
-(defmethod destroy-port :after ((port ttf-port-mixin))
+(defun invalidate-port-font-cache (port)
   (with-slots (font-loader-cache font-family-cache font-direct-cache text-style-cache) port
     (maphash-values (lambda (val) (zpb-ttf:close-font-loader val)) font-loader-cache)
     (clrhash font-loader-cache)
@@ -35,10 +35,14 @@
     (clrhash text-style-cache))
   (setf (font-families port) nil))
 
-(defmethod port-all-font-families ((port ttf-port-mixin) &key invalidate-cache)
+(defmethod destroy-port :after ((port ttf-port-mixin))
+  (invalidate-port-font-cache port))
+
+(defmethod port-all-font-families ((port ttf-port-mixin) &key invalidate-cache preload)
   (when invalidate-cache
-    (setf (font-families port) nil)
-    (register-all-ttf-fonts port))
+    (invalidate-port-font-cache port)
+    (register-all-ttf-fonts port :preload preload)
+    (register-standard-fonts port :preload preload))
   (font-families port))
 
 (defun ensure-truetype-font (port source size &optional preload)
@@ -82,7 +86,7 @@
                                        (slot-value port 'back-memory-cache)
                                        (read-file-into-byte-vector filename))))))
       (handler-case (dolist (size '(8 10 12 14 18 24 48 72))
-                      (ensure-truetype-font port source size))
+                      (ensure-truetype-font port source size preload))
         (error ()
           (when preload
             (ignore-errors (close source))
