@@ -44,11 +44,19 @@
 
 (defclass truetype-face (font-face)
   ((all-fonts :initform nil :accessor all-fonts)
+   (preloaded :initarg :preloaded :reader preloadedp)
    (font-loader :initarg :loader :reader zpb-ttf-font-loader)))
 
 (defmethod initialize-instance :after ((face truetype-face) &key &allow-other-keys)
   (let ((family (font-face-family face)))
     (pushnew face (all-faces family))))
+
+(defmethod print-object ((object truetype-face) stream)
+  (print-unreadable-object (object stream :type t :identity nil)
+    (format stream "~A, ~A, preloaded: ~a"
+            (font-family-name (font-face-family object))
+            (font-face-name object)
+            (if (preloadedp object) "yes" "no"))))
 
 (defgeneric font-leading (font)
   (:method (font) 1.2))
