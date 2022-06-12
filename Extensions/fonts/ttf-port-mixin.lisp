@@ -45,10 +45,10 @@
     (register-standard-fonts port :preload preload))
   (font-families port))
 
-(defun ensure-truetype-font (port source size &optional preload)
+(defun ensure-truetype-font (port filename source size &optional preload)
   (setf size (climb:normalize-font-size size))
   (with-slots (font-loader-cache font-family-cache font-direct-cache text-style-cache) port
-    (multiple-value-bind (loader loader-foundp) (gethash source font-loader-cache)
+    (multiple-value-bind (loader loader-foundp) (gethash filename font-loader-cache)
       (let* ((loader (or loader (zpb-ttf:open-font-loader source)))
              (f1-name (zpb-ttf:family-name loader))
              (f2-name (zpb-ttf:subfamily-name loader))
@@ -70,7 +70,7 @@
                  (face   (make-face family))
                  (fonts  (make-hash-table :test #'eql))
                  (font   (make-font face size)))
-            (setf (gethash source font-loader-cache) loader
+            (setf (gethash filename font-loader-cache) loader
                   (gethash loader font-direct-cache) (list face fonts)
                   (gethash size fonts) font
                   (gethash text-style text-style-cache) font)
@@ -79,18 +79,18 @@
 
 (defun register-ttf-font (port filename preload)
   (clim-sys:with-lock-held (*zpb-font-lock*)
-    (let ((source (if (not preload)
-                      filename
-                      (flexi-streams:make-in-memory-input-stream
-                       (ensure-gethash filename
-                                       (slot-value port 'back-memory-cache)
-                                       (read-file-into-byte-vector filename))))))
+    (let* ((vector (gethash filename (slot-value port 'back-memory-cache)))
+           (source (if (and (not preload) (not vector))
+                       filename
+                       (flexi-streams:make-in-memory-input-stream
+                        (ensure-gethash filename
+                                        (slot-value port 'back-memory-cache)
+                                        (read-file-into-byte-vector filename))))))
       (handler-case (dolist (size '(8 10 12 14 18 24 48 72))
-                      (ensure-truetype-font port source size preload))
+                      (ensure-truetype-font port filename source size preload))
         (error ()
-          (when preload
-            (ignore-errors (close source))
-            (remhash filename (slot-value port 'back-memory-cache))))))))
+          (ignore-errors (and (streamp source) (close source)))
+          (remhash filename (slot-value port 'back-memory-cache)))))))
 
 (defun register-all-ttf-fonts (port &key (dir *truetype-font-path*) (preload nil))
   (with-port-locked (port)
@@ -109,7 +109,7 @@
       (multiple-value-bind (family face size) (text-style-components text-style)
         (when-let ((source (assoc-value *families/faces* (list family face) :test #'equal)))
           (clim-sys:with-lock-held (*zpb-font-lock*)
-            (ensure-truetype-font port source size))))
+            (ensure-truetype-font port source source size))))
       (error "~s can't map the text style ~s." port text-style)))
 
 (defmethod text-style-mapping ((port ttf-port-mixin)
@@ -118,5 +118,5 @@
   (declare (ignore charset))
   (if-let ((font-name (probe-file (climi::device-font-name text-style))))
     (clim-sys:with-lock-held (*zpb-font-lock*)
-      (ensure-truetype-font port font-name :normal))
+      (ensure-truetype-font port font-name font-name :normal))
     (error "~s can't map the text style ~s." port text-style)))
