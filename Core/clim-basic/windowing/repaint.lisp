@@ -68,9 +68,10 @@
       (with-output-buffered (sheet)
         (handle-repaint sheet clipped)
         (loop for child in (sheet-children sheet)
-              for transformation = (sheet-transformation child)
-              for child-region = (untransform-region transformation region)
-              do (repaint-sheet child child-region))))))
+              unless (sheet-direct-mirror child)
+                do (let* ((tr (sheet-transformation child))
+                          (cr (untransform-region tr region)))
+                     (repaint-sheet child cr)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
