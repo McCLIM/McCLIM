@@ -971,3 +971,8 @@ COUNT specifies how many breaks we want to collect."
                                              (make-match match body)))
                                    (loop for match in match
                                          collect (make-match match body))))))))
+
+;;; For testing
+(defun random-color ()
+  (alexandria:random-elt
+   (list +blue+ +red+ +yellow+ +green+ +pink+ +cyan+ +deep-pink+)))
