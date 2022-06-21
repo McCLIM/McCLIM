@@ -116,7 +116,7 @@
   (window-clear stream)
   (let* ((pane-width (rectangle-width (sheet-region stream)))
          (pane-height (rectangle-height (sheet-region stream)))
-         (str "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+         (str "The quick brown fox jumps over the lazy dog")
          (style (font-selector-text-style frame))
          (ok nil))
     (cond ((not (eq (port frame) (font-selector-port frame)))
