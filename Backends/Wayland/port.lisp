@@ -177,6 +177,9 @@
 (defmethod port-force-output ((port wayland-port))
   (wlc:wl-surface-commit (wayland-port-window port)))
 
+(defmethod graft ((port wayland-port))
+  (first (port-grafts port)))
+
 ;;; Grafts
 
 (defclass wayland-graft (graft)
@@ -212,7 +215,7 @@
                                   :orientation orientation
                                   :units units)))
 
-(defmethod instance-initialize :after ((graft wayland-graft))
+(defmethod initialize-instance :after ((graft wayland-graft) &key)
   (with-slots (egl-window egl-context egl-display egl-surface)
       (sheet-mirror graft)
     (setf egl-window (create-native-window graft))
@@ -269,3 +272,25 @@
    (class-gensym :initarg :class-gensym
                  :initform (gensym "WAYLAND-")
                  :reader class-gensym)))
+
+(defclass wayland-egl-medium (basic-medium) ())
+
+(defmethod make-medium ((port wayland-port) sheet)
+  (make-instance 'wayland-egl-medium :port port :sheet sheet))
+
+(defmethod medium-finish-output ((medium wayland-egl-medium))
+  (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
+    (format t "medium-finish-output~%")
+    (egl:swap-buffers (wayland-egl-mirror-display mirror)
+                      (wayland-egl-mirror-window mirror))))
+
+(defmethod medium-force-output ((medium wayland-egl-medium))
+  (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
+    (gl:flush)
+    (format t "medium-force-output~%")
+    (egl:swap-buffers (wayland-egl-mirror-display mirror)
+                      (wayland-egl-mirror-window mirror))))
+
+(defmethod medium-clear-area :after
+    ((medium wayland-egl-medium) left top right bottom)
+  (format t "EGL medium clear area called~%"))

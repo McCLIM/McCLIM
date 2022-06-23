@@ -6,7 +6,8 @@
                "com.andrewsoutar.cl-wayland-client.protocol/stable/xdg-shell/xdg-shell"
                "com.andrewsoutar.cl-wayland-client/egl-core"
                "cl-egl"
-               "mcclim-backend-common")
+               "mcclim-backend-common"
+               "cl-opengl")
   :serial t
   :components
   ((:module "core" :pathname "" :components
