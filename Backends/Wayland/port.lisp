@@ -141,7 +141,8 @@
 
     ;; Make one more round trip to handle events triggered by bindings above
     ;; before the main event loop is started
-    (roundtrip (wayland-port-display port))))
+    (roundtrip (wayland-port-display port))
+    (wlc:wl-surface-commit (wayland-port-window port))))
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
   (with-slots (frame-managers) port
@@ -149,6 +150,7 @@
           frame-managers))
   (initialize-wayland port)
   (make-graft port)
+  (format t "Starting Event Loop~%")
   (when clim-sys:*multiprocessing-p*
     (flet ((wayland-port-event-loop ()
              (loop
@@ -177,6 +179,14 @@
 (defmethod port-force-output ((port wayland-port))
   (wlc:wl-surface-commit (wayland-port-window port)))
 
+;;; Port event handling
+(defmethod handle-event
+    ((port wayland-port) (event window-configuration-event))
+
+  (let ((sheet (event-sheet event))
+        (native-region (window-event-native-region event)))
+    (format t "window-configuration-event ~S ~S~%" sheet native-region)))
+
 (defmethod graft ((port wayland-port))
   (first (port-grafts port)))
 
@@ -184,6 +194,25 @@
 
 (defclass wayland-graft (graft)
   ())
+
+(defmethod dispatch-event
+    ((sheet mirrored-sheet-mixin) (event window-configuration-event))
+  (format t "dispatch-event window-cfg-event: Not sure what should happen here...~%")
+  ;; I'm not sure if the is the right way. For now, let's handle it like an
+  ;; immediate-event-mixin
+  (handle-event sheet event))
+
+(defmethod handle-event
+    ((sheet wayland-graft) (event window-configuration-event))
+  ;; Is this where I should set the egl-window width and swap buffers?
+  ;; Should this be handled by the medium? or the mirror?
+
+  (with-accessors ((width window-configuration-event-native-width)
+                   (height window-configuration-event-native-height))
+      event
+    (wl-egl:wl-egl-window-resize
+     (wayland-egl-mirror-window (sheet-mirror sheet)) width height 0 0))
+  (format t "handle-event window-cfg-event: top level reconfigure? Should I resize all the children?~%"))
 
 (defmethod graft-width ((graft wayland-graft) &key (units :device))
   (let ((screen (wayland-port-device (port graft))))
@@ -223,6 +252,7 @@
       (create-egl-context graft))))
 
 (defun create-native-window (graft)
+  (format t "starting CREATE-NATIVE-WINDOW~%")
   (with-accessors ((port-compositor wayland-port-compositor)
                    (port-window wayland-port-window))
       (port graft)

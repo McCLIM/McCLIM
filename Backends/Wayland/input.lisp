@@ -18,14 +18,13 @@
 (defmethod xdg:xdg-toplevel-configure :after (wayland-proxy width height states)
   (declare (ignore states wayland-proxy))
   (format t "toplevel configure event: w: ~a  h: ~a~%" width height)
-  ;; (wl-egl:wl-egl-window-resize *egl-window* width height 0 0)
-  ;; (wl-surface-commit *window*)
-  (distribute-event *wayland-port*
-                    (make-instance 'window-configuration-event
-                                   :width width
-                                   :height height
-                                   ; :region?
-                                   )))
+  (let* ((sheet (graft *wayland-port*))
+         (clim-event (make-instance 'window-configuration-event
+                                    :width width
+                                    :height height
+                                    :sheet sheet
+                                    :region (sheet-native-region sheet))))
+    (distribute-event *wayland-port* clim-event)))
 
 (defmethod xdg:xdg-toplevel-close :after (wayland-proxy)
   (declare (ignore wayland-proxy))
@@ -74,4 +73,5 @@
   (setf (screen-scale screen) scale-factor))
 
 (defmethod wlc:wl-output-done ((screen wayland-port-screen))
-  (format t "ALL OUTPUT EVENTS FINISHED ~S~%" screen))
+
+  (values (format t "ALL OUTPUT EVENTS FINISHED ~S~%" screen) screen))
