@@ -177,6 +177,14 @@
     (wlc:wl-display-disconnect display)))
 
 (defmethod port-force-output ((port wayland-port))
+  (format t "PORT-FORCE-OUTPUT~%")
+  ;; (alx:when-let* ((graft (graft port))
+  ;;                 (mirror (sheet-mirror graft))
+  ;;                 (egl-display (wayland-egl-mirror-display mirror))
+  ;;                 (egl-surface (wayland-egl-mirror-surface mirror)))
+  ;;   (format t "egl swap buffers~%")
+  ;;   (egl:swap-buffers egl-display egl-surface))
+
   (wlc:wl-surface-commit (wayland-port-window port)))
 
 ;;; Port event handling
@@ -186,6 +194,20 @@
   (let ((sheet (event-sheet event))
         (native-region (window-event-native-region event)))
     (format t "window-configuration-event ~S ~S~%" sheet native-region)))
+
+(defmethod port-set-mirror-geometry
+    ((port wayland-port) (sheet mirrored-sheet-mixin) region)
+  (alx:when-let ((mirror (sheet-direct-mirror sheet)))
+    (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
+      (with-bounding-rectangle* (ox1 ox2 oy1 oy2) (sheet-mirror-geometry sheet)
+        (let ((window (window mirror)))
+          (when (some #'/=
+                      (list x1 y1 x2 y2)
+                      (list ox1 oy1 ox2 oy2))
+            (format t "port-set-mirror-geometry~%")
+            ;TODO: determine if we need CLX's ROUND-COORDINATE
+            (xdg:xdg-surface-set-window-geometry window x1 y1 w h))))
+      (values x1 y1 x2 y2))))
 
 (defmethod graft ((port wayland-port))
   (first (port-grafts port)))
