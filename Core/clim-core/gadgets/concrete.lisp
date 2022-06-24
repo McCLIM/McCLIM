@@ -640,7 +640,7 @@
   (let ((position (convert-value-to-position pane))
         (slider-button-half-short-dim (floor slider-button-short-dim 2))
         (background-color (pane-background pane))
-        (inner-color (gadget-current-color pane)))
+        (inner-color *3d-normal-color*))
     (flet ((draw-knob (x y)
              (if (gadget-active-p pane)
                  (progn

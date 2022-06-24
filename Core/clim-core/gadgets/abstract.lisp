@@ -285,11 +285,6 @@ and must never be nil.")
   (:documentation "The value is a string")
   (:default-initargs :value ""))
 
-(defmethod initialize-instance :after ((gadget text-field) &rest rest)
-  (unless (getf rest :normal)
-    (setf (slot-value gadget 'current-color) +white+
-          (slot-value gadget 'normal) +white+)))
-
 ;;; 30.4.9 The abstract text-editor Gadget
 
 (defclass text-editor (text-field)

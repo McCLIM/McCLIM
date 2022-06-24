@@ -154,9 +154,7 @@
                 :align-y (pane-align-y pane)
                 :text-style (pane-text-style pane))))
 
-
 (defclass basic-gadget (;; sheet-leaf-mixin ; <- this cannot go here...
-                        gadget-color-mixin
                         ;; These are inherited from pane, via
                         ;; clim-sheet-input-mixin and clim-repainting-mixin
                         ;; immediate-sheet-input-mixin

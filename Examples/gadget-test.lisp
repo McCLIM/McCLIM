@@ -137,10 +137,7 @@
                 (list (push-button :label "E") (push-button :label "F")))))
      (toggle-btn :toggle-button
                  :label "Toggle"
-                 :value t
-                 :normal +red+
-                 :highlighted +red+
-                 :pushed-and-highlighted +red+)
+                 :value t)
      (scroll    (raising (:border-width 1 :background +Gray83+)
                    (scrolling (:background +Gray83+ :width 100 :height 100)
                      (horizontally ()

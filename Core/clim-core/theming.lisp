@@ -37,40 +37,9 @@
 ;;; gadget's colors
 ;;;
 
-;;; GADGET-COLOR-MIXIN is currently kind of dangling, we should reuse
-;;; it for effective-gadget-foreground et al.
-
-
-(defclass gadget-color-mixin ()
-  ((normal :type color
-           :initform +gray80+
-           :initarg :normal
-           :accessor gadget-normal-color)
-   (highlighted :type color
-                :initform +gray85+
-                :initarg :highlighted
-                :accessor gadget-highlighted-color)
-   (pushed-and-highlighted :type color
-                           :initform +gray75+
-                           :initarg :pushed-and-highlighted
-                           :accessor gadget-pushed-and-highlighted-color)
-   (current-color :type color
-                  :accessor gadget-current-color))
-  (:documentation "This class define the gadgets colors."))
-
-(defmethod initialize-instance :after ((gadget gadget-color-mixin) &rest args)
-  (declare (ignore args))
-  (setf (slot-value gadget 'current-color) (gadget-normal-color gadget)))
-
-(defmethod (setf gadget-current-color) :after (color (gadget gadget-color-mixin))
-  (declare (ignore color))
-  (dispatch-repaint gadget (sheet-region gadget)))
-
-;;; Common colors:
-
 (defgeneric gadget-highlight-background (gadget)
   (:method ((gadget gadget))
-    (compose-over (compose-in #|+paleturquoise+|# +white+ (make-opacity .5))
+    (compose-over (compose-in +white+ (make-opacity .5))
                   (pane-background gadget))))
 
 (defgeneric effective-gadget-foreground (gadget)
