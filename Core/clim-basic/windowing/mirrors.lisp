@@ -171,4 +171,12 @@ infinite recursion on (setf sheet-*).")
             (%%set-sheet-native-region (transform-region offset mirror-region) sheet)
             (unless (and old-n-tran (transformation-equal new-n-tran old-n-tran))
               (invalidate-cached-transformations sheet)
-              (%%set-sheet-native-transformation new-n-tran sheet))))))))
+              (%%set-sheet-native-transformation new-n-tran sheet)
+              (when old-n-tran
+                ;; Native transformation has changed - repaint the sheet.
+                ;;
+                ;; We don't call dispatch-repaint because the transformation of
+                ;; the sheet may change without intervening event reads and the
+                ;; repaint would not happen before the next event is read, causing
+                ;; a corrupted output during display. -- jd 2021-03-02
+                (dispatch-repaint sheet +everywhere+)))))))))
