@@ -1,20 +1,6 @@
 (defpackage #:mcclim-render
   (:nicknames #:clim-render)
-  (:use)
-  (:export
-   ;; colors
-   #:color->octets
-   ;; image
-   #:draw-image*
-   ;; image ops
-   #:make-image
-   #:clone-image
-   #:copy-image
-   #:blend-image
-   #:fill-image))
-
-(defpackage #:mcclim-render-extensions
-  (:use)
+  (:use #:clim #:clime #:clim-lisp #:mcclim-truetype)
   (:export
    ;; colors
    #:octet
@@ -36,10 +22,20 @@
    #:rgb->alpha
    #:gray->rgba
    #:gray->rgb
-   #:gray->alpha))
-
-(defpackage #:mcclim-render-internals
-  (:use #:clim #:clime #:clim-lisp #:mcclim-render #:mcclim-render-extensions #:mcclim-truetype)
+   #:gray->alpha
+   #:color->octets
+   ;; image-mirror-mixin
+   #:image-mirror-image
+   #:image-dirty-region
+   ;; image
+   #:draw-image*
+   ;; image ops
+   #:with-image-locked
+   #:make-image
+   #:clone-image
+   #:copy-image
+   #:blend-image
+   #:fill-image)
   (:import-from #:alexandria
                 #:minf
                 #:maxf
@@ -54,4 +50,5 @@
                 #:medium-native-transformation
                 #:medium-device-transformation
                 #:medium-native-region
-                #:medium-device-region))
+                #:medium-device-region
+                #:multiline-text-medium-mixin))

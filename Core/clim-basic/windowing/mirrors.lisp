@@ -82,6 +82,15 @@
 ;;;     this case we just blittered pixels which were considered dirty into
 ;;;     R_2. Redrawing R_1 now does not repair the defect, since R_2 now also
 ;;;     contains dirty pixels. => oops, redraw error.
+;;;
+;;;  XXX this is not true - we need to repaint the sheet always when its
+;;;  region changes (i.e due to a change to the transformation) - we need to
+;;;  redraw it even if the native transformation stays the same. On the other
+;;;  hand the native transformation never changes when the sheet region and
+;;;  the sheet transformation are constant. In other words - don't redraw,
+;;;  because the (SETF SHEET-TRANSFORMATION) :AROUND method already does that.
+;;;  -- jd 2022-05-12
+;;;
 ;;
 ;;;  b. Since the above above calculation took the parent's native
 ;;;     transformation into account, (and even the naively wanted mirror
@@ -162,12 +171,4 @@ infinite recursion on (setf sheet-*).")
             (%%set-sheet-native-region (transform-region offset mirror-region) sheet)
             (unless (and old-n-tran (transformation-equal new-n-tran old-n-tran))
               (invalidate-cached-transformations sheet)
-              (%%set-sheet-native-transformation new-n-tran sheet)
-              (when old-n-tran
-                ;; Native transformation has changed - repaint the sheet.
-                ;;
-                ;; We don't call dispatch-repaint because the transformation of
-                ;; the sheet may change without intervening event reads and the
-                ;; repaint would not happen before the next event is read, causing
-                ;; a corrupted output during display. -- jd 2021-03-02
-                (repaint-sheet sheet +everywhere+)))))))))
+              (%%set-sheet-native-transformation new-n-tran sheet))))))))

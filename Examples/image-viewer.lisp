@@ -68,7 +68,7 @@ value of the gadget is the image being displayed."))
 
 (define-image-viewer-command (com-display-image :name t :menu t)
     ((image-pathname 'pathname
-      :default (user-homedir-pathname) :insert-default t))
+                     :default (user-homedir-pathname) :insert-default t))
   (if (probe-file image-pathname)
       (let* ((type (funcall (case (readtable-case *readtable*)
                               (:upcase #'string-upcase)
@@ -85,6 +85,14 @@ value of the gadget is the image being displayed."))
           (unsupported-bitmap-format ()
             (format t "Image format ~A not recognized" type))))
       (format t "No such file: ~A" image-pathname)))
+
+(define-image-viewer-command (com-display-kitten :name t :menu t) ()
+  (com-display-image (merge-pathnames #p"images/kitten.jpg"
+                                      (asdf:system-source-directory :clim-examples))))
+
+(define-image-viewer-command (com-display-glider :name t :menu t) ()
+  (com-display-image (merge-pathnames #p"images/glider.png"
+                                      (asdf:system-source-directory :clim-examples))))
 
 (define-image-viewer-command (com-blank-image :name t :menu t)
     ()

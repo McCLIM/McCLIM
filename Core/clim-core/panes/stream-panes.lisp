@@ -54,14 +54,6 @@
    (end-of-page-action :initform :scroll
                        :initarg :end-of-page-action
                        :reader pane-end-of-page-action)
-   ;; Slots of space-requirement-options-mixin defined with private accessors for our
-   ;; convenience; They are used by the :compute protocol.
-   (user-width :accessor %pane-user-width)
-   (user-min-width :accessor %pane-user-min-width)
-   (user-max-width :accessor %pane-user-max-width)
-   (user-height :accessor %pane-user-height)
-   (user-min-height :accessor %pane-user-min-height)
-   (user-max-height :accessor %pane-user-max-height)
    ;; size required by the stream
    (stream-width :initform 100 :accessor stream-width)
    (stream-height :initform 100 :accessor stream-height))
@@ -95,13 +87,7 @@
                                         (pane clim-stream-pane)
                                         &key force-p)
   (declare (ignore frame force-p))
-  (unless (or (eql :compute (pane-user-width pane))
-              (eql :compute (pane-user-min-width pane))
-              (eql :compute (pane-user-max-width pane))
-              (eql :compute (pane-user-height pane))
-              (eql :compute (pane-user-min-height pane))
-              (eql :compute (pane-user-max-height pane)))
-    (change-space-requirements pane)))
+  (change-space-requirements pane))
 
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
@@ -120,45 +106,6 @@
   (when height
     (setf (stream-height pane) height))
   (change-space-requirements pane))
-
-(defmethod compose-space :around ((pane clim-stream-pane) &key width height)
-  (declare (ignore width height))
-  (flet ((compute (val default)
-           (if (eq val :compute) default val)))
-    (if (or (eql :compute (pane-user-width pane))
-            (eql :compute (pane-user-min-width pane))
-            (eql :compute (pane-user-max-width pane))
-            (eql :compute (pane-user-height pane))
-            (eql :compute (pane-user-min-height pane))
-            (eql :compute (pane-user-max-height pane)))
-        (multiple-value-bind (width height)
-            (let ((record
-                    (if (pane-incremental-redisplay pane)
-                        (stream-output-history pane)
-                        (with-output-to-output-record (pane)
-                          (invoke-display-function *application-frame* pane)))))
-              (with-bounding-rectangle* (min-x min-y max-x max-y) record
-                (values (max max-x (- max-x min-x))
-                        (max max-y (- max-y min-y)))))
-          (unless (> width 0) (setf width 1))
-          (unless (> height 0) (setf height 1))
-          (setf (stream-width pane) width)
-          (setf (stream-height pane) height)
-          ;; overwrite the user preferences which value is :compute
-          (letf (((%pane-user-width pane)
-                  (compute (pane-user-width pane) width))
-                 ((%pane-user-min-width pane)
-                  (compute (pane-user-min-width pane) width))
-                 ((%pane-user-max-width pane)
-                  (compute (pane-user-max-width pane) width))
-                 ((%pane-user-height pane)
-                  (compute (pane-user-height pane) height))
-                 ((%pane-user-min-height pane)
-                  (compute (pane-user-min-height pane) height))
-                 ((%pane-user-max-height pane)
-                  (compute (pane-user-max-height pane) height)))
-            (call-next-method)))
-        (call-next-method))))
 
 (defmethod compose-space ((pane clim-stream-pane) &key (width 100) (height 100))
   (with-bounding-rectangle* (min-x min-y max-x max-y)
@@ -186,11 +133,7 @@
 
 (defmethod window-clear ((pane clim-stream-pane))
   (stream-close-text-output-record pane)
-  (let ((output-history (stream-output-history pane)))
-    (with-bounding-rectangle* (left top right bottom) output-history
-      (when (sheet-viewable-p pane)
-        (medium-clear-area (sheet-medium pane) left top right bottom)))
-    (clear-output-record output-history))
+  (clear-output-record (stream-output-history pane))
   (window-erase-viewport pane)
   (when-let ((cursor (stream-text-cursor pane)))
     (setf (cursor-position cursor)
@@ -201,8 +144,7 @@
   (change-space-requirements pane))
 
 (defmethod window-refresh ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-region pane)
-    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+))
+  (window-erase-viewport pane)
   (stream-replay pane))
 
 (defun clim-stream-pane-default-display-function (frame pane)
@@ -214,9 +156,8 @@
       (sheet-region pane)))
 
 (defmethod window-erase-viewport ((pane clim-stream-pane))
-  (with-bounding-rectangle* (x1 y1 x2 y2) (or (pane-viewport-region pane)
-                                              (sheet-region pane))
-    (draw-rectangle* (sheet-medium pane) x1 y1 x2 y2 :ink +background-ink+)))
+  (with-bounding-rectangle* (x1 y1 x2 y2) (window-viewport pane)
+    (medium-clear-area (sheet-medium pane) x1 y1 x2 y2)))
 
 (defmethod window-viewport-position ((pane clim-stream-pane))
   (if (pane-scroller pane)

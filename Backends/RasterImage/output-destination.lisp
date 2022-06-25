@@ -16,10 +16,7 @@
            :initform :compute)
    (%height :initarg :height
             :reader height
-            :initform :compute)
-   (%border-width :initarg :border-width
-                  :reader border-width
-                  :initform 10)))
+            :initform :compute)))
 
 (defmethod shared-initialize :after ((instance raster-image-destination)
                                      (slot-names t)
@@ -40,9 +37,7 @@
                           (*standard-output* :raster *standard-output*
                                              :format (file-format destination)
                                              :width (width destination)
-                                             :height (height destination)
-                                             :border-width (border-width destination)
-                                             :recording-p nil)
+                                             :height (height destination))
                         (funcall continuation)))
                     destination))
 

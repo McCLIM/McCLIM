@@ -26,7 +26,7 @@
    ;; DPI (for font scaling)
    (font-dpi :initform *dpi* :initarg :dpi :reader font-dpi)))
 
-(defmethod destroy-port :after ((port ttf-port-mixin))
+(defun invalidate-port-font-cache (port)
   (with-slots (font-loader-cache font-family-cache font-direct-cache text-style-cache) port
     (maphash-values (lambda (val) (zpb-ttf:close-font-loader val)) font-loader-cache)
     (clrhash font-loader-cache)
@@ -35,63 +35,62 @@
     (clrhash text-style-cache))
   (setf (font-families port) nil))
 
-(defmethod port-all-font-families ((port ttf-port-mixin) &key invalidate-cache)
+(defmethod destroy-port :after ((port ttf-port-mixin))
+  (invalidate-port-font-cache port))
+
+(defmethod port-all-font-families ((port ttf-port-mixin) &key invalidate-cache preload)
   (when invalidate-cache
-    (setf (font-families port) nil)
-    (register-all-ttf-fonts port))
+    (invalidate-port-font-cache port)
+    (register-all-ttf-fonts port :preload preload)
+    (register-standard-fonts port :preload preload))
   (font-families port))
 
-(defun ensure-truetype-font (port source size)
+(defun ensure-truetype-font (port filename source size &optional preload)
   (setf size (climb:normalize-font-size size))
   (with-slots (font-loader-cache font-family-cache font-direct-cache text-style-cache) port
-    (flet ((ensure-family (loader)
-             (let ((name (zpb-ttf:family-name loader)))
-               (ensure-gethash name font-family-cache
-                               (make-instance 'truetype-font-family :name name :port port))))
-           (make-face (family loader)
-             (let ((name (zpb-ttf:subfamily-name loader)))
-               (make-instance 'truetype-face :family family :name name :loader loader)))
-           (make-font (face)
-             (let ((*dpi* (font-dpi port)))
-               (make-instance 'cached-truetype-font :face face :size size))))
-      (if-let ((loader (gethash source font-loader-cache)))
-        (destructuring-bind (face fonts) (gethash loader font-direct-cache)
-          (ensure-gethash size fonts (make-font face)))
-        (clim-sys:with-lock-held (*zpb-font-lock*)
-          (let* ((loader (zpb-ttf:open-font-loader source))
-                 (family (ensure-family loader))
-                 (face   (make-face family loader))
+    (multiple-value-bind (loader loader-foundp) (gethash filename font-loader-cache)
+      (let* ((loader (or loader (zpb-ttf:open-font-loader source)))
+             (f1-name (zpb-ttf:family-name loader))
+             (f2-name (zpb-ttf:subfamily-name loader))
+             (text-style (make-text-style f1-name f2-name size)))
+        (flet ((make-family ()
+                 (make-instance 'truetype-font-family :name f1-name :port port))
+               (make-face (family)
+                 (make-instance 'truetype-face :family family :name f2-name
+                                               :loader loader :preloaded preload))
+               (make-font (face size)
+                 (let ((*dpi* (font-dpi port)))
+                   (make-instance 'cached-truetype-font :face face :size size))))
+          (when loader-foundp
+            (return-from ensure-truetype-font
+              (destructuring-bind (face fonts) (gethash loader font-direct-cache)
+                (setf (gethash text-style text-style-cache)
+                      (ensure-gethash size fonts (make-font face size))))))
+          (let* ((family (ensure-gethash f1-name font-family-cache (make-family)))
+                 (face   (make-face family))
                  (fonts  (make-hash-table :test #'eql))
-                 (font   (make-font face))
-                 (style  (make-text-style (clime:font-family-name family)
-                                          (clime:font-face-name face)
-                                          size)))
-            (setf (gethash source font-loader-cache) loader
+                 (font   (make-font face size)))
+            (setf (gethash filename font-loader-cache) loader
                   (gethash loader font-direct-cache) (list face fonts)
                   (gethash size fonts) font
-                  (gethash style text-style-cache) font)
+                  (gethash text-style text-style-cache) font)
             (pushnew family (font-families port))
             font))))))
 
-(defun preload-font (port filename)
-  (let* ((hash (slot-value port 'back-memory-cache))
-         (file (or (gethash filename hash)
-                   (clim-sys:with-lock-held (*zpb-font-lock*)
-                     (setf (gethash filename hash)
-                           (read-file-into-byte-vector filename))))))
-    (flexi-streams:make-in-memory-input-stream file)))
-
 (defun register-ttf-font (port filename preload)
-  (with-slots (back-memory-cache) port
-    (let ((source (if (not preload)
-                      filename
-                      (preload-font port filename))))
+  (clim-sys:with-lock-held (*zpb-font-lock*)
+    (let* ((vector (gethash filename (slot-value port 'back-memory-cache)))
+           (source (if (and (not preload) (not vector))
+                       filename
+                       (flexi-streams:make-in-memory-input-stream
+                        (ensure-gethash filename
+                                        (slot-value port 'back-memory-cache)
+                                        (read-file-into-byte-vector filename))))))
       (handler-case (dolist (size '(8 10 12 14 18 24 48 72))
-                      (ensure-truetype-font port source size))
+                      (ensure-truetype-font port filename source size preload))
         (error ()
-          (when preload
-            (ignore-errors (close source))
-            (remhash filename back-memory-cache)))))))
+          (ignore-errors (and (streamp source) (close source)))
+          (remhash filename (slot-value port 'back-memory-cache)))))))
 
 (defun register-all-ttf-fonts (port &key (dir *truetype-font-path*) (preload nil))
   (with-port-locked (port)
@@ -109,7 +108,8 @@
   (or (gethash text-style (slot-value port 'text-style-cache))
       (multiple-value-bind (family face size) (text-style-components text-style)
         (when-let ((source (assoc-value *families/faces* (list family face) :test #'equal)))
-          (ensure-truetype-font port source size)))
+          (clim-sys:with-lock-held (*zpb-font-lock*)
+            (ensure-truetype-font port source source size))))
       (error "~s can't map the text style ~s." port text-style)))
 
 (defmethod text-style-mapping ((port ttf-port-mixin)
@@ -117,5 +117,6 @@
                                &optional charset)
   (declare (ignore charset))
   (if-let ((font-name (probe-file (climi::device-font-name text-style))))
-    (ensure-truetype-font port font-name :normal)
+    (clim-sys:with-lock-held (*zpb-font-lock*)
+      (ensure-truetype-font port font-name font-name :normal))
     (error "~s can't map the text style ~s." port text-style)))

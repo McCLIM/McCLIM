@@ -8,15 +8,11 @@
                   #:with-transformed-positions
                   #:unmanaged-top-level-sheet-pane
                   #:vbox-pane)
-    (:import-from :mcclim-render-internals
+    (:import-from :mcclim-render
                   #:render-medium-mixin
                   #:render-port-mixin
                   #:image-mirror-image
-                  #:image-sheet-mixin
                   #:image-mirror-mixin
-                  #:image-pixmap-mixin
-                  #:mirror->%image
-                  #:%make-image
                   #:image-mirror-image
                   ;;#:save-image-to-file
                   ;;#:save-image-to-stream

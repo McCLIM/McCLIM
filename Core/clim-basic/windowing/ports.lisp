@@ -87,7 +87,7 @@
    (grafts :initform nil
            :accessor port-grafts)
    (frame-managers :initform nil
-                   :reader frame-managers)
+                   :accessor frame-managers)
    (event-process
     :initform nil
     :initarg  :event-process

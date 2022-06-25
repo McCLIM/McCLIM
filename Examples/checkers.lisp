@@ -304,6 +304,7 @@
       (present checker 'checker :stream stream :view view))))
 
 (define-presentation-method present (object (type board) stream (view board-view) &key)
+  (declare (ignore object type))
   ;; Testing (player turn marker)
   (ecase (player *application-frame*)
     (:player-1 (draw-circle* stream 0.75 0.75 0.1))
@@ -311,43 +312,44 @@
     (:setup    (draw-circle* stream (+ *cols* 1.25) (+ *rows* 1.25) 0.1)))
   ;; Draw vertical coordinates
   (loop
-     for col from 1
-     for col-name in *col-labels*
-     for local-x1 = (+ col .5)
-     for local-y1 = 0.75
-     for local-y2 = (+ (1+ *rows*) .25)
-     do
-       (draw-text* stream col-name local-x1 local-y1
-                   :align-x :center
-                   :align-y :center)
+    for col from 1
+    for col-name in *col-labels*
+    for local-x1 = (+ col .5)
+    for local-y1 = 0.75
+    for local-y2 = (+ (1+ *rows*) .25)
+    do (multiple-value-bind (native-x native-y)
+           (transform-position (sheet-device-transformation stream) local-x1 local-y1)
+         (with-identity-transformation (stream)
+           (draw-text* stream col-name native-x native-y
+                       :align-x :center
+                       :align-y :center)))
        (multiple-value-bind (native-x native-y)
            (transform-position (sheet-device-transformation stream) local-x1 local-y2)
          (with-identity-transformation (stream)
            (draw-text* stream col-name native-x native-y
                        :align-x :center
                        :align-y :center
-                       :transformation (make-rotation-transformation* pi native-x native-y)
-                       :transform-glyphs t))))
+                       :transformation (make-rotation-transformation* pi native-x native-y)))))
   ;; Draw horizontal coordinates
   (loop
-     for row from 1
-     for row-name in *row-labels*
-     for local-x1 = 0.75
-     for local-x2 = (+ (1+ *cols*) .25)
-     for local-y1 = (+ row .5)
-     do
-       (draw-text* stream row-name local-x1 local-y1
-                   :align-x :center
-                   :align-y :center)
+    for row from 1
+    for row-name in *row-labels*
+    for local-x1 = 0.75
+    for local-x2 = (+ (1+ *cols*) .25)
+    for local-y1 = (+ row .5)
+    do (multiple-value-bind (native-x native-y)
+           (transform-position (sheet-device-transformation stream) local-x1 local-y1)
+         (with-identity-transformation (stream)
+           (draw-text* stream row-name native-x native-y
+                       :align-x :center
+                       :align-y :center)))
        (multiple-value-bind (native-x native-y)
            (transform-position (sheet-device-transformation stream) local-x2 local-y1)
          (with-identity-transformation (stream)
            (draw-text* stream row-name native-x native-y
                        :align-x :center
                        :align-y :center
-                       :transformation (make-rotation-transformation* pi native-x native-y)
-                       :transform-glyphs t))))
-
+                       :transformation (make-rotation-transformation* pi native-x native-y)))))
   (with-translation (stream 1 1)
     (if-let ((winner (game-over *application-frame*)))
       (let ((x (/ *cols* 2))

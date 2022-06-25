@@ -45,6 +45,9 @@
 (defmethod bounding-rectangle ((region region))
   (copy-bounding-rectangle region))
 
+(defmethod bounding-rectangle (thing)
+  (copy-bounding-rectangle thing))
+
 ;;; 4.1.2 Bounding Rectangle Convenience Functions
 
 (eval-when (:compile-toplevel :load-toplevel :execute)

@@ -168,7 +168,7 @@
          :accessor port)
    (drawable :initform nil
              :accessor %medium-drawable)
-   (buffering-p :initform t
+   (buffering-p :initform nil
                 :accessor medium-buffering-output-p))
   (:documentation "The basic class, on which all CLIM mediums are built."))
 
@@ -346,16 +346,6 @@
 
 
 ;;; Misc ops
-(defmacro with-output-buffered ((medium &optional (buffer-p t)) &body body)
-  (with-gensyms (cont)
-    `(flet ((,cont () ,@body))
-       (declare (dynamic-extent (function ,cont)))
-       (invoke-with-output-buffered ,medium (function ,cont) ,buffer-p))))
-
-(defmethod invoke-with-output-buffered
-    ((sheet sheet) continuation &optional (buffered-p t))
-  (with-sheet-medium (medium sheet)
-    (invoke-with-output-buffered medium continuation buffered-p)))
 
 (defmethod invoke-with-output-buffered
     ((medium basic-medium) continuation &optional (buffered-p t))
@@ -364,7 +354,20 @@
          (unless buffered-p
            (medium-force-output medium))
          (funcall continuation))
-    (medium-force-output medium)))
+    (unless (medium-buffering-output-p medium)
+      (medium-force-output medium))))
+
+;;; Trampoline.
+(defmethod invoke-with-output-buffered
+    ((sheet sheet-with-medium-mixin) continuation &optional (buffered-p t))
+  (with-sheet-medium (medium sheet)
+    (invoke-with-output-buffered medium continuation buffered-p)))
+
+;;; Default method.
+(defmethod invoke-with-output-buffered
+    (sheet continuation &optional (buffered-p t))
+  (declare (ignore buffered-p))
+  (funcall continuation))
 
 
 ;;; Pixmaps
@@ -559,7 +562,7 @@
 
 (defmethod medium-clear-area ((medium basic-medium) left top right bottom)
   (draw-rectangle* medium left top right bottom
-                   :ink (compose-over (indirect-ink-ink +background-ink+) +black+)))
+                   :ink (compose-over (medium-background medium) +black+)))
 
 (defmethod medium-beep ((medium basic-medium))
   nil)

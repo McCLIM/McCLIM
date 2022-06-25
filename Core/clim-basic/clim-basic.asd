@@ -15,6 +15,7 @@
    (:file "protocol-classes" :depends-on ("decls"))
    (:file "multiprocessing" :depends-on ("decls"))
    (:file "utils" :depends-on ("decls" "multiprocessing"))
+   (:file "macros")
    (:module "geometry"
     :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "setf-star")
     :serial t

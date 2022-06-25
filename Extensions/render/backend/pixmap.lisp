@@ -1,12 +1,24 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
-(defclass image-pixmap-mixin (image-mirror-mixin)
-  ((width :initarg :width :accessor pixmap-width)
-   (height :initarg :height :accessor pixmap-height)))
+(defclass image-pixmap-mixin (image-mirror-mixin) ())
+
+(defmethod pixmap-width ((pixmap image-pixmap-mixin))
+  (pattern-width (image-mirror-image pixmap)))
+
+(defmethod pixmap-height ((pixmap image-pixmap-mixin))
+  (pattern-height (image-mirror-image pixmap)))
 
 (defmethod pixmap-depth ((pixmap image-pixmap-mixin))
   (declare (ignore pixmap))
   32)
+
+(defmethod allocate-pixmap ((medium render-medium-mixin) width height)
+  (let ((pixmap (make-instance 'image-pixmap-mixin)))
+    (%create-mirror-image pixmap width height)
+    pixmap))
+
+(defmethod deallocate-pixmap ((pixmap image-pixmap-mixin))
+  (setf (image-mirror-image pixmap) nil))
 
 (defmethod medium-copy-area ((from-drawable render-medium-mixin) from-x from-y
                              width height
@@ -29,8 +41,8 @@
             (transform-position
              (medium-native-transformation from-drawable)
              from-x from-y)
-          (%medium-draw-image to-drawable
-                              (medium-sheet from-drawable)
+          (%medium-draw-image (medium-drawable to-drawable)
+                              (medium-drawable from-drawable)
                               (+ x2 (- min-x x1))
                               (+ y2 (- min-y y1))
                               (- max-x min-x) (- max-y min-y)
@@ -53,7 +65,7 @@
            (medium-native-transformation from-drawable)
            from-x from-y)
         (%medium-draw-image to-drawable
-                            (medium-sheet from-drawable)
+                            (medium-drawable from-drawable)
                             (+ x2 (- min-x to-x))
                             (+ y2 (- min-y to-y))
                             (- max-x min-x) (- max-y min-y)
@@ -75,7 +87,7 @@
                                (make-rectangle* to-x to-y (+ to-x w) (+ to-y h))))
           (multiple-value-bind (x1 y1)
               (transform-position to-native to-x to-y)
-            (%medium-draw-image to-drawable
+            (%medium-draw-image (medium-drawable to-drawable)
                                 from-drawable
                                 (+ from-x (- min-x x1))
                                 (+ from-y (- min-y y1))

@@ -1,4 +1,4 @@
-(in-package #:mcclim-render-internals)
+(in-package #:mcclim-render)
 
 (deftype octet ()
   '(unsigned-byte 8))
@@ -10,6 +10,13 @@
 
 (deftype argb-pixel ()
   '(unsigned-byte 32))
+
+;;; Designs
+
+(deftype bounded-region ()
+  `(and (not rectangular-tile)
+        (not (or climi::everywhere-region standard-region-complement))
+        (or region pattern)))
 
 ;;; Pixel arrays
 ;;;
@@ -38,6 +45,6 @@
   `(simple-array argb-pixel 2))
 
 (declaim (inline make-argb-pixel-array))
-(defun make-argb-pixel-array (width height &key (initial-element 0))
+(defun make-argb-pixel-array (width height &key (initial-element #xff88ff88))
   (make-array (list height width) :element-type 'argb-pixel
                                   :initial-element initial-element))

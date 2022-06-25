@@ -9,7 +9,7 @@
 ;;;  (c) copyright 2001 by Arnaud Rouanet <rouanet@emi.u-bordeaux.fr>
 ;;;  (c) copyright 2001-2002, 2014 by Robert Strandh <robert.strandh@gmail.com>
 ;;;  (c) copyright 2002-2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
-;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2020-2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -176,20 +176,6 @@
   ;; just for documentation
   `(satisfies spacing-value-p))
 
-;; Macros for quick access to space-requirement slots.
-(defmacro sr-width (pane)
-  `(space-requirement-width (pane-space-requirement ,pane)))
-(defmacro sr-height (pane)
-  `(space-requirement-height (pane-space-requirement ,pane)))
-(defmacro sr-max-width (pane)
-  `(space-requirement-max-width (pane-space-requirement ,pane)))
-(defmacro sr-max-height (pane)
-  `(space-requirement-max-height (pane-space-requirement ,pane)))
-(defmacro sr-min-width (pane)
-  `(space-requirement-min-width (pane-space-requirement ,pane)))
-(defmacro sr-min-height (pane)
-  `(space-requirement-min-height (pane-space-requirement ,pane)))
-
 
 ;;; User space requirements
 (defclass space-requirement-options-mixin ()
@@ -269,60 +255,33 @@
 
 (defgeneric spacing-value-to-device-units (pane x))
 
-(defun merge-one-option
-    (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
-
-
-  ;; NOTE: The defaulting for :min-foo and :max-foo is different from MAKE-SPACE-REQUIREMENT.
-  ;;       MAKE-SPACE-REQUIREMENT has kind of &key foo (min-foo 0) (max-foo +fill+)
-  ;;       While user space requirements has &key foo (min-foo foo) (max-foo foo).
-  ;;       I as a user would pretty much expect the same behavior, therefore I'll take the
-  ;;       following route:
-  ;;       When the :foo option is given, I'll let MAKE-SPACE-REQUIREMENT decide.
-  ;;
-  ;; old code:
-  ;;
-  ;; ;; Then we resolve defaulting. sec 29.3.1 says:
-  ;; ;; | If either of the :max-width or :min-width options is not
-  ;; ;; | supplied, it defaults to the value of the :width option. If
-  ;; ;; | either of the :max-height or :min-height options is not
-  ;; ;; | supplied, it defaults to the value of the :height option.
-  ;; (setf user-max-foo  (or user-max-foo user-foo)
-  ;;       user-min-foo  (or user-min-foo user-foo))
-  ;;       --GB 2003-01-23
-
-  (when (and (null user-max-foo) (not (null user-foo)))
-    (setf user-max-foo (space-requirement-max-width
-                        (make-space-requirement
-                         :width (spacing-value-to-device-units pane foo)))))
-  (when (and (null user-min-foo) (not (null user-foo)))
-    (setf user-min-foo (space-requirement-min-width
-                        (make-space-requirement
-                         :width (spacing-value-to-device-units pane foo)))))
-
-  ;; when the user has no idea about the preferred size just take the
-  ;; panes preferred size.
-  (setf user-foo (or user-foo foo))
-  (setf user-foo (spacing-value-to-device-units pane user-foo))
-
-  ;; dito for min/max
-  (setf user-min-foo (or user-min-foo min-foo)
-        user-max-foo (or user-max-foo max-foo))
-
-  ;; | :max-width, :min-width, :max-height, and :min-height can
-  ;; | also be specified as a relative size by supplying a list of
-  ;; | the form (number :relative). In this case, the number
-  ;; | indicates the number of device units that the pane is
-  ;; | willing to stretch or shrink.
-  (labels ((resolve-relative (dimension sign base)
-             (if (and (consp dimension) (eq (car dimension) :relative))
-                 (+ base (* sign (cadr dimension)))
-                 (spacing-value-to-device-units pane dimension))))
-    (setf user-min-foo (and user-min-foo
-                            (resolve-relative user-min-foo  -1 user-foo))
-          user-max-foo (and user-max-foo
-                            (resolve-relative user-max-foo  +1 user-foo))))
-
+(defun merge-one-option (pane foo user-foo user-min-foo user-max-foo min-foo max-foo)
+  (macrolet ((frob (user-val pane-val null-val)
+               `(setf ,user-val
+                      (cond ((eq ,user-val :compute)
+                             (spacing-value-to-device-units pane ,pane-val))
+                            ((eq ,user-val nil)
+                             (spacing-value-to-device-units pane ,null-val))
+                            (t
+                             (spacing-value-to-device-units pane ,user-val))))))
+    (frob user-foo foo foo)
+    ;; MIN and MAX when NIL are defaulting to 0 and +FILL+ - this is for
+    ;; consistency with MAKE-SPACE-REQUIREMENT.
+    ;;
+    ;; When the value is (:RELATIVE NUMBER), then it indicates the mumber of
+    ;; device units that the pane is willing to stretch or shrink.
+    ;;
+    ;; -- jd 2022-05-24
+    (if (typep user-min-foo '(cons (eql :relative)))
+        (destructuring-bind (key val) user-min-foo
+          (assert (eq key :relative))
+          (setf user-min-foo (- user-foo val)))
+        (frob user-min-foo min-foo 0))
+    (if (typep user-max-foo '(cons (eql :relative)))
+        (destructuring-bind (key val) user-max-foo
+          (assert (eq key :relative))
+          (setf user-max-foo (+ user-foo val)))
+        (frob user-max-foo max-foo +fill+)))
   ;; Now we have two space requirements which need to be 'merged'.
   (setf min-foo (clamp user-min-foo min-foo max-foo)
         max-foo (clamp user-max-foo min-foo max-foo)
@@ -331,9 +290,9 @@
 
 (defun merge-user-specified-options (pane sr)
   (check-type pane space-requirement-options-mixin)
-  ;; ### I want proper error checking and in case there is an error we
-  ;;     should just emit a warning and move on. CLIM should not die from
-  ;;     garbage passed in here.
+  ;; I want proper error checking and in case there is an error we should just
+  ;; emit a warning and move on. CLIM should not die from garbage passed in
+  ;; here. -- gb 2003-03-14
   (multiple-value-bind (width min-width max-width height min-height max-height)
       (space-requirement-components sr)
     (multiple-value-bind (new-width new-min-width new-max-width)
@@ -453,9 +412,8 @@
   "Bound to non-NIL while within the execution of CHANGING-SPACE-REQUIREMENTS.")
 
 (defvar *changed-space-requirements* nil
-  "A list of (frame pane resize-frame) tuples recording frames and their panes
-which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
-[This is expected to change]")
+  "A list of (FRAMES . PANES) tuples recording frames and panes which changed
+during the current execution of CHANGING-SPACE-REQUIREMENTS.")
 
 (defmethod change-space-requirements :before ((pane layout-protocol-mixin)
                                               &rest space-req-keys
@@ -500,49 +458,61 @@ which changed during the current execution of CHANGING-SPACE-REQUIREMENTS.
 ;;; CHANGING-SPACE-REQUIREMENTS macro
 
 (defmacro changing-space-requirements ((&key resize-frame layout) &body body)
-  `(invoke-with-changing-space-requirements (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
+  `(invoke-with-changing-space-requirements
+    (lambda () ,@body) :resize-frame ,resize-frame :layout ,layout))
 
-(defun invoke-with-changing-space-requirements (continuation
-                                                &key resize-frame layout)
-  (cond (*changed-space-requirements*
-         ;; We are already within changing-space-requirements, so just
-         ;; call the body. This might however lead to surprising
-         ;; behavior in case the outer changing-space-requirements has
-         ;; resize-frame = NIL while the inner has resize-frame = T.
-         (funcall continuation))
-        (t
-         (let ((*changed-space-requirements* nil))
-           (let ((*changing-space-requirements* t))
-             (funcall continuation))
-           ;;
-           ;; Note: That 'resize-frame' and especially 'layout' are
-           ;; options to this strongly suggests that the authors of
-           ;; the clim specification may have meant that
-           ;; changing-space-requirements records space requirements
-           ;; of the *application-frame* only.
-           ;;
-           ;; We solve this by recording all frames but applying
-           ;; resize-frame and layout only to *application-frame*.
-           ;;
-           (dolist (q *changed-space-requirements*)
-             (destructuring-bind (frame pane resize-frame-2) q
-               (cond ((eq frame *application-frame*)
-                      (when layout
-                        (setf (frame-current-layout frame) layout))
-                      (cond (resize-frame
-                             (layout-frame frame))
-                            (t
-                             (if (frame-resize-frame frame)
-                                 (layout-frame frame)
-                                 (multiple-value-bind (width height)
-                                     (bounding-rectangle-size pane)
-                                   (layout-frame frame width height))))))
+;;; Invalidates space requirements up to the top-level sheet forcing them to
+;;; be recomputed when the frame is laid out.
+(defun invalidate-space-requirements (pane)
+  (loop for sheet = pane then (sheet-parent sheet)
+        while (panep sheet)
+        do (setf (pane-space-requirement sheet) nil)))
+
+(defmethod change-space-requirements :around
+    ((pane layout-protocol-mixin) &rest space-req-keys
+     &key resize-frame &allow-other-keys)
+  (declare (ignore space-req-keys))
+  (if *changing-space-requirements*
+      (let ((frame (pane-frame pane)))
+        ;; FIXME we should not eagerly invalidate all requirements when
+        ;; RESIZE-FRAME is NIL, but this requires some deeper changes to
+        ;; NOTE-SPACE-REQUIREMENTS-CHANGED, ALLOCATE-SPACE etc; so we retain
+        ;; the old behavior for now. -- jd 2022-05-27
+        (invalidate-space-requirements pane)
+        (if (or resize-frame (frame-resize-frame frame))
+            (pushnew frame (car *changed-space-requirements*))
+            (pushnew pane  (cdr *changed-space-requirements*))))
+      (call-next-method)))
+
+(defmethod note-space-requirements-changed :around (sheet pane)
+  (unless *changing-space-requirements*
+    (call-next-method)))
+
+(defun invoke-with-changing-space-requirements
+    (continuation &key resize-frame layout)
+  (when *changing-space-requirements*
+    (return-from invoke-with-changing-space-requirements
+      (funcall continuation)))
+  (let ((*changed-space-requirements* (cons nil nil)))
+    (multiple-value-prog1 (let ((*changing-space-requirements* t))
+                            (funcall continuation))
+      (let ((frames (car *changed-space-requirements*))
+            (panes (cdr *changed-space-requirements*)))
+        (loop for frame in frames do
+          (layout-frame frame))
+        (loop for pane in panes
+              for frame = (pane-frame pane)
+              unless (or (member frame frames)
+                         (some (lambda (p)
+                                 (and (not (eq p pane))
+                                      (sheet-ancestor-p pane p)))
+                               panes))
+                do (cond
+                     (resize-frame
+                      (layout-frame frame))
+                     (layout
+                      (with-bounding-rectangle* (:width width :height height)
+                          (frame-top-level-sheet frame)
+                        (layout-frame frame width height)))
                      (t
-                      (cond (resize-frame-2
-                             (layout-frame frame))
-                            (t
-                             (if (frame-resize-frame frame)
-                                 (layout-frame frame)
-                                 (multiple-value-bind (width height)
-                                     (bounding-rectangle-size pane)
-                                   (layout-frame frame width height)))))))))))))
+                      (note-space-requirements-changed (sheet-parent pane) pane))))))))

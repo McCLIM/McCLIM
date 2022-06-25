@@ -182,8 +182,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-backend-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (render-pane
     (labelling (:label "Render")
       (scrolling ()
@@ -193,8 +193,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-render-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
@@ -243,8 +243,8 @@
                    :min-height *height*
                    :display-time t
                    :display-function #'display-backend-output
-                   :end-of-line-action :wrap
-                   :end-of-page-action :wrap))))
+                   :end-of-line-action :allow
+                   :end-of-page-action :allow))))
    (description-pane
     (spacing (:thickness 3)
       (clim-extensions:lowering ()
@@ -464,8 +464,8 @@
       (labels ((draw ()
                  (with-slots (recording-p) *application-frame*
                    (let ((pattern (clime:with-output-to-drawing-stream
-                                      (stream :raster :pattern :width *width* :height *height*
-                                              :border-width *border-width* :recording-p recording-p)
+                                      (stream :raster :pattern :recording-p recording-p
+                                              :width *width* :height *height*)
                                     (draw-rectangle* stream 0 0 *width* *height* :filled t :ink +grey90+)
                                     (funcall (drawing-test-display-function item) frame stream))))
                      (draw-pattern* output pattern 0 0)
@@ -1900,7 +1900,7 @@ outside the clipping area should be grey.")
                                :min-height 100)
         (draw-text* stream "(Test Page)" 170 30
                     :text-style (make-text-style :fix :bold :huge))))
-    (loop for i from 1 to 15
+    (loop for i from 2 to 15
           do (formatting-row (stream)
                (formatting-cell (stream :align-x :right
                                         :align-y :center

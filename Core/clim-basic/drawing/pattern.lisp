@@ -88,6 +88,12 @@
   (:documentation "Abstract class for all patterns based on an array (indexed
 pattern, stencil, image etc)."))
 
+(defmethod print-object ((object %array-pattern) stream)
+  (print-unreadable-object (object stream :type t :identity nil)
+    (format stream ":WIDTH ~s :HEIGHT ~S"
+            (pattern-width object)
+            (pattern-height object))))
+
 (defmethod pattern-width ((pattern %array-pattern))
   (array-dimension (pattern-array pattern) 1))
 
@@ -98,10 +104,6 @@ pattern, stencil, image etc)."))
   (let ((width (pattern-width pattern))
         (height (pattern-height pattern)))
     (values 0 0 width height)))
-
-(defmethod bounding-rectangle ((pattern %array-pattern))
-  (destructuring-bind (height width) (array-dimensions (pattern-array pattern))
-    (make-bounding-rectangle 0 0 width height)))
 
 (defclass %rgba-pattern (%array-pattern)
   ((array :type (simple-array (unsigned-byte 32) 2)))
@@ -201,6 +203,9 @@ throughout the drawing plane. This is most commonly used with patterns."))
                          (y (mod y (pattern-height pattern))))
   (design-ink (rectangular-tile-design pattern) x y))
 
+(defmethod bounding-rectangle* ((pattern rectangular-tile))
+  (values 0 0 (pattern-width pattern) (pattern-height pattern)))
+
 
 ;;; Bitmap images (from files)
 ;;;
@@ -290,7 +295,8 @@ Returns a pattern representing this file."
 (defmethod bounding-rectangle* ((pattern transformed-pattern))
   (let* ((source-pattern (transformed-design-design pattern))
          (transformation (transformed-design-transformation pattern)))
-    (bounding-rectangle* (transform-region transformation (bounding-rectangle source-pattern)))))
+    (bounding-rectangle* (transform-region transformation
+                                           (bounding-rectangle source-pattern)))))
 
 (defmethod pattern-width ((pattern transformed-pattern)
                           &aux

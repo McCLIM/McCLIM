@@ -8,7 +8,7 @@
   (:import-from #:clim-null
                 #:null-medium)
 
-  (:import-from #:mcclim-render-internals
+  (:import-from #:mcclim-render
                 #:render-medium-mixin
                 #:make-path
                 #:curve-to

@@ -16,7 +16,7 @@
         #:clim-lisp
         #:clim-backend
         #:clim-clx
-        #:mcclim-render-extensions)
+        #:mcclim-render)
   (:import-from #:alexandria
                 #:when-let #:when-let* #:maphash-keys #:maphash-values)
   (:import-from #:climi
@@ -31,16 +31,12 @@
                 #:width                 ; ditto
                 ;;
                 #:make-medium)
-  (:import-from #:mcclim-render-internals
+  (:import-from #:mcclim-render
                 #:render-medium-mixin
                 #:render-port-mixin
                 #:image-mirror-image
-                #:image-sheet-mixin
-                #:image-pixmap-mixin
                 #:image-mirror-mixin
-                ;;
-                #:mirror->%image
-                #:%make-image)
+                #:with-image-locked)
   (:import-from #:clim-clx
                 #:clx-port-display
                 #:initialize-clx

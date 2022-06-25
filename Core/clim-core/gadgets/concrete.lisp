@@ -392,54 +392,20 @@
                (draw-polygon scroll-bar pg :ink *3d-normal-color*)
                (draw-bordered-polygon scroll-bar pg :style :outset :border-width 2)))))))
     ;; thumb
-    (unless (and (not all-new-p)
-                 (and (eql tb-state old-tb-state)
-                      (eql tb-y1 old-tb-y1)
-                      (eql tb-y2 old-tb-y2)))
-      (cond ((and (not all-new-p)
-                  (eql tb-state old-tb-state)
-                  (numberp tb-y1) (numberp old-tb-y1)
-                  (numberp tb-y2) (numberp old-tb-y2)
-                  (= (- tb-y2 tb-y1) (- old-tb-y2 old-tb-y1)))
-             ;; Thumb is just moving, compute old and new region
-             (with-bounding-rectangle* (:x1 x1 :x2 x2) (scroll-bar-thumb-bed-region scroll-bar)
-               ;; compute new and old region
-               (with-sheet-medium (medium scroll-bar)
-                 (with-drawing-options (medium :transformation (scroll-bar-transformation scroll-bar))
-                   (multiple-value-bind (ox1 oy1 ox2 oy2) (values x1 old-tb-y1 x2 old-tb-y2)
-                     (multiple-value-bind (nx1 ny1 nx2 ny2) (values x1 tb-y1 x2 tb-y2)
-                       (declare (ignore nx2))
-                       (copy-area medium ox1 oy1 (- ox2 ox1) (- oy2 oy1) nx1 ny1)
-                       ;; clear left-overs from the old region
-                       (if (< oy1 ny1)
-                           (draw-rectangle* medium ox1 oy1 ox2 ny1 :ink *3d-inner-color*)
-                           (draw-rectangle* medium ox1 oy2 ox2 ny2 :ink *3d-inner-color*)))) ))))
-            (t
-             ;; redraw whole thumb bed and thumb all anew
-             (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
-               (with-bounding-rectangle* (bx1 by1 bx2 by2) (scroll-bar-thumb-bed-region scroll-bar)
-                 (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
-                   (draw-rectangle* scroll-bar bx1 by1 bx2 y1 :ink *3d-inner-color*)
-                   (draw-rectangle* scroll-bar bx1 y2 bx2 by2 :ink *3d-inner-color*)
-                   (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-normal-color*)
-                   (draw-bordered-polygon scroll-bar
-                                          (polygon-points (make-rectangle* x1 y1 x2 y2))
-                                          :style :outset
-                                          :border-width 2)
-                   ;;
-                   (let ((y (/ (+ y1 y2) 2)))
-                     (draw-bordered-polygon scroll-bar
-                                            (polygon-points (make-rectangle* (+ x1 3) (- y 1) (- x2 3) (+ y 1)))
-                                            :style :inset
-                                            :border-width 1)
-                     (draw-bordered-polygon scroll-bar
-                                            (polygon-points (make-rectangle* (+ x1 3) (- y 4) (- x2 3) (- y 2)))
-                                            :style :inset
-                                            :border-width 1)
-                     (draw-bordered-polygon scroll-bar
-                                            (polygon-points (make-rectangle* (+ x1 3) (+ y 4) (- x2 3) (+ y 2)))
-                                            :style :inset
-                                            :border-width 1))))))))
+    (when (or all-new-p
+              (not (eql tb-state old-tb-state))
+              (not (eql tb-y1 old-tb-y1))
+              (not (eql tb-y2 old-tb-y2)))
+      (with-drawing-options (scroll-bar :transformation (scroll-bar-transformation scroll-bar))
+        (with-bounding-rectangle* (bx1 by1 bx2 by2) (scroll-bar-thumb-bed-region scroll-bar)
+          (with-bounding-rectangle* (x1 y1 x2 y2) (scroll-bar-thumb-region scroll-bar value)
+            (draw-rectangle* scroll-bar bx1 by1 bx2 y1 :ink *3d-inner-color*)
+            (draw-rectangle* scroll-bar bx1 y2 bx2 by2 :ink *3d-inner-color*)
+            (draw-rectangle* scroll-bar x1 y1 x2 y2 :ink *3d-normal-color*)
+            (draw-bordered-polygon scroll-bar
+                                   (polygon-points (make-rectangle* x1 y1 x2 y2))
+                                   :style :outset
+                                   :border-width 2)))))
     (setf old-up-state up-state
           old-dn-state dn-state
           old-tb-state tb-state
@@ -1680,39 +1646,28 @@ if INVOKE-CALLBACK is given."))
                (values (+ x width)
                        (+ y height))))))))
 
-;; The CLIM 2.0 spec does not really say what this macro should return.
+;; The CLIM 2.0 spec does not really say what this operator should return.
 ;; Existing code written for "Real CLIM" assumes it returns the gadget pane
 ;; object. I think returning the gadget-output-record would be more useful.
 ;; For compatibility I'm having it return (values GADGET GADGET-OUTPUT-RECORD)
+(defun invoke-with-output-as-gadget (cont stream &rest options)
+  (multiple-value-bind (x y) (stream-cursor-position stream)
+    (flet ((invoke-with-output-as-gadget-continuation (stream record)
+             (setf (gadget record) (funcall cont stream))))
+      (let ((gadget-record
+              (apply #'invoke-with-output-to-output-record
+                     stream #'invoke-with-output-as-gadget-continuation
+                     'gadget-output-record (append options (list :x x :y y)))))
+        (setup-gadget-record stream gadget-record)
+        (stream-add-output-record stream gadget-record)
+        (values (gadget gadget-record) gadget-record)))))
 
 (defmacro with-output-as-gadget ((stream &rest options) &body body)
-  ;; NOTE - incremental-redisplay 12/28/05 will call this on redisplay
-  ;; unless wrapped in (updating-output (stream :cache-value t) ...)
-  ;; Otherwise, new gadget-output-records are generated but only the first
-  ;; gadget is ever adopted, and an erase-output-record called on a newer
-  ;; gadget-output-record will face a sheet-not-child error when trying
-  ;; to disown the never adopted gadget.
   (setf stream (stream-designator-symbol stream '*standard-output*))
-  (let ((gadget-output-record (gensym))
-        (x (gensym))
-        (y (gensym)))
-    `(multiple-value-bind (,x ,y) (stream-cursor-position ,stream)
-       (flet ((with-output-as-gadget-continuation (,stream record)
-                (flet ((with-output-as-gadget-body (,stream)
-                         (declare (ignorable ,stream))
-                         (progn ,@body)))
-                  (setf (gadget record)
-                        (with-output-as-gadget-body ,stream)))))
-         (declare (dynamic-extent #'with-output-as-gadget-continuation))
-         (let ((,gadget-output-record
-                 (invoke-with-output-to-output-record
-                  ,stream
-                  #'with-output-as-gadget-continuation
-                  'gadget-output-record ,@options :x ,x :y ,y)))
-           (setup-gadget-record ,stream ,gadget-output-record)
-           (stream-add-output-record ,stream ,gadget-output-record)
-           (values (gadget ,gadget-output-record) ,gadget-output-record))))))
-;;;
+  (let ((cont (gensym)))
+    `(flet ((,cont (,stream) ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-output-as-gadget (function ,cont) ,stream ,@options))))
 
 (defclass orientation-from-parent-mixin () ())
 

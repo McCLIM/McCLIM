@@ -1,407 +1,58 @@
-
-* Introduction
-
-1. The layout protocol is triggered by LAYOUT-FRAME, which is called when a
-   frame is adopted by a frame manager
-
-2. First pass :: space composition
-
-   - Hey top-level pane, how much space do you require? Give me your
-     ~space-requirement~ instance!
-
-   - Uh, hang on a minute, I'll ask my children and compose their answers. Here
-     it is: my desired width and height and how much I can wager!
-
-3. Second pass :: space allocation
-
-   - hey host window system! I need this width and height!
-   - hey top level sheet! I've managed to allocate this much, go!
-   - erm, OK, I'll take that and arrange my children..
-
-Notes:: composite panes are not required to even ask children about desired
-size in the first pass.
-
-* Pseudocode
-
-#+BEGIN_SRC lisp
-  (defun layout-frame (frame)
-    (compose-space (frame-top-level-sheet frame))
-    (allocate-space (frame-top-level-sheet frame)))
-
-  (defun compose-space (pane &key width height)
-    (mapc #'compose-space … (children pane)))
-
-  (defun allocate-space (pane width height)
-    (mapc #'allocate-space … (children pane)))
-
-  (defun note-space-requirements-changed (sheet pane)
-    (change-space-requirements pane))
-
-  (defun change-space-requirements (pane &key resize-frame &rest space-req-keys)
-    (let ((frame (frame pane)))
-      (if (or resize-frame
-              (resize-frame-p frame))
-          (layout-frame (frame pane))
-          (note-space-requirement-changed (sheet-parent pane) pane))))
-
-  (defmacro changing-space-requirements ((&key resize-frame layout) &body body)
-    #|hue hue hue|#)
-#+END_SRC
-
-* Spec
-
-#+BEGIN_QUOTE
-The layout protocol is triggered by layout-frame, which is called when a frame
-is adopted by a frame manager.
-
-CLIM uses a two pass algorithm to lay out a pane hierarchy. In the first pass
-(called called space composition), the top-level pane is asked how much space
-it requires. This may in turn lead to same the question being asked
-recursively of all the panes in the hierarchy, with the answers being composed
-to produce the top-level pane's answer. Each pane answers the query by
-returning a space requirement (or space-requirement) object, which specifies
-the pane's desired width and height as well as its willingness to shrink or
-grow along its width and height.
-
-In the second pass (called space allocation), the frame manager attempts to
-obtain the required amount of space from the host window system. The top-level
-pane is allocated the space that is actually available. Each pane, in turn,
-allocates space recursively to each of its descendants in the hierarchy
-according to the pane's rules of composition.
-
-/Minor issue: It isn't alway possible to allocate the required space. What is
-the protocol for handling these space allocation failures? Some kind of error
-should be signalled when the constraints can't be satisfied, which can be
-handled by the application. Otherwise the panes will fall where they may. The
-define-application-frame macro should provide an option that allows
-programmers to conveniently specify a condition handler. --- ILA/
-
-For many types of panes, the application programmer can indicate the space
-requirements of the pane at creation time by using the space requirement
-options (described above), as well as by calling the change-space-requirements
-function (described below). For example, application panes are used to display
-application-specific information, so the application can determine how much
-space should normally be given to them.
-
-Other pane types automatically calculate how much space they need based on the
-information they need to display. For example, label panes automatically
-calculate their space requirement based on the text they need to display.
-
-A composite pane calculates its space requirement based on the requirements of
-its children and its own particular rule for arranging them. For example, a
-pane that arranges its children in a vertical stack would return as its
-desired height the sum of the heights of its children. Note however that a
-composite is not required by the layout protocol to respect the space requests
-of its children; in fact, composite panes aren't even required to ask their
-children.
-
-Space requirements are expressed for each of the two dimensions as a preferred
-size, a mininum size below which the pane cannot be shrunk, and a maxium size
-above which the pane cannot be grown. (The minimum and maximum sizes can also
-be specified as relative amounts.) All sizes are specified as a real number
-indicating the number of device units (such as pixels).
-#+END_QUOTE
-
-#+BEGIN_QUOTE
-compose-space (pane &key width height) [gf]
-
-During the space composition pass, a composite pane will typically ask each of
-its children how much space it requires by calling compose-space. They answer
-by returning space-requirement objects. The composite will then form its own
-space requirement by composing the space requirements of its children
-according to its own rules for laying out its children.
-
-The value returned by compose-space is a space requirement object that
-represents how much space the pane pane requires.
-
-width and height are real numbers that the compose-space method for a pane may
-use as "recommended" values for the width and height of the pane. These are
-used to drive top-down layout.
-#+END_QUOTE
-
-#+BEGIN_QUOTE
-allocate-space pane width height [gf]
-          	
-During the space allocation pass, a composite pane will arrange its children
-within the available space and allocate space to them according to their space
-requirements and its own composition rules by calling allocate-space on each
-of the child panes. width and height are the width and height of pane in
-device units.
-#+END_QUOTE
-
-#+BEGIN_QUOTE
-change-space-requirements (pane &key resize-frame &rest space-req-keys) [gf]
-
-This function can be invoked to indicate that the space requirements for pane
-have changed. Any of the options that applied to the pane at creation time can
-be passed into this function as well.
-
-resize-frame determines whether the frame should be resized to accommodate the
-new space requirement of the hierarchy. If resize-frame is true, then
-layout-frame will be invoked on the frame. If resize-frame is false, then the
-frame may or may not get resized depending on the pane hierarchy and the
-:resize-frame option that was supplied to define-application-frame.
-#+END_QUOTE
-
-#+BEGIN_QUOTE
-note-space-requirements-changed (sheet pane) [gf]
-
-This function is invoked whenever pane's space requirements have
-changed. sheet must be the parent of pane. Invoking this function essentially
-means that compose-space will be reinvoked on pane, then it will reply with a
-space requirement that is not equal to the reply that was given on the last
-call to compose-space.
-
-This function is automatically invoked by change-space-requirements in the
-cases that layout-frame isn't invoked. In the case that layout-frame is
-invoked, it isn't necessary to call note-space-requirements-changed since a
-complete re-layout of the frame will be executed.
-#+END_QUOTE
-
-#+BEGIN_QUOTE
-changing-space-requirements ((&key resize-frame layout) &body body) [macro]
-
-This macro supports batching the invocation of the layout protocol by calls to
-change-space-requirements. Within the body, all calls to
-change-space-requirements change the internal structures of the pane and are
-recorded. When the body is exited, the layout protocol is invoked
-appropriately. body may have zero or more declarations as its first forms.
-#+END_QUOTE
-
-* Excerpts
-
-- layout-frame is called when a frame is adopted by a frame manager
-- first compose-space is called, second allocate-space is called
-- allocate-space first obtains space for the tpl sheet and works with that
-- space-requirement defines minimum, optimal and maximum width/height
-- space requirement of the pane is:
-  1. set during the pane creation and changed with change-space-requirements
-  2. calculated based on the pane contents (i.e label pane and its string)
-  3. fixed or calculated based on the pane children space requirements
-- space requirement component may be a relative number /specified how?/
-- space by default is specified in device units /implement dp already!/
-
-* What McCLIM does
-
-** Classes and types
-
-- standard-space-requirement :: the class implemented and used by McCLIM
-     this is a subclass of a protocol class space-requirement
-
-- space-requirement-options-mixin :: the class for user space requirements
-     this is mixed into a basic-pane. Spacing slots are used by gadgets.
-
-- layout-protocol-mixin :: implements the core behavior of the layout protocol
-     /write something clever here/
-
-- spacing-value   :: a valid argument for spacing-value-to-device-units - it
-     is a superset of valid arguments, because ~(2 :line)~ makes sense only
-     for the clim-pane-streams (maybe we should provide some default
-     interpretation for basic-panes too using a default-text-style?)
-
-** Functions
-
-Standard:
-
-- space-requirement-*, make-space-requirement
-- compose-space
-- allocate-space
-- change-space-requirements
-- note-space-requirements-changed
-
-Non-standard:
-
-- spacing-value-to-device-units :: converts i.e (42 :mm) to device units. See
-     entry for the type ~spacing-value~ and remark about ~:line~
-
-- merge-user-specified-options :: merges standard-space-requirement and
-     space-requirement-options-mixin requirements. It has a helper function
-     merge-one-option which is used only here. Function is called from
-     compose-space :around method defined on space-requirement-options-mixin
-
-- layout-child    :: this is a composition protocol function which is used to
-     allocate space to a child of a pane. This function may offer to its child
-     more space than it can cover and for that there are arguments like
-     align-x and align-y.
-
-** Other remarks
-
-In 2002 a special spacing-value has been introduced for clim-stream-pane which
-is denoted by a keyword ~:compute~. It's meaning is that the
-space-requirement-options-mixin appropriate value is set to the
-output-record-history dimension. This is a very wrong method, because it
-invokes the display function /from the compose-space method/ just to learn
-about dimensions!
-
-** Behavior
-
-*** compose-space
-
-Function is invoked to found out what the pane thinks are its space
-requirements.
-
-Methods (the set of primary methods is not complete):
-
-**** :around clim-stream-pane
-This method should be removed. See "Other remarks".
-
-**** :around layout-protocol-mixin
-Caches the result of the compose space, that is:
-#+BEGIN_SRC lisp
-  (or cached-value (setf cached-value (call-next-method)))
-#+END_SRC
-
-**** :around space-requirement-options-mixin
-Calls the next method and merges it with the options specified for the
-space-requirement-options-mixin.
-
-**** clim-stream-pane
-Takes the bounding-rectangle-max-x/y from the output recording history, the
-stream "specified" width and height (ignores the compose-space arguments width
-and height), and makes the space requirement based on that, where minimum
-width/height is based on the history max-x/max-y, the preferred is the stream
-width/height and the max width/height is ~+fill+~.
-
-**** viewport pane
-When the viewport's child has space-requirements, make-space-requirement with
-max-width/height specified by child's max-width/height, otherwise just
-make-space-requirement. Other requirements are ignored.
-
-**** top-level-sheet-pane
-Calls compose-space on its child and returns that. Why doesn't it pass ~width~
-and ~height~?
-
-*** allocate-space
-
-Function is used to make the sheet allocate its own space. For instance when
-called on the image-sheet-mixin, the image region is changed to the
-appropriate size. The size mandated by the allocate-space is final. Not all
-methods are listed.
-
-**** :around layout-protocol-mixin
-- Sets the pane-current-width/height
-- Unless the pane is a top-level-sheet-pane resizes the sheet
-- Calls the next method
-
-**** default method
-A default method does nothing.
-
-**** top-level-sheet-pane
-Unless the pane-space-requirements are already cached, cache them with the
-compose-space (is this really needed? layout-protocol-mixin will cache that
-for us). When the pane has a child, call allocate-space on it with
-width/height clamped to the user space requirements of the top-level-sheet.
-
-**** viewport-pane
-Composes its child space and takes {min,}-{width,height} of it. Then moves and
-resizes the sheet (taking into account scrollbars) and calls allocate-space on
-the child to the maximum of child-min-X, child-X and X. There is a CHECKME
-comment.
-
-*** change-space-requirements
-
-When the pane changes its size it should call change-space-requirements. If
-~resize-frame~ is ~t~ then /do something fancy/.
-
-All methods are listed.
-
-**** {:before,:after,primary} layout-protocol-mixin
-- :before clears the pane sr cache
-- primary calls the function on its parent (:resize-frame is carried)
-- :after method calls note-space-requirements-changed on the parent
-
-**** :before space-requirement-options-mixin
-Updates the specified values in the user options mixin. Is that right?
-
-**** top-level-sheet-pane
-Method coordinates with the macro ~changing-space-requirements~ (via variables
-*changed-space-requirements* and *changing-space-requirements*). There is a
-comment expressing concern about changing the requirements successively with
-different values when wrapped in the macro.
-
-This method when called outside the macro ~changing-space-requirements~ calls
-layout-frame and takes into account the argument ~resize-frame~ (but doesn't
-use ~:resize-frame~ from the application frame which is underspecified).
-
-**** unmanaged-top-level-sheet-pane
-
-This method has elaborate comment that it does at least partially a wrong
-thing. Either way the method computes the space requirements, resizes the
-sheet and allocates the space for it.
-
-#+BEGIN_QUOTE
-  ;; Special variant for unmanaged-top-level-sheet-pane. Since the
-  ;; pane is unmanaged there is no window manager which can offer the
-  ;; user options to resize this top level pane.
-  ;;
-  ;; This should however be changed by turning on the :resize-frame
-  ;; option of the frame of the unmanaged-top-level-sheet-pane and
-  ;; handle it in the method on top-level-sheet.
-  ;;
-  ;; This is currently not done, since:
-  ;; . we obviously lack the :resize-frame option
-  ;; . of some reason the frame of e.g. a command-menu is the
-  ;;   application-frame. I am not sure if this is totally right.
-  ;;
-  ;; --GB 2003-03-16
-#+END_QUOTE
-
-**** viewport-pane
-Resizes the sheet, allocates the sheet space and updates scroller-pane's
-scroll barts. Width/height are max of the bounding-rectangle of the viewport
-pane and space-requirements of its child (on which compose-space is called).
-Note, that the child's sheet is moved and resized in the allocate-size method.
-
-*** note-space-requirements-changed
-**** default behavior (also restraining-pane behavior)
-Does nothing.
-
-**** viewport-pane
-Ensures that the when the child changes its size the viewport pane rescrolls
-it it doesn't show area "outside" of the sheet.
-
-**** :after clx-graft
-Tell window manager about space requirements. This seems bogus, because only
-method specialized on the graft does nothing.
-
-**** :after null-graft
-No-op.
-
-*** changing-space-requirements
-
-Trampolines to the function ~invoke-with-changing-space-requirements~ per
-McCLIM convention. When already in the context of cahnging space requirements
-it simply calls the body. Otherwise:
-- binds *changed-space-requirements* to ()
-- binds *changing-space-requirements* to t
-- calls the body :: change-space-requirements method on tpl pushes objects in
-                    form (list frame pane resize-frame-p) to the sequence
-                    unless the pane was already pushed
-- maps over all entries in *changed-space-requirements* and
-  1. sets the frame layout when provided (this is wrong!)
-  2. calls layout-frame; args depend on the resize-frame value*
-
-Setting the frame layout is wrong, because the argument name was misrecognized
-by the original author of the macro. This will require amending the spec to
-explain the gist of the issue. The argument layout is either t or nil, and if
-layout is t, then layout-frame should be called on changed frames, otherwise
-it should not be called. This interpretation is based on the CLIM-TOS code.
-
-* What CLIM-TOS does
-
-** Classes and types
-
-layout-mixin
-
-space-requirement-cache-mixin (layout-mixin)
-wrapping-space-mixin          (layout-mixin)
-basic-space-requirement-mixin (layout-mixin)
-
-space-requirement-mixin (basic-space-requirement-mixin)
-client-overridability-mixin (space-requirement-mixin)
-
-layout-pane (...
-             space-requirement-cache-mixin
-             client-overridability-mixin
-             ...
-             composite-pane)
+#+title: Layout protocol
+#+author: Daniel Kochmański
+#+date: [2022-05-27 pią]
+
+* Layout protocol
+
+The layout protocol is triggered by a call to ~layout-frame~. This function
+may be called as a result of:
+
+- adopting the frame by a frame manager
+- external event that changes the frame geometry ~window-configuration-event~
+- user call to change the frame layout
+- user call to change the space requierments ~change-space-requirements~
+
+The protocol is executed in two passes:
+
+** Composition
+
+The function ~(compose-space pane &key width height)~ takes parameters that
+denote a suggested width and height of the pane and uses the user space
+requirements provided when the pane is created (~:min-width~, ~:width~ etc)
+and returns an instance of the class ~standard-space-requierement~ that
+specifies min, max and optimum size of the pane.
+
+Results of ~compose-space~ are cached. The cached value is invalided by a call
+to ~change-space-requirements~.
+
+** Allocation
+
+The function ~(allocate-space pane width height)~ is responsible for arranging
+the pane children by changing their geometry and invoking ~allocate-space~ on
+each of them. ~allocate-space~ does not change the geometry of its "own" pane.
+Sometimes it is not possible to meet the pane requirements, in that case
+~allocate-space~ may be called with values that are "outside" of the pane
+space requirement.
+
+* Changing the space requirements
+
+When space requirements are changed with ~change-space-requirements~, then
+user preferences are updated. Then the parent is notified about that with
+~(note-sheet-requirements-changed parent pane)~. The parent may decide to
+re-allocate the space for children or to escalate the changed requirements to
+its own parents.
+
+Sometimes numerous changes to space requirements happen in a single batch of
+invocations. For example the pane requirement may be specified as ~:compute~,
+that is to be able to contain the stream output history. In that case when we
+redisplay the frame, then first we call ~window-clear~ and then we produce a
+new output history. That results in two calls to ~change-space-requirements~.
+To avoid consecutive changes to the sheet size all these calls may be wrapped
+in ~changing-space-requirements~ - as a result all changes will be merged and
+executed only once the top-most macro invocation exits.
+
+Merging calls inside ~changing-space-requirements~ may be a little tricky,
+because changes may happen at different points in the hierarchy with different
+options. It is important for each call to update the user preferences,
+invalidate intervening cached values of ~compose-space~ and call depending on
+options either ~allocate-space~ or ~layout-frame~.

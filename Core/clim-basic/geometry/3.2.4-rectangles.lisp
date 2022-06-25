@@ -24,6 +24,10 @@
 (defclass standard-rectangle (rectangle)
   ((coordinates :initform (make-array 4 :element-type 'coordinate))))
 
+(defmethod make-load-form ((object standard-rectangle) &optional environment)
+  (make-load-form-saving-slots object :slot-names '(coordinates)
+                                      :environment environment))
+
 (defmethod simple-pprint-object-args (stream (object standard-rectangle))
   (multiple-value-bind (x1 y1 x2 y2) (rectangle-edges* object)
     (loop for (slot-name slot-value) in `((x1 ,x1)
