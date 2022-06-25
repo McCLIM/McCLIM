@@ -1900,7 +1900,7 @@ outside the clipping area should be grey.")
                                :min-height 100)
         (draw-text* stream "(Test Page)" 170 30
                     :text-style (make-text-style :fix :bold :huge))))
-    (loop for i from 1 to 15
+    (loop for i from 2 to 15
           do (formatting-row (stream)
                (formatting-cell (stream :align-x :right
                                         :align-y :center
