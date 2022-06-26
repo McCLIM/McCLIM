@@ -35,7 +35,7 @@
 (defmethod wlc:wl-callback-done ((self %wayland-invoking-callback) data)
   (funcall (fun self) data))
 
-(defun roundtrip (display)
+(defun roundtrip (port)
   "Wait for all previous requests to be processed by the wayland compositor"
   (let (callback done-p)
     (unwind-protect
@@ -47,11 +47,11 @@
            ;; in order, it won't be processed until all prior requests
            ;; are done being processed.
            (setf callback (wlc:wl-display-sync
-                           display
+                           (wayland-port-display port)
                            (make-instance '%wayland-invoking-callback
                                           :fun #'set-done)))
            (loop until done-p
-                 do (wlc:wl-display-dispatch display)))
+                 do (process-next-event port)))
       (when callback (wlc:wayland-destroy callback)))))
 
 ;;; Create a xdg_wm_base subclass which responds to pings
@@ -98,7 +98,7 @@
                                       (make-instance 'wayland-globals)))
 
   ;; Initiates a waylond connection and is informed by the server of the server's globals
-  (roundtrip (wayland-port-display port))
+  (roundtrip port)
 
   ;; Now we bind to some of the globals for local port state. The act of binding also causes some wayland events to fire
   (alx:when-let* ((compositor (bind-wayland-registry
@@ -141,7 +141,7 @@
 
     ;; Make one more round trip to handle events triggered by bindings above
     ;; before the main event loop is started
-    (roundtrip (wayland-port-display port))
+    (roundtrip port)
     (wlc:wl-surface-commit (wayland-port-window port))))
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
@@ -158,8 +158,10 @@
                    (restart-event-loop
                     "Restart Wayland event loop.")
                  (loop (process-next-event port))))))
-      (clim-sys:make-process #'wayland-port-event-loop
-                             :name (format nil "~S's event process." port)))))
+      (setf (port-event-process port)
+            (clim-sys:make-process
+             #'wayland-port-event-loop
+             :name (format nil "~S's event process." port))))))
 
 
 (defmethod destroy-port :before ((port wayland-port))
@@ -184,7 +186,7 @@
   ;;                 (egl-surface (wayland-egl-mirror-surface mirror)))
   ;;   (format t "egl swap buffers~%")
   ;;   (egl:swap-buffers egl-display egl-surface))
-
+  (map-over-grafts #'%graft-force-output port)
   (wlc:wl-surface-commit (wayland-port-window port)))
 
 ;;; Port event handling
@@ -206,8 +208,13 @@
                       (list ox1 oy1 ox2 oy2))
             (format t "port-set-mirror-geometry~%")
             ;TODO: determine if we need CLX's ROUND-COORDINATE
-            (xdg:xdg-surface-set-window-geometry window x1 y1 w h))))
+            (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h))))
       (values x1 y1 x2 y2))))
+
+(defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
+  (format t "port enable-sheet ~a ~a ~%" port sheet)
+  (alx:when-let ((mirror (sheet-direct-mirror sheet)))
+    (port-force-output port)))
 
 (defmethod graft ((port wayland-port))
   (first (port-grafts port)))

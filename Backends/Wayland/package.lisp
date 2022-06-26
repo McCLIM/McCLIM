@@ -15,6 +15,7 @@
                 #:medium-device-region
                 #:height
                 #:width
+                #:maybe-funcall
                 #:port-event-process
                 #:port-grafts
                 #:top-level-sheet-mixin

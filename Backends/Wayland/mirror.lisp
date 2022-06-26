@@ -26,6 +26,12 @@
   (let ((root (wayland-port-window port)))
     (make-instance 'wayland-egl-mirror :window root)))
 
+(defun %graft-force-output (graft)
+  (let ((mirror (sheet-mirror graft)))
+    (format t "egl swap buffers graft-force-output ~%")
+    (egl:swap-buffers (wayland-egl-mirror-display mirror)
+                      (wayland-egl-mirror-surface mirror))))
+
 ;;; TODO: determine if I need to specialize REALIZE-MIRROR on
 ;;; top-level-sheet-mixin and create various contexts... either wayland, egl,
 ;;; or opengl

@@ -6,16 +6,38 @@
 (defmethod process-next-event ((port wayland-port) &key wait-function (timeout nil))
   (let ((*wayland-port* port)
         (*wayland-wait-func* wait-function))
-    (let ((event-status (wlc:wl-display-dispatch
-                         (wayland-port-display *wayland-port*))))
+    (let ((event (progn (when timeout
+                          (sleep timeout))
+                        (wlc:wl-display-dispatch
+                         (wayland-port-display *wayland-port*)))))
+      (format t "process-next-event status? ~a~%" event)
       ;; Return t for now since I seem beholden to the wlc event loop and I'm
       ;; not sure when I should return nil
-      t
-      )))
+      (case event
+        ((nil)
+         (if (maybe-funcall wait-function)
+             (values nil :wait-function)
+             (values nil :timeout)))
+        ((t)
+         (values nil :wait-function))
+        (otherwise
+         (prog1 t
+           (unless (numberp event) ; status numbers are returned for events we
+                                   ; haven't translated yet.
+             (distribute-event port event))))))))
 
 ;;; Now we connect all of wayland-client events to our port's events
 
-(defmethod xdg:xdg-toplevel-configure :after (wayland-proxy width height states)
+(defmethod xdg:xdg-surface-configure ((surface xdg:xdg-surface) serial)
+  ;; We assume we handle configuration events immediately, so we can
+  ;; acknowledge right away. TODO: find where in the CLIM flow this should
+  ;; really happen. This ACK is very important for the PROCESS-NEXT-EVENT to
+  ;; continue even though it might be in the wrong place
+  (xdg:xdg-surface-ack-configure surface serial))
+(defmethod xdg-surface-configure :after (surface serial)
+  (format t "xdg surface configured ~a  surface: ~a~%" serial surface))
+
+(defmethod xdg:xdg-toplevel-configure (wayland-proxy width height states)
   (declare (ignore states wayland-proxy))
   (format t "toplevel configure event: w: ~a  h: ~a~%" width height)
   (let* ((sheet (graft *wayland-port*))
@@ -24,14 +46,14 @@
                                     :height height
                                     :sheet sheet
                                     :region (sheet-native-region sheet))))
-    (distribute-event *wayland-port* clim-event)))
+    clim-event))
 
-(defmethod xdg:xdg-toplevel-close :after (wayland-proxy)
+(defmethod xdg:xdg-toplevel-close (wayland-proxy)
   (declare (ignore wayland-proxy))
   (format t "close toplevel event")
-  (dispatch-event *wayland-port* (make-instance 'window-destroy-event
-                                                ;; :region?
-                                                )))
+  (make-instance 'window-destroy-event
+                 ;; :region?
+                 ))
 
 (defclass wayland-port-screen (wlc:wl-output)
   ((x :initform 0 :accessor screen-x)
@@ -73,5 +95,15 @@
   (setf (screen-scale screen) scale-factor))
 
 (defmethod wlc:wl-output-done ((screen wayland-port-screen))
+  (with-accessors ((width screen-width)
+                   (height screen-height))
+      screen
+    (alx:when-let* ((sheet (graft *wayland-port*))
+                    (clim-event (make-instance 'window-configuration-event
+                                               :width width
+                                               :height height
+                                               :sheet sheet
+                                               :region (sheet-native-region sheet))))
+      (format t "ALL OUTPUT EVENTS FINISHED ~S~%" screen)
 
-  (values (format t "ALL OUTPUT EVENTS FINISHED ~S~%" screen) screen))
+      clim-event)))
