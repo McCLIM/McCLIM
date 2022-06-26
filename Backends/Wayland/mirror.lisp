@@ -26,6 +26,11 @@
   (let ((root (wayland-port-window port)))
     (make-instance 'wayland-egl-mirror :window root)))
 
+(defmethod destroy-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
+  (format t "destroying mirror~%")
+  ;; all egl-mirror slots are nil; not sure if anything more needs to be done
+  nil)
+
 (defun %graft-force-output (graft)
   (let ((mirror (sheet-mirror graft)))
     (format t "egl swap buffers graft-force-output ~%")
