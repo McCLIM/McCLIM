@@ -48,8 +48,13 @@
 ;;; NOTE see #1280 to learn why SHEET-NATIVE-REGION* is introduced.
 ;;; FIXME caching.
 (defgeneric sheet-native-region* (sheet)
+  (:method ((sheet graft))
+    +everywhere+)
   (:method ((sheet mirrored-sheet-mixin))
-    (sheet-region sheet))
+    (region-intersection
+     (sheet-region sheet)
+     (untransform-region (sheet-transformation sheet)
+                         (sheet-native-region* (sheet-parent sheet)))))
   (:method ((sheet basic-sheet))
     (region-intersection
      (transform-region (sheet-native-transformation sheet) (sheet-region sheet))
@@ -170,12 +175,15 @@
 (defun dispatch-repaint-region (sheet old-region new-region)
   (when (and (not *skip-repaint-p*)
              (sheet-viewable-p sheet))
-    (dispatch-repaint sheet
+    (let ((region (if (sheet-direct-mirror sheet)
+                      (region-difference (rounded-bounding-rectangle new-region)
+                                         (rounded-bounding-rectangle old-region))
                       (if (or (region-equal new-region +everywhere+)
                               (region-equal old-region +everywhere+))
                           +everywhere+
                           (region-union (rounded-bounding-rectangle new-region)
                                         (rounded-bounding-rectangle old-region))))))
+      (repaint-sheet sheet region))))
 
 (defmethod (setf sheet-region) :around (new-region (sheet basic-sheet))
   (let ((old-region (sheet-region sheet)))

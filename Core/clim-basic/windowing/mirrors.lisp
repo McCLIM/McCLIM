@@ -179,4 +179,4 @@ infinite recursion on (setf sheet-*).")
                 ;; the sheet may change without intervening event reads and the
                 ;; repaint would not happen before the next event is read, causing
                 ;; a corrupted output during display. -- jd 2021-03-02
-                (dispatch-repaint sheet +everywhere+)))))))))
+                (repaint-sheet sheet (sheet-native-region* sheet))))))))))
