@@ -43,6 +43,7 @@
            "Gilbert Baumann"
            "Iban Hatchondo"
            "Julien Boninfan"
+           "Jan Moringen"
            "Lionel Salabartan"
            "Max-Gerd Retzlaff"
            "Mike McDonald"
