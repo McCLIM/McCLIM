@@ -245,7 +245,7 @@
         with result = (make-array 1 :element-type 'character
                                     :adjustable t
                                     :fill-pointer 0)
-        for char = (event-read-no-hang input-buffer)
+        for char = (event-queue-read-no-hang input-buffer)
         do (cond ((null char)
                   (return (values result nil)))
                  ((char= #\Newline char)
@@ -374,6 +374,64 @@ keys read."))
                (signal 'accelerator-gesture :event gesture))
               (t
                (return-from stream-read-gesture gesture))))))))
+
+;;; These functions are for convenience - seos is not a character stream so it
+;;; is not obligated to implement these. Reading a character discards all
+;;; non-character events in the input buffer.
+
+(defmethod stream-read-char ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for gesture = (stream-read-gesture estream
+                                             :input-wait-test nil
+                                             :input-wait-handler nil
+                                             :pointer-button-press-handler nil)
+          until (characterp gesture)
+          finally (return gesture))))
+
+(defmethod stream-read-char-no-hang ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for gesture = (stream-read-gesture estream
+                                             :timeout 0
+                                             :input-wait-test nil
+                                             :input-wait-handler nil
+                                             :pointer-button-press-handler nil)
+          until (typep gesture '(or null character))
+          finally (return gesture))))
+
+(defmethod stream-unread-char ((stream standard-extended-input-stream) char)
+  (check-type char character)
+  (with-encapsulating-stream (estream stream)
+    (stream-unread-gesture estream char)))
+
+(defmethod stream-peek-char ((stream standard-extended-input-stream))
+  (with-encapsulating-stream (estream stream)
+    (loop for gesture = (stream-read-gesture estream
+                                             :timeout 0
+                                             :input-wait-test nil
+                                             :input-wait-handler nil
+                                             :pointer-button-press-handler nil)
+          until (typep gesture '(or null character))
+          finally (when (characterp gesture)
+                    (stream-unread-gesture estream gesture))
+                  (return gesture))))
+
+;;; STREAM-READ-LINE returns a second value of t if terminated by the fact,
+;;; that there is no input (currently) available.
+(defmethod stream-read-line ((stream standard-extended-input-stream))
+  (loop with input-buffer = (stream-input-buffer stream)
+        with result = (make-array 1 :element-type 'character
+                                    :adjustable t
+                                    :fill-pointer 0)
+        for char = (event-queue-read-no-hang input-buffer)
+        do (cond ((null char)
+                  (return (values result nil)))
+                 ((not (characterp char))
+                  ;; Ignore gesturs that are not characters.
+                  )
+                 ((char= #\Newline char)
+                  (return (values result t)))
+                 (t
+                  (vector-push-extend char result)))))
 
 
 ;;; stream-read-gesture on string strings. Needed for accept-from-string.
