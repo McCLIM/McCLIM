@@ -1,14 +1,7 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-basic"
-  :depends-on ("clim-lisp"
-               "alexandria"
-               "spatial-trees"
-               (:version "flexichain" "1.5.1")
-               "bordeaux-threads"
-               "trivial-garbage"
-               "trivial-features"
-               "babel")
+  :depends-on ("clim-lisp" "alexandria" "bordeaux-threads" "trivial-garbage")
   :components
   ((:module "system"
     :components ((:file "utilities")
@@ -59,18 +52,4 @@
                  (:file "pattern"  :depends-on ("design"))
                  (:file "medium"   :depends-on ("design" "text-style" "colors"))
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))
-                 (:file "with-output-to-drawing-stream")))
-   (:module "extended-streams"
-    :pathname "clim-basic/extended-streams"
-    :depends-on ("system" "protocols" "geometry" "windowing" "drawing")
-    :components ((:file "text-formatting") ; standard-page-layout
-                 (:file "views")           ; stream-default-view
-                 (:file "dead-keys")       ; dead-key merging
-                 (:file "stream-output"     :depends-on ("text-formatting" "views"))
-                 (:file "recording"         :depends-on ("stream-output"))
-                 (:file "text-selection"    :depends-on ("recording"))
-                 (:file "encapsulate"       :depends-on ("stream-output" "recording"))
-                 (:file "stream-input"      :depends-on ("encapsulate" "dead-keys"))
-                 (:file "gestures")
-                 (:file "standard-gestures" :depends-on ("gestures"))
-                 (:file "pointer-tracking"  :depends-on ("stream-output" "stream-input"))))))
+                 (:file "with-output-to-drawing-stream")))))

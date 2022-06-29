@@ -2,6 +2,7 @@
 
 (defsystem "mcclim-clx"
   :depends-on ("alexandria"
+               "babel"
                "cl-unicode"
                "zpb-ttf"
                "clx"

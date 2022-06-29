@@ -21,7 +21,12 @@
 
 (defsystem "mcclim-bezier/core"
   :description "core bezier routines"
-  :depends-on ("clim" "mcclim-null" "mcclim-render" "clim-postscript" "clim-pdf")
+  :depends-on ((:version "flexichain" "1.5.1")
+               "clim"
+               "mcclim-null"
+               "mcclim-render"
+               "clim-postscript"
+               "clim-pdf")
   :components ((:file "package")
                (:file "bezier" :depends-on ("package"))))
 

@@ -3,6 +3,7 @@
   :serial t
   :depends-on ("alexandria"
                "trivial-gray-streams"
+               "trivial-features"
                "closer-mop"
                #+(or) "log4cl")
   :components (;; First possible patches
