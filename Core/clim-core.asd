@@ -2,9 +2,9 @@
 
 (defsystem "clim-core"
   :depends-on ("clim-basic" (:feature :sbcl "sb-introspect"))
+  :pathname "clim-core"
   :components
-  ((:file "defresource")
-   (:file "theming")
+  ((:file "theming")
    (:module "incremental-redisplay"
     :serial t
     :components ((:file "cache")

@@ -10,14 +10,19 @@
                "trivial-features"
                "babel")
   :components
-  ((:file "setf-star")
-   (:file "decls" :depends-on ("setf-star"))
-   (:file "protocol-classes" :depends-on ("decls"))
-   (:file "multiprocessing" :depends-on ("decls"))
-   (:file "utils" :depends-on ("decls" "multiprocessing"))
-   (:file "macros")
+  ((:module "system"
+    :components ((:file "utilities")
+                 (:file "macros")
+                 (:file "multiprocessing")
+                 (:file "resources")
+                 (:file "setf-star")))
+   (:module "protocols"
+    :depends-on ("system")
+    :components ((:file "declarations")
+                 (:file "protocol-classes")))
    (:module "geometry"
-    :depends-on ("decls" "protocol-classes" "multiprocessing" "utils" "setf-star")
+    :pathname "clim-basic/geometry/"
+    :depends-on ("system" "protocols")
     :serial t
     :components ((:file "coordinates")
                  (:file "transforms")
@@ -34,7 +39,8 @@
                  (:file "region-composition")
                  (:file "region-set-composition")))
    (:module "windowing"
-    :depends-on ("utils" "decls" "protocol-classes" "multiprocessing" "geometry")
+    :pathname "clim-basic/windowing"
+    :depends-on ("system" "protocols" "geometry")
     :components ((:file "events")
                  (:file "output")
                  (:file "sheets")
@@ -45,7 +51,8 @@
                  (:file "grafts"  :depends-on ("sheets" "ports"))
                  (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))))
    (:module "drawing"
-    :depends-on ("utils" "decls" "protocol-classes" "geometry" "windowing")
+    :pathname "clim-basic/drawing"
+    :depends-on ("system" "protocols" "geometry" "windowing")
     :components ((:file "design")
                  (:file "text-style")
                  (:file "colors"   :depends-on ("design"))
@@ -54,7 +61,8 @@
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))
                  (:file "with-output-to-drawing-stream")))
    (:module "extended-streams"
-    :depends-on ("setf-star" "decls" "utils" "protocol-classes" "multiprocessing" "geometry" "windowing" "drawing")
+    :pathname "clim-basic/extended-streams"
+    :depends-on ("system" "protocols" "geometry" "windowing" "drawing")
     :components ((:file "text-formatting") ; standard-page-layout
                  (:file "views")           ; stream-default-view
                  (:file "dead-keys")       ; dead-key merging

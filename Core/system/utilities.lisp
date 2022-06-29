@@ -435,10 +435,7 @@ in KEYWORDS removed."
      ,@body))
 
 (defun symbol-concat (&rest symbols)
-  "Actually this function raises the next question: what is *PACKAGE* supposed to be?
-   The correct answer: listen to the elders and don't use this function or any variant
-   of it -- Don't construct symbols, instead let the user specify them."
-  (intern (apply #'concatenate 'string (mapcar #'symbol-name symbols))))
+  (intern (apply #'concatenate 'string (mapcar #'string symbols))))
 
 (defun stream-designator-symbol (symbol default)
   "Maps T to DEFAULT, barfs if argument does not look good.
@@ -971,8 +968,3 @@ COUNT specifies how many breaks we want to collect."
                                              (make-match match body)))
                                    (loop for match in match
                                          collect (make-match match body))))))))
-
-;;; For testing
-(defun random-color ()
-  (alexandria:random-elt
-   (list +blue+ +red+ +yellow+ +green+ +pink+ +cyan+ +deep-pink+)))
