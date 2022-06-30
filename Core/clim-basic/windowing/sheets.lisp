@@ -488,6 +488,16 @@
                    sheet)
   (note-sheet-region-changed sheet))
 
+(defmethod (setf medium-clipping-region) :after (region (medium medium))
+  (declare (ignore region))
+  (when-let ((sheet (medium-sheet medium)))
+    (%invalidate-cached-device-regions sheet)))
+
+(defmethod (setf medium-transformation) :after (transformation (medium medium))
+  (declare (ignore transformation))
+  (when-let ((sheet (medium-sheet medium)))
+    (%invalidate-cached-device-transformations sheet)))
+
 (defmethod (setf sheet-pointer-cursor) :after (cursor (sheet basic-sheet))
   (declare (ignore cursor))
   (unless (sheet-direct-mirror sheet)
@@ -760,6 +770,12 @@ this might be different from the sheet's native region and transformation.")))
    :icon nil
    :name 'top-level
    :pretty-name "McCLIM Window"))
+
+(defun get-top-level-sheet (sheet)
+  "Returns the root window for sheet or nil."
+  (if (typep sheet '(or top-level-sheet-mixin null))
+      sheet
+      (get-top-level-sheet (sheet-parent sheet))))
 
 (defmethod shrink-sheet ((sheet top-level-sheet-mixin))
   (port-shrink-sheet (port sheet) sheet))

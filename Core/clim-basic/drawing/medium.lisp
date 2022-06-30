@@ -83,10 +83,7 @@
   (:method ((record gs-line-style-mixin) (medium medium))
     (/ (line-style-effective-thickness (graphics-state-line-style record)
                                        medium)
-       2))
-  (:method ((record gs-line-style-mixin) (sheet sheet))
-    (with-sheet-medium (medium sheet)
-      (graphics-state-line-style-border record medium))))
+       2)))
 
 (defclass gs-text-style-mixin (graphics-state)
   ((text-style :initarg :text-style :accessor graphics-state-text-style)))
@@ -182,7 +179,7 @@
 
 (defmethod initialize-instance :after ((medium basic-medium) &rest args)
   (declare (ignore args))
-  ;; Initial CLIPPING-REGION is in coordinates, given by initial
+  ;; Initial CLIPPING-REGION is in coordinates given by the initial
   ;; TRANSFORMATION, but we store it in SHEET's coords.
   (with-slots (clipping-region) medium
     (setf clipping-region (transform-region (medium-transformation medium)
@@ -194,18 +191,9 @@
 
 (defmethod (setf medium-clipping-region) (region (medium basic-medium))
   (setf (slot-value medium 'clipping-region)
-        (transform-region (medium-transformation medium)
-                          region)))
+        (transform-region (medium-transformation medium) region)))
 
-(defmethod (setf medium-clipping-region) :after (region (medium medium))
-  (declare (ignore region))
-  (when-let ((sheet (medium-sheet medium)))
-    (%invalidate-cached-device-regions sheet)))
 
-(defmethod (setf medium-transformation) :after (transformation (medium medium))
-  (declare (ignore transformation))
-  (when-let ((sheet (medium-sheet medium)))
-    (%invalidate-cached-device-transformations sheet)))
 
 (defmethod medium-merged-text-style ((medium medium))
   (merge-text-styles (medium-text-style medium) (medium-default-text-style medium)))
@@ -347,6 +335,12 @@
 
 ;;; Misc ops
 
+(defmacro with-output-buffered ((medium &optional (buffer-p t)) &body body)
+  (with-gensyms (cont)
+    `(flet ((,cont () ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-output-buffered ,medium (function ,cont) ,buffer-p))))
+
 (defmethod invoke-with-output-buffered
     ((medium basic-medium) continuation &optional (buffered-p t))
   (unwind-protect
@@ -356,12 +350,6 @@
          (funcall continuation))
     (unless (medium-buffering-output-p medium)
       (medium-force-output medium))))
-
-;;; Trampoline.
-(defmethod invoke-with-output-buffered
-    ((sheet sheet-with-medium-mixin) continuation &optional (buffered-p t))
-  (with-sheet-medium (medium sheet)
-    (invoke-with-output-buffered medium continuation buffered-p)))
 
 ;;; Default method.
 (defmethod invoke-with-output-buffered

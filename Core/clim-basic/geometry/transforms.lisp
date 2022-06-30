@@ -35,6 +35,55 @@
 ;;; to be practically equal, if the (rounded) images of any point within that
 ;;; range are equal.
 
+(define-condition transformation-error (error)
+  ())
+
+(define-condition transformation-underspecified (transformation-error)
+  ((coords :initarg :coords
+           :reader transformation-error-coords))
+  (:report
+   (lambda (transformation sink)
+     (apply #'format sink
+            "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
+            (subseq (transformation-error-coords transformation) 0 6)))))
+
+(define-condition reflection-underspecified (transformation-error)
+  ((coords :initarg :coords
+           :reader transformation-error-coords)
+   (why :initarg :why :initform nil
+        :reader transformation-error-why))
+  (:report (lambda (transformation sink)
+             (apply #'format sink
+                    "The two points (~D,~D) and (~D,~D) are coincident."
+                    (transformation-error-coords transformation))
+             (when (transformation-error-why transformation)
+               (format sink " (That was determined by the following error:~%~A)"
+                       (transformation-error-why transformation))))))
+
+(define-condition singular-transformation (transformation-error)
+  ((transformation :initarg :transformation
+                   :reader transformation-error-transformation)
+   (why :initarg :why :initform nil
+        :reader transformation-error-why))
+  (:report (lambda (transformation sink)
+             (format sink
+                     "Attempt to invert the probably singular transformation ~S."
+                     (transformation-error-transformation transformation))
+             (when (transformation-error-why transformation)
+               (format sink
+                       "~%Another error occurred while computing the inverse:~%    ~A"
+                       (transformation-error-why transformation))))))
+
+(define-condition rectangle-transformation-error (transformation-error)
+  ((transformation :initarg :transformation
+                   :reader transformation-error-transformation)
+   (rect :initarg :rect
+         :reader transformation-error-rect))
+  (:report (lambda (transformation sink)
+             (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
+                     (transformation-error-rect transformation)
+                     (transformation-error-transformation transformation)))))
+
 (defclass standard-transformation (transformation)
   ()
   (:documentation
@@ -237,55 +286,6 @@ real numbers, and default to 0."
                            x1-image y1-image
                            x2-image y2-image
                            x3-image y3-image)))))
-
-(define-condition transformation-error (error)
-  ())
-
-(define-condition transformation-underspecified (transformation-error)
-  ((coords :initarg :coords
-           :reader transformation-error-coords))
-  (:report
-   (lambda (transformation sink)
-     (apply #'format sink
-            "The three points (~D,~D), (~D,~D), and (~D,~D) are propably collinear."
-            (subseq (transformation-error-coords transformation) 0 6)))))
-
-(define-condition reflection-underspecified (transformation-error)
-  ((coords :initarg :coords
-           :reader transformation-error-coords)
-   (why :initarg :why :initform nil
-        :reader transformation-error-why))
-  (:report (lambda (transformation sink)
-             (apply #'format sink
-                    "The two points (~D,~D) and (~D,~D) are coincident."
-                    (transformation-error-coords transformation))
-             (when (transformation-error-why transformation)
-               (format sink " (That was determined by the following error:~%~A)"
-                       (transformation-error-why transformation))))))
-
-(define-condition singular-transformation (transformation-error)
-  ((transformation :initarg :transformation
-                   :reader transformation-error-transformation)
-   (why :initarg :why :initform nil
-        :reader transformation-error-why))
-  (:report (lambda (transformation sink)
-             (format sink
-                     "Attempt to invert the probably singular transformation ~S."
-                     (transformation-error-transformation transformation))
-             (when (transformation-error-why transformation)
-               (format sink
-                       "~%Another error occurred while computing the inverse:~%    ~A"
-                       (transformation-error-why transformation))))))
-
-(define-condition rectangle-transformation-error (transformation-error)
-  ((transformation :initarg :transformation
-                   :reader transformation-error-transformation)
-   (rect :initarg :rect
-         :reader transformation-error-rect))
-  (:report (lambda (transformation sink)
-             (format sink "Attempt to transform the rectangle ~S through the non-rectilinear transformation ~S."
-                     (transformation-error-rect transformation)
-                     (transformation-error-transformation transformation)))))
 
 (defmethod transformation-equal ((transformation1 standard-transformation)
                                  (transformation2 standard-transformation))

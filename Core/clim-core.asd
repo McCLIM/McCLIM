@@ -4,7 +4,9 @@
   :depends-on ("clim-basic" "spatial-trees" (:feature :sbcl "sb-introspect"))
   :pathname "clim-core"
   :components
-  ((:module "extended-streams"
+  ((:file "utilities")
+   (:file "theming")
+   (:module "extended-streams"
     :components ((:file "text-formatting") ; standard-page-layout
                  (:file "views")           ; stream-default-view
                  (:file "dead-keys")       ; dead-key merging
@@ -16,7 +18,6 @@
                  (:file "gestures")
                  (:file "standard-gestures" :depends-on ("gestures"))
                  (:file "pointer-tracking"  :depends-on ("stream-output" "stream-input"))))
-   (:file "theming")
    (:module "incremental-redisplay"
     :serial t
     :components ((:file "cache")

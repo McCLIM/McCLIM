@@ -70,11 +70,6 @@
   (declare (ignore lambda-list))
   `(quote ,name))
 
-;;;; Early special variables
-
-(defvar *application-frame* nil)
-(defvar *pointer-documentation-output* nil)
-
 
 ;;; 3.1.1 The Region Predicate Protocol
 

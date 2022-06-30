@@ -61,7 +61,7 @@
                         (unless (eq name ,expression)
                           (list (list name ,expression)))))
                    (ref (name)
-                     `(assoc-value bindings ',name)))
+                     `(cdr (assoc ',name bindings))))
           `(let* (,@(when (or x1 width  center-x)
                       (bind x1 (nth 0 coordinate-expressions)))
                   ,@(when (or y1 height center-y)
@@ -124,6 +124,16 @@
   (def bounding-rectangle-size     (:width width) (:height height))
   (def bounding-rectangle-width    (:width width))
   (def bounding-rectangle-height   (:height height)))
+
+(defun rounded-bounding-rectangle (region)
+  ;; return a bounding rectangle whose coordinates have been rounded to
+  ;; lock into the pixel grid.  Includes some extra safety to make
+  ;; sure antialiasing around the theoretical limits are included, too.
+  (with-bounding-rectangle* (x1 y1 x2 y2) region
+    (make-rectangle*  (floor (- x1 0.5))
+                      (floor (- y1 0.5))
+                      (ceiling (+ x2 0.5))
+                      (ceiling (+ y2 0.5)))))
 
 ;;; Bounding rectangles are special in that they are not canonicalized
 ;;; to +nowhere+ when they have no width or height. When the result may

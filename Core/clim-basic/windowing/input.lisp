@@ -502,9 +502,8 @@ use condition-variables nor locks."))
 ;;; STANDARD-SHEET-INPUT-MIXIN
 
 (defclass standard-sheet-input-mixin ()
-  ((queue :initform (if *multiprocessing-p*
-                        (make-instance 'concurrent-event-queue)
-                        (make-instance 'simple-event-queue))
+  ((queue :initform #+clim-mp (make-instance 'concurrent-event-queue)
+                    #-clim-mp (make-instance 'simple-event-queue)
           :reader sheet-event-queue
           :initarg :event-queue)
    (port :initform nil

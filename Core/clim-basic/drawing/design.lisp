@@ -422,34 +422,6 @@
 (defgeneric compose-out (ink mask))
 
 ;;;
-;;; For patterns look in pattern.lisp
-;;;
-
-(defclass transformed-design (design)
-  ((transformation
-    :initarg :transformation
-    :reader transformed-design-transformation)
-   (design
-    :initarg :design
-    :reader transformed-design-design)))
-
-(defmethod transform-region :around (transformation (design design))
-  (if (or (identity-transformation-p transformation)
-          (typep design '(or color opacity uniform-compositum standard-flipping-ink indirect-ink)))
-      design
-      (call-next-method)))
-
-(defmethod transform-region (transformation (design design))
-  (let ((old-transformation (transformed-design-transformation design)))
-    (make-instance 'transformed-design
-                   :design (transformed-design-design design)
-                   :transformation (compose-transformations old-transformation transformation))))
-
-(defun effective-transformed-design (design) design) ;obsolete
-(defmethod transformed-design-transformation ((design design)) +identity-transformation+)
-(defmethod transformed-design-design ((design design)) design)
-
-;;;
 
 (defclass masked-compositum (design)
   ((ink  :initarg :ink  :reader compositum-ink)
@@ -518,6 +490,34 @@
 (defmethod design-ink ((compositum uniform-compositum) x y)
   (declare (ignore x y))
   compositum)
+
+;;;
+;;; For patterns look in pattern.lisp
+;;;
+
+(defclass transformed-design (design)
+  ((transformation
+    :initarg :transformation
+    :reader transformed-design-transformation)
+   (design
+    :initarg :design
+    :reader transformed-design-design)))
+
+(defmethod transform-region :around (transformation (design design))
+  (if (or (identity-transformation-p transformation)
+          (typep design '(or color opacity uniform-compositum standard-flipping-ink indirect-ink)))
+      design
+      (call-next-method)))
+
+(defmethod transform-region (transformation (design design))
+  (let ((old-transformation (transformed-design-transformation design)))
+    (make-instance 'transformed-design
+                   :design (transformed-design-design design)
+                   :transformation (compose-transformations old-transformation transformation))))
+
+(defun effective-transformed-design (design) design) ;obsolete
+(defmethod transformed-design-transformation ((design design)) +identity-transformation+)
+(defmethod transformed-design-design ((design design)) design)
 
 ;;;
 ;;; color

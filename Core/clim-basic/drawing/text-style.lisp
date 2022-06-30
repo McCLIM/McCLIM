@@ -255,23 +255,19 @@
 (defmethod text-style-components ((text-style device-font-text-style))
   (values :device :device :device))
 
-(defmethod text-style-mapping ((port basic-port)
-                               (text-style text-style)
-                               &optional character-set)
+(defmethod text-style-mapping
+    ((port port) (text-style text-style) &optional character-set)
   (declare (ignore port character-set))
   ;; INV the around method looks up the cache for the mapping. If we
   ;; end up here it is a game over. For consistency we return the
   ;; text-style like other methods. -- jd 2020-01-15
   text-style)
 
-(defmethod text-style-mapping ((port basic-port)
-                               text-style
-                               &optional character-set)
+(defmethod text-style-mapping ((port port) text-style &optional character-set)
   (text-style-mapping port (parse-text-style text-style) character-set))
 
-(defmethod text-style-mapping :around ((port basic-port)
-                                       (text-style text-style)
-                                       &optional character-set)
+(defmethod text-style-mapping :around
+    ((port port) (text-style text-style) &optional character-set)
   (declare (ignore character-set))
   ;; Cache mappings only for fully specified text styles.
   (let ((mappings (port-text-style-mappings port)))
@@ -280,17 +276,13 @@
         (ensure-gethash text-style mappings (call-next-method))
         (or (gethash text-style mappings) (call-next-method)))))
 
-(defmethod (setf text-style-mapping) (mapping
-                                      (port basic-port)
-                                      text-style
-                                      &optional character-set)
+(defmethod (setf text-style-mapping)
+    (mapping (port port) text-style &optional character-set)
   (declare (ignore character-set))
   (setf (text-style-mapping port (parse-text-style text-style)) mapping))
 
-(defmethod (setf text-style-mapping) (mapping
-                                      (port basic-port)
-                                      (text-style text-style)
-                                      &optional character-set)
+(defmethod (setf text-style-mapping)
+    (mapping (port port) (text-style text-style) &optional character-set)
   (declare (ignore character-set))
   (when (listp mapping)
     (error "Delayed mapping is not supported.")) ; FIXME

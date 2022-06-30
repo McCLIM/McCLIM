@@ -2145,16 +2145,12 @@
   #+excl
   (:import-from :excl compile-system load-system)
   (:import-from #:alexandria
-                #:clamp
                 #:make-keyword
                 #:ensure-gethash
                 #:emptyp
                 #:last-elt
                 #:with-gensyms
                 #:once-only
-                #:if-let
-                #:when-let
-                #:when-let*
                 #:assoc-value)
   (:intern #:letf))
 

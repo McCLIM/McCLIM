@@ -1,11 +1,10 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-basic"
-  :depends-on ("clim-lisp" "alexandria" "bordeaux-threads" "trivial-garbage")
+  :depends-on ("clim-lisp" "bordeaux-threads" "trivial-garbage")
   :components
   ((:module "system"
     :components ((:file "utilities")
-                 (:file "macros")
                  (:file "multiprocessing")
                  (:file "resources")
                  (:file "setf-star")))
@@ -31,9 +30,18 @@
                  (:file "region-predicates")
                  (:file "region-composition")
                  (:file "region-set-composition")))
+   (:module "drawing"
+    :pathname "clim-basic/drawing"
+    :depends-on ("system" "protocols" "geometry")
+    :components ((:file "design")
+                 (:file "text-style")
+                 (:file "colors"   :depends-on ("design"))
+                 (:file "pattern"  :depends-on ("design"))
+                 (:file "medium"   :depends-on ("design" "text-style" "colors"))
+                 (:file "graphics" :depends-on ("design" "text-style" "medium"))))
    (:module "windowing"
     :pathname "clim-basic/windowing"
-    :depends-on ("system" "protocols" "geometry")
+    :depends-on ("system" "protocols" "geometry" "drawing")
     :components ((:file "events")
                  (:file "output")
                  (:file "sheets")
@@ -42,14 +50,5 @@
                  (:file "ports"   :depends-on ("sheets" "events"))
                  (:file "input"   :depends-on ("sheets" "ports"))
                  (:file "grafts"  :depends-on ("sheets" "ports"))
-                 (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))))
-   (:module "drawing"
-    :pathname "clim-basic/drawing"
-    :depends-on ("system" "protocols" "geometry" "windowing")
-    :components ((:file "design")
-                 (:file "text-style")
-                 (:file "colors"   :depends-on ("design"))
-                 (:file "pattern"  :depends-on ("design"))
-                 (:file "medium"   :depends-on ("design" "text-style" "colors"))
-                 (:file "graphics" :depends-on ("design" "text-style" "medium"))
-                 (:file "with-output-to-drawing-stream")))))
+                 (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))
+                 (:file "with-output-to-drawing-stream" :depends-on ("ports"))))))
