@@ -375,6 +375,21 @@ keys read."))
               (t
                (return-from stream-read-gesture gesture))))))))
 
+(defmethod stream-pointer-position ((stream standard-extended-input-stream)
+                                    &key (pointer
+                                          (port-pointer (port stream))))
+  (multiple-value-bind (x y)
+      (pointer-position pointer)
+    (let ((graft (graft (port pointer))))
+      (untransform-position (sheet-delta-transformation stream graft) x y))))
+
+(defmethod* (setf stream-pointer-position) (x y (stream standard-extended-input-stream))
+  (let ((graft (graft stream))
+        (pointer (port-pointer (port stream))))
+    (multiple-value-bind (x y)
+        (transform-position (sheet-delta-transformation stream graft) x y)
+      (setf (pointer-position pointer) (values x y)))))
+
 ;;; These functions are for convenience - seos is not a character stream so it
 ;;; is not obligated to implement these. Reading a character discards all
 ;;; non-character events in the input buffer.
@@ -447,68 +462,3 @@ keys read."))
 (defmethod stream-unread-gesture ((stream string-stream) gesture)
   (unread-char gesture stream))
 
-
-
-;;; 22.4 The Pointer Protocol
-;;;
-;;; Implemented by the back end.  Sort of.
-
-;;; FIXME: I think the standard-pointer should absorb some of the
-;;; common methods that are currently entirely provided by the
-;;; backends.
-
-(defclass standard-pointer (pointer)
-  ((port :reader port :initarg :port)
-   (state-lock :reader state-lock :initform (make-lock "pointer lock"))
-   (button-state :initform 0 )
-   (sheet :initform nil :initarg :sheet :accessor pointer-sheet)))
-
-(defgeneric pointer-sheet (pointer))
-
-(defgeneric (setf pointer-sheet) (sheet pointer))
-
-(defgeneric pointer-button-state (pointer))
-
-(defgeneric pointer-position (pointer))
-
-(defgeneric* (setf pointer-position) (x y pointer))
-
-(defgeneric synthesize-pointer-motion-event (pointer)
-  (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
-
-(defgeneric pointer-cursor (pointer))
-
-(defgeneric (setf pointer-cursor) (cursor pointer))
-
-(defmethod pointer-button-state ((pointer standard-pointer))
-  (with-lock-held ((state-lock pointer))
-    (slot-value pointer 'button-state)))
-
-(defmethod pointer-update-state
-    ((pointer standard-pointer) (event pointer-button-press-event))
-  (with-lock-held ((state-lock pointer))
-    (setf (slot-value pointer 'button-state)
-          (logior (slot-value pointer 'button-state)
-                  (pointer-event-button event)))))
-
-(defmethod pointer-update-state
-    ((pointer standard-pointer) (event pointer-button-release-event))
-  (with-lock-held ((state-lock pointer))
-    (setf (slot-value pointer 'button-state)
-          (logandc2 (slot-value pointer 'button-state)
-                    (pointer-event-button event)))))
-
-(defmethod stream-pointer-position ((stream standard-extended-input-stream)
-                                    &key (pointer
-                                          (port-pointer (port stream))))
-  (multiple-value-bind (x y)
-      (pointer-position pointer)
-    (let ((graft (graft (port pointer))))
-      (untransform-position (sheet-delta-transformation stream graft) x y))))
-
-(defmethod* (setf stream-pointer-position) (x y (stream standard-extended-input-stream))
-  (let ((graft (graft stream))
-        (pointer (port-pointer (port stream))))
-    (multiple-value-bind (x y)
-        (transform-position (sheet-delta-transformation stream graft) x y)
-      (setf (pointer-position pointer) (values x y)))))

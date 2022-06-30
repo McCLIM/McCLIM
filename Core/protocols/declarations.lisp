@@ -1448,16 +1448,18 @@ for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
 ;;;
 
 (declfun draw-rectangle (sheet point1 point2
-                               &rest args
-                               &key (filled t)
-                               ink clipping-region transformation line-style line-thickness
-                               line-unit line-dashes line-joint-shape))
+                         &rest args
+                         &key (filled t)
+                         ink clipping-region transformation line-style line-thickness
+                         line-unit line-dashes line-joint-shape
+                         &allow-other-keys))
 
 (declfun draw-rectangle* (sheet x1 y1 x2 y2
-                                &rest args
-                                &key (filled t)
-                                ink clipping-region transformation line-style line-thickness
-                                line-unit line-dashes line-joint-shape))
+                          &rest args
+                          &key (filled t)
+                          ink clipping-region transformation line-style line-thickness
+                          line-unit line-dashes line-joint-shape
+                          &allow-other-keys))
 
 ;;; "exported" from a port
 

@@ -44,6 +44,7 @@
     :depends-on ("system" "protocols" "geometry" "drawing")
     :components ((:file "events")
                  (:file "output")
+                 (:file "pointer")
                  (:file "sheets")
                  (:file "pixmaps" :depends-on ("output"))
                  (:file "mirrors" :depends-on ("sheets"))

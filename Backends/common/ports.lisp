@@ -140,7 +140,7 @@
     (publish-selection (port sheet)
                        selection
                        (make-instance 'selection-object
-                                      :content object
+                                       :content object
                                       :type type
                                       :owner sheet)
                        nil))
