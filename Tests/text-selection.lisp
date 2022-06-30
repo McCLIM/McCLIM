@@ -5,7 +5,7 @@
 
 (test text-selection.smoke
   "Smoke test for the text selection protocol."
-  (let ((port (make-instance 'climi::standard-port))
+  (let ((port (make-instance 'clim:basic-port))
         (sheet-1 (make-instance 'basic-sheet))
         (sheet-2 (make-instance 'basic-sheet))
         (box-1 :testing-selection-1)

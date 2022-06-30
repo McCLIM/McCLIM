@@ -34,7 +34,8 @@
                  (:file "typed-output")
                  (:file "typed-input")
                  (:file "translators")
-                 (:file "drag-and-drop")))
+                 (:file "drag-and-drop")
+                 (:file "selection-object")))
    (:module "formatting"
     :depends-on ("presentations" "theming")
     :components ((:file "bordered-output")

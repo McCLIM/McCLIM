@@ -49,6 +49,7 @@
                  (:file "pixmaps" :depends-on ("output"))
                  (:file "mirrors" :depends-on ("sheets"))
                  (:file "ports"   :depends-on ("sheets" "events"))
+                 (:file "fonts"   :depends-on ("ports"))
                  (:file "input"   :depends-on ("sheets" "ports"))
                  (:file "grafts"  :depends-on ("sheets" "ports"))
                  (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))

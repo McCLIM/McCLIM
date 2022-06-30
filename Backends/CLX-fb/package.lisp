@@ -47,6 +47,4 @@
                 #:window
                 #:mirroring
                 #:class-gensym
-                #:maybe-add-mirroring-superclasses)
-  (:import-from #:climi
-                #:standard-port))
+                #:maybe-add-mirroring-superclasses))
