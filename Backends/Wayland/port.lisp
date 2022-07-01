@@ -64,6 +64,9 @@
 (defclass wayland-globals (wlc:wl-registry)
   ((globals :type list :accessor globals :initform nil)))
 
+(defclass wayland-xdg-toplevel (xdg:xdg-toplevel)
+  ())
+
 (defmethod wlc:wl-registry-global :after
     ((registry wayland-globals) name interface version)
   (pushnew (list name interface version) (globals registry)))
@@ -130,14 +133,16 @@
                           (make-instance 'xdg-wm-base-pingpong :version 1)
                           "xdg_wm_base" 1)
 
+            ;; Create XDG Surface
             port-surface (xdg:xdg-wm-base-get-xdg-surface
                           port-wm-base
                           (make-instance 'xdg:xdg-surface)
                           port-window)
 
+            ;; Assign toplevel role to XDG surface
             port-top-level (xdg:xdg-surface-get-toplevel
                             port-surface
-                            (make-instance 'xdg:xdg-toplevel))))
+                            (make-instance 'wayland-xdg-toplevel))))
 
     ;; Make one more round trip to handle events triggered by bindings above
     ;; before the main event loop is started

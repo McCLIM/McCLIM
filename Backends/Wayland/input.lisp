@@ -34,10 +34,12 @@
   ;; really happen. This ACK is very important for the PROCESS-NEXT-EVENT to
   ;; continue even though it might be in the wrong place
   (xdg:xdg-surface-ack-configure surface serial))
-(defmethod xdg-surface-configure :after (surface serial)
-  (format t "xdg surface configured ~a  surface: ~a~%" serial surface))
 
-(defmethod xdg:xdg-toplevel-configure (wayland-proxy width height states)
+(defmethod xdg-surface-configure :after ((surface xdg:xdg-surface) serial)
+  (format *debug-io* "xdg surface configured ~a  surface: ~a~%" serial surface))
+
+(defmethod xdg:xdg-toplevel-configure
+    ((wayland-proxy wayland-xdg-toplevel) width height states)
   (declare (ignore states wayland-proxy))
   (format t "toplevel configure event: w: ~a  h: ~a~%" width height)
   (let* ((sheet (graft *wayland-port*))
@@ -48,7 +50,7 @@
                                     :region (sheet-native-region sheet))))
     clim-event))
 
-(defmethod xdg:xdg-toplevel-close (wayland-proxy)
+(defmethod xdg:xdg-toplevel-close ((wayland-proxy wayland-xdg-toplevel))
   (declare (ignore wayland-proxy))
   (format t "close toplevel event")
   (make-instance 'window-destroy-event
