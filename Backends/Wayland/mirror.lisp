@@ -85,9 +85,19 @@
   (format *debug-io* "realizing mirror top-level~%"))
 
 (defmethod destroy-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
-  (format t "destroying mirror~%")
-  ;; all egl-mirror slots are nil; not sure if anything more needs to be done
-  nil)
+  (format *debug-io* "destroying mirror~%")
+  (port-disable-sheet port sheet)
+  (let ((mirror (sheet-direct-mirror sheet)))
+   (with-slots (egl-window egl-context egl-display egl-surface)
+       mirror
+     (cffi:foreign-free egl-window)
+     (cffi:foreign-free egl-context)
+     (cffi:foreign-free egl-surface)
+     (cffi:foreign-free egl-display)
+     (setf egl-window nil
+           egl-context nil
+           egl-surface nil
+           egl-display nil))))
 
 (defun %graft-force-output (graft)
   (let ((mirror (sheet-mirror graft)))

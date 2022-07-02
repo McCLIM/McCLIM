@@ -221,6 +221,12 @@
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     (port-force-output port)))
 
+(defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
+  (format t "port disable-sheet ~a ~a ~%" port sheet)
+  (alx:when-let ((mirror (sheet-direct-mirror sheet)))
+    (wlc:wl-surface-attach (wayland-port-window port) nil 0 0)
+    (wlc:wl-surface-commit (wayland-port-window port))))
+
 (defmethod graft ((port wayland-port))
   (first (port-grafts port)))
 
