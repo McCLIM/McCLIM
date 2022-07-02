@@ -278,57 +278,6 @@
                                   :orientation orientation
                                   :units units)))
 
-(defmethod initialize-instance :after ((graft wayland-graft) &key)
-  (with-slots (egl-window egl-context egl-display egl-surface)
-      (sheet-mirror graft)
-    (setf egl-window (create-native-window graft))
-    (multiple-value-setq (egl-display egl-surface egl-context)
-      (create-egl-context graft))))
-
-(defun create-native-window (graft)
-  (format t "starting CREATE-NATIVE-WINDOW~%")
-  (with-accessors ((port-compositor wayland-port-compositor)
-                   (port-window wayland-port-window))
-      (port graft)
-    (let ((region
-            (wlc:wl-compositor-create-region port-compositor
-                                             (make-instance 'wlc:wl-region)))
-          (width (graft-width graft))
-          (height (graft-height graft)))
-      (wlc:wl-region-add region 0 0 width height)
-      (wlc:wl-surface-set-opaque-region port-window region)
-      (wl-egl:wl-egl-window-create (wl-core:pointer port-window)
-                                   width
-                                   height))))
-
-(defun create-egl-context (graft)
-  (with-accessors ((native-display wayland-port-display))
-      (port graft)
-    (let* ((egl-display (egl:get-display (wl-core:pointer native-display))))
-      (format t "egl init ~s~%"
-              (multiple-value-list (egl:initialize egl-display)))
-      (egl:bind-api :opengl-api)
-
-      (let* ((config (egl:choose-config egl-display 1
-                                        :surface-type :window-bit
-                                        :renderable-type :opengl-bit
-                                        :red-size 8
-                                        :green-size 8
-                                        :blue-size 8
-                                        :none))
-             (surface (egl:create-window-surface egl-display
-                                                 (first config)
-                                                 (wayland-egl-mirror-window (sheet-mirror graft))
-                                                 (cffi:null-pointer)))
-             (context (egl:create-context egl-display
-                                          (first config)
-                                          (cffi:null-pointer)
-                                          :context-major-version 2
-                                          :none)))
-        (egl:make-current egl-display surface surface context)
-        (values egl-display surface context)))))
-
-
 (defclass wayland-frame-manager (standard-frame-manager)
   ((mirroring :initarg :mirroring
               :initform nil
