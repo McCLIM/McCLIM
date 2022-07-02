@@ -52,10 +52,16 @@
 
 (defmethod xdg:xdg-toplevel-close ((wayland-proxy wayland-xdg-toplevel))
   (declare (ignore wayland-proxy))
-  (format t "close toplevel event")
-  (make-instance 'window-destroy-event
-                 ;; :region?
-                 ))
+  (format *debug-io* "close toplevel event ~s~%" *application-frame*)
+  ;; QQQQ this feels terrible but it seems *application-frame* isn't
+  ;; bound. Extremely hacky way to get top-level-frame-sheet
+  (let* ((sheet (frame-top-level-sheet
+                 (first (frame-manager-frames
+                         (find-frame-manager :port *wayland-port*)))))
+         (clim-event (make-instance 'window-manager-delete-event
+                                    :sheet sheet)))
+    ;; (break)
+    (distribute-event *wayland-port* clim-event)))
 
 (defclass wayland-port-screen (wlc:wl-output)
   ((x :initform 0 :accessor screen-x)

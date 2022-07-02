@@ -27,6 +27,7 @@
                 #:window-configuration-event-native-height
                 #:window-configuration-event-native-x
                 #:window-configuration-event-native-y
+                #:window-manager-delete-event
                 ;; #:%%sheet-native-transformation
                 ;; #:%%set-sheet-native-transformation
                 ;; #:device-transformation
