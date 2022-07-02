@@ -46,9 +46,11 @@
          (clim-event (make-instance 'window-configuration-event
                                     :width width
                                     :height height
+                                    :x 0
+                                    :y 0
                                     :sheet sheet
-                                    :region (sheet-native-region sheet))))
-    clim-event))
+                                    :region (make-bounding-rectangle 0 0 width height))))
+    (distribute-event *wayland-port* clim-event)))
 
 (defmethod xdg:xdg-toplevel-close ((wayland-proxy wayland-xdg-toplevel))
   (declare (ignore wayland-proxy))
