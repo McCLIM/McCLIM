@@ -22,7 +22,7 @@
                 #:top-level-sheet-pane
                 #:sheet-mirror-geometry
                 ;; events
-                #:window-configuration
+                #:window-configuration-event
                 #:window-configuration-event-native-width
                 #:window-configuration-event-native-height
                 #:window-configuration-event-native-x
