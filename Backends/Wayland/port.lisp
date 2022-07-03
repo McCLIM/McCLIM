@@ -151,7 +151,7 @@
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
   (with-slots (frame-managers) port
-    (push (apply #'make-instance 'wayland-frame-manager :port port nil)
+    (push (apply #'make-instance 'standard-frame-manager :port port nil)
           frame-managers))
   (initialize-wayland port)
   (make-graft port)
@@ -305,14 +305,6 @@
                                   :mirror mirror
                                   :orientation orientation
                                   :units units)))
-
-(defclass wayland-frame-manager (standard-frame-manager)
-  ((mirroring :initarg :mirroring
-              :initform nil
-              :reader mirroring)
-   (class-gensym :initarg :class-gensym
-                 :initform (gensym "WAYLAND-")
-                 :reader class-gensym)))
 
 (defclass wayland-egl-medium (basic-medium) ())
 
