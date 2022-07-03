@@ -1,0 +1,36 @@
+#+title: Silex introduction
+#+author: Daniel Kochmański
+#+date: [2022-07-03 nie]
+
+Silex is a library inspired by Silica and SDL2 - libraries that are meant to
+provide an access to the underlying hardware in a portable fashion. This code
+is derived from the McCLIM codebase to allow building GUI toolkits following
+different paradigms than CLIM.
+
+* Overview
+
+1. System Interface
+
+The System Interface Substrate implements lisp utilities, abstractions and
+portability layers for the system (like networking and multithreading).
+
+2. Geometry and Math Utilities
+
+The Geometry Substrate implements regions, region sets and operations on
+them. Additionally it exports math utilities relevant to processing grapahics.
+   
+3. Drawing Substrate
+
+The Drawing Substrate proposes the model for rendering graphics and the
+software renderer that implements them.
+
+4. Windowing Substrate
+
+The Windowing Substrate implements managing windows and and defines the model
+for handling the I/O for a display server.
+
+* Non-goals
+
+Silex does not provide any sort of widgets or composition panes. This is the
+responsibility of a toolkit written on top of it. Only the system itnerface,
+input and output.
