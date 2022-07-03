@@ -1,0 +1,109 @@
+* Wayland Backend (warning: work-in-progress quality!)
+
+This is currently in a proof-of-concept state for getting some early code review. I'm currently learning both CLIM, McCLIM, and Wayland so I'm sure I'm "doing it wrong" in quite a few places.
+
+I'm testing this on a GUIX OS using sway as my wayland compositor. I haven't yet tested in a GNOME or KDE contexts at all.
+
+I plan to rebase this branch again McCLIM/master frequently as I work.
+
+* What "works"
+1. A visual window can been seen on the screen
+2. It resizes in sway as it's moved around
+3. The sway keychord for quitting an app (s-M-q on mine) kinda works, but not without error.
+4. =destroy-port= works
+
+* What doesn't work as of 2022-07-02
+1. Everything else :)
+2. No fonts
+3. No demo applications (hah!)
+4. No keyboard or pointer
+
+* Running
+
+** Dependencies
+This currently requires my feature branch of Andrew Soutar's great =cl-wayland-client= package which adds extra FFI bindings for EGL and convenience path search for finding the wayland protocol libraries. Neither are on quicklisp currently. I'll be seeing if upstreaming is a possibility but I haven't testing for non-breaking on more mainstream distros.
+
+I realize this is a weakness.
+
+** Environment
+You'll need development library for wayland and mesa. For debian/ubuntu based distributions, it usually means the =*-dev= packages. On Guix, I'm doing this in a dedicated dev environment:
+#+begin_src sh
+guix shell sbcl mesa wayland wayland-protocols
+#+end_src
+
+I needed to start emacs in a way it could find the wayland protocal specs and libraries. You might not need this if you aren't sandboxing your environment:
+#+begin_src sh
+LD_LIBRARY_PATH="$GUIX_ENVIRONMENT/lib" emacs &
+#+end_src
+
+And of course a way to teach your lisp's ASDF about the McCLIM branch. I do this via quicklisp and its local-projects facility.
+
+* Points of Interest
+
+** PROCESS-NEXT-EVENT
+
+- The wayland events come in as methods on CLOS objects sometimes with =:after= method combinations, each doing its own call to DISTRIBUTE-EVENT.
+- I haven't dedicated much time to figuring out how to do this in a way that is closer in style to the CLX backend and I've only been testing in a multi-processor based system. So, it's triggering the reading of waylend events and just returning =T=, no =:timeout= or =:wait-function:=.
+
+** PORT-SET-MIRROR-GEOMETRY
+
+Between it and PORT-ENABLE-SHEET... I'm not sure I'm doing the correct port -> graft -> mirror initialization / realization flow correctly.
+
+** There are not many files on purpose at the moment.
+For example, I haven't split PORT and GRAFTS into their own files like other backends. It will happen eventually as I get a better understanding.
+
+* My silly testing app
+It shows the window on the screen but there is still a lot that doesn't work and is just "wishful"
+#+begin_src lisp
+;; (ql:quickload '(mcclim cl-opengl))
+
+(in-package #:common-lisp-user)
+
+(uiop:define-package #:mcclim-wayland-test
+    (:use #:clim #:clim-lisp)
+  (:local-nicknames (#:climi #:clim-internals))
+  (:import-from #:climi
+                #:never-repaint-background-mixin)
+  (:export #:run-opengl-test))
+
+(in-package #:mcclim-wayland-test)
+
+(defclass opengl-pane (basic-pane)
+  ())
+
+;; (defmethod handle-repaint ((client opengl-pane) region)
+;;   (break))
+
+;; This isn't working yet.
+(defun draw-gl (pane)
+  (format t "calling draw-gl ~%")
+  (gl:clear-color 0.3 0.3 0.1 1.0)
+
+  (gl:clear :color-buffer-bit)
+  (medium-finish-output pane))
+
+(define-application-frame opengl-test ()
+  ()
+  (:menu-bar nil)
+  (:geometry :width 1024 :height 768)
+  ;; (:panes=
+  ;;  ;; (gl opengl-pane :height 1024 :width 768
+  ;;  ;;                 :medium 'wayland-egl-medium)
+  ;;  (gl opengl-pane))
+  ;; (:layouts (default gl))
+  (:pane opengl-pane)
+  )
+
+(defmethod compose-space :after ((pane opengl-pane) &key width height)
+  (format t "compose-space opengl-pane ~a ~a ~%" width height))
+
+(defmethod handle-repaint ((pane opengl-pane) region)
+  (draw-gl pane))
+
+(defmethod handle-event :after (sheet (event window-configuration-event))
+  (format *debug-io* "fancy! (window-cfg-event) sheet: ~s~%" sheet))
+
+(defun run-opengl-test ()
+  (let ((*default-server-path* :wayland-ffi)) ;force wayland backend
+   (run-frame-top-level (make-application-frame 'opengl-test))))
+#+end_src
