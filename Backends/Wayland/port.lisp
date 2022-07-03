@@ -1,4 +1,4 @@
-(in-package #:clim-wayland)
+(in-package #:mcclim-wayland)
 
 (defclass wayland-port (basic-port)
   ((device :initform nil

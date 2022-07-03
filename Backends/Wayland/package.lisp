@@ -1,6 +1,6 @@
 (in-package #:common-lisp-user)
 
-(defpackage #:clim-wayland
+(defpackage #:mcclim-wayland
   (:use #:clim #:clim-lisp #:clim-backend)
   (:local-nicknames (#:alx #:alexandria)
                     (#:wlc #:com.andrewsoutar.cl-wayland-client)

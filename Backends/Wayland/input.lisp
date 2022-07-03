@@ -1,4 +1,4 @@
-(in-package #:clim-wayland)
+(in-package #:mcclim-wayland)
 
 (defvar *wayland-port*)
 (defvar *wayland-wait-func*)
