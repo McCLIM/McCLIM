@@ -206,7 +206,7 @@
     ((port wayland-port) (sheet mirrored-sheet-mixin) region)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
-      (with-bounding-rectangle* (ox1 ox2 oy1 oy2) (sheet-mirror-geometry sheet)
+      (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (sheet-mirror-geometry sheet)
         (let ((window (window mirror)))
           (when (some #'/=
                       (list x1 y1 x2 y2)
