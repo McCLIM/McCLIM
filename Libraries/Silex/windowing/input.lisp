@@ -57,71 +57,23 @@
               nil))
       (event-queue-append queue (schedule-entry-event entry)))))
 
-(defgeneric schedule-event-queue (queue event delay)
-  (:method ((queue schedule-mixin) event delay)
-    (with-slots (schedule) queue
-      (let* ((alarm (+ (now) delay))
-             (entry (make-schedule-entry alarm event)))
-        (cond ((null schedule) ; no other events scheduled
-               (push entry schedule)
-               (setf (event-schedule-time queue) alarm))
-              ((< alarm (event-schedule-time queue)) ; EVENT is new earliest
-               (push entry schedule)
-               (setf (event-schedule-time queue) alarm))
-              (t ; EVENT goes somewhere after the earliest event
-               (do* ((previous schedule (rest previous))
-                     (rest  (rest schedule) (rest rest))
-                     (current #1=(first rest) #1#))
-                    ((or (null rest)
-                         (< alarm (schedule-entry-time current)))
-                     (setf (cdr previous) (list* entry (cdr previous)))))))))))
-
-;;; EVENT-QUEUE protocol (not exported)
-
-(define-protocol-class event-queue () ())
-
-(defgeneric event-queue-read (event-queue)
-  (:documentation "Reads one event from the queue, if there is no event, hang
-until here is one."))
-
-(defgeneric event-queue-read-no-hang (event-queue)
-  (:documentation "Reads one event from the queue, if there is no event just
-return NIL."))
-
-(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function)
-  (:documentation "Waits until wait-function returns true, event queue
-is not empty or none of the above happened before a timeout.
-
-- Returns (values nil :wait-function) if wait-function returns true
-- Reads and returns one event from the queue if it is not empty
-- Returns (values nil :timeout) otherwise."))
-
-(defgeneric event-queue-append (event-queue item)
-  (:documentation "Append the item at the end of the queue. Does event compression."))
-
-(defgeneric event-queue-prepend (event-queue item)
-  (:documentation "Prepend the item to the beginning of the queue."))
-
-(defgeneric event-queue-peek (event-queue)
-  (:documentation "Peeks the first event in a queue. Queue is left unchanged.
-If queue is empty returns NIL."))
-
-(defgeneric event-queue-peek-if (predicate event-queue)
-  (:documentation "Goes through the whole event queue and returns the first
-event, which satisfies PREDICATE. Queue is left unchanged. Returns NIL if there
-is no such event."))
-
-(defgeneric event-queue-listen (event-queue)
-  (:documentation "Returns true if there are any events in the queue. Otherwise
-returns NIL."))
-
-(defgeneric event-queue-listen-or-wait (event-queue &key timeout wait-function)
-  (:documentation "Waits until wait-function returns true, event queue
-is not empty or none of the above happened before a timeout.
-
-- Returns (values nil :wait-function) when wait-function returns true
-- Returns true when there are events in the queue before a timeout
-- Returns (values nil :timeout) otherwise."))
+(defmethod schedule-event-queue ((queue schedule-mixin) event delay)
+  (with-slots (schedule) queue
+    (let* ((alarm (+ (now) delay))
+           (entry (make-schedule-entry alarm event)))
+      (cond ((null schedule) ; no other events scheduled
+             (push entry schedule)
+             (setf (event-schedule-time queue) alarm))
+            ((< alarm (event-schedule-time queue)) ; EVENT is new earliest
+             (push entry schedule)
+             (setf (event-schedule-time queue) alarm))
+            (t ; EVENT goes somewhere after the earliest event
+             (do* ((previous schedule (rest previous))
+                   (rest  (rest schedule) (rest rest))
+                   (current #1=(first rest) #1#))
+                  ((or (null rest)
+                       (< alarm (schedule-entry-time current)))
+                   (setf (cdr previous) (list* entry (cdr previous))))))))))
 
 
 (defclass simple-event-queue (event-queue schedule-mixin)
@@ -549,6 +501,16 @@ use condition-variables nor locks."))
   (with-slots (queue) sheet
     (event-queue-listen queue)))
 
+(defmethod event-read-with-timeout ((sheet standard-sheet-input-mixin)
+                                    &key (timeout nil) (wait-function nil))
+  (with-slots (queue) sheet
+    (event-queue-read-with-timeout queue timeout wait-function)))
+
+(defmethod event-listen-or-wait ((sheet standard-sheet-input-mixin)
+          &key (timeout nil) (wait-function nil))
+  (with-slots (queue) sheet
+    (event-queue-listen-or-wait queue :timeout timeout :wait-function wait-function)))
+
 (defclass no-event-queue-mixin ()
   ())
 
@@ -602,6 +564,16 @@ use condition-variables nor locks."))
 (defmethod event-listen ((sheet sheet-mute-input-mixin))
   (error 'sheet-is-mute-for-input))
 
+(defmethod event-read-with-timeout ((sheet sheet-mute-input-mixin)
+                                    &key (timeout nil) (wait-function nil))
+  (declare (ignore timeout wait-function))
+  (error 'sheet-is-mute-for-input))
+
+(defmethod event-listen-or-wait ((sheet sheet-mute-input-mixin)
+                                 &key (timeout nil) (wait-function nil))
+  (declare (ignore timeout wait-function))
+  (error 'sheet-is-mute-for-input))
+
 ;;;;
 
 (defclass delegate-sheet-input-mixin ()
@@ -636,47 +608,15 @@ use condition-variables nor locks."))
 (defmethod event-listen ((sheet delegate-sheet-input-mixin))
   (event-listen (delegate-sheet-delegate sheet)))
 
-;;; Extensions involving wait-function
-;;;
-;;; wait-function in principle behaves like for process-next-event
-;;; (and for single-threaded run it is exactly what happens - we pass
-;;; it to the port method). It is not called in a busy loop but rather
-;;; after some input wakes up blocking backend-specific wait
-;;; function. Then we call wait-function. -- jd 2019-03-26
+(defmethod event-read-with-timeout ((sheet delegate-sheet-input-mixin)
+                                    &key (timeout nil) (wait-function nil))
+  (event-read-with-timeout (delegate-sheet-delegate sheet)
+                           :timeout timeout :wait-function wait-function))
 
-(defgeneric event-read-with-timeout (sheet &key timeout wait-function)
-  (:documentation "Reads event from the event queue. Function returns
-when event is succesfully read, timeout expires or wait-function
-returns true. Time of wait-function call depends on a port.")
-  (:method ((sheet standard-sheet-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (with-slots (queue) sheet
-      (event-queue-read-with-timeout queue timeout wait-function)))
-  (:method ((sheet sheet-mute-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (declare (ignore timeout wait-function))
-    (error 'sheet-is-mute-for-input))
-  (:method ((sheet delegate-sheet-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (event-read-with-timeout (delegate-sheet-delegate sheet)
-                             :timeout timeout :wait-function wait-function)))
-
-(defgeneric event-listen-or-wait (sheet &key timeout wait-function)
-  (:documentation "When wait-function is nil then function waits for
-available event. Otherwise function returns when wait-function
-predicate yields true. Time of wait-function call depends on a port.")
-  (:method ((sheet standard-sheet-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (with-slots (queue) sheet
-      (event-queue-listen-or-wait queue :timeout timeout :wait-function wait-function)))
-  (:method ((sheet sheet-mute-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (declare (ignore timeout wait-function))
-    (error 'sheet-is-mute-for-input))
-  (:method ((sheet delegate-sheet-input-mixin)
-            &key (timeout nil) (wait-function nil))
-    (event-listen-or-wait (delegate-sheet-delegate sheet)
-                          :timeout timeout :wait-function wait-function)))
+(defmethod event-listen-or-wait ((sheet delegate-sheet-input-mixin)
+                                 &key (timeout nil) (wait-function nil))
+  (event-listen-or-wait (delegate-sheet-delegate sheet)
+                        :timeout timeout :wait-function wait-function))
 
 ;;; Class actually used by panes.
 

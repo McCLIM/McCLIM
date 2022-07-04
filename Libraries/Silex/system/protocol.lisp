@@ -16,10 +16,8 @@
 
 (defmacro define-protocol-class (name super-classes &optional slots &rest options)
   (let* ((sym-name (symbol-name name))
-         (protocol-predicate (alexandria:symbolicate
-                              sym-name
-                              (if (find #\- sym-name) "-" "")
-                              '#:p))
+         (protocol-predicate
+           (protocol-predicate-name name))
          (predicate-docstring
            (concatenate 'string
                         "Protocol predicate checking for class " sym-name)))
@@ -53,1697 +51,1082 @@
          (:method ((object ,name))
            t)
          (:documentation ,predicate-docstring))
-
        ',name)))
 
-;; "Part I: Overview and Conventions" doesn't have any protocol
-;; classes defined, so no need for a separate page for it.
-
-
-;;;; Part II: Geometry Substrate
-
-;;; 3.1 General Regions
-(define-protocol-class region (design))
-
-(define-protocol-class point (region bounding-rectangle))
-(define-protocol-class path (region bounding-rectangle))
-(define-protocol-class area (region bounding-rectangle))
-(define-protocol-class region-set (region bounding-rectangle))
-
-(define-protocol-class polybezier (path) ()) ; McCLIM extension
-(define-protocol-class polyline (polybezier))
-(define-protocol-class line (polyline))
-(define-protocol-class elliptical-arc (path))
-
-(define-protocol-class bezigon (area) ()) ; McCLIM extension
-(define-protocol-class polygon (bezigon))
-(define-protocol-class rectangle (polygon))
-(define-protocol-class ellipse (area))
-
-;;; 4.1 Bounding Rectangles
-(define-protocol-class bounding-rectangle ())
-
-;;; 5.1 Transformations
-(define-protocol-class transformation ())
-
-
-;;;; Part III: Windowing Substrate
-
-;;; 7.1 Basic Sheet Classes
-(define-protocol-class sheet (bounding-rectangle))
-
-;;; 8.2 Standard Device Events
-(define-protocol-class event ()
-  ())
-
-;;; 8.3.1 Output Properties
-
-(define-protocol-class medium ()
-  ())
-
-;;; 9.2 Ports
-(define-protocol-class port ())
-
-
-;;;; Part IV: Sheet and Medium Output Facilities
-
-;;; 10.3 Line Styles
-
-(define-protocol-class line-style ())
-
-;;; 11.1 Text Styles
-
-(define-protocol-class text-style ()
-  ())
-
-;;; 13.2 Basic Designs
-
-(define-protocol-class design ())
-
-;;; 13.3 Color class
-
-(define-protocol-class color (design))
-
-;;; 13.4
-
-(define-protocol-class opacity (design))
-
-
-;;;; Part V: Extended Stream Output Facilities
-
-;; CLIM Specification says that E-O-S is a subclass of OUTPUT-STREAM,
-;; but it does not say what is it. We infer it is a base class for
-;; all CLIM output streams (output-recording-stream included).
-(defclass output-stream (fundamental-character-output-stream) ())
-
-;;; 15.2 Extended Output Streams
-(define-protocol-class extended-output-stream
-    (output-stream)
-  ())
-
-;;; 15.3 The Text Cursor
-(define-protocol-class cursor ())
-
-;;; 16.2 Output Records
-(define-protocol-class output-record (bounding-rectangle)
-  ())
-
-(define-protocol-class displayed-output-record (output-record)
-  ())
-
-;;; 16.3.2 Graphics Displayed Output Records
-(define-protocol-class graphics-displayed-output-record
-    (displayed-output-record)
-  ())
-
-;;; 16.3.3 Text Displayed Output Record
-(define-protocol-class text-displayed-output-record (displayed-output-record)
-  ())
-
-;;; 16.4 Output Recording Streams
-(define-protocol-class output-recording-stream (output-stream)
-  ())
-
-;;; 17.3.1 Table Formatting Protocol
-(define-protocol-class table-output-record (output-record))
-
-;;; 17.3.2 Row and Column Formatting Protocol
-(define-protocol-class row-output-record (output-record))
-(define-protocol-class column-output-record (output-record))
-
-;;; 17.3.3 Cell Formatting Protocol
-(define-protocol-class cell-output-record (output-record))
-
-;;; 17.3.4 Item List Formatting Protocol
-(define-protocol-class item-list-output-record ()
-  ())
-
-;;; 18.2 The Graph Formatting Protocol
-(define-protocol-class graph-output-record (output-record))
-(define-protocol-class graph-node-output-record (output-record))
-
-;;; 21.3 Incremental Redisplay Protocol
-(define-protocol-class updating-output-record (output-record))
-
-
-;;;; Part VI: Extended Stream Input Facilities
-
-;; CLIM Specification says that E-I-S is a subclass of INPUT-STREAM,
-;; but it does not say what is it. We infer it is a base class for
-;; all CLIM input streams (standard-input-stream included).
-(defclass input-stream (fundamental-input-stream) ())
-
-;;; 22.2 Extended Input Streams
-
-(define-protocol-class extended-input-stream (input-stream))
-
-;;; 22.4 The Pointer Protocol
-
-(define-protocol-class pointer ())
-
-;;; 23.2 Presentations
-(define-protocol-class presentation ())
-
-;;; 23.6 Views
-(define-protocol-class view ())
-
-;;; 24.1.1 The Input Editing Stream Protocol
-(define-protocol-class input-editing-stream ())
-
-
-;;;; Part VII: Building Applications
-
-;;; 27.2 Command Tables
-(define-protocol-class command-table ())
-
-;;; 28.2 Application Frames
-(define-protocol-class application-frame ())
-
-;;; 28.5 Frame Managers
-(define-protocol-class frame-manager () ())
-
-;;; 29.2 Basic Pane Construction
-(define-protocol-class pane (sheet))
-
-;;; 30.3 Basic Gadget Classes
-(define-protocol-class gadget (pane))
-
-
-;;;; Part VIII: Appendices
-
-;;; C.1 Encapsulating Streams
-(define-protocol-class encapsulating-stream ())
-
-
-
-;;; This is just an ad hoc list. Would it be a good idea to include all
-;;; (exported) generic functions here? --GB
-;;;
-;;; YES!  -- CSR
-;;; We'll get right on it :) -- moore
-;;; Whose numbers are we using here?
-
-;;; The numbers are section numbers from the spec. --GB
-
-;; Since the declaim form for functions looks clumsy and is
-;; syntax-wise different from defun, we define us a new declfun, which
-;; fixes this.
+;; Since the declaim form for functions looks clumsy and is syntax-wise
+;; different from defun, we define us a new declfun, which fixes this.
 
 (defmacro declfun (name lambda-list)
   `(declaim (ftype (function
                     ,(let ((q lambda-list)
                            res)
-                          (do () ((or (null q)
-                                      (member (car q) '(&optional &rest &key))))
-                            (push 't res)
-                            (pop q))
-                          (when (eq (car q) '&optional)
-                            (push '&optional res)
-                            (pop q)
-                            (do () ((or (null q)
-                                        (member (car q) '(&rest &key))))
-                              (pop q)
-                              (push 't res)))
-                          (when (eq (car q) '&rest)
-                            (push '&rest res)
-                            (pop q)
-                            (push 't res)
-                            (pop q))
-                          (when (eq (car q) '&key)
-                            (push '&key res)
-                            (pop q)
-                            (do () ((or (null q)
-                                        (member (car q) '(&allow-other-keys))))
-                              (push (list (intern (string (if (consp (car q))
-                                                              (if (consp (caar q))
-                                                                  (caaar q)
-                                                                  (caar q))
-                                                              (car q)))
-                                                  :keyword)
-                                          't)
-                                    res)
-                              (pop q)))
-                          (when (eq (car q) '&allow-other-keys)
-                            (push '&allow-other-keys res)
-                            (pop q))
-                          (reverse res))
+                       (do () ((or (null q)
+                                   (member (car q) '(&optional &rest &key))))
+                         (push 't res)
+                         (pop q))
+                       (when (eq (car q) '&optional)
+                         (push '&optional res)
+                         (pop q)
+                         (do () ((or (null q)
+                                     (member (car q) '(&rest &key))))
+                           (pop q)
+                           (push 't res)))
+                       (when (eq (car q) '&rest)
+                         (push '&rest res)
+                         (pop q)
+                         (push 't res)
+                         (pop q))
+                       (when (eq (car q) '&key)
+                         (push '&key res)
+                         (pop q)
+                         (do () ((or (null q)
+                                     (member (car q) '(&allow-other-keys))))
+                           (push (list (intern (string (if (consp (car q))
+                                                           (if (consp (caar q))
+                                                               (caaar q)
+                                                               (caar q))
+                                                           (car q)))
+                                               :keyword)
+                                       't)
+                                 res)
+                           (pop q)))
+                       (when (eq (car q) '&allow-other-keys)
+                         (push '&allow-other-keys res)
+                         (pop q))
+                       (reverse res))
                     t)
-             ,name)))
+                   ,name)))
 
-(defmacro declmacro (name lambda-list)
-  (declare (ignore lambda-list))
-  `(quote ,name))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *protocols* (make-hash-table :test #'equalp))
+  (defclass protocol ()
+    ((name :initarg :name :reader name)
+     (sups :initarg :sups :reader sups)
+     (decl :initarg :decl :reader decl)
+     (syms :initarg :syms :reader syms))))
 
-;;;; Early special variables
+(defmacro define-protocol (protocol-name super &rest forms)
+  (let ((names (mapcar #'second forms)))
+    (setf (gethash protocol-name *protocols*)
+          (make-instance 'protocol
+           :name protocol-name :sups super :decl forms :syms names)))
+  (flet ((expand-declare (form)
+           (if (stringp (first form))
+               `(define-protocol ,(first form) (,protocol-name) ,@(rest form))
+               (destructuring-bind (type name &rest description) form
+                 `(progn
+                    (export ',name)
+                    ,(ecase type
+                       ((:protocol-class :protocol-class*)
+                        `(progn
+                           (export ',(protocol-predicate-name name))
+                           (define-protocol-class ,name ,@description)))
+                       ((:class :class* :mixin :mixin*)
+                        `(quote ,name))
+                       ((:condition :condition*)
+                        `(quote ,name))
+                       ((:type :type*)
+                        `(quote ,name))
+                       ((:constant :constant* :variable :variable*)
+                        `(quote ,name))
+                       ((:function :function* :constructor :constructor*)
+                        `(declfun ,name ,@description))
+                       ((:generic :generic*)
+                        `(defgeneric ,name ,@description))
+                       ((:reader :reader*)
+                        `(defgeneric ,name (instance) ,@description))
+                       ((:accessor :accessor*)
+                        `(progn
+                           (defgeneric ,name (instance) ,@description)
+                           (defgeneric (setf ,name) (new-value instance))))
+                       ((:macro :macro*)
+                        `(quote ,name))
+                       ((:symbol :symbol*)
+                        `(quote ,name))))))))
+    `(progn ,@(mapcar #'expand-declare forms))))
 
-(defvar *application-frame* nil)
-(defvar *pointer-documentation-output* nil)
+;;; expand-exports protocol-name &key with-extensions
+;;; expand-definitions protocol-name
 
-
-;;; 3.1.1 The Region Predicate Protocol
-
-(defgeneric region-equal               (region1 region2))
-(defgeneric region-contains-region-p   (region1 region2))
-(defgeneric region-contains-position-p (region x y))
-(defgeneric region-intersects-region-p (region1 region2))
-
-;;; 3.1.2 Region Composition Protocol
-
-(defgeneric region-set-regions (region &key normalize))
-(defgeneric map-over-region-set-regions (function region &key normalize)
-  (:argument-precedence-order region function))
-(defgeneric region-union (region1 region2))
-(defgeneric region-intersection (region1 region2))
-(defgeneric region-difference (region1 region2))
-
-;;; 3.2.1.1 The Point Protocol
-
-(defgeneric point-position (point))
-(defgeneric point-x (point))
-(defgeneric point-y (point))
-
-;;; 3.2.2.1 The Polygon and Polyline Protocol
-
-(defgeneric polygon-points (polygon-or-polyline))
-(defgeneric map-over-polygon-coordinates (function polygon-or-polyline))
-(defgeneric map-over-polygon-segments (function polygon-or-polyline))
-(defgeneric polyline-closed (polyline))
-
-;;; 3.2.3.1 The Line Protocol
-
-(defgeneric line-start-point* (line))
-(defgeneric line-end-point* (line))
-(defgeneric line-start-point (line))
-(defgeneric line-end-point (line))
-
-;;; 3.2.4.1
-
-(defgeneric rectangle-edges* (rectangle))
-(defgeneric rectangle-min-point (rectangle))
-(defgeneric rectangle-max-point (rectangle))
-(defgeneric rectangle-min-x (rectangle))
-(defgeneric rectangle-min-y (rectangle))
-(defgeneric rectangle-max-x (rectangle))
-(defgeneric rectangle-max-y (rectangle))
-(defgeneric rectangle-width (rectangle))
-(defgeneric rectangle-height (rectangle))
-(defgeneric rectangle-size (rectangle))
-
-;;; 3.2.5.1 The Ellipse and Elliptical Arc Protocol
-
-(defgeneric ellipse-center-point* (elliptical-object))
-(defgeneric ellipse-center-point (elliptical-object))
-(defgeneric ellipse-radii (elliptical-object))
-(defgeneric ellipse-start-angle (elliptical-object))
-(defgeneric ellipse-end-angle (elliptical-object))
-
-;;; 3.2.6.1 The Bezigon and Bezier Curve Protocol (McCLIM extension)
-
-(defgeneric bezigon-points (object))
-(defgeneric bezigon-order (object))
-(defgeneric map-over-bezigon-segments (function object))
+'(protocol (:name geometry-substrate :label "Geometry Substrate")
+  (protocol (:name regions :label "3 Regions"))
+  (class (:name design :abstract t))
+  (class (:name region :super design)
+   (accessor (:name medium-background))
+   (accessor (:name medium-foreground))
+   (generic  (:name medium-current-text-style)
+    (argument (:name medium :type medium))))
+  (function (:name draw-rectangles*)
+   (argument (:name sheet))
+   (argument (:name point1)))
+  (enum (:name foobar)
+   (item (:name +foobar+) 3)
+   (item (:name +foobar+) 4)))
 
 
-;;; 4.1.1 The Bounding Rectangle Protocol
 
-(defgeneric bounding-rectangle* (region))
-(defgeneric bounding-rectangle (region))
+;;; "Part I: Overview and Conventions" doesn't have any protocol classes
+;;; defined, so no need for a separate page for it.
 
-;;; 4.1.2 Bounding Rectangle Convenience Functions
+(define-protocol "former climi" ()
+  ;; FIXME these symbols should be pruned or made a proper interface.
+  (:symbol* letf)
+  (:symbol* atan*)
+  (:symbol* now)
+  (:symbol* compute-decay)
+  (:symbol* reparameterize-ellipse)
+  (:symbol* normalize-angle)
+  (:symbol* normalize-angle*)
+  (:symbol* expand-point-seq)
+  (:symbol* coord-seq->point-seq)
+  (:symbol* cubic-bezier-dimension-min-max)
+  (:symbol* ELLIPSE-SIMPLIFIED-REPRESENTATION)
+  (:symbol* ELLIPSE-BOUNDING-RECTANGLE*)
+  (:symbol* %ELLIPSE-ANGLE->POSITION)
+  (:symbol* %%SET-SHEET-NATIVE-TRANSFORMATION)
+  (:symbol* %%SET-SHEET-NATIVE-REGION)
+  (:symbol* %%SHEET-NATIVE-TRANSFORMATION)
+  (:symbol* %%SHEET-NATIVE-REGION)
+  (:symbol* NATIVE-REGION)
+  (:symbol* NATIVE-TRANSFORMATION)
+  (:symbol* DEVICE-REGION)
+  (:symbol* DEVICE-TRANSFORMATION)
+  (:symbol* ELLIPSE-CUBIC-BEZIER-POINTS)
+  (:symbol* TRANSFORM-COORDINATES-MIXIN)
+  (:symbol* %SET-SHEET-REGION-AND-TRANSFORMATION)
+  (:symbol* %rgba-value)
+  (:symbol* %pattern-rgba-value)
+  (:symbol* %collapse-pattern)
+  (:symbol* %ub8-stencil)
+  (:symbol* %rgba-pattern)
+  (:symbol* *configuration-event-p*)
+  (:symbol* EXPAND-RECTANGLE-COORDS)
+  (:symbol* *all-ports*)
+  (:symbol* ink)
+  (:symbol* clipping-region)
+  (:symbol* transformation)
+  (:symbol* line-style)
+  (:symbol* text-style)
+  (:symbol* coordinates))
 
-(defgeneric bounding-rectangle-position (region))
-(defgeneric bounding-rectangle-min-x (region))
-(defgeneric bounding-rectangle-min-y (region))
-(defgeneric bounding-rectangle-max-x (region))
-(defgeneric bounding-rectangle-max-y (region))
-(defgeneric bounding-rectangle-width (region))
-(defgeneric bounding-rectangle-height (region))
-(defgeneric bounding-rectangle-size (region))
+;;; "Part II: Geometry Substrate"
+(define-protocol "Geometry Substrate" ())
 
-
-;;; 5.3.1 Transformation Predicates
+(define-protocol "3 Regions" ("Geometry Substrate")
+  ("3.1 General Regions"
+   (:protocol-class design ())
+   (:protocol-class region (design))
+   (:protocol-class path (region bounding-rectangle))
+   (:protocol-class area (region bounding-rectangle))
+   (:type coordinate)
+   (:function coordinate (n))
+   (:function* coordinate-epsilon ())
+   (:function* coordinate= (x y))
+   (:function* coordinate/= (x y))
+   (:function* coordinate<= (x y))
+   (:function* coordinate-between (c1 x c2))
+   (:function* coordinate-between* (low x high))
+   (:type* standard-rectangle-coordinate-vector)
+   (:class* nowhere-region (region))
+   (:class* everywhere-region (region))
+   (:constant +everywhere+ region)
+   (:constant +nowhere+ region)
+   ("3.1.1 The Region Predicate Protocol"
+    (:generic region-equal (region1 region2))
+    (:generic region-contains-region-p (region1 region2))
+    (:generic region-contains-position-p (region x y))
+    (:generic region-intersects-region-p (region1 region2)))
+   ("3.1.2 Region Composition Protocol"
+    (:protocol-class region-set (region bounding-rectangle))
+    (:class standard-region-union (region-set))
+    (:class standard-region-intersection (region-set))
+    (:class standard-region-difference (region-set))
+    (:class* standard-region-complement (region-set))
+    (:class* standard-rectangle-set (region-set))
+    (:generic region-set-regions (region &key normalize))
+    (:generic map-over-region-set-regions (fun region &key normalize))
+    (:generic region-union (region1 region2))
+    (:generic region-intersection (region1 region2))
+    (:generic region-difference (region1 region2))
+    (:generic* region-complement (region))
+    (:condition* region-set-not-rectangular (error))))
+  ("3.2 Other Region Types"
+   ("3.2.1 Points"
+    (:protocol-class point (region bounding-rectangle))
+    (:class standard-point (point))
+    (:constructor make-point (x y))
+    (:generic point-position (point))
+    (:generic point-x (point))
+    (:generic point-y (point)))
+   ("3.2.2 Polygons and Polylines"
+    (:protocol-class polygon (bezigon))
+    (:protocol-class polyline (polybezier))
+    (:class standard-polygon (polygon))
+    (:constructor make-polygon (point-seq))
+    (:constructor make-polygon* (coord-seq))
+    (:class standard-polyline (standard-polyline))
+    (:constructor make-polyline (point-seq &key closed))
+    (:constructor make-polyline* (coord-seq &key closed))
+    (:generic polygon-points (polygon-or-polyline))
+    (:generic map-over-polygon-coordinates (fun polygon-or-polyline))
+    (:generic map-over-polygon-segments (fun polygon-or-polyline))
+    (:generic polyline-closed (polyline)))
+   ("3.2.3 Lines"
+    (:protocol-class line (polyline))
+    (:class standard-line (line))
+    (:constructor make-line (start-point end-point))
+    (:constructor make-line* (x1 y1 x2 y2))
+    (:generic line-start-point* (line))
+    (:generic line-end-point* (line))
+    (:generic line-start-point (line))
+    (:generic line-end-point (line)))
+   ("3.2.4 Rectangles"
+    (:protocol-class rectangle (polygon))
+    (:class standard-rectangle (rectangle))
+    (:constructor make-rectangle (point1 point2))
+    (:constructor make-rectangle* (x1 y1 x2 y2))
+    (:generic rectangle-edges* (rectangle))
+    (:generic rectangle-min-point (rectangle))
+    (:generic rectangle-max-point (rectangle))
+    (:generic rectangle-min-x (rectangle))
+    (:generic rectangle-min-y (rectangle))
+    (:generic rectangle-max-x (rectangle))
+    (:generic rectangle-max-y (rectangle))
+    (:generic rectangle-width (rectangle))
+    (:generic rectangle-height (rectangle))
+    (:generic rectangle-size (rectangle)))
+   ("3.2.5 Ellipses and Elliptical Arcs"
+    (:protocol-class ellipse (area))
+    (:protocol-class elliptical-arc (path))
+    (:class standard-ellipse (ellipse))
+    (:constructor make-ellipse (center rdx1 rdy1 rdx2 rdy1 &key start-angle end-angle))
+    (:constructor make-ellipse* (cx cy rdx1 rdy1 rdx2 rdy1 &key start-angle end-angle))
+    (:class standard-elliptical-arc (elliptical-arc))
+    (:constructor make-elliptical-arc (center rdx1 rdy1 rdx2 rdy1 &key start-angle end-angle))
+    (:constructor make-elliptical-arc* (cx cy rdx1 rdy1 rdx2 rdy1 &key start-angle end-angle))
+    (:generic ellipse-center-point* (elliptical-object))
+    (:generic ellipse-center-point (elliptical-object))
+    (:generic ellipse-radii (elliptical-object))
+    (:generic ellipse-start-angle (elliptical-object))
+    (:generic ellipse-end-angle (elliptical-object)))
+   ("3.2.6 The Bezigon and Bezier Curve Protocol (McCLIM extension)"
+    (:protocol-class* bezigon (area))
+    (:protocol-class* polybezier (path))
+    (:class* standard-bezigon (bezigon))
+    (:constructor* make-bezigon (point-seq))
+    (:constructor* make-bezigon* (coord-seq))
+    (:class* standard-polybezier (polybezier))
+    (:constructor* make-polybezier (point-seq))
+    (:constructor* make-polybezier* (coord-seq))
+    (:generic* bezigon-points (object))
+    (:generic* bezigon-order (object))
+    (:generic* map-over-bezigon-segments (fun object))
+    (:function* map-over-bezigon-segments* (fun coord-seq order)))))
 
-(defgeneric transformation-equal (transformation1 transformation2))
-(defgeneric identity-transformation-p (transformation))
-(defgeneric invertible-transformation-p (transformation))
-(defgeneric translation-transformation-p (transformation))
-(defgeneric reflection-transformation-p (transformation))
-(defgeneric rigid-transformation-p (transformation))
-(defgeneric even-scaling-transformation-p (transformation))
-(defgeneric scaling-transformation-p (transformation))
-(defgeneric rectilinear-transformation-p (transformation))
+(define-protocol "4 Bounding Rectangles" ("Geometry Substrate")
+  ("4.1 Bounding Rectangles"
+   (:protocol-class bounding-rectangle ())
+   (:class standard-bounding-rectangle (bounding-rectangle rectangle))
+   (:constructor make-bounding-rectangle (x1 y1 x2 y2))
+   (:generic bounding-rectangle* (region))
+   (:generic bounding-rectangle (region))
+   (:macro with-bounding-rectangle* ((&rest variables) region &body body))
+   (:macro* with-standard-rectangle* ((&rest variables) rectangle &body body))
+   (:generic bounding-rectangle-position (region))
+   (:generic bounding-rectangle-min-x (region))
+   (:generic bounding-rectangle-min-y (region))
+   (:generic bounding-rectangle-max-x (region))
+   (:generic bounding-rectangle-max-y (region))
+   (:generic bounding-rectangle-width (region))
+   (:generic bounding-rectangle-height (region))
+   (:generic bounding-rectangle-size (region))
+   (:function* copy-bounding-rectangle (region))
+   (:function* rounded-bounding-rectangle (region))))
 
-;;; 5.3.2 Composition of Transformations
+(define-protocol "5 Affine Transformations" ("Geometry Substrate")
+  ("5.1 Transformations"
+   (:protocol-class transformation ())
+   (:function* get-transformation (transformation))
+   (:class* standard-transformation (transformation))
+   (:class* standard-identity-transformation)
+   (:class* standard-translation (transformation))
+   (:class* standard-hairy-transformation (transformation))
+   (:constant +identity-transformation+ transformation)
+   (:macro* with-transformed-position ((transformation x y) &body body))
+   (:macro* with-transformed-distance ((transformation dx dy) &body body))
+   (:macro* with-transformed-angles ((transformation clockwisep &rest angles) &body body))
+   (:macro* with-transformed-positions ((transformation coord-seq) &body body))
+   (:macro* with-transformed-positions* ((transformation &rest coord-seq) &body body))
+   (:function* transform-angle (transformation phi))
+   (:function* untransform-angle (transformation phi))
+   ("5.1.1 Transformation Conditions"
+    (:condition transformation-error (error) (:initargs :points))
+    (:condition transformation-underspecified (error) (:initargs :points))
+    (:condition reflection-underspecified (error) (:initargs :points))
+    (:condition singular-transformation (error) (:initargs :transformation))
+    (:condition* rectangle-transformation-error (error) (:initargs :rect))))
+  ("5.2 Transformation Constructors"
+   (:constructor make-translation-transformation (dx dy))
+   (:constructor make-rotation-transformation (angle &optional origin))
+   (:constructor make-rotation-transformation* (angle &optional x0 y0))
+   (:constructor make-scaling-transformation (sx sy &optional origin))
+   (:constructor make-scaling-transformation* (sx sy &optional x0 y0))
+   (:constructor make-reflection-transformation (point1 point2))
+   (:constructor make-reflection-transformation* (x1 y1 x2 y2))
+   (:constructor make-transformation (mxx mxy myx myy tx ty))
+   (:constructor make-3-point-transformation (p1 p2 p3 p1* p2* p3*))
+   (:constructor make-3-point-transformation* (x1 y1 x2 y2 x3 y3 x1* y1* x2* y2* x3* y3*)))
+  ("5.3 Transformation Protocol"
+   ("5.3.1 Transformation Predicates"
+    (:generic transformation-equal (transformation1 transformation2))
+    (:generic identity-transformation-p (transformation))
+    (:generic invertible-transformation-p (transformation))
+    (:generic translation-transformation-p (transformation))
+    (:generic reflection-transformation-p (transformation))
+    (:generic rigid-transformation-p (transformation))
+    (:generic even-scaling-transformation-p (transformation))
+    (:generic scaling-transformation-p (transformation))
+    (:generic rectilinear-transformation-p (transformation))
+    (:generic* y-inverting-transformation-p (transformation)))
+   ("5.3.2 Composition of Transformations"
+    (:generic compose-transformations (transformation1 transformation2))
+    (:generic invert-transformation (transformation))
+    (:function compose-translation-with-transformation (transformation dx dy))
+    (:function compose-scaling-with-transformation (transformation sx sy &optional origin))
+    (:function compose-rotation-with-transformation (transformation angle &optional origin))
+    (:function compose-transformation-with-translation (transformation dx dy))
+    (:function compose-transformation-with-scaling (transformation sx sy &optional origin))
+    (:function compose-transformation-with-rotation (transformation angle &optional origin)))
+   ("5.3.3 Applying Transformations"
+    (:generic transform-region (transformation region))
+    (:generic untransform-region (transformation region))
+    (:generic transform-position (transformation x y))
+    (:function* transform-positions (transformation coord-seq))
+    (:function* transform-position-sequence (seq-type transformation coord-seq))
+    (:generic untransform-position (transformation x y))
+    (:generic transform-distance (transformation dx dy))
+    (:generic untransform-distance (transformation dx dy))
+    (:generic transform-rectangle* (transformation x1 y1 x2 y2))
+    (:generic untransform-rectangle* (transformation x1 y1 x2 y2)))))
 
-(defgeneric compose-transformations (transformation1 transformation2))
-(defgeneric invert-transformation (transformation))
-(declfun compose-translation-with-transformation (transformation dx dy))
-(declfun compose-scaling-with-transformation (transformation sx sy &optional origin))
-(declfun compose-rotation-with-transformation (transformation angle &optional origin))
-(declfun compose-transformation-with-translation (transformation dx dy))
-(declfun compose-transformation-with-scaling (transformation sx sy &optional origin))
-(declfun compose-transformation-with-rotation (transformation angle &optional origin))
+;;; "Part IV: Sheet and Medium Output Facilities" number comes from CLIM
+;;; specification, but it is defined earlier in Silex.
+(define-protocol "Sheet and Medium Output Facilities" ())
 
-;;; 5.3.3 Applying Transformations
+(define-protocol "10 Drawing Options" ("Sheet and Medium Output Facilities")
+  ("10.1 Medium Components"
+   (:protocol-class medium ())
+   (:class basic-medium (medium))
+   (:accessor medium-background)
+   (:accessor medium-foreground)
+   (:accessor medium-ink)
+   (:accessor medium-transformation)
+   (:accessor medium-clipping-region)
+   (:accessor medium-line-style)
+   (:accessor medium-default-text-style)
+   (:accessor medium-text-style)
+   (:generic medium-current-text-style (medium)) ; redundant with m-merged-t-s
+   (:generic medium-merged-text-style (medium))
+   (:reader medium-sheet)
+   (:reader medium-drawable)
+   (:reader* medium-device-transformation)
+   (:reader* medium-device-region)
+   (:reader* medium-native-transformation)
+   (:reader* medium-native-region)
+   ;; Graphics state mixin
+   (:class* graphics-state)
+   (:mixin* gs-transformation-mixin)
+   (:mixin* gs-ink-mixin)
+   (:mixin* gs-clip-mixin)
+   (:mixin* gs-line-style-mixin)
+   (:mixin* gs-text-style-mixin)
+   (:mixin* complete-medium-state)
+   (:reader* graphics-state-transformation)
+   (:reader* graphics-state-ink)
+   (:reader* graphics-state-clip)
+   (:reader* graphics-state-line-style)
+   (:reader* graphics-state-text-style)
+   (:generic* graphics-state-line-style-border (record medium))
+   (:generic* (setf graphics-state) (new-value graphics-state)))
+  ("10.2 Drawing Option Binding Forms"
+   (:macro* with-medium-options ((medium args) &body body))
+   (:macro with-drawing-options ((medium &rest drawing-options
+                                         &key ink
+                                         transformation
+                                         clipping-region
+                                         line-style
+                                         text-style
+                                         &allow-other-keys)
+                                 &body body))
+   (:generic invoke-with-drawing-options (medium cont &rest drawing-options &key &allow-other-keys))
+   ("10.2.1 Transformation \"Convenience\" Forms"
+    (:macro with-translation ((medium dx dy) &body body))
+    (:macro with-scaling ((medium sx &optional sy origin) &body body))
+    (:macro with-rotation ((medium angle &optional origin) &body body))
+    (:macro with-identity-transformation)
+    (:generic invoke-with-identity-transformation (medium continuation))
+    (:generic invoke-with-local-coordinates (medium continuation x y))
+    (:generic invoke-with-first-quadrant-coordinates (medium continuation x y)))
+   ("10.2.2 Estabilishing Local Coordinate System"
+    (:macro with-local-coordinates ((medium &optional x y) &body body))
+    (:macro with-first-quadrant-coordinates ((medium &optional x y) &body body))))
+  ("10.3 Line Styles"
+   (:protocol-class line-style () ()
+                    (:default-initargs
+                     :line-unit :normal
+                     :line-thickness 1
+                     :line-joint-shape :miter
+                     :line-cap-shape :butt
+                     :line-dashes nil))
+   (:class standard-line-style (line-style))
+   (:constructor make-line-style (&key unit thickness joint-shape cap-shape dashes))
+   (:generic* line-style-equalp (style1 style2))
+   ("10.3.1 Line Style Protocol and Line Style Suboptions"
+    (:reader line-style-unit)
+    (:reader line-style-thickness)
+    (:reader line-style-joint-shape)
+    (:reader line-style-cap-shape)
+    (:reader line-style-dashes))
+   ("10.3.2 Contrasting Dash Patterns"
+    (:function make-contrasting-dash-patterns (n &optional k))
+    (:generic contrasting-dash-pattern-limit (port)))))
+(define-protocol "11 Text Styles" ("Sheet and Medium Output Facilities")
+  ("11.1 Text Style"
+   (:protocol-class text-style () () (:default-initargs :text-family nil :text-face nil :text-size nil))
+   (:class standard-text-style (text-style))
+   (:generic* text-style-equalp (style1 style2))
+   (:constructor make-text-style (family face size))
+   (:constant *default-text-style*)
+   (:constant *undefined-text-style*)
+   ("11.1.1 Text Style Protocol and Text Style Suboptions"
+    (:reader text-style-components)
+    (:reader text-style-family)
+    (:reader text-style-face)
+    (:reader text-style-size)
+    (:function parse-text-style (style-spec))
+    (:function* parse-text-style* (style))
+    (:function* normalize-font-size (size))
+    (:generic merge-text-styles (style1 style2))
+    (:generic text-style-ascent (text-style medium))
+    (:generic text-style-descent (text-style medium))
+    (:generic text-style-width (text-style medium))
+    (:generic text-style-height (text-style medium))
+    (:generic text-style-fixed-width-p (text-style medium))
+    (:generic text-size (medium string &key text-style start end))
+    (:generic* text-style-leading (text-style medium)
+      (:method (text-style medium) 1.2))
+    (:generic* text-style-character-width (text-style medium char)
+      (:method (text-style medium char)
+        (text-size medium char :text-style text-style)))
+    (:generic* text-bounding-rectangle* (medium string &key text-style start end align-x align-y direction))))
+  ("11.2 Text Style Binding Forms"
+   (:macro with-text-style ((medium text-style) &body body))
+   (:generic invoke-with-text-style (medium cont text-style))
+   (:macro with-text-family ((medium family) &body body))
+   (:macro with-text-face ((medium face) &body body))
+   (:macro with-text-size ((medium size) &body body)))
+  ("11.3 Controlling Text Style Mappings"
+   (:generic text-style-mapping (port text-style &optional character-set))
+   (:generic (setf text-style-mapping) (mapping port text-style &optional character-set))
+   (:class device-font-text-style (text-style))
+   (:function device-font-text-style-p (object))
+   (:generic make-device-font-text-style (display-device device-font-name))))
 
-(defgeneric transform-region (transformation region))
-(defgeneric untransform-region (transformation region))
-(defgeneric transform-position (transformation x y))
-(defgeneric untransform-position (transformation x y))
-(defgeneric transform-distance (transformation dx dy))
-(defgeneric untransform-distance (transformation dx dy))
-(defgeneric transform-rectangle* (transformation x1 y1 x2 y2))
-(defgeneric untransform-rectangle* (transformation x1 y1 x2 y2))
+(define-protocol "12 Graphics" ("Sheet and Medium Output Facilities")
+  ("12.5 Drawing Functions"
+   ("12.5.1 Basic Drawing Functions"
+    (:macro* def-sheet-trampoline (name (&rest args)))
+    (:macro* def-graphic-op (name (&rest args)))
+    (:function draw-point (sheet point &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
+    (:function draw-point* (sheet x y &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
+    (:function draw-points (sheet point-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
+    (:function draw-points* (sheet position-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
+    (:function draw-line (sheet point1 point2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-line* (sheet x1 y1 x2 y2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-lines (sheet point-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-lines* (sheet position-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-polygon (sheet point-seq &rest drawing-options &key (filled t) (closed t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
+    (:function draw-polygon* (sheet position-seq &rest drawing-options &key (filled t) (closed t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
+    (:function draw-rectangle (sheet point1 point2 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function draw-rectangle* (sheet x1 y1 x2 y2 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function draw-rectangles (sheet points &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function draw-rectangles* (sheet position-seq &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function draw-ellipse (sheet center rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-ellipse* (sheet cx cy rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-circle (sheet center radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-circle* (sheet cx cy radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-text (sheet text point &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-point nil toward-point-p) transform-glyphs ink clipping-region transformation text-style text-family text-face text-size &allow-other-keys))
+    (:function draw-text* (sheet text x y &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-x (1+ x)) (toward-y y) transform-glyphs ink clipping-region transformation text-style text-family text-face text-size &allow-other-keys))
+    (:function* draw-triangle (sheet point1 point2 point3 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function* draw-triangle* (sheet x1 y1 x2 y2 x3 y3 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
+    (:function* draw-bezigon (sheet point-seq &rest drawing-args &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
+    (:function* draw-bezigon* (sheet position-seq &rest drawing-args &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
+    (:function* draw-image (sheet pattern point &rest drawing-options))
+    (:function* draw-image* (sheet pattern x y &rest drawing-options)))
+   ("12.5.2 Compound Drawing Functions"
+    (:function draw-arrow (medium point1 point2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
+    (:function draw-arrow* (medium x1 y1 x2 y2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
+    (:function draw-oval (medium center rx ry &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function draw-oval* (medium cx cy rx ry &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+    (:function* draw-rounded-rectangle* (sheet x1 y1 x2 y2
+                                               &rest args &key
+                                               (radius 7)
+                                               (radius-x radius)
+                                               (radius-y radius)
+                                               (radius-left  radius-x)
+                                               (radius-right radius-x)
+                                               (radius-top    radius-y)
+                                               (radius-bottom radius-y)
+                                               filled &allow-other-keys))))
+  ("12.6 Pixmaps"
+   (:generic allocate-pixmap (medium width height))
+   (:generic deallocate-pixmap (pixmap))
+   (:reader pixmap-width)
+   (:reader pixmap-height)
+   (:reader pixmap-depth)
+   (:function copy-to-pixmap (source src-x src-y width height &optional pixmap dst-x dst-y))
+   (:function copy-from-pixmap (pixmap src-x src-y width height destination dst-x dst-y))
+   (:generic copy-area (medium src-x src-y width height dst-x dst-y))
+   (:generic medium-copy-area (source src-x src-y width height destination dst-x dst-y))
+   (:macro with-output-to-pixmap ((medium-var medium &key width height) &key body))
+   (:generic invoke-with-output-to-pixmap (medium cont &key width height)))
+  ("12.7 Graphics Protocols"
+   ("12.7.2 Medium-specific Drawing Functions"
+    (:generic medium-draw-point* (medium x y))
+    (:generic medium-draw-points* (medium coord-seq))
+    (:generic medium-draw-line* (medium x1 y1 x2 y2))
+    (:generic medium-draw-lines* (medium coord-seq))
+    (:generic medium-draw-polygon* (medium coord-seq closed filled))
+    (:generic medium-draw-rectangles* (medium coord-seq filled))
+    (:generic medium-draw-rectangle* (medium left top right bottom filled))
+    (:generic medium-draw-ellipse* (medium cx cy rdx1 rdy1 rdx2 rdy2 start-angle end-angle filled))
+    (:generic medium-draw-text* (medium string x y start end align-x align-y toward-x toward-y transform-glyphs))
+    (:generic* medium-draw-bezigon* (medium coord-seq filled)))
+   ("12.7.3 Other Medium-specific Output Functions"
+    (:generic medium-finish-output (medium))
+    (:generic medium-force-output (medium))
+    (:generic medium-clear-area (medium x1 y1 x2 y2))
+    (:generic medium-beep (medium))
+    (:generic beep (&optional medium))
+    ;; Moved from "15.6 Buffering the Output"
+    (:accessor* medium-buffering-output-p)
+    (:macro with-output-buffered (medium &optional (buffer-p t)))
+    (:generic invoke-with-output-buffered (medium cont &optional buffered-p))
+    (:macro* with-output-to-drawing-stream ((stream backend destination &rest args) &body body))
+    (:generic* invoke-with-output-to-drawing-stream (cont backend destination &key &allow-other-keys))
+    (:reader* medium-miter-limit)
+    (:generic* line-style-effective-thickness (line-style medium))
+    (:generic* line-style-effective-dashes (line-style medium)))))
 
-
-;;; 7.2.1 Sheet Relationship Functions
+(define-protocol "13 Drawing in Color" ("Sheet and Medium Output Facilities")
+  ;; (:protocol-class design ()) ; defined in regions
+  ("13.3 Color"
+   (:protocol-class color (design))
+   (:class* standard-color (color))
+   (:constructor make-rgb-color (red green blue))
+   (:constructor make-ihs-color (intensity hue saturation))
+   (:constructor make-gray-color (luminance))
+   (:constructor* make-named-color (name red green blue))
+   (:reader color-rgb)
+   (:reader color-ihs)
+   (:reader* color-rgba)
+   ("13.3.1 Standard Color Names and Constants"
+    (:constant +red+)
+    (:constant +green+)
+    (:constant +blue+)
+    (:constant +cyan+)
+    (:constant +magenta+)
+    (:constant +yellow+)
+    (:constant +black+)
+    (:constant +white+))
+   ("13.3.2 Contrastin Colors"
+    (:constructor make-contrasting-inks (n &optional k))
+    (:reader contrasting-inks-limit)))
+  ("13.4 Opacity"
+   (:protocol-class opacity (design))
+   (:constructor make-opacity (value))
+   (:constant +transparent-ink+)
+   (:reader opacity-value))
+  ("13.6 Indirect Inks"
+   (:constant +foreground-ink+)
+   (:constant +background-ink+)
+   (:class* indirect-ink (design))
+   (:function* indirect-ink-p (design))
+   (:function* indirect-ink-ink (indirect-ink)))
+  ("13.7 Flipping Ink"
+   (:class* standard-flipping-ink (design))
+   (:generic make-flipping-ink (design1 design2))
+   (:constant +flipping-ink+)
+   (:reader flipping-ink-design1)
+   (:reader flipping-ink-design2)))
 
-(defgeneric sheet-parent (sheet))
-(defgeneric sheet-children (sheet))
-(defgeneric sheet-adopt-child (sheet child))
-(defgeneric sheet-disown-child (sheet child &key errorp))
-(defgeneric sheet-siblings (sheet))
-(defgeneric sheet-enabled-children (sheet))
-(defgeneric sheet-ancestor-p (sheet putative-ancestor))
-(defgeneric raise-sheet (sheet))
-(defgeneric bury-sheet (sheet))
-(defgeneric reorder-sheets (sheet new-ordering))
-(defgeneric sheet-enabled-p (sheet))
-(defgeneric (setf sheet-enabled-p) (enabled-p sheet))
-(defgeneric sheet-viewable-p (sheet))
-(defgeneric sheet-occluding-sheets (sheet child))
-(defgeneric map-over-sheets (function sheet))
+(define-protocol "14 General Design" ("Sheet and Medium Output Facilities")
+  ("14.1 The Compositing Protocol"
+   (:generic compose-over (design1 design2))
+   (:generic compose-in (ink mask))
+   (:generic compose-out (ink mask)))
+  ("14.2 Patterns and Stencils"
+   (:constructor make-pattern (array designs))
+   (:constructor make-stencil (array))
+   ;; v constructor specified in "14.3 Tiling"
+   (:constructor make-rectangular-tile (design width height))
+   ;; v constructor specified in "E.2 SUpported for Reading Bitmap Files"
+   (:constructor make-pattern-from-bitmap-file (pathname &key format designs))
+   (:variable* *bitmap-file-readers*)
+   (:variable* *bitmap-file-writers*)
+   (:macro* define-bitmap-file-reader (bitmap-format (&rest args) &body body))
+   (:macro* define-bitmap-file-writer (format (&rest args) &body body))
+   (:function* bitmap-format-supported-p (format))
+   (:function* bitmap-output-supported-p (format))
+   (:condition unsupported-bitmap-format (error))
+   (:function* read-bitmap-file (pathname &key (format :bitmap)))
+   (:function* write-bitmap-file (image pathname &key (format :bitmap)))
+   (:reader pattern-width)
+   (:reader pattern-height)
+   ;; Extensions
+   (:protocol-class* pattern (design))
+   (:class* stencil (pattern))
+   (:class* indexed-pattern (pattern))
+   (:class* image-pattern (pattern))
+   (:class* rectangular-tile (pattern))
+   ;; v constructed by transform-region
+   (:class* transformed-pattern (transformed-design pattern))
+   (:reader* pattern-array)
+   (:reader* pattern-designs)
+   (:reader* transformed-design-design)
+   (:reader* transformed-design-transformation)
+   (:reader* rectangular-tile-design))
+  ("14.5 Arbitrary Designs"
+   (:constructor* make-uniform-compositum (ink opacity-value))
+   (:class* transformed-design (design)) 
+   (:class* masked-compositum (design))
+   (:reader* compositum-mask)
+   (:reader* compositum-ink)
+   (:class* in-compositum (masked-compositum))
+   (:class* uniform-compositum (in-compositum))
+   (:class* out-compositum (masked-compositum))
+   (:class* over-compositum (design))
+   (:reader compositum-foreground)
+   (:reader compositum-background)
+   (:generic* design-ink (design x y))
+   (:function* design-ink* (design x y))
+   (:generic* design-equalp (design1 design2))
+   (:generic draw-design (medium design &key ink filled clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape text-style text-family text-face text-size))
+   (:function draw-pattern* (medium pattern x y &key clipping-region transformation)))
+  ;; Minor issue: The generic functions underlying the functions described in
+  ;; this and the preceding chapter will be documented later. This will allow
+  ;; for programmer-defined design classes. This also needs to describe how to
+  ;; decode designs into inks. --- SWM (copied from CLIM II spec)
+  ("14.7 Design Protocol"))
 
-(defgeneric sheet-name (sheet)
-  (:documentation "McCLIM extension: Return the name of SHEET.
-The returned name is a symbol and does not change.
-For sheets which are also panes, the returned name is identical to the
-pane name.")
-  (:method (sheet) nil))
-(defgeneric sheet-pretty-name (sheet)
-  (:documentation "McCLIM extension: Return the pretty name of SHEET.
-The returned name is a string and may change over time.
-The pretty name usually corresponds to the title of the associated
-window.")
-  (:method (sheet) "(Unnamed sheet)"))
-(defgeneric (setf sheet-pretty-name) (new-value sheet)
-  (:documentation "McCLIM extension: Set SHEET's pretty name to NEW-VALUE.
-NEW-NAME must be a string.
-Changing the pretty name of SHEET usually changes the title of the
-window associated with it."))
+;;; Part III: Windowing Substrate
+(define-protocol "Windowing Substrate" ())
 
-(defgeneric sheet-icon (sheet)
-  (:documentation "McMCLIM extension: Return the icon or icons of SHEET.
-The return value is either a `clim-extensions:image-pattern' or
-a sequence of those.
-These icons are typically used by window managers to represent windows
-that are not currently visible or added to other representations of
-windows to make them more easily recognizable."))
-(defgeneric (setf sheet-icon) (new-value sheet)
-  (:documentation "McMCLIM extension: Set icon or icons of SHEET to NEW-VALUE.
-NEW-VALUE must be a `clim-extensions:image-pattern' or a sequence of
-those. If a sequence is supplied, the window manager is instructed to
-prefer the first element, if possible. Some window managers select
-different icons for different purposes based on the icon sizes."))
+(define-protocol "7 Properties of Sheets" ("Windowing Substrate")
+  ("7.1 Basic Sheet Classes"
+   (:protocol-class sheet ())
+   (:class basic-sheet (sheet))
+   (:reader* sheet-name)
+   (:accessor* sheet-pretty-name)
+   (:accessor* sheet-icon)
+   (:accessor* sheet-pointer-cursor))
+  ("7.2 Relationships Between Classes"
+   ("7.2.1 Sheet Relationship Functions"
+    (:reader sheet-parent)
+    (:reader sheet-children)
+    (:reader* sheet-child)
+    (:generic sheet-adopt-child (sheet child))
+    (:generic sheet-disown-child (sheet child &key errorp))
+    (:generic sheet-siblings (sheet))
+    (:generic sheet-enabled-children (sheet))
+    (:generic sheet-ancestor-p (sheet putative-ancestor))
+    (:generic raise-sheet (sheet))
+    (:generic bury-sheet (sheet))
+    (:generic reorder-sheets (sheet new-ordering))
+    (:generic* shrink-sheet (sheet))
+    (:condition* sheet-is-not-child (error))
+    (:condition* sheet-is-top-level (error))
+    (:condition* sheet-ordering-underspecified (error))
+    (:condition* sheet-is-not-ancestor (error))
+    (:condition* sheet-already-has-parent (error))
+    (:condition* sheet-supports-only-one-child (error))
+    (:accessor sheet-enabled-p)
+    (:generic sheet-viewable-p (sheet))
+    (:generic sheet-occluding-sheets (sheet child))
+    (:generic map-over-sheets (fun sheet)))
+   ("7.2.2 Sheet Genealogy Classes"
+    (:mixin sheet-parent-mixin)
+    (:mixin sheet-leaf-mixin)
+    (:mixin sheet-single-child-mixin)
+    (:mixin sheet-multiple-child-mixin)))   
+  ("7.3 Sheet Geometry"
+   ("7.3.1 Sheet Geometry Functions"
+    (:accessor sheet-transformation)
+    (:accessor sheet-region)
+    (:generic move-sheet (sheet x y))
+    (:generic resize-sheet (sheet width height))
+    (:generic move-and-resize-sheet (sheet x y width height))
+    (:generic map-sheet-position-to-parent (sheet x y))
+    (:generic map-sheet-position-to-child (sheet x y))
+    (:generic map-sheet-rectangle*-to-parent (sheet x1 y1 x2 y2))
+    (:generic map-sheet-rectangle*-to-child (sheet x1 y1 x2 y2))
+    (:generic map-over-sheets-containing-position (fun sheet x y))
+    (:generic map-over-sheets-overlapping-region (fun sheet region))
+    (:generic child-containing-position (sheet x y))
+    (:generic children-overlapping-region (sheet region))
+    (:generic children-overlapping-rectangle* (sheet x1 y1 x2 y2))
+    (:generic sheet-delta-transformation (sheet ancestor))
+    (:generic sheet-allocated-region (sheet child)))
+   ("7.3.1 Sheet Geometry Classes"
+    (:mixin sheet-identity-transformation-mixin)
+    (:mixin sheet-translation-mixin)
+    (:mixin sheet-y-inverting-transformation-mixin)
+    (:mixin sheet-transformation-mixin))))
 
-;;; 7.3.1 Sheet Geometry Functions [complete]
-
-(defgeneric sheet-transformation (sheet))
-(defgeneric (setf sheet-transformation) (transformation sheet))
-(defgeneric sheet-region (sheet))
-(defgeneric (setf sheet-region) (region sheet))
-(defgeneric move-sheet (sheet x y))
-(defgeneric resize-sheet (sheet width height))
-(defgeneric move-and-resize-sheet (sheet x y width height))
-(defgeneric map-sheet-position-to-parent (sheet x y))
-(defgeneric map-sheet-position-to-child (sheet x y))
-(defgeneric map-sheet-rectangle*-to-parent (sheet x1 y1 x2 y2))
-(defgeneric map-sheet-rectangle*-to-child (sheet x1 y1 x2 y2))
-(defgeneric map-over-sheets-containing-position (function sheet x y))
-(defgeneric map-over-sheets-overlapping-region (function sheet region))
-(defgeneric child-containing-position (sheet x y))
-(defgeneric children-overlapping-region (sheet region))
-(defgeneric children-overlapping-rectangle* (sheet x1 y1 x2 y2))
-(defgeneric sheet-delta-transformation (sheet ancestor))
-(defgeneric sheet-allocated-region (sheet child))
-
-;;; 7.3.2
-
-;; sheet-identity-transformation-mixin [class]
-;; sheet-translation-mixin [class]
-;; sheet-y-inverting-transformation-mixin [class]
-;; sheet-transformation-mixin [class]
-
-
-;;;; 8.1
-(defgeneric process-next-event (port &key wait-function timeout))
-(defgeneric port-keyboard-input-focus (port))
-(defgeneric (setf port-keyboard-input-focus) (focus port))
-(defgeneric distribute-event (port event))
-
-;;; 8.2 Standard Device Events
-
-(defgeneric event-timestamp (event))
-(defgeneric event-type (event))
-(defgeneric event-sheet (device-event))
-(defgeneric event-modifier-state (device-event))
-(defgeneric keyboard-event-key-name (keyboard-event))
-(defgeneric keyboard-event-character (keyboard-event))
-(defgeneric pointer-event-x (pointer-event))
-(defgeneric pointer-event-y (pointer-event))
-(defgeneric pointer-event-native-x (pointer-event))
-(defgeneric pointer-event-native-y (pointer-event))
-(defgeneric pointer-event-pointer (pointer-event))
-(defgeneric pointer-event-button (pointer-button-event))
-(defgeneric pointer-boundary-event-kind (pointer-boundary-event))
-(defgeneric window-event-region (window-event))
-(defgeneric window-event-native-region (window-event))
-(defgeneric window-event-mirrored-sheet (window-event))
-
-;;; 8.3.1 Output Properties
-
-(defgeneric medium-foreground (medium))
-(defgeneric (setf medium-foreground) (design medium))
-(defgeneric medium-background (medium))
-(defgeneric (setf medium-background) (design medium))
-(defgeneric medium-ink (medium))
-(defgeneric (setf medium-ink) (design medium))
-(defgeneric medium-transformation (medium))
-(defgeneric (setf medium-transformation) (transformation medium))
-(defgeneric medium-clipping-region (medium))
-(defgeneric (setf medium-clipping-region) (region medium))
-(defgeneric medium-line-style (medium))
-(defgeneric (setf medium-line-style) (line-style medium))
-(defgeneric medium-text-style (medium))
-(defgeneric (setf medium-text-style) (text-style medium))
-(defgeneric medium-default-text-style (medium))
-(defgeneric (setf medium-default-text-style) (text-style medium))
-(defgeneric medium-merged-text-style (medium))
-
-
-;;;; 8.3.4 Associating a Medium with a Sheet
-
-;; with-sheet-medium (medium sheet) &body body [Macro]
-;; with-sheet-medium-bound (sheet medium) &body body [Macro]
-
-(defgeneric sheet-medium (sheet))
-(defgeneric medium-sheet (medium))
-(defgeneric medium-drawable (medium))
-
-;;; 8.3.4.1 Grafting and Degrafting of Mediums
-
-(defgeneric allocate-medium (port sheet))
-(defgeneric deallocate-medium (port medium))
-(defgeneric make-medium (port sheet))
-(defgeneric engraft-medium (medium port sheet))
-(defgeneric degraft-medium (medium port sheet))
-
-;;; 8.4.1 Repaint Protocol Functions
-
-(defgeneric queue-repaint (sheet repaint-event))
-(defgeneric handle-repaint (sheet region))
-(defgeneric repaint-sheet (sheet region))
-
-
-;;;; 9 Ports, Grafts, and Mirrored Sheets
-
-;; (defgeneric portp (object))
-;; find-port function
-
-;;; 9.2 Ports
-
-(defgeneric port (object))
-(defgeneric port-server-path (port))
-(defgeneric port-name (port))
-(defgeneric port-type (port))
-(defgeneric port-properties (port indicator))
-(defgeneric (setf port-properties) (property port indicator))
-(defgeneric restart-port (port))
-(defgeneric destroy-port (port))
-
-;;; 9.3 Grafts
-
-(defgeneric sheet-grafted-p (sheet))
-(declfun find-graft (&key (server-path *default-server-path*)
-                          (port (find-port :server-path server-path))
-                          (orientation :default)
-                          (units :device)))
-(defgeneric graft (object))
-;; XXX In CLIM II map-over-grafts is a (not generic) function.
-(defgeneric map-over-grafts (function port)
-  (:argument-precedence-order port function))
-;; with-graft-locked (graft) &body body [macro]
-(defgeneric graft-orientation (graft))
-(defgeneric graft-units (graft))
-(defgeneric graft-width (graft &key units))
-(defgeneric graft-height (graft &key units))
-(defgeneric graft-pixel-aspect-ratio (graft))
-(declfun graft-pixels-per-millimeter (graft &key orientation))
-(declfun graft-pixels-per-inch (graft &key orientation))
-
-;;; Not in the spec, clearly needed.
-(defgeneric make-graft (port &key orientation units))
-
-;; 9.4.1 Mirror Functions
-
-(defgeneric sheet-direct-mirror (sheet))
-(defgeneric sheet-mirrored-ancestor (sheet))
-(defgeneric sheet-mirror (sheet))
-(defgeneric realize-mirror (port mirrored-sheet))
-(defgeneric destroy-mirror (port mirrored-sheet))
-(defgeneric raise-mirror (port sheet))
-(defgeneric bury-mirror (port sheet))
-
-;; 9.4.2 Internal Interfaces for Native Coordinates
-
-(defgeneric sheet-native-transformation (sheet))
-(defgeneric sheet-native-region (sheet))
-(defgeneric sheet-device-transformation (sheet))
-(defgeneric sheet-device-region (sheet))
-(defgeneric invalidate-cached-transformations (sheet))
-(defgeneric invalidate-cached-regions (sheet))
-
-;;; Graphics ops
-
-(defgeneric medium-draw-point* (medium x y))
-(defgeneric medium-draw-points* (medium coord-seq))
-(defgeneric medium-draw-line* (medium x1 y1 x2 y2))
-(defgeneric medium-draw-lines* (medium coord-seq))
-(defgeneric medium-draw-polygon* (medium coord-seq closed filled))
-(defgeneric medium-draw-bezigon* (medium coord-seq filled))
-(defgeneric medium-draw-rectangles* (medium coord-seq filled))
-(defgeneric medium-draw-rectangle* (medium left top right bottom filled))
-(defgeneric medium-draw-ellipse* (medium center-x center-y
-                                  radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                                  start-angle end-angle filled))
-(defgeneric medium-draw-text* (medium string x y
-                               start end
-                               align-x align-y
-                               toward-x toward-y transform-glyphs))
-
-
-;;; 10.1 Medium Components
+(define-protocol "8 Sheet Protocols" ("Windowing Substrate")
+  ("8.1 Input Protocol"
+   ("8.1.1 Input Protocol Functions"
+    (:generic sheet-event-queue (sheet))
+    (:generic process-next-event (port &key wait-function timeout))
+    (:accessor port-keyboard-input-focus)
+    (:generic* note-input-focus-changed (sheet state)
+      (:documentation "Called when a sheet receives or loses the keyboard input
+focus. STATE argument is T when the sheet gains focus and NIL otherwise. This
+is a McCLIM extension."))
+    (:generic distribute-event (port event))
+    (:generic dispatch-event (port event))
+    (:generic queue-event (port event))
+    (:generic* schedule-event (client event delay))
+    (:generic handle-event (port event))
+    (:generic event-read (client))
+    (:generic event-read-no-hang (client))
+    (:generic event-peek (client &optional event-type))
+    (:generic event-unread (client event))
+    (:generic event-listen (client))
+;;; Extensions involving wait-function
 ;;;
-;;; For reasons that are beyond me, many of the medium component
-;;; accessors are also specified in section 8.3.1.
-
-(defgeneric medium-current-text-style (medium))
-
-;;;; 10.2
-(defgeneric invoke-with-drawing-options
-    (medium continuation &rest drawing-options &key &allow-other-keys))
-
-;;;; 10.2.1
-(defgeneric invoke-with-identity-transformation (medium continuation))
-
-;;;; 10.2.2
-(defgeneric invoke-with-local-coordinates (medium continuation x y))
-
-(defgeneric invoke-with-first-quadrant-coordinates (medium continuation x y))
-
-
-;;;; 10.3.2 Contrasting Dash Patterns
-
-(defgeneric contrasting-dash-pattern-limit (port))
-
-
-;;; 11.1.1 Text Style Protocol and Text Style Suboptions
-
-(defgeneric text-style-components (text-style))
-(defgeneric text-style-family (text-style))
-(defgeneric text-style-face (text-style))
-(defgeneric text-style-size (text-style))
-(defgeneric merge-text-styles (style1 style2))
-(defgeneric text-style-ascent (text-style medium))
-(defgeneric text-style-descent (text-style medium))
-(defgeneric text-style-height (text-style medium))
-(defgeneric text-style-width (text-style medium))
-(defgeneric text-style-fixed-width-p (text-style medium))
-(defgeneric text-size (medium string &key text-style start end))
-
-(defgeneric text-style-leading (text-style medium)
-  (:method (text-style medium)
-    1.2))
-
-(defgeneric text-style-character-width (text-style medium char)
-  (:method (text-style medium char)
-    (text-size medium char :text-style text-style)))
-
-(defgeneric text-bounding-rectangle*
-    (medium string &key text-style start end align-x align-y direction)
-  (:documentation "Function returns a bounding box of the text for given
-text-style, alignment and direction.
-
-Argument types:
-align-x   (member :left :center :right)
-align-y   (member :top :baseline :center :baseline* :bottom)
-direction (member :ltr :rtl)
-
-Returned values:
-xmin ymin xmax ymax."))
-
-;;; 11.2 Text Style Binding Forms
-
-(defgeneric invoke-with-text-style (medium continuation text-style))
-
-;;; 11.3 Controling Text Style Mappings
-
-(defgeneric text-style-mapping (port text-style &optional character-set))
-(defgeneric (setf text-style-mapping)
-    (mapping port text-style &optional character-set))
-(defgeneric make-device-font-text-style (port font-name))
-
-
-;;; 12.6 Pixmaps
-(defgeneric allocate-pixmap (sheet width height))
-(defgeneric deallocate-pixmap (pixmap))
-
-(defgeneric pixmap-width (sheet))
-(defgeneric pixmap-height (sheet))
-(defgeneric pixmap-depth (sheet))
-
-(defgeneric copy-to-pixmap (medium medium-x medium-y width height
-                            &optional pixmap pixmap-x pixmap-y))
-(defgeneric copy-from-pixmap (pixmap from-x from-y width height
-                              medium medium-x medium-y))
-(defgeneric copy-area (medium from-x from-y width height to-x to-y))
-(defgeneric medium-copy-area (from-drawable from-x from-y width height
-                              to-drawable to-x to-y))
-
-(defgeneric invoke-with-output-to-pixmap (medium cont &key width height))
-
-;; with-output-to-pixmap (medium-var medium &key width height) &body body [Macro]
-
-;;; 12.7.3 Other Medium-specific Output Functions
-
-(defgeneric medium-finish-output (medium))
-(defgeneric medium-force-output (medium))
-(defgeneric medium-clear-area (medium left top right bottom))
-(defgeneric medium-beep (medium))
-
-
-;;; 13.3.2 Contrasting Colors
-
-(defgeneric contrasting-inks-limit (port))
-
-
-;;; 14.2
-
-(defgeneric pattern-width (pattern)
-  (:documentation "Return the width of `pattern'."))
-
-(defgeneric pattern-height (pattern)
-  (:documentation "Return the height of `pattern'."))
-
-(defgeneric pattern-array (pattern)
-  (:documentation "Returns the array associated with `pattern'."))
-
-(defgeneric pattern-designs (pattern)
-  (:documentation "Returns the array of designs associated with
-`pattern'."))
-
-;;;; 14.5
-(defgeneric draw-design
-    (medium design
-     &key ink filled clipping-region transformation
-       line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape
-       text-style text-family text-face text-size))
-
-
-;;; 15.3 The Text Cursor [complete]
-
-;;; 15.3.1 Text Cursor Protocol [complete]
-
-;; cursor [protocol class]
-;; cursorp object [protocol predicate]
-;; :sheet [Initarg for cursor]
-;; standard-text-cursor [class]
-(defgeneric cursor-sheet (cursor))
-(defgeneric cursor-position (cursor))
-(defgeneric* (setf cursor-position) (x y cursor))
-(defgeneric cursor-active (cursor))
-(defgeneric (setf cursor-active) (value cursor))
-(defgeneric cursor-state (cursor))
-(defgeneric (setf cursor-state) (value cursor))
-(defgeneric cursor-focus (cursor))
-(defgeneric cursor-visibility (cursor))
-(defgeneric (setf cursor-visibility) (visibility cursor))
-
-;;; 15.3.2 Stream Text Cursor Protocol [complete]
-
-(defgeneric stream-text-cursor (stream))
-(defgeneric (setf stream-text-cursor) (cursor stream))
-(defgeneric stream-cursor-position (stream))
-(defgeneric* (setf stream-cursor-position) (x y stream))
-(defgeneric stream-set-cursor-position (stream x y)) ; This is actually in 19.3.1 in CLIM 2.2
-(defgeneric stream-increment-cursor-position (stream dx dy))
-
-;;; 15.4 Text Protocol [complete]
-
-(defgeneric stream-character-width (stream character &key text-style))
-(defgeneric stream-string-width (stream character &key start end text-style))
-(defgeneric stream-text-margin (stream))
-(defgeneric (setf stream-text-margin) (margin stream))
-(defgeneric stream-line-height (stream &key text-style))
-(defgeneric stream-line-width (stream)
-  (:documentation "McCLIM extension which returns a space between left
-and right margin for text output."))
-(defgeneric stream-vertical-spacing (stream))
-(defgeneric stream-baseline (stream))
-
-;;; 15.4.1 Mixing Text and Graphics [complete]
-
-;; with-room-for-graphics (&optional stream &key (first-quadrant t) height (move-cursor t) record-type) &body body [Macro]
-
-;;; 15.4.2 Wrapping of Text Lines [complete]
-
-(defgeneric stream-end-of-line-action (stream))
-(defgeneric (setf stream-end-of-line-action) (action stream))
-;; with-end-of-line-action (stream action) &body body [Macro]
-(defgeneric stream-end-of-page-action (stream))
-(defgeneric (setf stream-end-of-page-action) (action stream))
-;; with-end-of-page-action (stream action) &body body [Macro]
-
-;;; 15.5 Attracting the User's Attention
-
-(defgeneric beep (&optional medium))
-
-;;; 15.6 Buffering of Output
-
-(defgeneric medium-buffering-output-p (medium))
-(defgeneric (setf medium-buffering-output-p) (buffer-p medium))
-;;; with-output-buffered (medium &optional (buffer-p t)) &body body [Macro]
-(defgeneric invoke-with-output-buffered (medium cont &optional buffered-p))
-
-
-;;; 16.2.1. The Basic Output Record Protocol
-(defgeneric output-record-position (record)
-  (:documentation
-   "Returns the x and y position of RECORD. The position is the
-position of the upper-left corner of its bounding rectangle. The
-position is relative to the stream, where (0,0) is (initially) the
-upper-left corner of the stream."))
-
-(defgeneric* (setf output-record-position) (x y record)
-  (:documentation
-   "Changes the x and y position of the RECORD to be X and Y, and
-updates the bounding rectangle to reflect the new position (and saved
-cursor positions, if the output record stores it). If RECORD has any
-children, all of the children (and their descendants as well) will be
-moved by the same amount as RECORD was moved. The bounding rectangles
-of all of RECORD's ancestors will also be updated to be large enough
-to contain RECORD."))
-
-(defgeneric output-record-start-cursor-position (record)
-  (:documentation
-   "Returns the x and y starting cursor position of RECORD. The
-positions are relative to the stream, where (0,0) is (initially) the
-upper-left corner of the stream."))
-
-(defgeneric* (setf output-record-start-cursor-position) (x y record))
-
-(defgeneric output-record-end-cursor-position (record)
-  (:documentation
-   "Returns the x and y ending cursor position of RECORD. The
-positions are relative to the stream, where (0,0) is (initially) the
-upper-left corner of the stream."))
-
-(defgeneric* (setf output-record-end-cursor-position) (x y record))
-
-(defgeneric output-record-parent (record)
-  (:documentation
-   "Returns the output record that is the parent of RECORD, or NIL if
-RECORD has no parent."))
-
-(defgeneric replay-output-record (record stream
-                                  &optional region x-offset y-offset)
-  (:documentation "Displays the output captured by RECORD on the
-STREAM, exactly as it was originally captured. The current user
-transformation, line style, text style, ink and clipping region of
-STREAM are all ignored. Instead, these are gotten from the output
-record.
-
-Only those records that overlap REGION are displayed."))
-
-(defgeneric output-record-hit-detection-rectangle* (record))
-
-(defgeneric output-record-refined-position-test (record x y))
-
-(defgeneric highlight-output-record (record stream state))
-
-(defgeneric displayed-output-record-ink (displayed-output-record))
-
-;;; 16.2.1. The Basic Output Record Protocol (extras)
-
-(defgeneric (setf output-record-parent) (parent record)
-  (:documentation "Additional protocol generic function. PARENT may be
-an output record or NIL."))
-
-;;; 16.2.2. Output Record "Database" Protocol
-
-(defgeneric output-record-children (record))
-
-(defgeneric add-output-record (child record)
-  (:documentation "Sets RECORD to be the parent of CHILD."))
-
-(defgeneric delete-output-record (child record &optional errorp)
-  (:documentation "If CHILD is a child of RECORD, sets the parent of
-CHILD to NIL."))
-
-(defgeneric clear-output-record (record)
-  (:documentation "Sets the parent of all children of RECORD to NIL."))
-
-(defgeneric output-record-count (record))
-
-(defgeneric map-over-output-records-containing-position
-  (function record x y &optional x-offset y-offset &rest function-args)
-  (:documentation "Maps over all of the children of RECORD that
-contain the point at (X,Y), calling FUNCTION on each one. FUNCTION is
-a function of one or more arguments, the first argument being the
-record containing the point. FUNCTION is also called with all of
-FUNCTION-ARGS as APPLY arguments.
-
-If there are multiple records that contain the point,
-MAP-OVER-OUTPUT-RECORDS-CONTAINING-POSITION hits the most recently
-inserted record first and the least recently inserted record
-last. Otherwise, the order in which the records are traversed is
-unspecified."))
-
-(defgeneric map-over-output-records-overlapping-region
-  (function record region &optional x-offset y-offset &rest function-args)
-  (:documentation "Maps over all of the children of the RECORD that
-overlap the REGION, calling FUNCTION on each one. FUNCTION is a
-function of one or more arguments, the first argument being the record
-overlapping the region. FUNCTION is also called with all of
-FUNCTION-ARGS as APPLY arguments.
-
-If there are multiple records that overlap the region and that overlap
-each other, MAP-OVER-OUTPUT-RECORDS-OVERLAPPING-REGION hits the least
-recently inserted record first and the most recently inserted record
-last. Otherwise, the order in which the records are traversed is
-unspecified. "))
-
-;;; 16.2.2. Output Record "Database" Protocol (extras)
-;;;
-;;; From the Franz CLIM user's guide but not in the spec... clearly
-;;; necessary.
-
-(defgeneric map-over-output-records-1 (continuation record continuation-args))
-
-(defun map-over-output-records
-    (function record &optional (x-offset 0) (y-offset 0) &rest function-args)
-  "Call FUNCTION on each of the children of RECORD.
-FUNCTION is a function of one or more arguments and called with all of
-FUNCTION-ARGS as APPLY arguments."
-  (declare (ignore x-offset y-offset))
-  (map-over-output-records-1 function record function-args))
-
-;;; 16.2.3. Output Record Change Notification Protocol
-
-(defgeneric recompute-extent-for-new-child (record child))
-
-(defgeneric recompute-extent-for-changed-child
-  (record child old-min-x old-min-y old-max-x old-max-y))
-
-(defgeneric tree-recompute-extent (record))
-
-;;; 16.3.3 Text Displayed Output Record
-
-(defgeneric add-character-output-to-text-record
-  (text-record character text-style width height baseline))
-
-(defgeneric add-string-output-to-text-record
-  (text-record string start end text-style width height baseline))
-
-(defgeneric text-displayed-output-record-string (text-record))
-
-;;; 16.4.1. The Output Recording Stream Protocol
-
-(defgeneric stream-recording-p (stream))
-(defgeneric (setf stream-recording-p) (recording-p stream))
-(defgeneric stream-drawing-p (stream))
-(defgeneric (setf stream-drawing-p) (drawing-p stream))
-(defgeneric stream-output-history (stream))
-(defgeneric stream-current-output-record (stream))
-(defgeneric (setf stream-current-output-record) (record stream))
-(defgeneric stream-add-output-record (stream record))
-(defgeneric stream-replay (stream &optional region))
-(defgeneric erase-output-record (record stream &optional errorp))
-
-;;; 16.4.3. Text Output Recording
-(defgeneric stream-text-output-record (stream text-style))
-(defgeneric stream-close-text-output-record (stream))
-(defgeneric stream-add-character-output
-  (stream character text-style width height baseline))
-(defgeneric stream-add-string-output
-  (stream string start end text-style width height baseline))
-
-;;; 16.4.4 Output Recording Utilities [complete]
-
-;; with-output-recording-options (stream &key record draw) &body body [Macro]
-(defgeneric invoke-with-output-recording-options
-    (stream continuation record draw))
-
-;;; with-new-output-record (stream &optional record-type record &rest initargs) &body body [Macro]
-(defgeneric invoke-with-new-output-record
-    (stream continuation record-type &rest initargs &key parent &allow-other-keys))
-
-;;; with-output-to-output-record (stream &optional record-type record &rest initargs)) &body body [Macro]
-(defgeneric invoke-with-output-to-output-record
-    (stream continuation record-type &rest initargs))
-
-(defgeneric make-design-from-output-record (record))
-
-
-;;;; 17.3 The Table and Item List Formatting Protocols
-
-(defgeneric map-over-table-elements (function table-record type)
-  (:documentation "Applies FUNCTION to all the rows or columns of
-TABLE-RECORD that are of type TYPE. TYPE is one of :ROW, :COLUMN or
-:ROW-OR-COLUMN. FUNCTION is a function of one argument. The function
-skips intervening non-table output record structures."))
-
-(defgeneric map-over-block-cells (function block)
-  (:documentation "Applies the FUNCTION to all cells in the BLOCK."))
-
-(defgeneric map-over-row-cells (function row-record)
-  (:documentation "Applies FUNCTION to all the cells in the row
-ROW-RECORD, skipping intervening non-table output record structures.
-FUNCTION is a function of one argument, an output record corresponding
-to a table cell within the row."))
-
-(defgeneric map-over-column-cells (function column-record)
-  (:documentation "Applies FUNCTION to all the cells in the column
-COLUMN-RECORD, skipping intervening non-table output record
-structures. FUNCTION is a function of one argument, an output record
-corresponding to a table cell within the column."))
-
-(defgeneric map-over-item-list-cells (function item-list-record))
-
-(defgeneric adjust-table-cells (table-record stream))
-(defgeneric adjust-multiple-columns (table-record stream))
-(defgeneric adjust-item-list-cells (item-list-record stream))
-
-
-;;;; 21.2
-(defgeneric invoke-updating-output
-    (stream continuation record-type unique-id id-test cache-value cache-test
-     &key fixed-position all-new parent-cache))
-
-(declfun redisplay (record stream &key (check-overlapping t)))
-
-(defgeneric redisplay-output-record (record stream &optional check-overlapping))
-
-;;; 21.3 Incremental Redisplay Protocol.
-
-(defgeneric output-record-unique-id (record))
-(defgeneric output-record-cache-value (record))
-(defgeneric output-record-fixed-position (record))
-(defgeneric output-record-displayer (record))
-(defgeneric compute-new-output-records (record stream))
-(defgeneric compute-difference-set
-    (record &optional check-overlapping))
-(defgeneric augment-draw-set (record difference-set))
-(defgeneric note-output-record-child-changed
-    (record child mode old-position old-bounding-rectangle stream
-     &key difference-set check-overlapping))
-
-(defgeneric propagate-output-record-changes-p
-    (record child mode old-position old-bounding-rectangle))
-
-(defgeneric propagate-output-record-changes
-    (record child mode
-     &optional old-position old-bounding-rectangle
-       difference-set check-overlapping))
-
-(defgeneric match-output-records (record &rest args))
-
-;;; The following operators are not implemented. -- jd 2021-12-08
-(defgeneric find-child-output-record
-    (record use-old-elements record-type &key unique-id unique-id-test))
-(defgeneric output-record-contents-ok (record))
-(defgeneric recompute-contents-ok (record))
-(defgeneric cache-output-record (record child unique-id))
-(defgeneric decache-output-record (record child use-old-elements))
-(defgeneric find-cached-output-record (record use-old-elements record-type
-                                       &key unique-id unique-id-test &allow-other-keys ))
-
-;;; 21.4 Incremental Redisplay Stream Protocol
-(defgeneric redisplayable-stream-p (stream)
-  (:method (stream) nil))
-
-(defgeneric stream-redisplaying-p (stream)
-  (:method (stream) nil))
-
-(defgeneric incremental-redisplay
-    (stream position erases moves draws erase-overlapping move-overlapping))
-
-
-;;; 22.2.1 The Extended Stream Input Protocol
-
-(defgeneric stream-input-buffer (stream))
-(defgeneric (setf stream-input-buffer) (buffer stream))
-(defgeneric stream-pointer-position (stream &key pointer))
-(defgeneric* (setf stream-pointer-position) (x y stream))
-(defgeneric stream-set-input-focus (stream))
-(defgeneric stream-read-gesture
-    (stream &key timeout peek-p input-wait-test
-            input-wait-handler pointer-button-press-handler))
-(defgeneric stream-input-wait (stream &key timeout input-wait-test))
-(defgeneric stream-unread-gesture (stream gesture))
-
-;;; 22.2.2 Extended Input Stream Conditions
-
-(defgeneric abort-gesture-event (condition))
-(defgeneric accelerator-gesture-event (condition))
-(defgeneric accelerator-gesture-numeric-argument (condition))
-
-;;; 22.5 Pointer Tracking
-
-;; tracking-pointer
-;; dragging-output
-
-(defgeneric drag-output-record
-    (stream output &key repaint erase feedback finish-on-release multiple-window))
-
-
-;;; 23.2 Presentations
-
-(defgeneric presentation-object (presentation))
-(defgeneric (setf presentation-object) (object presentation))
-(defgeneric presentation-type (presentation))
-(defgeneric (setf presentation-type) (type presentation))
-(defgeneric presentation-view (presentation))
-(defgeneric (setf presentation-view) (view presentation))
-(defgeneric presentation-single-box (presentation))
-(defgeneric (setf presentation-single-box) (single-box presentation))
-(defgeneric presentation-modifier (presentation))
-
-(declfun make-blank-area-presentation (sheet x y event))
-
-;;; 23.4 Typed output
-
-(defgeneric stream-present
-    (stream object type
-     &key view modifier acceptably for-context-type single-box
-       allow-sensitive-inferiors sensitive record-type))
-
-;;; 23.5 Context-dependent (Typed) Input
-
-(defgeneric stream-accept
-    (stream
-     type &key view default default-type provide-default insert-default
-     replace-input history active-p prompt prompt-mode display-default
-     query-identifier activation-gestures additional-activation-gestures
-     delimiter-gestures additional-delimiter-gestures))
-(defgeneric prompt-for-accept (stream type view &rest accept-args &key))
-
-;;; 23.7 Presentation Translators
-(declfun highlight-applicable-presentation
-    (frame stream input-context &optional prefer-pointer-window))
-
-
-;;; 24.1 The Input Editor
-
-(defgeneric input-editor-format (stream format-string &rest args)
-  (:documentation "This function is like `format', except that it
-is intended to be called on input editing streams. It arranges to
-insert \"noise strings\" in the input editor's input
-buffer. Programmers can use this to display in-line prompts in
-`accept' methods.
-
-If `stream' is a stream that is not an input editing stream, then
-`input-editor-format' is equivalent to format."))
-
-
-(defgeneric redraw-input-buffer (stream &optional start-from)
-  (:documentation "Displays the input editor's buffer starting at
-the position `start-position' on the interactive stream that is
-encapsulated by the input editing stream `stream'."))
-
-;;; 24.1.1 The Input Editing Stream Protocol
-
-(defgeneric stream-insertion-pointer (stream)
-  (:documentation "Returns an integer corresponding to the
-current input position in the input editing stream `stream's
-buffer, that is, the point in the buffer at which the next user
-input gesture will be inserted. The insertion pointer will always
-be less than (fill-pointer (stream-input-buffer stream)). The
-insertion pointer can also be thought of as an editing cursor."))
-
-(defgeneric (setf stream-insertion-pointer) (pointer stream)
-  (:documentation "Changes the input position of the input
-editing stream `stream' to `pointer'. `Pointer' is an integer,
-and must be less than (fill-pointer (stream-input-buffer stream))"))
-
-(defgeneric stream-scan-pointer (stream)
-  (:documentation "Returns an integer corresponding to the
-current scan pointer in the input editing stream `stream's
-buffer, that is, the point in the buffer at which calls to
-`accept' have stopped parsing input. The scan pointer will always
-be less than or equal to (stream-insertion-pointer stream)."))
-
-(defgeneric (setf stream-scan-pointer) (pointer stream)
-  (:documentation "Changes the scan pointer of the input editing
-stream `stream' to `pointer'. `Pointer' is an integer, and must
-be less than or equal to (stream-insertion-pointer stream)"))
-
-(defgeneric stream-rescanning-p (stream)
-  (:documentation "Returns the state of the input editing stream
-`stream's \"rescan in progress\" flag, which is true if stream is
-performing a rescan operation, otherwise it is false. All
-extended input streams must implement a method for this, but
-non-input editing streams will always returns false."))
-
-(defgeneric reset-scan-pointer (stream &optional scan-pointer)
-  (:documentation "Sets the input editing stream stream's scan
-pointer to `scan-pointer', and sets the state of
-`stream-rescanning-p' to true."))
-
-(defgeneric immediate-rescan (stream)
-  (:documentation "Invokes a rescan operation immediately by
-\"throwing\" out to the most recent invocation of
-`with-input-editing'."))
-
-(defgeneric queue-rescan (stream)
-  (:documentation "Indicates that a rescan operation on the input
-editing stream `stream' should take place after the next
-non-input editing gesture is read by setting the \"rescan
-queued\" flag to true. "))
-
-(defgeneric rescan-if-necessary (stream &optional inhibit-activation)
-  (:documentation "Invokes a rescan operation on the input
-editing stream `stream' if `queue-rescan' was called on the same
-stream and no intervening rescan operation has taken
-place. Resets the state of the \"rescan queued\" flag to false.
-
-If `inhibit-activation' is false, the input line will not be
-activated even if there is an activation character in it."))
-
-(defgeneric erase-input-buffer (stream &optional start-position)
-  (:documentation "Erases the part of the display that
-corresponds to the input editor's buffer starting at the position
-`start-position'."))
-
-;;; McCLIM relies on a text editor class (by default
-;;; DREI-INPUT-EDITING-MIXIN) to perform the user interaction and
-;;; display for input editing. Also, that class must update the stream
-;;; buffer and the insertion pointer, cause rescans to happen, and
-;;; handle activation gestures.
-(defgeneric stream-process-gesture (stream gesture type)
-  (:documentation "If gesture is an input editing command,
-stream-process-gesture performs the input editing operation on
-the input editing stream `stream' and returns NIL. Otherwise, it
-returns the two values `gesture' and `type'."))
-
-;;; 24.4 Reading and Writing of Tokens
-
-(defgeneric replace-input
-    (stream new-input &key start end buffer-start rescan)
-  ;; XXX: Nonstandard behavior for :rescan.
-  (:documentation "Replaces the part of the input editing stream
-`stream's input buffer that extends from `buffer-start' to its
-scan pointer with the string `new-input'. `buffer-start' defaults
-to the current input position of stream, which is the position at
-which the current accept \"session\" starts. `start' and `end' can be
-supplied to specify a subsequence of `new-input'; start defaults to
-0 and end defaults to the length of `new-input'.
-
-`replace-input' will queue a rescan by calling `queue-rescan' if
-the new input does not match the old input, or `rescan' is
-true. If `rescan' is explicitly provided as NIL, no rescan will
-be queued in any case.
-
-The returned value is the position in the input buffer."))
-
-(defgeneric presentation-replace-input
-    (stream object type view
-            &key buffer-start rescan query-identifier for-context-type)
-  (:documentation "Like `replace-input', except that the new
-input to insert into the input buffer is gotten by presenting
-`object' with the presentation type `type' and view
-`view'. `buffer-start' and `rescan' are as for `replace-input',
-and `query-identifier' and `for-context-type' as as for
-`present'.
-
-Typically, this function will be implemented by calling
-`present-to-string' on `object', `type', `view', and
-`for-context-type', and then calling `replace-input' on the
-resulting string.
-
-If the object cannot be transformed into an acceptable textual
-form, it may be inserted as a special \"accept result\" that is
-considered a single gesture. These accept result objects have no
-standardised form."))
-
-
-;;; 26 Dialog Facilities
-(defgeneric display-exit-boxes (frame stream view))
-(defgeneric accept-values-resynchronize (stream))
-
-
-;;; 27.2 Command Tables
-(defgeneric command-table-name (command-table))
-(defgeneric command-table-inherit-from (command-table))
-
-;;; Franz user manual says that this slot is setf-able
-(defgeneric (setf command-table-inherit-from) (inherit-from table))
-
-;;; 27.3 Command Menus
-
-(defgeneric display-command-table-menu (command-table stream
-                                        &key max-width max-height
-                                          n-rows n-columns x-spacing
-                                          y-spacing initial-spacing row-wise
-                                          cell-align-x cell-align-y move-cursor)
-  (:documentation "Display a menu of the commands accessible in
-`command-table' to `stream'.
-
-`max-width', `max-height', `n-rows', `n-columns', `x-spacing',
-`y-spacing', `row-wise', `initial-spacing', `cell-align-x',
-`cell-align-y', and `move-cursor' are as for
-`formatting-item-list'."))
-
-
-;;; 28.2 Specifying the Panes of a Frame
-
-(defgeneric destroy-frame (frame))
-(defgeneric raise-frame (frame))
-(defgeneric bury-frame (frame))
-
-;;; 28.3 Application Frame Functions
-
-(defgeneric frame-name (frame))
-(defgeneric frame-pretty-name (frame))
-(defgeneric (setf frame-pretty-name) (name frame))
-(defgeneric frame-icon (frame)
-  (:documentation "McMCLIM extension: Return the icon or icons of FRAME.
-The return value is either a `clim-extensions:image-pattern' or
-a sequence of those.
-These icons are typically used - via the top-level sheet of FRAME - by
-window managers to represent windows that are not currently visible or
-added to other representations of windows to make them more easily
-recognizable."))
-(defgeneric (setf frame-icon) (new-value frame)
-  (:documentation "McMCLIM extension: Set icon or icons of FRAME to NEW-VALUE.
-NEW-VALUE must be a `clim-extensions:image-pattern' or a sequence of
-those. If a sequence is supplied, the window manager is instructed to
-prefer the first element, if possible. Some window managers select
-different icons for different purposes based on the icon sizes.
-This function also sets NEW-VALUE as the icon(s) of the top-level
-sheet of FRAME."))
-
-(defgeneric frame-command-table (frame))
-(defgeneric (setf frame-command-table) (command-table frame))
-
-(defgeneric frame-standard-output (frame)
-  (:documentation "Returns the stream that will be used for
-`*standard-output*' for the frame `frame'. The default method (on
-`standard-application-frame') returns the first named pane of type
-`application-pane' that is visible in the current layout; if there is
-no such pane, it returns the first pane of type `interactor-pane' that
-is exposed in the current layout."))
-
-(defgeneric frame-standard-input (frame))
-(defgeneric frame-query-io (frame))
-(defgeneric frame-error-output (frame))
-(defgeneric frame-pointer-documentation-output (frame))
-(defgeneric frame-calling-frame (frame))
-(defgeneric frame-parent (frame))
-(defgeneric frame-panes (frame))
-;;; missing in the CLIM 2 spec, probably omission
-(defgeneric (setf frame-panes) (panes frame))
-(defgeneric frame-top-level-sheet (frame))
-(defgeneric frame-current-panes (frame))
-(defgeneric get-frame-pane (frame pane-name))
-
-(defgeneric find-pane-named (frame pane-name)
-  (:documentation "Returns the pane in the frame `frame' whose name is
-`pane-name'. This can return any type of pane, not just CLIM stream
-panes."))
-
-(defgeneric frame-current-layout (frame))
-(defgeneric (setf frame-current-layout) (layout frame))
-(defgeneric frame-all-layouts (frame))
-(defgeneric layout-frame (frame &optional width height))
-(defgeneric frame-exit-frame (condition))
-(defgeneric frame-exit (frame))
-(defgeneric pane-needs-redisplay (pane))
-(defgeneric (setf pane-needs-redisplay) (value pane))
-(defgeneric redisplay-frame-pane (frame pane &key force-p))
-(defgeneric redisplay-frame-panes (frame &key force-p))
-(defgeneric frame-replay (frame stream &optional region))
-(defgeneric notify-user (frame message &key associated-window title
-                               documentation exit-boxes name style text-style))
-(defgeneric frame-properties (frame property))
-(defgeneric (setf frame-properties) (value frame property))
-
-;;; 28.3.1 Interface with Presentation Types
-
-(defgeneric frame-maintain-presentation-histories (frame))
-(defgeneric frame-find-innermost-applicable-presentation
-    (frame input-context stream x y &key event))
-(defgeneric frame-input-context-button-press-handler
-    (frame stream button-press-event))
-(defgeneric frame-input-context-track-pointer
-    (frame input-context stream event))
-(defgeneric frame-document-highlighted-presentation
-    (frame presentation input-context window-context x y stream))
-(defgeneric frame-drag-and-drop-feedback
-    (frame presentation stream initial-x initial-y new-x new-y state))
-(defgeneric frame-drag-and-drop-highlighting
-    (frame presentation stream state))
-
-;;;; 28.4
-(defgeneric default-frame-top-level
-    (frame &key command-parser command-unparser partial-command-parser prompt))
-(defgeneric read-frame-command (frame &key stream))
-(defgeneric execute-frame-command (frame command))
-(defgeneric run-frame-top-level (frame &key &allow-other-keys))
-(defgeneric command-enabled (command-name frame))
-(defgeneric (setf command-enabled) (enabled command-name frame))
-(defgeneric (setf command-name) (enabled command-name frame))
-(defgeneric display-command-menu (frame stream &key command-table
-                                        initial-spacing row-wise max-width
-                                        max-height n-rows n-columns
-                                        cell-align-x cell-align-y)
-  (:documentation "Display the command table associated with
-`command-table' on `stream' by calling
-`display-command-table-menu'. If no command table is
-provided, (frame-command-table frame) will be used.
-
-The arguments `initial-spacing', `row-wise',
-`max-width', `max-height', `n-rows', `n-columns', `cell-align-x',
-and `cell-align-y' are as for `formatting-item-list'."))
-
-;;;; 28.5.2 Frame Manager Operations
-
-(defgeneric frame-manager (frame))
-(defgeneric (setf frame-manager) (frame-manager frame))
-(defgeneric frame-manager-frames (frame-manager))
-(defgeneric adopt-frame (frame-manager frame))
-(defgeneric disown-frame (frame-manager frame))
-(defgeneric frame-state (frame))
-(defgeneric enable-frame (frame))
-(defgeneric disable-frame (frame))
-(defgeneric shrink-frame (frame))
-
-(defgeneric note-frame-enabled (frame-manager frame))
-(defgeneric note-frame-disabled (frame-manager frame))
-(defgeneric note-frame-iconified (frame-manager frame))
-(defgeneric note-frame-deiconified (frame-manager frame))
-(defgeneric note-command-enabled (frame-manager frame command-name))
-(defgeneric note-command-disabled (frame-manager frame command-name))
-
-(defgeneric note-frame-pretty-name-changed (frame-manager frame new-name)
-  (:documentation "McCLIM extension: Notify client that the pretty
-name of FRAME, managed by FRAME-MANAGER, changed to NEW-NAME."))
-
-(defgeneric note-frame-icon-changed (frame-manager frame new-icon)
-  (:documentation "McCLIM extension: Notify client that the icon of
-FRAME, managed by FRAME-MANAGER, changed to NEW-ICON."))
-
-(defgeneric note-frame-command-table-changed (frame-manager frame new-command-table)
-  (:documentation "McCLIM extension: Notify client that the command-table of
-FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE."))
-
-(defgeneric frame-manager-notify-user
-    (framem message-string
-     &key frame associated-window title
-       documentation exit-boxes name style text-style))
-
-(defgeneric generate-panes (frame-manager frame))
-(defgeneric find-pane-for-frame (frame-manager frame))
-
-;;; 28.5.3 Frame Manager Settings
-
-(defgeneric (setf client-setting) (value frame setting))
-(defgeneric reset-frame (frame &rest client-settings))
-
-
-;;;; 29.2
-;;;;
-;;;; FIXME: should we have &key &allow-other-keys here, to cause
-;;;; initarg checking?  Probably.
-(defgeneric make-pane-1 (realizer frame abstract-class-name &rest initargs))
-
-;;;; 29.2.2 Pane Properties
-
-(defgeneric pane-frame (pane))
-(defgeneric pane-name (pane))
-(defgeneric pane-foreground (pane))
-(defgeneric pane-background (pane))
-(defgeneric pane-text-style (pane))
-
-;;;; 29.3.3 Scroller Pane Classes
-
-(defgeneric pane-viewport (pane))
-(defgeneric pane-viewport-region (pane))
-(defgeneric pane-scroller (pane))
-(defgeneric scroll-extent (pane x y))
-
-(deftype scroll-bar-spec () '(member t :both :vertical :horizontal nil))
-
-;;;; 29.3.4 The Layout Protocol
-
-;; (define-protocol-class space-requirement ())
-
-;; make-space-requirement &key (width 0) (max-width 0) (min-width 0) (height 0) (max-height 0) (min-height 0) [Function]
-
-(defgeneric space-requirement-width (space-req))
-(defgeneric space-requirement-min-width (space-req))
-(defgeneric space-requirement-max-width (space-req))
-(defgeneric space-requirement-height (space-req))
-(defgeneric space-requirement-min-height (space-req))
-(defgeneric space-requirement-max-height (space-req))
-(defgeneric space-requirement-components (space-req))
-
-(defgeneric space-requirement-equal (sr1 sr2) ; McCLIM extension
-  (:documentation
-   "Return true if the components of SR1 and SR2 are EQL."))
-;; space-requirement-combine function sr1 sr2 [Function]
-;; space-requirement+ sr1 sr2 [Function]
-;; space-requirement+* space-req &key width min-width max-width height min-height max-height [Function]
-
-(defgeneric compose-space (pane &key width height)
-  (:documentation "During the space composition pass, a composite pane will
-typically ask each of its children how much space it requires by calling COMPOSE-SPACE.
-They answer by returning space-requirement objects. The composite will then form
-its own space requirement by composing the space requirements of its children
-according to its own rules for laying out its children.
-
-Returns a SPACE-REQUIREMENT object."))
-(defgeneric allocate-space (pane width height))
-(defgeneric change-space-requirements
-    (pane &rest space-req-keys &key resize-frame width height
-          min-width min-height max-width max-height))
-(defgeneric note-space-requirements-changed (sheet pane))
-;; changing-space-requirements (&key resize-frame layout) &body body [Macro]
-
-;;;; 29.4.4 CLIM Stream Pane Functions
-
-(defgeneric window-clear (window))
-(defgeneric window-refresh (window))
-(defgeneric window-viewport (window))
-(defgeneric window-erase-viewport (window))
-(defgeneric window-viewport-position (window))
-;; (defgeneric (setf* window-viewport-position) (x y window))
-
-;;; 29.4.5 Creating a Standalone CLIM Window
-(declfun open-window-stream
-  (&key port left top right bottom width height foreground background text-style
-        (vertical-spacing 2) end-of-line-action end-of-page-action output-record
-        (draw t) (record t) (initial-cursor-visibility :off) text-margin save-under
-        input-buffer (scroll-bars :vertical) borders label))
-
-
-;;; 30.3 Basic gadgets
-
-(defgeneric gadget-id (gadget))
-(defgeneric (setf gadget-id) (value gadget))
-(defgeneric gadget-client (gadget))
-(defgeneric (setf gadget-client) (value gadget))
-(defgeneric gadget-armed-callback (gadget))
-(defgeneric gadget-disarmed-callback (gadget))
-(defgeneric armed-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric disarmed-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric gadget-active-p (gadget))
-(defgeneric activate-gadget (gadget))
-(defgeneric deactivate-gadget (gadget))
-(defgeneric note-gadget-activated (client gadget))
-(defgeneric note-gadget-deactivated (client gadget))
-(defgeneric gadget-value (gadget))
-(defgeneric (setf gadget-value) (value value-gadget &key invoke-callback))
-(defgeneric gadget-value-changed-callback (gadget))
-(defgeneric value-changed-callback (gadget client gadget-id value)
-  (:argument-precedence-order client gadget-id gadget value))
-(defgeneric gadget-activate-callback (gadget))
-(defgeneric activate-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric gadget-orientation (gadget))
-(defgeneric gadget-label (gadget))
-(defgeneric (setf gadget-label) (value gadget))
-(defgeneric gadget-label-align-x (gadget))
-(defgeneric (setf gadget-label-align-x) (value gadget))
-(defgeneric gadget-label-align-y (gadget))
-(defgeneric (setf gadget-label-align-y) (value gadget))
-(defgeneric gadget-min-value (gadget))
-(defgeneric (setf gadget-min-value) (value gadget))
-(defgeneric gadget-max-value (gadget))
-(defgeneric (setf gadget-max-value) (value gadget))
-(defgeneric gadget-range (gadget)
-  (:documentation
-   "Returns the difference of the maximum and minimum value of RANGE-GADGET."))
-(defgeneric gadget-range* (gadget)
-  (:documentation
-   "Returns the minimum and maximum value of RANGE-GADGET as two values."))
-
-;;; 30.4 Abstract gadgets
-
-(defgeneric push-button-show-as-default (gadget))
-(defgeneric toggle-button-indicator-type (gadget))
-(defgeneric scroll-bar-drag-callback (gadget))
-(defgeneric scroll-bar-scroll-to-top-callback (gadget))
-(defgeneric scroll-bar-scroll-to-bottom-callback (gadget))
-(defgeneric scroll-bar-scroll-up-line-callback (gadget))
-(defgeneric scroll-bar-scroll-up-page-callback (gadget))
-(defgeneric scroll-bar-scroll-down-line-callback (gadget))
-(defgeneric scroll-bar-scroll-down-page-callback (gadget))
-(defgeneric scroll-to-top-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric scroll-to-bottom-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric scroll-up-line-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric scroll-up-page-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric scroll-down-line-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric scroll-down-page-callback (gadget client gadget-id)
-  (:argument-precedence-order client gadget-id gadget))
-(defgeneric gadget-show-value-p (gadget))
-(defgeneric slider-drag-callback (slider))
-(defgeneric drag-callback (gadget client gadget-id value)
-  (:argument-precedence-order client gadget-id gadget value))
-(defgeneric radio-box-current-selection (gadget))
-(defgeneric (setf radio-box-current-selection) (value gadget))
-(defgeneric radio-box-selections (gadget))
-(defgeneric check-box-current-selection (gadget))
-(defgeneric (setf check-box-current-selection) (value gadget))
-(defgeneric check-box-selections (gadget))
-
-
-;;; D.2 Basic Stream Functions
-
-;;; Gray Streamoid functions, but not part of any Gray proposal.
-(defgeneric stream-pathname (stream))
-(defgeneric stream-truename (stream))
-
-;;; E.0 Drawing backend protocols (generalization of the postscript backend)
-(declmacro with-output-to-drawing-stream (stream-var backend destination &rest args))
-(defgeneric invoke-with-output-to-drawing-stream (continuation backend destination &key &allow-other-keys)
-  (:argument-precedence-order backend destination continuation))
-
-;;; E.1
-
-(declmacro with-output-to-postscript-stream
-  ((stream-var stream
-    &key device-type multi-page scale-to-fit orientation header-comments)
-  &body body))
-
-(defgeneric new-page (stream))
-
-
-;;;
-
-(defgeneric medium-miter-limit (medium)
-  (:documentation
-   "If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
-   consequent lines is less than the values return by
-   MEDIUM-MITER-LIMIT, :BEVEL is used instead."))
-
-(defgeneric line-style-effective-thickness (line-style medium)
-  (:documentation
-   "Returns the thickness in device units of a line,
-rendered on MEDIUM with the style LINE-STYLE."))
-
-(defgeneric line-style-effective-dashes (line-style medium)
-  (:documentation
-   "Return a dash length or a sequence of dash lengths device units
-for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
-
-;;;
-
-(declfun draw-rectangle (sheet point1 point2
-                         &rest args
-                         &key (filled t)
-                         ink clipping-region transformation line-style line-thickness
-                         line-unit line-dashes line-joint-shape
-                         &allow-other-keys))
-
-(declfun draw-rectangle* (sheet x1 y1 x2 y2
-                          &rest args
-                          &key (filled t)
-                          ink clipping-region transformation line-style line-thickness
-                          line-unit line-dashes line-joint-shape
-                          &allow-other-keys))
-
-;;; "exported" from a port
-
-(defgeneric port-text-style-mappings (port))
-(defgeneric port-enable-sheet (port sheet))
-(defgeneric port-disable-sheet (port sheet))
-(defgeneric port-shrink-sheet (port sheet))
-(defgeneric port-pointer (port))
-
-(defgeneric port-set-mirror-name (port sheet name))
-(defgeneric port-set-mirror-icon (port sheet icon))
-(defgeneric port-set-mirror-geometry (port sheet region))
-
-;;; Defined in Franz user guide sec. 15.1
-(defgeneric port-modifier-state (port))
-
-(defgeneric pointer-update-state (pointer event)
-  (:documentation "Called by port event dispatching code to update the modifier
-and button states of the pointer."))
-
-;;;
-
-;; Used in stream-input.lisp, defined in frames.lisp
-(defgeneric frame-event-queue (frame))
-
-;;; Used in presentations.lisp, defined in commands.lisp
-
-(defgeneric presentation-translators (command-table))
-
-(defgeneric stream-default-view (stream))
-
-;;; ----------------------------------------------------------------------
-
-(defgeneric output-record-basline (record)
-  (:documentation
-   "Returns two values: the baseline of an output record and a boolean
-indicating if this baseline is definitive. McCLIM addition."))
-
-(defgeneric encapsulating-stream-stream (encapsulating-stream)
-  (:documentation "The stream encapsulated by an encapsulating stream"))
-
-#||
-
-Further undeclared functions
-
-  FRAME-EVENT-QUEUE FRAME-EXIT PANE-FRAME ALLOCATE-SPACE COMPOSE-SPACE
-  FIND-INNERMOST-APPLICABLE-PRESENTATION HIGHLIGHT-PRESENTATION-1
-  PANE-DISPLAY-FUNCTION PANE-DISPLAY-TIME PANE-NAME PRESENTATION-OBJECT
-  PRESENTATION-TYPE SPACE-REQUIREMENT-HEIGHT SPACE-REQUIREMENT-WIDTH
-  THROW-HIGHLIGHTED-PRESENTATION WINDOW-CLEAR
-
-  (SETF GADGET-MAX-VALUE) (SETF GADGET-MIN-VALUE) (SETF SCROLL-BAR-THUMB-SIZE)
-  SLOT-ACCESSOR-NAME::|CLIM-INTERNALS CLIENT slot READER|
-  FORMAT-CHILDREN GADGET-VALUE MAKE-MENU-BAR TABLE-PANE-NUMBER MEDIUM
-  WITH-GRAPHICS-STATE TEXT-STYLE-CHARACTER-WIDTH SCROLL-EXTENT
-
-||#
-
+;;; wait-function in principle behaves like for process-next-event (and for
+;;; single-threaded run it is exactly what happens - we pass it to the port
+;;; method). It is not called in a busy loop but rather after some input wakes
+;;; up blocking backend-specific wait function. Then we call wait-function.
+;;; -- jd 2019-03-26
+    (:generic* event-read-with-timeout (client &key timeout wait-function)
+      (:documentation "Reads event from the event queue. Function returns when event is succesfully
+read, timeout expires or wait-function returns true. Time of wait-function call
+depends on a port."))
+    (:generic* event-listen-or-wait (client &key timeout wait-function)
+      (:documentation "When wait-function is nil then function waits for available event. Otherwise
+function returns when wait-function predicate yields true. Time of wait-function
+call depends on a port."))
+    ;; Event queue protocol (a mailbox with compression, maybe move to system?)
+    (:protocol-class* event-queue ())
+    (:accessor* event-queue-port)
+    (:class* simple-event-queue (event-queue))
+    (:class* concurrent-event-queue (event-queue))
+    (:generic* schedule-event-queue (queue event delay))
+    (:generic* event-queue-read (event-queue)
+      (:documentation "Reads one event from the queue, if there is no event, hang
+until here is one."))
+
+    (:generic* event-queue-read-no-hang (event-queue)
+      (:documentation "Reads one event from the queue, if there is no event just
+return NIL."))
+    (:generic* event-queue-read-with-timeout (event-queue timeout wait-function)
+      (:documentation "Waits until wait-function returns true, event queue
+is not empty or none of the above happened before a timeout.
+
+- Returns (values nil :wait-function) if wait-function returns true
+- Reads and returns one event from the queue if it is not empty
+- Returns (values nil :timeout) otherwise."))
+    (:generic* event-queue-append (event-queue item)
+      (:documentation "Append the item at the end of the queue. Does event compression."))
+    (:generic* event-queue-prepend (event-queue item)
+      (:documentation "Prepend the item to the beginning of the queue."))
+    (:generic* event-queue-peek (event-queue)
+      (:documentation "Peeks the first event in a queue. Queue is left unchanged.
+If queue is empty returns NIL."))
+    (:generic* event-queue-peek-if (predicate event-queue)
+      (:documentation "Goes through the whole event queue and returns the first
+event, which satisfies PREDICATE. Queue is left unchanged. Returns NIL if there
+is no such event."))
+    (:generic* event-queue-listen (event-queue)
+      (:documentation "Returns true if there are any events in the queue. Otherwise
+returns NIL."))
+    (:generic* event-queue-listen-or-wait (event-queue &key timeout wait-function)
+      (:documentation "Waits until wait-function returns true, event queue
+is not empty or none of the above happened before a timeout.
+
+- Returns (values nil :wait-function) when wait-function returns true
+- Returns true when there are events in the queue before a timeout
+- Returns (values nil :timeout) otherwise.")))
+   ("8.1.2 Input Protocol Classes"
+    (:mixin standard-sheet-input-mixin)
+    (:mixin immediate-sheet-input-mixin)
+    (:mixin sheet-mute-input-mixin)
+    (:mixin delegate-sheet-input-mixin)
+    (:accessor delegate-sheet-delegate)
+    (:mixin* clim-sheet-input-mixin)))
+  ("8.2 Standard Device Events"
+   (:protocol-class event () () (:default-initargs :timestamp nil))
+   (:macro* define-event-class (name superclasses slots &rest options))
+   (:reader event-timestamp)
+   (:reader event-type)
+   (:class device-event (event) () (:default-initargs :sheet nil :modifier-state nil))
+   (:reader* device-event-x)
+   (:reader* device-event-y)
+   (:reader* device-event-native-x)
+   (:reader* device-event-native-y)
+   (:reader* device-event-native-graft-x)
+   (:reader* device-event-native-graft-y)
+   (:reader event-sheet)
+   (:reader event-modifier-state)
+   (:class keyboard-event (device-event) () (:default-initargs :key-name nil))
+   (:reader keyboard-event-key-name)
+   (:reader keyboard-event-character)
+   (:class key-press-event (keyboard-event))
+   (:class key-release-event (keyboard-event))
+   (:class pointer-event (device-event) () (:default-initargs :pointer nil :button nil :x nil :y nil))
+   (:reader pointer-event-x)
+   (:reader pointer-event-y)
+   (:reader pointer-event-native-x)
+   (:reader pointer-event-native-y)
+   (:reader pointer-event-pointer)
+   (:class pointer-button-event (pointer-event))  
+   (:reader pointer-event-button)
+   (:class pointer-button-press-event (pointer-button-event))
+   (:class pointer-button-release-event (pointer-button-event))
+   (:class pointer-button-hold-event (pointer-button-event))
+   (:class pointer-click-event (pointer-button-event))
+   (:class pointer-double-click-event (pointer-button-event))
+   (:class pointer-click-and-hold-event (pointer-button-event))
+   (:class* pointer-scroll-event (pointer-button-event))
+   (:reader* pointer-event-delta-x)
+   (:reader* pointer-event-delta-y)
+   (:class pointer-motion-event (pointer-event))
+   (:class pointer-boundary-event (pointer-motion-event))
+   ;; Returns:
+   ;; (member :ancestor :virtual :inferior :nonlinear :nonlinear-virtual nil)
+   (:generic pointer-boundary-event-kind (pointer-boundary-event))
+   (:generic* pointer-update-state (pointer event))
+   (:class pointer-enter-event (pointer-boundary-event))
+   (:class pointer-exit-event (pointer-boundary-event))
+   (:class* pointer-grab-enter-event (pointer-enter-event))
+   (:class* pointer-grab-leave-event (pointer-exit-event))
+   (:class* pointer-ungrab-enter-event (pointer-enter-event))
+   (:class* pointer-ungrab-leave-event (pointer-exit-event))
+   (:class window-event (event) () (:default-initargs :region))
+   (:reader window-event-region)
+   (:reader window-event-native-region)
+   (:reader window-event-mirrored-sheet)
+   (:class window-configuration-event (window-event))
+   (:reader window-configuration-event-x)
+   (:reader window-configuration-event-y)
+   (:reader window-configuration-event-width)
+   (:reader window-configuration-event-height)
+   (:class window-repaint-event (window-event))
+   (:class* window-map-event (window-event))
+   (:class* window-unmap-event (window-event))
+   (:class* window-destroy-event (window-event))
+   (:class window-manager-event (window-event) () (:default-initargs :sheet))
+   (:class window-manager-delete-event (window-manager-event))
+   (:class* window-manager-focus-event (window-manager-event))
+   (:class* window-manager-iconify-event (window-manager-event))
+   (:class* window-manager-deiconify-event (window-manager-event))
+   (:class timer-event (event))
+   (:constant +pointer-left-button+ fixnum)
+   (:constant +pointer-middle-button+ fixnum)
+   (:constant +pointer-right-button+ fixnum)
+   (:constant* +pointer-wheel-up+ fixnum)
+   (:constant* +pointer-wheel-down+ fixnum)
+   (:constant* +pointer-wheel-left+ fixnum)
+   (:constant* +pointer-wheel-right+ fixnum)
+   (:constant +shift-key+ fixnum)
+   (:constant +control-key+ fixnum)
+   (:constant +meta-key+ fixnum)
+   (:constant +super-key+ fixnum)
+   (:constant +hyper-key+ fixnum)
+   (:constant* +alt-key+ fixnum))
+  ("8.3 Output Protocol"
+   ("8.3.3 Output Protocol Functions"
+    (:mixin standard-sheet-output-mixin)
+    (:mixin sheet-mute-output-mixin)
+    (:mixin sheet-with-medium-mixin)
+    (:mixin permanent-medium-sheet-output-mixin)
+    (:mixin temporary-medium-sheet-output-mixin))
+   ("8.3.4 Associating a Medium with a Sheet"
+    (:macro with-sheet-medium ((medium sheet) &body body))
+    (:macro with-sheet-medium-bound ((medium sheet) &body body))
+    (:generic invoke-with-sheet-medium-bound (cont medium sheet))
+    (:reader sheet-medium)
+    ("8.3.4.1 Grafting and Degrafting of Mediums"
+     (:generic allocate-medium (port sheet))
+     (:generic deallocate-medium (port medium))
+     (:generic make-medium (port sheet))
+     (:generic engraft-medium (medium port sheet))
+     (:generic degraft-medium (medium port sheet)))))
+  ("8.4 Repaint Protocol"
+   ("8.4.1 Repaint Protocol Functions"
+    (:generic* dispatch-repaint (sheet region))
+    (:generic queue-repaint (sheet repaint-event))
+    (:generic handle-repaint (sheet region))
+    (:generic repaint-sheet (sheet region)))
+   ("8.4.2 Repaint Protocol Classes"
+    (:mixin standard-repainting-mixin)
+    (:mixin immediate-repainting-mixin)
+    (:mixin sheet-mute-repainting-mixin)
+    (:mixin* always-repaint-background-mixin)
+    (:mixin* never-repaint-background-mixin)
+    (:mixin* clim-repainting-mixin)))
+  ("8.5 Sheet Notification Protocol"
+   ("8.5.1 Relationship to Window System Change Notifications"
+    (:generic note-sheet-grafted (sheet))
+    (:generic note-sheet-degrafted (sheet))
+    (:generic note-sheet-adopted (sheet))
+    (:generic note-sheet-disowned (sheet))
+    (:generic note-sheet-enabled (sheet))
+    (:generic note-sheet-disabled (sheet)))
+   ("8.5.2 Sheet Geometry Notifications"
+    ;; More to be written. --- RSL
+    (:generic note-sheet-region-changed (sheet))
+    (:generic note-sheet-transformation-changed (sheet)))))
+
+(define-protocol "9 Ports, Grafts and Mirrored Sheets" ("Windowing Substrate")
+  ("9.2 Ports"
+   (:protocol-class port ())
+   (:class basic-port)
+   (:function find-port (&key (server-path *default-server-path*)))
+   (:generic* find-port-type (symbol))
+   (:variable *default-server-path*)
+   (:reader port)
+   (:macro* with-port ((port-var server &rest args &key &allow-other-keys) &body body))
+   (:function* invoke-with-port (continuation server &rest args &key &allow-other-keys))
+   (:macro with-port-locked ((port) &body body))
+   (:generic invoke-with-port-locked (port continuation))
+   (:function map-over-ports (fun))
+   (:reader port-server-path)
+   (:reader port-name)
+   (:reader port-type)
+   (:reader* port-modifier-state)
+   (:generic port-properties (port indicator))
+   (:generic (setf port-properties) (property port indicator))
+   (:generic restart-port (port))
+   (:generic destroy-port (port))
+   ;; basic-port extra accessors
+   (:accessor* port-grafts)
+   (:accessor* frame-managers)
+   (:accessor* port-event-process)
+   (:accessor* port-lock)
+   (:reader* port-text-style-mappings)
+   (:reader* port-keyboard-input-focus)
+   (:accessor* port-pointer)
+   (:reader* port-cursors)
+   (:reader* port-selections)
+   (:accessor* port-grabbed-sheet)
+   (:accessor* port-pressed-sheet))
+  ("McCLIM extension: Font listing"
+   (:generic* port-all-font-families
+       (port &key invalidate-cache &allow-other-keys)
+     (:documentation
+      "Returns the list of all FONT-FAMILY instances known by PORT.
+With INVALIDATE-CACHE, cached font family information is discarded, if any."))
+   (:generic* font-family-name (font-family)
+     (:documentation
+      "Return the font family's name.  This name is meant for user display,
+and does not, at the time of this writing, necessarily the same string
+used as the text style family for this port."))
+   (:generic* font-family-port (font-family)
+     (:documentation "Return the port this font family belongs to."))
+   (:generic* font-family-all-faces (font-family)
+     (:documentation
+      "Return the list of all font-face instances for this family."))
+   (:generic* font-face-name (font-face)
+     (:documentation
+      "Return the font face's name.  This name is meant for user display,
+and does not, at the time of this writing, necessarily the same string
+used as the text style face for this port."))
+   (:generic* font-face-family (font-face)
+     (:documentation "Return the font family this face belongs to."))
+   (:generic* font-face-all-sizes (font-face)
+     (:documentation
+      "Return the list of all font sizes known to be valid for this font,
+if the font is restricted to particular sizes.  For scalable fonts, arbitrary
+sizes will work, and this list represents only a subset of the valid sizes.
+See font-face-scalable-p."))
+   (:generic* font-face-scalable-p (font-face)
+     (:documentation
+      "Return true if this font is scalable, as opposed to a bitmap font.  For
+a scalable font, arbitrary font sizes are expected to work."))
+   (:generic* font-face-text-style (font-face &optional size)
+     (:documentation
+      "Return an extended text style describing this font face in the specified
+size.  If size is nil, the resulting text style does not specify a size."))
+   (:class* font-family)
+   (:class* font-face)
+   (:class* basic-font-family)
+   (:class* basic-font-face))
+  ("9.3 Grafts"
+   (:class graft ())
+   (:function* graftp (graft))
+   (:constructor make-graft (port &key orientation units))
+   (:generic sheet-grafted-p (sheet))
+   (:function find-graft (&key (port nil) (server-path *default-server-path*) (orientation :default) (units :device)))
+   (:reader graft)
+   (:generic map-over-grafts (fun port))
+   (:macro with-graft-locked ((graft) &body body))
+   (:reader graft-orientation)
+   (:reader graft-units)
+   (:generic graft-width (graft &key units))
+   (:generic graft-height (graft &key units))
+   (:function graft-pixels-per-millimeter (graft &key orientation))
+   (:function graft-pixels-per-inch (graft &key orientation))
+   (:generic* graft-pixel-aspect-ratio (graft)))
+  ("9.4 Mirrors and Mirrored Sheets"
+   (:mixin mirrored-sheet-mixin)
+   (:mixin* top-level-sheet-mixin)
+   (:mixin* unmanaged-sheet-mixin)
+   (:function* get-top-level-sheet (sheet))
+   ("9.4.1 Mirror Functions"
+    (:generic sheet-direct-mirror (sheet))
+    (:generic sheet-mirrored-ancestor (sheet))
+    (:generic sheet-mirror (sheet))
+    (:generic realize-mirror (port mirrored-sheet))
+    (:generic destroy-mirror (port mirrored-sheet))
+    (:generic raise-mirror (port sheet))
+    (:generic bury-mirror (port sheet))
+    (:generic* port-set-mirror-name (port sheet name))
+    (:generic* port-set-mirror-icon (port sheet icon))
+    (:generic* port-set-mirror-geometry (port sheet region))
+    (:generic* port-enable-sheet (port sheet))
+    (:generic* port-disable-sheet (port sheet))
+    (:generic* port-shrink-sheet (port sheet))
+    (:accessor* sheet-mirror-geometry)
+    (:generic* update-mirror-geometry (sheet))
+    (:generic* (setf %sheet-direct-mirror) (new-val sheet)))
+   ;; Minor issue: Do these functions work on any sheet, or only on sheets that
+   ;; have a mirror, or only on sheets that have a direct mirror? Also, define
+   ;; what a "native coordinate" are. Also, do sheet-device-transformation and
+   ;; sheet-device-region really account for the user's transformation and
+   ;; clipping region? --- SWM
+   ("9.4.2 Internal Interfaces for Native Coordinates"
+    (:reader sheet-native-transformation)
+    (:reader sheet-native-region)
+    (:reader sheet-device-transformation)
+    (:reader sheet-device-region)
+    (:generic invalidate-cached-transformations (sheet))
+    (:generic invalidate-cached-regions (sheet))))
+  ("22.4 The Pointer Protocol"
+   (:protocol-class pointer ())
+   (:class standard-pointer)
+   (:accessor pointer-sheet)
+   ;; returns +pointer-left-button+ etc (enum)
+   (:reader pointer-button-state)
+   (:reader pointer-position)
+   (:generic (setf pointer-position) (x y pointer))
+   (:accessor pointer-cursor)
+   (:macro* with-pointer-grabbed ((port sheet &key pointer multiple-window) &body body))
+   (:generic* port-grab-pointer (port pointer sheet &key multiple-window)
+              (:documentation "Grab the specified pointer."))
+   (:generic* port-ungrab-pointer (port pointer sheet)
+              (:documentation "Ungrab the specified pointer."))
+   (:generic* set-sheet-pointer-cursor (port sheet cursor)
+              (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))))

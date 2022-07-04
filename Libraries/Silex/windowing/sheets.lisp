@@ -22,48 +22,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-;;; input protocol
-
-(defgeneric dispatch-event (client event))
-(defgeneric queue-event (client event))
-(defgeneric schedule-event (client event delay))
-(defgeneric handle-event (client event))
-(defgeneric event-read (client))
-(defgeneric event-read-no-hang (client))
-(defgeneric event-peek (client &optional event-type))
-(defgeneric event-unread (client event))
-(defgeneric event-listen (client))
-
-;;; These DEFGENERIC forms are commented out because they appear
-;;; in decls.lisp.
-;(defgeneric sheet-direct-mirror (sheet))
-;(defgeneric sheet-mirrored-ancestor (sheet))
-;(defgeneric sheet-mirror (sheet))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; repaint protocol
-
-(defgeneric dispatch-repaint (sheet region))
-;(defgeneric queue-repaint (sheet region))
-;(defgeneric handle-repaint (sheet region))
-;(defgeneric repaint-sheet (sheet region))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; notification protocol
-
-(defgeneric note-sheet-grafted (sheet))
-(defgeneric note-sheet-degrafted (sheet))
-(defgeneric note-sheet-adopted (sheet))
-(defgeneric note-sheet-disowned (sheet))
-(defgeneric note-sheet-enabled (sheet))
-(defgeneric note-sheet-disabled (sheet))
-(defgeneric note-sheet-region-changed (sheet))
-(defgeneric note-sheet-transformation-changed (sheet))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
 ;;; non standard protocol
 
 (defgeneric %invalidate-cached-device-transformations (sheet))
@@ -87,8 +45,9 @@
   ((sheet :initarg :sheet)))
 
 (defmethod print-object ((object sheet-supports-only-one-child) stream)
-  (format stream "~A~%single-child-composite-pane is allowed to have only one child."
-          (slot-value object 'sheet)))
+  (format stream "~A~%~A is allowed to have only one child."
+          (slot-value object 'sheet)
+          'sheet-single-child-mixin))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;

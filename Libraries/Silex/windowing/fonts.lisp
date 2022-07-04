@@ -4,51 +4,6 @@
 ;;;; Font listing extension
 ;;;;
 
-(defgeneric port-all-font-families
-    (port &key invalidate-cache &allow-other-keys)
-  (:documentation
-   "Returns the list of all FONT-FAMILY instances known by PORT.
-With INVALIDATE-CACHE, cached font family information is discarded, if any."))
-
-(defgeneric font-family-name (font-family)
-  (:documentation
-   "Return the font family's name.  This name is meant for user display,
-and does not, at the time of this writing, necessarily the same string
-used as the text style family for this port."))
-
-(defgeneric font-family-port (font-family)
-  (:documentation "Return the port this font family belongs to."))
-
-(defgeneric font-family-all-faces (font-family)
-  (:documentation
-   "Return the list of all font-face instances for this family."))
-
-(defgeneric font-face-name (font-face)
-  (:documentation
-   "Return the font face's name.  This name is meant for user display,
-and does not, at the time of this writing, necessarily the same string
-used as the text style face for this port."))
-
-(defgeneric font-face-family (font-face)
-  (:documentation "Return the font family this face belongs to."))
-
-(defgeneric font-face-all-sizes (font-face)
-  (:documentation
-   "Return the list of all font sizes known to be valid for this font,
-if the font is restricted to particular sizes.  For scalable fonts, arbitrary
-sizes will work, and this list represents only a subset of the valid sizes.
-See font-face-scalable-p."))
-
-(defgeneric font-face-scalable-p (font-face)
-  (:documentation
-   "Return true if this font is scalable, as opposed to a bitmap font.  For
-a scalable font, arbitrary font sizes are expected to work."))
-
-(defgeneric font-face-text-style (font-face &optional size)
-  (:documentation
-   "Return an extended text style describing this font face in the specified
-size.  If size is nil, the resulting text style does not specify a size."))
-
 (defclass font-family ()
   ((font-family-port :initarg :port :reader font-family-port)
    (font-family-name :initarg :name :reader font-family-name))

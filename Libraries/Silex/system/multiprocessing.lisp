@@ -21,7 +21,7 @@
 ;;; multi-processing. CLIM provides a pset of functions that implement
 ;;; a uniform interface to the multi-processing functionality.
 
-(defconstant *multiprocessing-p* bt:*supports-threads-p*
+(defvar *multiprocessing-p* bt:*supports-threads-p*
   "The value of *multiprocessing-p* is t if the current Lisp environment
 supports multi-processing, otherwise it is nil.")
 

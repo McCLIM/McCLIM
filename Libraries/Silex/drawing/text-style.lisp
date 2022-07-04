@@ -56,9 +56,8 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-  (defgeneric text-style-equalp (style1 style2)
-    (:method ((style1 text-style) (style2 text-style))
-      (eq style1 style2)))
+  (defmethod text-style-equalp ((style1 text-style) (style2 text-style))
+    (eq style1 style2))
 
   (defclass standard-text-style (text-style)
     ((family   :initarg :text-family

@@ -32,7 +32,6 @@
    (:module "drawing"
     :components ((:file "design")
                  (:file "text-style")
-                 (:file "colors"   :depends-on ("design"))
                  (:file "pattern"  :depends-on ("design"))
                  (:file "medium"   :depends-on ("design" "text-style" "colors"))
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))))

@@ -470,6 +470,9 @@ in KEYWORDS removed."
 (defun symbol-concat (&rest symbols)
   (intern (apply #'concatenate 'string (mapcar #'string symbols))))
 
+(defun protocol-predicate-name (name)
+  (symbol-concat name (if (find #\- (string name)) "-" "") '#:p))
+
 (defun stream-designator-symbol (symbol default)
   "Maps T to DEFAULT, barfs if argument does not look good.
    To be used in the various WITH-... macros."

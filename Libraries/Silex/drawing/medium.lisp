@@ -200,37 +200,31 @@
 
 ;;; Medium Device functions
 
-(defgeneric medium-device-transformation (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-device-transformation sheet)
-      (medium-transformation medium))))
+(defmethod medium-device-transformation ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-device-transformation sheet)
+    (medium-transformation medium)))
 
-(defgeneric medium-device-region (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-device-region sheet)
-      (transform-region (medium-device-transformation medium)
-                        (medium-clipping-region medium)))))
+(defmethod medium-device-region ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-device-region sheet)
+    (transform-region (medium-device-transformation medium)
+                      (medium-clipping-region medium))))
 
-(defgeneric medium-native-transformation (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-native-transformation sheet)
-      +identity-transformation+)))
+(defmethod medium-native-transformation ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-native-transformation sheet)
+    +identity-transformation+))
 
-(defgeneric medium-native-region (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-native-region sheet)
-      (transform-region (compose-transformations (medium-native-transformation medium)
-                                                 (medium-transformation medium))
-                        (medium-clipping-region medium)))))
+(defmethod medium-native-region ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-native-region sheet)
+    (transform-region (compose-transformations (medium-native-transformation medium)
+                                               (medium-transformation medium))
+                      (medium-clipping-region medium))))
 
 
 ;;; Line-Style class
-
-(defgeneric line-style-equalp (arg1 arg2))
 
 (defclass standard-line-style (line-style)
   ((unit        :initarg :line-unit
