@@ -235,15 +235,8 @@
 (defclass wayland-graft (graft)
   ())
 
-(defmethod dispatch-event
-    ((sheet mirrored-sheet-mixin) (event window-configuration-event))
-  (format t "dispatch-event window-cfg-event: Not sure what should happen here...~%")
-  ;; I'm not sure if the is the right way. For now, let's handle it like an
-  ;; immediate-event-mixin
-  (handle-event sheet event))
-
 (defmethod handle-event
-    ((sheet wayland-graft) (event window-configuration-event))
+    ((sheet top-level-sheet-pane) (event window-configuration-event))
   ;; Is this where I should set the egl-window width and swap buffers?
   ;; Should this be handled by the medium? or te mirror?
   (alx:when-let ((mirror (sheet-mirror sheet)))
