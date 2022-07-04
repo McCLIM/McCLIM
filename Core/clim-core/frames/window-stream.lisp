@@ -96,3 +96,9 @@
                 do (handle-event (event-sheet event) event)))
       (frame-exit ()
         (disown-frame (frame-manager frame) frame)))))
+
+(defmethod invoke-with-output-to-drawing-stream (continuation backend (window null) &rest args)
+  (let* ((port (find-port :server-path backend))
+         (window (apply #'open-window-stream :port port :input-buffer nil args)))
+    (multiple-value-prog1 (funcall continuation window)
+      (finish-output window))))

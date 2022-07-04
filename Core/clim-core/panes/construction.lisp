@@ -174,3 +174,8 @@ returned or error is signaled depending on the argument ERRORP.")
 
 (defmethod handle-event ((sheet basic-pane) (event window-unmap-event))
   (setf (sheet-enabled-p sheet) nil))
+
+(defmethod handle-repaint :around ((sheet basic-pane) region)
+  (letf (((medium-background sheet) (pane-background sheet))
+         ((medium-foreground sheet) (pane-foreground sheet)))
+    (call-next-method)))

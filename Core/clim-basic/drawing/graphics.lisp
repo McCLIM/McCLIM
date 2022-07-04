@@ -175,12 +175,8 @@
   ;; Moore suggests we use (0,0) if medium is no stream.
   ;;
   ;; Furthermore, the specification is vague about possible scalings ...
-  (unless (and x y)
-    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
-                                     (stream-cursor-position medium)
-                                     (values 0 0))
-      (setf x (or x cx)
-            y (or y cy))))
+  (orf x 0)
+  (orf y 0)
   (multiple-value-bind (mxx mxy myy myx tx ty)
       (get-transformation (medium-transformation medium))
     (declare (ignore tx ty))
@@ -198,12 +194,8 @@
   ;; (0,0)-(0,1)] and setting up a transformation which features an upward
   ;; pointing y-axis and a right pointing x-axis with a length equal to above
   ;; measured vectors.
-  (unless (and x y)
-    (multiple-value-bind (cx cy) (if (extended-output-stream-p medium)
-                                     (stream-cursor-position medium)
-                                     (values 0 0))
-      (setf x (or x cx)
-            y (or y cy))))
+  (orf x 0)
+  (orf y 0)
   (let* ((tr (medium-transformation medium))
          (xlen
           (multiple-value-bind (dx dy) (transform-distance tr 1 0)

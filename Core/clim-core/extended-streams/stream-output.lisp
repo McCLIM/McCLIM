@@ -469,6 +469,51 @@ produces no more than one line of output i.e., doesn't wrap."))
       (when (sheetp *standard-output*)
         (medium-beep (sheet-medium *standard-output*)))))
 
+(defmethod invoke-with-local-coordinates ((medium extended-output-stream) cont x y)
+  ;; For now we do as real CLIM does.
+  ;; Default seems to be the cursor position.
+  ;; Moore suggests we use (0,0) if medium is no stream.
+  ;;
+  ;; Furthermore, the specification is vague about possible scalings ...
+  (unless (and x y)
+    (multiple-value-bind (cx cy) (stream-cursor-position medium)
+      (orf x cx)
+      (orf y cy)))
+  (multiple-value-bind (mxx mxy myy myx tx ty)
+      (get-transformation (medium-transformation medium))
+    (declare (ignore tx ty))
+    (with-identity-transformation (medium)
+      (with-drawing-options
+          (medium :transformation (make-transformation
+                                   mxx mxy myy myx
+                                   x y))
+        (funcall cont medium)))))
+
+(defmethod invoke-with-first-quadrant-coordinates ((medium extended-output-stream) cont x y)
+  ;; First we do the same as invoke-with-local-coordinates but rotate and deskew
+  ;; it so that it becomes first-quadrant. We do this by simply measuring the
+  ;; length of the transformed x and y "unit vectors".  [That is (0,0)-(1,0) and
+  ;; (0,0)-(0,1)] and setting up a transformation which features an upward
+  ;; pointing y-axis and a right pointing x-axis with a length equal to above
+  ;; measured vectors.
+  (unless (and x y)
+    (multiple-value-bind (cx cy) (stream-cursor-position medium)
+      (orf x cx)
+      (orf y cy)))
+  (let* ((tr (medium-transformation medium))
+         (xlen
+          (multiple-value-bind (dx dy) (transform-distance tr 1 0)
+            (sqrt (+ (expt dx 2) (expt dy 2)))))
+         (ylen
+          (multiple-value-bind (dx dy) (transform-distance tr 0 1)
+            (sqrt (+ (expt dx 2) (expt dy 2))))))
+    (with-identity-transformation (medium)
+      (with-drawing-options
+          (medium :transformation (make-transformation
+                                   xlen 0 0 (- ylen)
+                                   x y))
+        (funcall cont medium)))))
+
 (defgeneric scroll-quantum (pane)
   (:documentation "Returns the number of pixels respresenting a 'line', used
 to computed distance to scroll in response to mouse wheel events."))

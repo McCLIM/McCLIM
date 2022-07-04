@@ -166,8 +166,7 @@
   (with-sheet-medium (medium sheet)
     (with-bounding-rectangle* (x1 y1 x2 y2)
         (region-intersection region (sheet-visible-region sheet))
-      (letf (((medium-background medium) (pane-background sheet)))
-        (medium-clear-area medium x1 y1 x2 y2)))))
+      (medium-clear-area medium x1 y1 x2 y2))))
 
 ;;; Integration with region and transformation changes
 (defparameter *skip-repaint-p* nil)

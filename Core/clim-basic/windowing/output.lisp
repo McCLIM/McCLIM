@@ -613,11 +613,6 @@
 (def-sheet-trampoline medium-force-output ())
 (def-sheet-trampoline medium-beep ())
 
-(defmethod medium-clear-area :around ((medium output-recording-stream) left top right bottom)
-  (declare (ignore left top right bottom))
-  (when (stream-drawing-p medium)
-    (call-next-method)))
-
 (defmethod medium-copy-area ((from-drawable sheet) fx fy w h (to-drawable sheet) tx ty)
   (with-sheet-medium (from-drawable from-drawable)
     (with-sheet-medium (to-drawable to-drawable)
