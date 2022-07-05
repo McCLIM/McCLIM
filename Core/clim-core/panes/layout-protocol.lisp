@@ -361,6 +361,16 @@
     :initform nil
     :documentation "The cache of the space requirements of the pane. NIL means: need to recompute.") ))
 
+(defun layout-sheet (sheet &optional width height)
+  (when (and (null width) (null height))
+    (let ((space (compose-space sheet)))
+      (setq width (space-requirement-width space))
+      (setq height (space-requirement-height space))))
+  (unless (and (= width (bounding-rectangle-width sheet))
+               (= height (bounding-rectangle-height sheet)))
+    (resize-sheet sheet width height))
+  (allocate-space sheet width height))
+
 ;;; Note
 
 ;;; This is how I read the relevant section of the specification:

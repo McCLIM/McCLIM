@@ -351,11 +351,7 @@
   ;;
   ;; --GB 2003-03-16
   (declare (ignore space-req-keys resize-frame))
-  (let* ((space-requirements (compose-space pane))
-         (width (space-requirement-width space-requirements))
-         (height (space-requirement-height space-requirements)))
-    (resize-sheet pane width height)
-    (allocate-space pane width height)))
+  (layout-sheet pane))
 
 ;;; Now each child (client) of a box-layout pane is described by the
 ;;; following class:

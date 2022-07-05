@@ -348,16 +348,7 @@
 (defmethod layout-frame ((frame application-frame) &optional width height)
   (when (alexandria:xor width height)
     (error "LAYOUT-FRAME must be called with both WIDTH and HEIGHT or neither"))
-  (let ((tpl-sheet (frame-top-level-sheet frame)))
-    (when (and (null width) (null height))
-      (let (;;I guess this might be wrong. --GB 2004-06-01
-            (space (compose-space tpl-sheet)))
-        (setq width (space-requirement-width space))
-        (setq height (space-requirement-height space))))
-    (unless (and (= width (bounding-rectangle-width tpl-sheet))
-                 (= height (bounding-rectangle-height tpl-sheet)))
-      (resize-sheet tpl-sheet width height))
-    (allocate-space tpl-sheet width height)))
+  (layout-sheet (frame-top-level-sheet frame) width height))
 
 (defun find-pane-of-type (parent type)
   "Returns a pane of `type' in the forest growing from `parent'."
