@@ -424,16 +424,20 @@
             (setq redisplayp (or redisplayp t)
                   clearp t))
           (when redisplayp
-            (changing-space-requirements ()
-              (with-output-buffered (pane-object)
-                (when-let ((highlited (frame-highlited-presentation frame)))
-                  (highlight-presentation-1 (car highlited)
-                                            (cdr highlited)
-                                            :unhighlight)
-                  (setf (frame-highlited-presentation frame) nil))
-                (when clearp
-                  (window-clear pane-object))
-                (call-next-method)))
+            ;; FIXME the pane may be resized twice: once when it is cleared, and
+            ;; the second time after drawing. CHANGING-SPACE-REQUIREMENTS can't
+            ;; be used here because it inhibits all resizes, so it also affects
+            ;; local drawing context from WITH-OUTPUT-TO-DRAWING-STREAM that may
+            ;; rely on eagerly changed size. -- jd 2022-07-05
+            (with-output-buffered (pane-object)
+              (when-let ((highlited (frame-highlited-presentation frame)))
+                (highlight-presentation-1 (car highlited)
+                                          (cdr highlited)
+                                          :unhighlight)
+                (setf (frame-highlited-presentation frame) nil))
+              (when clearp
+                (window-clear pane-object))
+              (call-next-method))
             (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
               (setf (pane-needs-redisplay pane-object) nil))))
       (clear-pane-try-again ()
