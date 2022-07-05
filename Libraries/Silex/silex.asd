@@ -33,7 +33,7 @@
     :components ((:file "design")
                  (:file "text-style")
                  (:file "pattern"  :depends-on ("design"))
-                 (:file "medium"   :depends-on ("design" "text-style" "colors"))
+                 (:file "medium"   :depends-on ("design" "text-style"))
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))))
    (:module "windowing"
     :components ((:file "events")
