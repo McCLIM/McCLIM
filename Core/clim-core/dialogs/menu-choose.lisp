@@ -325,11 +325,8 @@ maximum size according to `frame')."
           ;; part of the screen.
           (let ((max-left (- res-max-x frame-width))
                 (max-top (- res-max-y frame-height)))
-            ;; XXX: This is an ugly way to find the screen position of
-            ;; the menu frame, possibly even undefined.
             (multiple-value-bind (left top)
-                (with-slots (dx dy) (sheet-transformation top-level-pane)
-                  (values dx dy))
+                (transform-position (sheet-transformation top-level-pane) 0 0)
               (when x-position
                 (setf left x-position))
               (when y-position
