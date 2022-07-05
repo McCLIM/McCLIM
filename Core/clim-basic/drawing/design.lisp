@@ -369,9 +369,11 @@
 
 (defclass standard-flipping-ink (design)
   ((design1 :initarg :design1
-            :type design)
+            :type design
+            :reader flipping-ink-design1)
    (design2 :initarg :design2
-            :type design)))
+            :type design
+            :reader flipping-ink-design2)))
 
 (defmethod design-ink ((flipping-ink standard-flipping-ink) x y)
   (declare (ignore x y))

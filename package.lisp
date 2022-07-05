@@ -1929,6 +1929,7 @@
    #:viewport-pane
    #:device-font-text-style-p
    #:draw-image
+   #:draw-image*
    #:image-pane
    #:draw-label
    #:label-pane-label
@@ -1971,6 +1972,8 @@
    #:transformed-pattern
    #:effective-transformed-design       ; obsolete
    #:rectangular-tile-design
+   #:flipping-ink-design1
+   #:flipping-ink-design2
    ;; readers
    #:pattern-array
    #:transformed-design-design

@@ -89,9 +89,9 @@ top-left. Useful when we iterate over the same array and mutate its state."
           ,form)))
     (standard-flipping-ink
      `(let* ((rgba (logxor (climi::%rgba-value
-                            (slot-value design 'climi::design1))
+                            (flipping-ink-design1 design))
                            (climi::%rgba-value
-                            (slot-value design 'climi::design2))))
+                            (flipping-ink-design2 design))))
              (a.fg #xff))
         (declare (type argb-pixel rgba)
                  (ignorable rgba a.fg))
