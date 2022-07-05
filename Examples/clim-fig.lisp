@@ -188,9 +188,7 @@
              (lambda (gadget)
                (setf (current-color (gadget-client gadget)) color))
              :width width :height height
-             :background color :foreground color
-             :normal color :pushed-and-highlighted color
-             :highlighted color))
+             :background color :foreground color))
 
 (defun make-drawing-mode-button (label mode)
   (make-pane 'push-button
