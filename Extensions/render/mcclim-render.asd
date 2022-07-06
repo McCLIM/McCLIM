@@ -4,7 +4,7 @@
   :description "Support for raster images McCLIM."
   :depends-on ("alexandria"
                "cl-vectors"
-               "clim-basic"
+               "clim"
                "mcclim-fonts/truetype"
                "mcclim-backend-common")
   :serial t

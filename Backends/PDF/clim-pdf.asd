@@ -1,7 +1,7 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-pdf"
-  :depends-on ("clim-basic" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
+  :depends-on ("clim" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
                "cl-pdf"
                "flexi-streams"
                "clim-postscript"

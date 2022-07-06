@@ -5,7 +5,7 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-postscript"
-  :depends-on ("clim-basic"
+  :depends-on ("clim"
                "clim-postscript-font")
   :serial t
   :components ((:file "package")

@@ -1,7 +1,7 @@
 (in-package #:asdf-user)
 
 (defsystem "mcclim-raster-image"
-  :depends-on ("clim-basic" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
+  :depends-on ("clim" ; for CLIMB:FILE-DESTINATION, CLIMB:REGISTER-OUTPUT-DESTINATION-TYPE
                "mcclim-render"
                "mcclim-backend-common")
   :serial t

@@ -19,6 +19,6 @@ bitmap reading functions.
 
 Currently supported formats are the formats covered by opticl
 library and XPM format."
-  :depends-on ("clim-basic" "opticl")
+  :depends-on ("clim" "opticl")
   :components ((:file "xpm")
                (:file "bitmaps" :depends-on ("xpm"))))
