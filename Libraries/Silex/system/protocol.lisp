@@ -224,7 +224,7 @@
   (:macro* do-sequence* ((vars sequence step &optional result-form) &body body))
   (:function* curry (fun &rest args))
   (:function* always (x))
-  (:function* clamp (x))
+  (:function* clamp (x min max))
   (:macro* maxf (&rest args) max)
   (:macro* minf (&rest args) min)
   (:macro* nconcf (&rest args) nconc)
@@ -253,7 +253,9 @@
   (:symbol* slots-for-pprint-object)
   (:symbol* simple-pprint-object-args)
   (:symbol* simple-pprint-object)
-  (:macro* maybe-print-readably ((self sink) &body body)))
+  (:macro* maybe-print-readably ((self sink) &body body))
+  (:function* declare-ignorable-form (variables))
+  (:function* declare-ignorable-form* (&rest variables)))
 
 (define-protocol "B The CLIM-SYS Package" ("Appendices")
   ("B.1 Resources"
@@ -332,6 +334,7 @@
     (:generic region-intersection (region1 region2))
     (:generic region-difference (region1 region2))
     (:generic* region-complement (region))
+    (:generic* region-exclusive-or (region1 region2))
     (:condition* region-set-not-rectangular (error))))
   ("3.2 Other Region Types"
    ("3.2.1 Points"
@@ -713,6 +716,10 @@
    (:reader color-rgb)
    (:reader color-ihs)
    (:reader* color-rgba)
+   (:generic* highlight-shade (ink)
+     (:documentation
+      "Produce an alternate shade of the given ink for the purpose of highlighting.
+Typically the ink will be brightened, but very light inks may be darkened."))
    ("13.3.1 Standard Color Names and Constants"
     (:constant +red+)
     (:constant +green+)
@@ -733,6 +740,8 @@
   ("13.6 Indirect Inks"
    (:constant +foreground-ink+)
    (:constant +background-ink+)
+   (:variable* *foreground-ink*)
+   (:variable* *background-ink*)
    (:class* indirect-ink (design))
    (:function* indirect-ink-p (design))
    (:function* indirect-ink-ink (indirect-ink)))
@@ -904,11 +913,13 @@ call depends on a port."))
     ;; Event queue protocol (a mailbox with compression, maybe move to system?)
     (:protocol-class* event-queue ())
     (:accessor* event-queue-port)
+    (:accessor* event-queue-head)
+    (:accessor* event-queue-tail)
     (:class* simple-event-queue (event-queue))
     (:class* concurrent-event-queue (event-queue))
     (:generic* schedule-event-queue (queue event delay))
     (:generic* event-queue-read (event-queue)
-      (:documentation "Reads one event from the queue, if there is no event, hang
+               (:documentation "Reads one event from the queue, if there is no event, hang
 until here is one."))
 
     (:generic* event-queue-read-no-hang (event-queue)
@@ -973,6 +984,8 @@ is not empty or none of the above happened before a timeout.
    (:reader pointer-event-y)
    (:reader pointer-event-native-x)
    (:reader pointer-event-native-y)
+   (:reader pointer-event-native-graft-x)
+   (:reader pointer-event-native-graft-y)
    (:reader pointer-event-pointer)
    (:class pointer-button-event (pointer-event))  
    (:reader pointer-event-button)
@@ -987,6 +1000,9 @@ is not empty or none of the above happened before a timeout.
    (:reader* pointer-event-delta-y)
    (:class pointer-motion-event (pointer-event))
    (:class pointer-boundary-event (pointer-motion-event))
+   (:generic* synthesize-pointer-motion-event (pointer)
+     (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
+   (:function* synthesize-boundary-events (port event))
    ;; Returns:
    ;; (member :ancestor :virtual :inferior :nonlinear :nonlinear-virtual nil)
    (:generic pointer-boundary-event-kind (pointer-boundary-event))
@@ -1016,6 +1032,9 @@ is not empty or none of the above happened before a timeout.
    (:class* window-manager-iconify-event (window-manager-event))
    (:class* window-manager-deiconify-event (window-manager-event))
    (:class timer-event (event))
+   (:class* lambda-event (event))
+   (:reader lambda-event-thunk)
+   (:macro* with-synchronization (sheet test &body body))
    (:constant +pointer-left-button+ fixnum)
    (:constant +pointer-middle-button+ fixnum)
    (:constant +pointer-right-button+ fixnum)
@@ -1105,7 +1124,9 @@ is not empty or none of the above happened before a timeout.
    (:reader* port-cursors)
    (:reader* port-selections)
    (:accessor* port-grabbed-sheet)
-   (:accessor* port-pressed-sheet))
+   (:accessor* port-pressed-sheet)
+   (:function* stored-object (port selection))
+   (:function* remove-stored-object (port selection)))
   ("McCLIM extension: Font listing"
    (:generic* port-all-font-families
        (port &key invalidate-cache &allow-other-keys)

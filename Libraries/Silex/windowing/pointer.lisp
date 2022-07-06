@@ -1,26 +1,5 @@
 (in-package #:silex)
 
-;;; 22.4 The Pointer Protocol
-;;;
-;;; Implemented by the back end.  Sort of.
-
-(defgeneric pointer-sheet (pointer))
-
-(defgeneric (setf pointer-sheet) (sheet pointer))
-
-(defgeneric pointer-button-state (pointer))
-
-(defgeneric pointer-position (pointer))
-
-(defgeneric* (setf pointer-position) (x y pointer))
-
-(defgeneric synthesize-pointer-motion-event (pointer)
-  (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
-
-(defgeneric pointer-cursor (pointer))
-
-(defgeneric (setf pointer-cursor) (cursor pointer))
-
 ;;; FIXME: I think the standard-pointer should absorb some of the common
 ;;; methods that are currently entirely provided by the backends.
 

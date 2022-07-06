@@ -916,11 +916,6 @@
 
 ;;; Color utilities
 
-(defgeneric highlight-shade (ink)
-  (:documentation
-  "Produce an alternate shade of the given ink for the purpose of highlighting.
-   Typically the ink will be brightened, but very light inks may be darkened."))
-
 (defmethod highlight-shade (ink) ink)
 
 (defmethod highlight-shade ((ink (eql +background-ink+)))
