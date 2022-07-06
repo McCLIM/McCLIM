@@ -27,6 +27,10 @@
              (distribute-event port event))))))))
 
 ;;; Now we connect all of wayland-client events to our port's events
+(defun %hacky-top-level-sheet ()
+  (frame-top-level-sheet
+   (first (frame-manager-frames
+           (find-frame-manager :port *wayland-port*)))))
 
 (defmethod xdg:xdg-surface-configure ((surface xdg:xdg-surface) serial)
   ;; We assume we handle configuration events immediately, so we can
@@ -40,14 +44,12 @@
 
 (defmethod xdg:xdg-toplevel-configure
     ((wayland-proxy wayland-xdg-toplevel) width height states)
-  (declare (ignore states wayland-proxy))
-  (format *debug-io* "toplevel configure event: w: ~a  h: ~a frame?: ~s ~%" width height
+  (declare (ignore wayland-proxy))
+  (format *debug-io* "toplevel configure event: w: ~a  h: ~a  states: ~s frame?: ~s ~%" width height states
           (frame-manager-frames (find-frame-manager :port *wayland-port*)))
   (when (every #'plusp (list width height))
     (alx:when-let*
-        ((top-level-sheet (frame-top-level-sheet
-                           (first (frame-manager-frames
-                                   (find-frame-manager :port *wayland-port*)))))
+        ((top-level-sheet (%hacky-top-level-sheet))
          (clim-event (make-instance 'window-configuration-event
                                     :width width
                                     :height height
@@ -62,11 +64,9 @@
   (format *debug-io* "close toplevel event ~s~%" *application-frame*)
   ;; QQQQ this feels terrible but it seems *application-frame* isn't
   ;; bound. Extremely hacky way to get top-level-frame-sheet
-  (let* ((sheet (frame-top-level-sheet
-                 (first (frame-manager-frames
-                         (find-frame-manager :port *wayland-port*)))))
-         (clim-event (make-instance 'window-manager-delete-event
-                                    :sheet sheet)))
+  (alx:when-let* ((sheet (%hacky-top-level-sheet))
+                  (clim-event (make-instance 'window-manager-delete-event
+                                             :sheet sheet)))
     ;; (break)
     (distribute-event *wayland-port* clim-event)))
 
