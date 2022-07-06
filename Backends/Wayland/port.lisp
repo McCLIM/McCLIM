@@ -235,7 +235,7 @@
 (defclass wayland-graft (graft)
   ())
 
-(defmethod handle-event
+(defmethod handle-event :before
     ((sheet top-level-sheet-pane) (event window-configuration-event))
   ;; Is this where I should set the egl-window width and swap buffers?
   ;; Should this be handled by the medium? or te mirror?
@@ -320,3 +320,8 @@
 (defmethod medium-clear-area :after
     ((medium wayland-egl-medium) left top right bottom)
   (format t "EGL medium clear area called~%"))
+
+(defmethod medium-draw-polygon*
+    ((medium wayland-egl-medium) coord-seq closed filled)
+  (declare (ignore coord-seq closed filled))
+  nil)
