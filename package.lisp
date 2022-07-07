@@ -2142,16 +2142,7 @@
 (defpackage :clim-internals
   (:use :clim :clim-sys :clim-extensions :clim-backend :clim-lisp)
   (:nicknames :climi)
-  #+excl
-  (:import-from :excl compile-system load-system)
-  (:import-from #:alexandria
-                #:make-keyword
-                #:ensure-gethash
-                #:emptyp
-                #:last-elt
-                #:with-gensyms
-                #:once-only
-                #:assoc-value)
+  (:import-from #:alexandria #:make-keyword #:emptyp #:last-elt #:assoc-value)
   (:intern #:letf))
 
 (defpackage :clim-user

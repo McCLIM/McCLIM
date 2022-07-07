@@ -106,6 +106,27 @@
   `(progn
      ,@body))
 
+;;; Curbed from Alexandria.
+(deftype array-index (&optional (length (1- array-dimension-limit)))
+  "Type designator for an index into array of LENGTH: an integer between
+0 (inclusive) and LENGTH (exclusive). LENGTH defaults to one less than
+ARRAY-DIMENSION-LIMIT."
+  `(integer 0 (,length)))
+
+(defmacro with-gensyms (names &body body)
+  `(let ,(mapcar (lambda (symbol)
+                   `(,symbol (gensym ,(symbol-name symbol))))
+          names)
+     ,@body))
+
+;;; Curbed from PCL.
+(defmacro once-only ((&rest names) &body body)
+  (let ((gensyms (loop for n in names collect (gensym))))
+    `(let (,@(loop for g in gensyms collect `(,g (gensym))))
+       `(let (,,@(loop for g in gensyms for n in names collect ``(,,g ,,n)))
+          ,(let (,@(loop for n in names for g in gensyms collect `(,n ,g)))
+             ,@body)))))
+
 (deftype function-designator ()
   `(or function symbol (cons (eql setf) (cons symbol null))))
 
@@ -138,6 +159,22 @@ When A = B, return 0.5."
   (if (= a b)
       0.5
       (/ (- v a) (- b a))))
+
+(declaim (inline ensure-list))
+(defun ensure-list (maybe-list)
+  (if (listp maybe-list)
+      maybe-list
+      (list maybe-list)))
+
+(defmacro ensure-gethash (key hash-table &body compute)
+  (once-only (key hash-table)
+    (with-gensyms (value presentp)
+     `(multiple-value-bind (,value ,presentp) (gethash ,key ,hash-table)
+        (if ,presentp
+            (values ,value ,presentp)
+            (values (setf (gethash ,key ,hash-table)
+                          (progn ,@compute))
+                    nil))))))
 
 
 (defun check-letf-form (form)
@@ -273,7 +310,7 @@ sequence.  The iteration is then \"stepped\" by the specified number."
              (t `(lambda (list) (nthcdr ,n list))))))
     (with-gensyms (body-fun i iter-limit)
       (once-only (sequence)
-        (let* ((vars        (alexandria:ensure-list vars))
+        (let* ((vars        (ensure-list vars))
                (count       (length vars))
                (step        (or step count))
                (vector-args (loop for j from 0 below count
@@ -286,13 +323,13 @@ sequence.  The iteration is then \"stepped\" by the specified number."
                (etypecase ,sequence
                  (list
                   (loop with ,iter-limit = (- (length ,sequence) ,count)
-                        for ,i of-type alexandria:array-index from 0 by ,step
+                        for ,i of-type array-index from 0 by ,step
                         for ,vars on ,sequence by (function ,(list-stepper step))
                         until (> ,i ,iter-limit)
                         do (,body-fun ,@vars)))
                  (vector
                   (loop with ,iter-limit = (- (length ,sequence) ,count)
-                        for ,i of-type alexandria:array-index from 0 by ,step
+                        for ,i of-type array-index from 0 by ,step
                         until (> ,i ,iter-limit)
                         do (,body-fun ,@vector-args)))))
              ,@(when result-form
@@ -384,6 +421,18 @@ sequence.  The iteration is then \"stepped\" by the specified number."
                    `(progn ,@body))))
       (bind binding-list body))))
 
+(defun evaluate-constant (name new test)
+  (if (boundp name)
+      (let ((old (symbol-value name)))
+        (if (funcall test old new)
+            old
+            new))
+      new))
+
+(defmacro define-constant (name value &key documentation (test #'eql))
+  `(defconstant ,name (evaluate-constant ',name ,value ,test)
+     ,@(and documentation (list documentation))))
+
 ;;; curbed from uiop
 (defmacro nest (&rest things)
   (reduce #'(lambda (outer inner) `(,@outer ,inner))
@@ -428,6 +477,9 @@ in KEYWORDS removed."
 
 (defun symbol-concat (&rest symbols)
   (intern (apply #'concatenate 'string (mapcar #'string symbols))))
+
+(defun protocol-predicate-name (name)
+  (symbol-concat name (if (find #\- (string name)) "-" "") '#:p))
 
 (defun stream-designator-symbol (symbol default)
   "Maps T to DEFAULT, barfs if argument does not look good.
