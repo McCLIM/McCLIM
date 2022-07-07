@@ -404,7 +404,7 @@
                :y (fmt y)
                :text-anchor text-anchor
                :dominant-baseline dominant-baseline
-               (cl-who:fmt (subseq string start (or end (length string)))))))))
+               (cl-who:esc (subseq string start (or end (length string)))))))))
 
 
 ;;; Patterns
