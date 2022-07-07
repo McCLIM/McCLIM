@@ -635,6 +635,10 @@
   (apply #'draw-design medium
          (bounding-rectangle (sheet-region medium)) options))
 
+(defmethod draw-design ((medium sheet) (design nowhere-region)
+                        &rest options &key &allow-other-keys)
+  (declare (ignore medium design options)))
+
 (defun draw-rounded-rectangle* (sheet x1 y1 x2 y2
                                       &rest args &key
                                       (radius 7)
