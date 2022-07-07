@@ -4,8 +4,12 @@
   :depends-on ("clim-basic" "spatial-trees" (:feature :sbcl "sb-introspect"))
   :pathname "clim-core"
   :components
-  ((:file "utilities")
-   (:file "theming")
+  ((:module "system"
+    :components ((:file "protocol-classes")
+                 (:file "declarations")
+                 (:file "utilities")
+                 (:file "extra-colors")
+                 (:file "theming")))
    (:module "extended-streams"
     :components ((:file "text-formatting") ; standard-page-layout
                  (:file "views")           ; stream-default-view
@@ -37,7 +41,7 @@
                  (:file "drag-and-drop")
                  (:file "selection-object")))
    (:module "formatting"
-    :depends-on ("presentations" "theming")
+    :depends-on ("presentations")
     :components ((:file "bordered-output")
                  (:file "table-formatting")
                  (:file "graph-formatting")))
@@ -54,7 +58,7 @@
                  (:file "tables")
                  (:file "processor")))
    (:module "panes"
-    :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing" "theming")
+    :depends-on ("incremental-redisplay" "presentations" "standard-presentations" "input-editing")
     :serial t
     :components ((:file "construction")
                  (:file "layout-protocol")
@@ -71,7 +75,7 @@
                  (:file "window-stream")
                  (:file "default-frame")))
    (:module "gadgets"
-    :depends-on ("commands" "input-editing" "frames" "incremental-redisplay" "panes" "presentations" "theming")
+    :depends-on ("commands" "input-editing" "frames" "incremental-redisplay" "panes" "presentations")
     :serial t
     :components ((:file "base")
                  (:file "abstract")

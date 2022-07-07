@@ -636,3 +636,97 @@ be forms containing FORM."
      ((and *print-pretty* *print-readably*)
       (simple-pprint-object ,sink ,self))
      (t ,@body)))
+
+(defmacro define-protocol-class (name super-classes &optional slots &rest options)
+  (let* ((sym-name (symbol-name name))
+         (protocol-predicate (alexandria:symbolicate
+                              sym-name
+                              (if (find #\- sym-name) "-" "")
+                              '#:p))
+         (predicate-docstring
+           (concatenate 'string
+                        "Protocol predicate checking for class " sym-name)))
+    `(progn
+       (defclass ,name ,super-classes ,slots ,@options)
+
+       ;; This adds a DUMMY slot to the protocol class that signals an
+       ;; error in its initfunction. Thus attempting to make an
+       ;; instance of the class signals an error.
+       ;;
+       ;; For subclasses, the slot is not added (as the method is
+       ;; EQL-specialized on the protocol class itself) so that no
+       ;; runtime time or space overhead is incurred.
+       (defmethod c2mop:compute-slots ((class (eql (find-class ',name))))
+         (list* (make-instance 'c2mop:standard-effective-slot-definition
+                               :name         'dummy
+                               :allocation   :instance
+                               :initform     '#1=(error "~S is a protocol class ~
+                                                         and thus cannot be ~
+                                                         instantiated"
+                                                        ',name)
+                               :initfunction (lambda () #1#))
+                (call-next-method)))
+
+       (let ((the-class (find-class ',name)))
+         (setf (documentation the-class 'type) "CLIM protocol class"))
+
+       (defgeneric ,protocol-predicate (object)
+         (:method ((object t))
+           nil)
+         (:method ((object ,name))
+           t)
+         (:documentation ,predicate-docstring))
+
+       ',name)))
+
+;; Since the declaim form for functions looks clumsy and is syntax-wise
+;; different from defun, we define us a new declfun, which fixes this.
+
+(defmacro declfun (name lambda-list)
+  `(declaim (ftype (function
+                    ,(let ((q lambda-list)
+                           res)
+                       (do () ((or (null q)
+                                   (member (car q) '(&optional &rest &key))))
+                         (push 't res)
+                         (pop q))
+                       (when (eq (car q) '&optional)
+                         (push '&optional res)
+                         (pop q)
+                         (do () ((or (null q)
+                                     (member (car q) '(&rest &key))))
+                           (pop q)
+                           (push 't res)))
+                       (when (eq (car q) '&rest)
+                         (push '&rest res)
+                         (pop q)
+                         (push 't res)
+                         (pop q))
+                       (when (eq (car q) '&key)
+                         (push '&key res)
+                         (pop q)
+                         (do () ((or (null q)
+                                     (member (car q) '(&allow-other-keys))))
+                           (push (list (intern (string (if (consp (car q))
+                                                           (if (consp (caar q))
+                                                               (caaar q)
+                                                               (caar q))
+                                                           (car q)))
+                                               :keyword)
+                                       't)
+                                 res)
+                           (pop q)))
+                       (when (eq (car q) '&allow-other-keys)
+                         (push '&allow-other-keys res)
+                         (pop q))
+                       (reverse res))
+                    t)
+                   ,name)))
+
+(defmacro pledge (type name &rest args)
+  (declare (ignore type args))
+  `(quote ,name))
+
+(defmacro declmacro (name lambda-list)
+  (declare (ignore lambda-list))
+  `(quote ,name))

@@ -2,19 +2,16 @@
 
 (defsystem "clim-basic"
   :depends-on ("clim-lisp" "bordeaux-threads" "trivial-garbage")
+  :pathname "clim-basic"
   :components
   ((:module "system"
     :components ((:file "utilities")
+                 (:file "protocol")
                  (:file "multiprocessing")
                  (:file "resources")
                  (:file "setf-star")))
-   (:module "protocols"
-    :depends-on ("system")
-    :components ((:file "declarations")
-                 (:file "protocol-classes")))
    (:module "geometry"
-    :pathname "clim-basic/geometry/"
-    :depends-on ("system" "protocols")
+    :depends-on ("system")
     :serial t
     :components ((:file "coordinates")
                  (:file "transforms")
@@ -31,8 +28,7 @@
                  (:file "region-composition")
                  (:file "region-set-composition")))
    (:module "drawing"
-    :pathname "clim-basic/drawing"
-    :depends-on ("system" "protocols" "geometry")
+    :depends-on ("system" "geometry")
     :components ((:file "design")
                  (:file "text-style")
                  (:file "colors"   :depends-on ("design"))
@@ -40,8 +36,7 @@
                  (:file "medium"   :depends-on ("design" "text-style" "colors"))
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))))
    (:module "windowing"
-    :pathname "clim-basic/windowing"
-    :depends-on ("system" "protocols" "geometry" "drawing")
+    :depends-on ("system" "geometry" "drawing")
     :components ((:file "events")
                  (:file "output")
                  (:file "pointer")
