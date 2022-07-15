@@ -138,305 +138,156 @@
 
 
 ;;; 12 Graphics
+(defmacro define-drawing-function ((name sheet &rest position-args)
+                                   extra-keys &body body)
+  (let ((medium-options (gensym)))
+    `(defun ,name (,sheet ,@position-args
+                   &rest ,medium-options &key ,@extra-keys &allow-other-keys)
+       (with-stream-designator (,sheet *standard-output*)
+         (with-medium-options (,sheet ,medium-options)
+           ,@body)))))
 
-(defun draw-point (sheet point
-                   &rest args
-                   &key ink clipping-region transformation
-                        line-style line-thickness line-unit
-                   &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness line-unit))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (x y) (point-position point)
-      (medium-draw-point* medium x y))))
+(define-drawing-function (draw-point* sheet x y) ()
+  (medium-draw-point* medium x y))
 
-(defun draw-point* (sheet x y
-                    &rest args
-                    &key ink clipping-region transformation
-                         line-style line-thickness line-unit
-                    &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness line-unit))
-  (with-medium-options (sheet args)
-    (medium-draw-point* medium x y)))
+(define-drawing-function (draw-points sheet point-seq) ()
+  (medium-draw-points* medium (expand-point-seq point-seq)))
 
-(defun draw-points (sheet point-seq
-                    &rest args
-                    &key ink clipping-region transformation
-                         line-style line-thickness line-unit
-                    &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness line-unit))
-  (with-medium-options (sheet args)
-    (medium-draw-points* medium (expand-point-seq point-seq))))
+(define-drawing-function (draw-points* sheet coord-seq) ()
+  (medium-draw-points* medium coord-seq))
 
-(defun draw-points* (sheet coord-seq
-                     &rest args
-                     &key ink clipping-region transformation
-                          line-style line-thickness line-unit
-                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness line-unit))
-  (with-medium-options (sheet args)
-    (medium-draw-points* medium coord-seq)))
+(define-drawing-function (draw-line sheet point1 point2) ()
+  (multiple-value-bind (x1 y1) (point-position point1)
+    (multiple-value-bind (x2 y2) (point-position point2)
+      (medium-draw-line* medium x1 y1 x2 y2))))
 
-(defun draw-line (sheet point1 point2
-                  &rest args
-                  &key ink clipping-region transformation line-style
-                       line-thickness line-unit line-dashes line-cap-shape
-                  &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (x1 y1) (point-position point1)
-      (multiple-value-bind (x2 y2) (point-position point2)
-        (medium-draw-line* medium x1 y1 x2 y2)))))
+(define-drawing-function (draw-line* sheet x1 y1 x2 y2) ()
+  (medium-draw-line* medium x1 y1 x2 y2))
 
-(defun draw-line* (sheet x1 y1 x2 y2
-                   &rest args
-                   &key ink clipping-region transformation line-style
-                        line-thickness line-unit line-dashes line-cap-shape
-                   &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-line* medium x1 y1 x2 y2)))
+(define-drawing-function (draw-lines sheet point-seq) ()
+  (medium-draw-lines* medium (expand-point-seq point-seq)))
 
-(defun draw-lines (sheet point-seq
-                   &rest args
-                   &key ink clipping-region transformation line-style
-                        line-thickness line-unit line-dashes line-cap-shape
-                   &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-lines* medium (expand-point-seq point-seq))))
+(define-drawing-function (draw-lines* sheet coord-seq) ()
+  (medium-draw-lines* medium coord-seq))
 
-(defun draw-lines* (sheet coord-seq
-                    &rest args
-                    &key ink clipping-region transformation line-style
-                         line-thickness line-unit line-dashes line-cap-shape
-                    &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-lines* medium coord-seq)))
+(define-drawing-function (draw-polygon sheet point-seq)
+    ((filled t)
+     (closed t))
+  (medium-draw-polygon* medium (expand-point-seq point-seq) closed filled))
 
-(defun draw-polygon (sheet point-seq
-                     &rest args
-                     &key (filled t) (closed t) ink clipping-region
-                          transformation line-style line-thickness
-                          line-unit line-dashes line-joint-shape line-cap-shape
-                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-polygon* medium (expand-point-seq point-seq) closed filled)))
+(define-drawing-function (draw-polygon* sheet coord-seq)
+    ((filled t)
+     (closed t))
+  (medium-draw-polygon* medium coord-seq closed filled))
 
-(defun draw-polygon* (sheet coord-seq
-                      &rest args
-                      &key (filled t) (closed t) ink clipping-region
-                           transformation line-style line-thickness line-unit
-                           line-dashes line-joint-shape line-cap-shape
-                      &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-polygon* medium coord-seq closed filled)))
+(define-drawing-function (draw-bezigon sheet point-seq)
+    ((filled t))
+  (medium-draw-bezigon* medium (expand-point-seq point-seq) filled))
 
-(defun draw-bezigon (sheet point-seq
-                     &rest args
-                     &key (filled t) ink clipping-region
-                          transformation line-style line-thickness
-                          line-unit line-dashes line-joint-shape line-cap-shape
-                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-bezigon* medium (expand-point-seq point-seq) filled)))
+(define-drawing-function (draw-bezigon* sheet coord-seq)
+    ((filled t))
+  (medium-draw-bezigon* medium coord-seq filled))
 
-(defun draw-bezigon* (sheet coord-seq
-                      &rest args
-                      &key (filled t) ink clipping-region
-                           transformation line-style line-thickness line-unit
-                           line-dashes line-joint-shape line-cap-shape
-                      &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape line-cap-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-bezigon* medium coord-seq filled)))
+(define-drawing-function (draw-rectangle sheet point1 point2)
+    ((filled t))
+  (multiple-value-bind (x1 y1) (point-position point1)
+    (multiple-value-bind (x2 y2) (point-position point2)
+      (medium-draw-rectangle* medium x1 y1 x2 y2 filled))))
 
-(defun draw-rectangle (sheet point1 point2
-                       &rest args
-                       &key (filled t) ink clipping-region transformation
-                            line-style line-thickness line-unit
-                            line-dashes line-joint-shape
-                       &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (x1 y1) (point-position point1)
-      (multiple-value-bind (x2 y2) (point-position point2)
-        (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))))
+(define-drawing-function (draw-rectangle* sheet x1 y1 x2 y2)
+    ((filled t))
+  (medium-draw-rectangle* medium x1 y1 x2 y2 filled))
 
-(defun draw-rectangle* (sheet x1 y1 x2 y2
-                        &rest args
-                        &key (filled t) ink clipping-region transformation
-                             line-style line-thickness line-unit line-dashes
-                             line-joint-shape
-                        &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-rectangle* medium x1 y1 x2 y2 filled)))
+(define-drawing-function (draw-rectangles sheet points)
+    ((filled t))
+  (loop for point in points
+        nconcing (multiple-value-list (point-position point))
+          into position-seq
+        finally (medium-draw-rectangles* medium position-seq filled)))
 
-(defun draw-rectangles (sheet points
-                        &rest args
-                        &key (filled t) ink clipping-region transformation
-                             line-style line-thickness line-unit line-dashes
-                             line-joint-shape
-                        &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (loop for point in points
-          nconcing (multiple-value-bind (x y) (point-position point)
-                     (list x y)) into position-seq
-          finally (medium-draw-rectangles* medium position-seq filled))))
+(define-drawing-function (draw-rectangles* sheet position-seq)
+    ((filled t))
+  (medium-draw-rectangles* medium position-seq filled))
 
-(defun draw-rectangles* (sheet position-seq
-                         &rest args
-                         &key (filled t) ink clipping-region transformation
-                              line-style line-thickness line-unit
-                              line-dashes line-joint-shape
-                         &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (with-medium-options (sheet args)
-    (medium-draw-rectangles* medium position-seq filled)))
+(define-drawing-function (draw-triangle sheet p1 p2 p3)
+    ((filled t))
+  (medium-draw-polygon* medium (expand-point-seq (list p1 p2 p3)) t filled))
 
-(defun draw-triangle (sheet point1 point2 point3
-                      &rest args
-                      &key (filled t) ink clipping-region transformation
-                           line-style line-thickness line-unit line-dashes
-                           line-joint-shape
-                      &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (apply #'draw-polygon sheet (list point1 point2 point3)
-         :filled filled :closed t args))
+(define-drawing-function (draw-triangle* sheet x1 y1 x2 y2 x3 y3)
+    ((filled t))
+  (medium-draw-polygon* medium (list x1 y1 x2 y2 x3 y3) t filled))
 
-(defun draw-triangle* (sheet x1 y1 x2 y2 x3 y3
-                       &rest args
-                       &key (filled t) ink clipping-region transformation
-                            line-style line-thickness line-unit line-dashes
-                            line-joint-shape
-                       &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-joint-shape))
-  (apply #'draw-polygon* sheet (list x1 y1 x2 y2 x3 y3)
-         :filled filled :closed t args))
-
-(defun draw-ellipse (sheet center-point
-                     radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                     &rest args
-                     &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                          ink clipping-region transformation line-style
-                          line-thickness line-unit line-dashes line-cap-shape
-                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
+(define-drawing-function (draw-ellipse sheet center-point
+                                       radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+    ((filled t)
+     (start-angle 0.0)
+     (end-angle (* 2.0 pi)))
   (multiple-value-setq (start-angle end-angle)
     (normalize-angle* start-angle end-angle))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (center-x center-y) (point-position center-point)
-      (medium-draw-ellipse* medium
-                            center-x center-y
-                            radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                            start-angle end-angle filled))))
-
-(defun draw-ellipse* (sheet center-x center-y
-                      radius-1-dx radius-1-dy radius-2-dx radius-2-dy
-                      &rest args
-                      &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                           ink clipping-region transformation line-style
-                           line-thickness line-unit line-dashes line-cap-shape
-                      &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
+  (multiple-value-bind (center-x center-y) (point-position center-point)
     (medium-draw-ellipse* medium
                           center-x center-y
                           radius-1-dx radius-1-dy radius-2-dx radius-2-dy
                           start-angle end-angle filled)))
 
-(defun draw-circle (sheet center-point radius
-                    &rest args
-                    &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                         ink clipping-region transformation
-                         line-style line-thickness line-unit line-dashes
-                         line-cap-shape
-                    &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (center-x center-y) (point-position center-point)
-      (medium-draw-ellipse* medium
-                            center-x center-y
-                            radius 0 0 radius
-                            start-angle end-angle filled))))
+(define-drawing-function (draw-ellipse* sheet center-x center-y
+                                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy)
+    ((filled t)
+     (start-angle 0.0)
+     (end-angle (* 2.0 pi)))
+  (medium-draw-ellipse* medium
+                        center-x center-y
+                        radius-1-dx radius-1-dy radius-2-dx radius-2-dy
+                        start-angle end-angle filled))
 
-(defun draw-circle* (sheet center-x center-y radius
-                     &rest args
-                     &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi))
-                          ink clipping-region transformation line-style
-                          line-thickness line-unit line-dashes line-cap-shape
-                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
+(define-drawing-function (draw-circle sheet center-point radius)
+    ((filled t)
+     (start-angle 0.0)
+     (end-angle (* 2.0 pi)))
+  (multiple-value-bind (center-x center-y) (point-position center-point)
     (medium-draw-ellipse* medium
                           center-x center-y
                           radius 0 0 radius
                           start-angle end-angle filled)))
 
-(defun draw-text (sheet string point
-                  &rest args
-                  &key (start 0) (end nil)
-                       (align-x :left) (align-y :baseline)
-                       (toward-point nil toward-point-p)
-                       transform-glyphs
-                       ink clipping-region transformation
-                       text-style text-family text-face text-size
-                  &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   text-style text-family text-face text-size))
-  (with-medium-options (sheet args)
-    (multiple-value-bind (x y) (point-position point)
-      (multiple-value-bind (toward-x toward-y)
-          (if toward-point-p
-              (point-position toward-point)
-              (values (1+ x) y))
-        (medium-draw-text* medium string x y
-                           start end
-                           align-x align-y
-                           toward-x toward-y transform-glyphs)))))
+(define-drawing-function (draw-circle* sheet center-x center-y radius)
+    ((filled t)
+     (start-angle 0.0)
+     (end-angle (* 2.0 pi)))
+  (medium-draw-ellipse* medium
+                        center-x center-y
+                        radius 0 0 radius
+                        start-angle end-angle filled))
 
-(defun draw-text* (sheet string x y
-                   &rest args
-                   &key (start 0) (end nil)
-                        (align-x :left) (align-y :baseline)
-                        (toward-x (1+ x)) (toward-y y) transform-glyphs
-                        ink clipping-region transformation
-                        text-style text-family text-face text-size
-                   &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   text-style text-family text-face text-size))
-  (with-medium-options (sheet args)
-    (medium-draw-text* medium string x y
-                       start end
-                       align-x align-y
-                       toward-x toward-y transform-glyphs)))
+(define-drawing-function (draw-text sheet string point)
+    ((start 0)
+     (end nil)
+     (align-x :left)
+     (align-y :baseline)
+     (toward-point nil toward-point-p)
+     transform-glyphs)
+  (multiple-value-bind (x y) (point-position point)
+    (multiple-value-bind (toward-x toward-y)
+        (if toward-point-p
+            (point-position toward-point)
+            (values (1+ x) y))
+      (medium-draw-text* medium string x y
+                         start end
+                         align-x align-y
+                         toward-x toward-y transform-glyphs))))
+
+(define-drawing-function (draw-text* sheet string x y)
+    ((start 0)
+     (end nil)
+     (align-x :left)
+     (align-y :baseline)
+     (toward-x (1+ x))
+     (toward-y y)
+     transform-glyphs)
+  (medium-draw-text* medium string x y
+                     start end
+                     align-x align-y
+                     toward-x toward-y transform-glyphs))
 
 (defun draw-arrow (sheet point-1 point-2
                    &rest args
@@ -466,68 +317,69 @@
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
-  (with-medium-options (sheet args)
-    (with-translation (sheet x2 y2)
-      (unless angle
-        (let ((dx (- x1 x2))
-              (dy (- y1 y2)))
-          (if (and (zerop dx)
-                   (zerop dy))
-              (setf angle 0.0)
-              (setf angle (atan* dx dy)))))
-      (with-rotation (sheet angle)
-        (let* ((end 0.0)
-               (start (sqrt (+ (expt (- x2 x1) 2)
-                               (expt (- y2 y1) 2))))
-               (p end)
-               (q start)
-               (line-style (medium-line-style sheet))
-               (thickness (line-style-effective-thickness line-style sheet))
-               (width/2 (/ head-width 2))
-               (a (atan (/ width/2 head-length)))
-               (offset (if (and head-length (not (zerop head-length)))
-                           (/ thickness (* 2 (sin a )))
-                           0.0))
-               (tip-to-peak (+ head-length
-                               offset
-                               (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
-          (when (not head-filled)
-            (when to-head   (incf p offset))
-            (when from-head (decf q offset)))
-          (if (and to-head
-                   from-head
-                   (< (abs (- start end)) (* 2 tip-to-peak)))
-              (let ((width (* 0.5 (+ head-width thickness)
-                              (/ (abs (- start end))
-                                 (* 2 tip-to-peak)) )))
-                (draw-polygon* sheet
-                               (list end 0
-                                     (/ start 2) width
-                                     start 0
-                                     (/ start 2) (- width))
-                               :filled head-filled
-                               :line-thickness 0))
-              (progn
-                (when to-head
+  (with-stream-designator ((sheet *standard-output*))
+    (with-medium-options (sheet args)
+      (with-translation (sheet x2 y2)
+        (unless angle
+          (let ((dx (- x1 x2))
+                (dy (- y1 y2)))
+            (if (and (zerop dx)
+                     (zerop dy))
+                (setf angle 0.0)
+                (setf angle (atan* dx dy)))))
+        (with-rotation (sheet angle)
+          (let* ((end 0.0)
+                 (start (sqrt (+ (expt (- x2 x1) 2)
+                                 (expt (- y2 y1) 2))))
+                 (p end)
+                 (q start)
+                 (line-style (medium-line-style sheet))
+                 (thickness (line-style-effective-thickness line-style sheet))
+                 (width/2 (/ head-width 2))
+                 (a (atan (/ width/2 head-length)))
+                 (offset (if (and head-length (not (zerop head-length)))
+                             (/ thickness (* 2 (sin a )))
+                             0.0))
+                 (tip-to-peak (+ head-length
+                                 offset
+                                 (- (* thickness 0.5 (sin a)))))) ;; okay, a guess..
+            (when (not head-filled)
+              (when to-head   (incf p offset))
+              (when from-head (decf q offset)))
+            (if (and to-head
+                     from-head
+                     (< (abs (- start end)) (* 2 tip-to-peak)))
+                (let ((width (* 0.5 (+ head-width thickness)
+                                (/ (abs (- start end))
+                                   (* 2 tip-to-peak)) )))
                   (draw-polygon* sheet
-                                 (list (+ p head-length) (- width/2)
-                                       p 0
-                                       (+ p head-length) width/2)
+                                 (list end 0
+                                       (/ start 2) width
+                                       start 0
+                                       (/ start 2) (- width))
                                  :filled head-filled
-                                 :closed nil))
-                (when from-head
-                  (draw-polygon* sheet
-                                 (list (- q head-length) (- width/2)
-                                       q 0
-                                       (- q head-length) width/2)
-                                 :filled head-filled
-                                 :closed nil))
+                                 :line-thickness 0))
+                (progn
+                  (when to-head
+                    (draw-polygon* sheet
+                                   (list (+ p head-length) (- width/2)
+                                         p 0
+                                         (+ p head-length) width/2)
+                                   :filled head-filled
+                                   :closed nil))
+                  (when from-head
+                    (draw-polygon* sheet
+                                   (list (- q head-length) (- width/2)
+                                         q 0
+                                         (- q head-length) width/2)
+                                   :filled head-filled
+                                   :closed nil))
 
-                (unless (< q p)
-                  (when head-filled
-                    (when to-head   (incf p offset))
-                    (when from-head (decf q offset)))
-                  (draw-line* sheet q 0 p 0)))))))))
+                  (unless (< q p)
+                    (when head-filled
+                      (when to-head   (incf p offset))
+                      (when from-head (decf q offset)))
+                    (draw-line* sheet q 0 p 0))))))))))
 
 (defun draw-oval (sheet center-pt x-radius y-radius
                   &rest args
@@ -552,30 +404,31 @@
                    line-unit line-dashes line-cap-shape))
   (check-type x-radius (real 0))
   (check-type y-radius (real 0))
-  (with-medium-options (sheet args)
-    (if (or (coordinate= x-radius 0) (coordinate= y-radius 0))
-        (draw-circle* sheet center-x center-y (max x-radius y-radius)
-                      :filled filled)
-        (if (coordinate<= y-radius x-radius)
-            (let ((x1 (- center-x x-radius)) (x2 (+ center-x x-radius))
-                  (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))
-              (if filled
-                  ;; Kludge coordinates, sometimes due to rounding the
-                  ;; lines don't connect.
-                  (draw-rectangle* sheet (floor x1) y1 (ceiling x2) y2)
-                  (draw-lines* sheet (list (floor x1) y1 (ceiling x2) y1
-                                           (floor x1) y2 (ceiling x2) y2)))
-              (draw-circle* sheet x1 center-y y-radius
-                            :filled filled
-                            :start-angle (* pi 0.5)
-                            :end-angle (* pi 1.5))
-              (draw-circle* sheet x2 center-y y-radius
-                            :filled filled
-                            :start-angle (* pi 1.5)
-                            :end-angle (* pi 2.5)))
-            (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
-              (draw-oval* sheet center-x center-y y-radius x-radius
-                          :filled filled)) ))))
+  (with-stream-designator (sheet *standard-output*)
+    (with-medium-options (sheet args)
+      (if (or (coordinate= x-radius 0) (coordinate= y-radius 0))
+          (draw-circle* sheet center-x center-y (max x-radius y-radius)
+                        :filled filled)
+          (if (coordinate<= y-radius x-radius)
+              (let ((x1 (- center-x x-radius)) (x2 (+ center-x x-radius))
+                    (y1 (- center-y y-radius)) (y2 (+ center-y y-radius)))
+                (if filled
+                    ;; Kludge coordinates, sometimes due to rounding the
+                    ;; lines don't connect.
+                    (draw-rectangle* sheet (floor x1) y1 (ceiling x2) y2)
+                    (draw-lines* sheet (list (floor x1) y1 (ceiling x2) y1
+                                             (floor x1) y2 (ceiling x2) y2)))
+                (draw-circle* sheet x1 center-y y-radius
+                              :filled filled
+                              :start-angle (* pi 0.5)
+                              :end-angle (* pi 1.5))
+                (draw-circle* sheet x2 center-y y-radius
+                              :filled filled
+                              :start-angle (* pi 1.5)
+                              :end-angle (* pi 2.5)))
+              (with-rotation (sheet (/ pi 2) (make-point center-x center-y))
+                (draw-oval* sheet center-x center-y y-radius x-radius
+                            :filled filled)) )))))
 
 
 ;;; Generic graphic operation methods
