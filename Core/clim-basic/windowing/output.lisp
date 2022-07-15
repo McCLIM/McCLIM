@@ -317,7 +317,7 @@
   (declare (ignore ink clipping-region transformation
                    line-style line-thickness
                    line-unit line-dashes line-cap-shape))
-  (with-stream-designator ((sheet *standard-output*))
+  (with-stream-designator (sheet *standard-output*)
     (with-medium-options (sheet args)
       (with-translation (sheet x2 y2)
         (unless angle
