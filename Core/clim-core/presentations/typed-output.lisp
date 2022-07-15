@@ -22,23 +22,23 @@
                                         &allow-other-keys)
                                        &body body)
   (declare (ignore parent single-box modifier))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (multiple-value-bind (decls with-body)
-      (get-body-declarations body)
-    (with-gensyms (record-arg continuation)
-      (with-keywords-removed (key-args (:record-type :allow-sensitive-inferiors))
-        `(flet ((,continuation () ,@decls ,@with-body))
-           (declare (dynamic-extent #',continuation))
-           (if (and (output-recording-stream-p ,stream)
-                    *allow-sensitive-inferiors*)
-               (with-new-output-record
-                   (,stream ,record-type ,record-arg
-                            :object ,object
-                            :type (expand-presentation-type-abbreviation ,type)
-                            ,@key-args)
-                 (let ((*allow-sensitive-inferiors* ,allow-sensitive-inferiors))
-                   (,continuation)))
-               (,continuation)))))))
+  (with-stream-designator (stream '*standard-output*)
+    (multiple-value-bind (decls with-body)
+        (get-body-declarations body)
+      (with-gensyms (record-arg continuation)
+        (with-keywords-removed (key-args (:record-type :allow-sensitive-inferiors))
+          `(flet ((,continuation () ,@decls ,@with-body))
+             (declare (dynamic-extent #',continuation))
+             (if (and (output-recording-stream-p ,stream)
+                      *allow-sensitive-inferiors*)
+                 (with-new-output-record
+                     (,stream ,record-type ,record-arg
+                              :object ,object
+                              :type (expand-presentation-type-abbreviation ,type)
+                              ,@key-args)
+                   (let ((*allow-sensitive-inferiors* ,allow-sensitive-inferiors))
+                     (,continuation)))
+                 (,continuation))))))))
 
 ;;; XXX The spec calls out that the presentation generic function has
 ;;; keyword arguments acceptably and for-context-type, but the

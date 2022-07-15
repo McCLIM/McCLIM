@@ -104,11 +104,9 @@
                 &allow-other-keys)
      &body body)
   (declare (ignore shape move-cursor))
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (gen-invoke-trampoline 'invoke-surrounding-output-with-border
-                         (list stream)
-                         drawing-options
-                         body))
+  (with-stream-designator (stream '*standard-output*)
+    (gen-invoke-trampoline
+     'invoke-surrounding-output-with-border (list stream) drawing-options body)))
 
 (defmethod recompute-extent-for-changed-child
     ((record bordered-output-record) child x1 y1 x2 y2)

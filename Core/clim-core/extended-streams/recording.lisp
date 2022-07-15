@@ -156,17 +156,17 @@ or (SLOT-NAME SLOT-P)."
                                           &key (record nil record-supplied-p)
                                                (draw nil draw-supplied-p))
                                          &body body)
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (continuation)
-    `(flet ((,continuation  (,stream)
-              ,(declare-ignorable-form* stream)
-              ,@body))
-       (declare (dynamic-extent #',continuation))
-       (with-drawing-options (,stream)
-         (invoke-with-output-recording-options
-          ,stream #',continuation
-          ,(if record-supplied-p record `(stream-recording-p ,stream))
-          ,(if draw-supplied-p draw `(stream-drawing-p ,stream)))))))
+  (with-stream-designator (stream '*standard-output*)
+    (with-gensyms (continuation)
+      `(flet ((,continuation  (,stream)
+                ,(declare-ignorable-form* stream)
+                ,@body))
+         (declare (dynamic-extent #',continuation))
+         (with-drawing-options (,stream)
+           (invoke-with-output-recording-options
+            ,stream #',continuation
+            ,(if record-supplied-p record `(stream-recording-p ,stream))
+            ,(if draw-supplied-p draw `(stream-drawing-p ,stream))))))))
 
 ;;; Macro masturbation...
 
@@ -178,16 +178,16 @@ or (SLOT-NAME SLOT-P)."
                            &rest initargs)
                           &body body)
      ,doc-string
-     (setq stream (stream-designator-symbol stream '*standard-output*))
-     (with-gensyms (continuation)
-       (multiple-value-bind (bindings m-i-args)
-           (rebind-arguments initargs)
-         `(let ,bindings
-            (flet ((,continuation (,stream ,record)
-                     ,(declare-ignorable-form* stream record)
-                     ,@body))
-              (declare (dynamic-extent #',continuation))
-              (,',func-name ,stream #',continuation ,record-type ,@m-i-args)))))))
+     (with-stream-designator (stream '*standard-output*)
+       (with-gensyms (continuation)
+         (multiple-value-bind (bindings m-i-args)
+             (rebind-arguments initargs)
+           `(let ,bindings
+              (flet ((,continuation (,stream ,record)
+                       ,(declare-ignorable-form* stream record)
+                       ,@body))
+                (declare (dynamic-extent #',continuation))
+                (,',func-name ,stream #',continuation ,record-type ,@m-i-args))))))))
 
 (define-invoke-with with-new-output-record invoke-with-new-output-record
   standard-sequence-output-record

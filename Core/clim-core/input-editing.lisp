@@ -293,13 +293,13 @@ is a string, the string will be inserted into the input buffer
 using `replace-input'. If it is a list, the printed
 representation of the object will be inserted into the input
 buffer using `presentation-replace-input'."
-  (setq stream (stream-designator-symbol stream '*standard-input*))
-  (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
-    `(invoke-with-input-editing ,stream
-                                #'(lambda (,stream) ,@body)
-                                ,input-sensitizer ,initial-contents
-                                ,class
-                                ,@args)))
+  (with-stream-designator (stream '*standard-input*)
+    (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
+      `(invoke-with-input-editing ,stream
+                                  #'(lambda (,stream) ,@body)
+                                  ,input-sensitizer ,initial-contents
+                                  ,class
+                                  ,@args))))
 
 (defmacro with-input-position ((stream) &body body)
   (let ((stream-var (gensym "STREAM")))

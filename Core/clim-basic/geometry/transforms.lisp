@@ -513,11 +513,9 @@ real numbers, and default to 0."
   ;;
   ;; Q: Do we want a invoke-with-identity-transformation?
   ;;
-  (let ((medium (stream-designator-symbol medium '*standard-output*)))
-    (gen-invoke-trampoline 'invoke-with-identity-transformation
-                           (list medium)
-                           nil
-                           body)))
+  (with-stream-designator (medium '*standard-output*)
+    (gen-invoke-trampoline
+     'invoke-with-identity-transformation (list medium) nil body)))
 
 ;;; invoke-with-identity-transformation is gone to graphics.lisp
 ;;; invoke-with-identity-transformation and
@@ -526,18 +524,14 @@ real numbers, and default to 0."
 ;;; perhaps we should gather macros in a macros.lisp file?
 
 (defmacro with-local-coordinates ((medium &optional x y) &body body)
-  (setf medium (stream-designator-symbol medium '*standard-output*))
-  (gen-invoke-trampoline 'invoke-with-local-coordinates
-                         (list medium)
-                         (list x y)
-                         body))
+  (with-stream-designator (medium '*standard-output*)
+    (gen-invoke-trampoline
+     'invoke-with-local-coordinates (list medium) (list x y) body)))
 
 (defmacro with-first-quadrant-coordinates ((medium &optional x y) &body body)
-  (setf medium (stream-designator-symbol medium '*standard-output*))
-  (gen-invoke-trampoline 'invoke-with-first-quadrant-coordinates
-                         (list medium)
-                         (list x y)
-                         body))
+  (with-stream-designator (medium '*standard-output*)
+    (gen-invoke-trampoline
+     'invoke-with-first-quadrant-coordinates (list medium) (list x y) body)))
 
 (defmethod untransform-region ((transformation transformation) region)
   (transform-region (invert-transformation transformation) region))

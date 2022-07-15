@@ -213,39 +213,39 @@
     ((sheet &rest args &key pointer multiple-window transformp context-type highlight)
      &body body)
   (declare (ignore pointer multiple-window transformp context-type highlight))
-  (setq sheet (stream-designator-symbol sheet '*standard-output*))
-  ;; The Spec specifies the tracking-pointer clause arguments as,
-  ;; e.g., (&key presentation event x y), implying that the user must
-  ;; write the &key keyword, but real code doesn't do that. Check if
-  ;; &key is in the arg list and add it if it is not.
-  (flet ((fix-args (name args)
-           (let ((aok nil)
-                 (args (if (eq (car args) '&key)
-                           args
-                           (cons '&key args))))
-             (dolist (arg (cdr args))
-               (cond ((find arg '(window event gesture presentation x y) :test #'string=))
-                     ((eq arg '&allow-other-keys)
-                      (setf aok t))
-                     (t
-                      (error "TRACKING-POINTER: ~s is not a valid argument for a clause ~s."
-                             arg name))))
-             (unless aok
-               (setq args (append args '(&allow-other-keys))))
-             args)))
-    (loop
-       for (name arglist . body) in body
-       for handler-name = (gensym (symbol-name name))
-       do (unless (typep name 'tracking-pointer-clause)
-            (error "TRACKING-POINTER: ~s is not a valid clause name." name))
-       collect `(,handler-name ,(fix-args name arglist) ,@body) into bindings
-       collect `#',handler-name into fn-names
-       append  `(,name #',handler-name) into initargs
-       finally (return `(flet ,bindings
-                          (declare (dynamic-extent ,@fn-names))
-                          (invoke-tracking-pointer
-                           (make-instance 'tracking-pointer-state
-                                          :sheet ,sheet ,@args ,@initargs)))))))
+  (with-stream-designator (sheet '*standard-output*)
+    ;; The Spec specifies the tracking-pointer clause arguments as,
+    ;; e.g., (&key presentation event x y), implying that the user must
+    ;; write the &key keyword, but real code doesn't do that. Check if
+    ;; &key is in the arg list and add it if it is not.
+    (flet ((fix-args (name args)
+             (let ((aok nil)
+                   (args (if (eq (car args) '&key)
+                             args
+                             (cons '&key args))))
+               (dolist (arg (cdr args))
+                 (cond ((find arg '(window event gesture presentation x y) :test #'string=))
+                       ((eq arg '&allow-other-keys)
+                        (setf aok t))
+                       (t
+                        (error "TRACKING-POINTER: ~s is not a valid argument for a clause ~s."
+                               arg name))))
+               (unless aok
+                 (setq args (append args '(&allow-other-keys))))
+               args)))
+      (loop
+        for (name arglist . body) in body
+        for handler-name = (gensym (symbol-name name))
+        do (unless (typep name 'tracking-pointer-clause)
+             (error "TRACKING-POINTER: ~s is not a valid clause name." name))
+        collect `(,handler-name ,(fix-args name arglist) ,@body) into bindings
+        collect `#',handler-name into fn-names
+        append  `(,name #',handler-name) into initargs
+        finally (return `(flet ,bindings
+                           (declare (dynamic-extent ,@fn-names))
+                           (invoke-tracking-pointer
+                            (make-instance 'tracking-pointer-state
+                                           :sheet ,sheet ,@args ,@initargs))))))))
 
 
 ;;; DRAG-OUTPUT-RECORD and DRAGGING-OUTPUT.
@@ -349,10 +349,10 @@
                                       &key (repaint t) finish-on-release multiple-window)
                            &body body)
   (declare (ignore repaint finish-on-release multiple-window))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (erase record)
-    `(let ((,record (with-output-to-output-record (,stream) ,@body)))
-       (flet ((,erase (record sheet)
-                ;; Default function would signal error.
-                (erase-output-record record sheet nil)))
-         (drag-output-record ,stream ,record :erase #',erase ,@args)))))
+  (with-stream-designator (stream '*standard-output*)
+    (with-gensyms (erase record)
+      `(let ((,record (with-output-to-output-record (,stream) ,@body)))
+         (flet ((,erase (record sheet)
+                  ;; Default function would signal error.
+                  (erase-output-record record sheet nil)))
+           (drag-output-record ,stream ,record :erase #',erase ,@args))))))

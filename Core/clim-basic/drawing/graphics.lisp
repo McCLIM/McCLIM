@@ -140,14 +140,14 @@
      (apply #'do-graphics-with-options ,medium #'graphics-op ,args)))
 
 (defmacro with-drawing-options ((medium &rest drawing-options) &body body)
-  (setq medium (stream-designator-symbol medium '*standard-output*))
-  (with-gensyms (gcontinuation cont-arg)
-    `(flet ((,gcontinuation (,cont-arg)
-              (declare (ignore ,cont-arg))
-              ,@body))
-       (declare (dynamic-extent #',gcontinuation))
-       (invoke-with-drawing-options
-        ,medium #',gcontinuation ,@drawing-options))))
+  (with-stream-designator (medium '*standard-output*)
+    (with-gensyms (gcontinuation cont-arg)
+      `(flet ((,gcontinuation (,cont-arg)
+                (declare (ignore ,cont-arg))
+                ,@body))
+         (declare (dynamic-extent #',gcontinuation))
+         (invoke-with-drawing-options
+          ,medium #',gcontinuation ,@drawing-options)))))
 
 (defmethod invoke-with-drawing-options ((medium medium) continuation
                                         &rest drawing-options

@@ -1665,11 +1665,11 @@ if INVOKE-CALLBACK is given."))
         (values (gadget gadget-record) gadget-record)))))
 
 (defmacro with-output-as-gadget ((stream &rest options) &body body)
-  (setf stream (stream-designator-symbol stream '*standard-output*))
-  (let ((cont (gensym)))
-    `(flet ((,cont (,stream) ,@body))
-       (declare (dynamic-extent (function ,cont)))
-       (invoke-with-output-as-gadget (function ,cont) ,stream ,@options))))
+  (with-stream-designator (stream '*standard-output*)
+    (let ((cont (gensym)))
+      `(flet ((,cont (,stream) ,@body))
+         (declare (dynamic-extent (function ,cont)))
+         (invoke-with-output-as-gadget (function ,cont) ,stream ,@options)))))
 
 (defclass orientation-from-parent-mixin () ())
 

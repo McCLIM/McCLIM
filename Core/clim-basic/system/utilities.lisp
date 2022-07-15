@@ -481,15 +481,15 @@ in KEYWORDS removed."
 (defun protocol-predicate-name (name)
   (symbol-concat name (if (find #\- (string name)) "-" "") '#:p))
 
-(defun stream-designator-symbol (symbol default)
-  "Maps T to DEFAULT, barfs if argument does not look good.
-   To be used in the various WITH-... macros."
-  (cond ((eq symbol 't)
-         default)
-        ((symbolp symbol)
-         symbol)
-        (t
-         (error "~S Can not be a stream designator for ~S" symbol default))))
+;;; This macro may be used in WITH-... macros to map T to DEFAULT;
+;;;    (with-stream-designator (medium '*standard-output*) ...)
+;;; It is also useful in functions to map the value at runtime.
+;;;    (with-stream-designator (medium *standard-output*) ...)
+(defmacro with-stream-designator ((designator default) &body body)
+  `(let ((,designator (typecase ,designator
+                        ((eql t)   ,default)
+                        (otherwise ,designator))))
+     ,@body))
 
 (defun declare-ignorable-form (variables)
   #+CMU

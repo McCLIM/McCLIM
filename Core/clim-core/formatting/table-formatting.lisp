@@ -146,11 +146,9 @@
          ;; arguments with constant keys correspond to known initargs.
          (%maybe-check-constant-keyword-arguments
           record-type ',standard-output-record-class args ',keywords)
-         (gen-invoke-trampoline
-          ',invoke-name
-          (list (stream-designator-symbol stream '*standard-output*))
-          args
-          body)))))
+         (with-stream-designator (stream '*standard-output*)
+           (gen-invoke-trampoline
+            ',invoke-name (list stream) args body))))))
 
 ;;; Cell formatting
 

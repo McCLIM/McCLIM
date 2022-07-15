@@ -98,21 +98,21 @@
              &key (move-cursor t) (left nil lp) (right nil rp) (top nil tp) (bottom nil bp))
      &body body)
   (declare (ignore move-cursor))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-keywords-removed (args (:left :right :top :bottom))
-    (with-gensyms (stream-arg continuation margins)
-      `(flet ((,continuation (,stream-arg)
-                (declare (ignore ,stream-arg))
-                ,@body))
-         (declare (dynamic-extent #',continuation))
-         (let (,margins)
-           ,@(collect (margin)
-               (when lp (margin `(setf (getf ,margins :left) ,left)))
-               (when rp (margin `(setf (getf ,margins :right) ,right)))
-               (when tp (margin `(setf (getf ,margins :top) ,top)))
-               (when bp (margin `(setf (getf ,margins :bottom) ,bottom)))
-               (margin))
-           (invoke-with-temporary-page ,stream #',continuation :margins ,margins ,@args))))))
+  (with-stream-designator (stream '*standard-output*)
+    (with-keywords-removed (args (:left :right :top :bottom))
+      (with-gensyms (stream-arg continuation margins)
+        `(flet ((,continuation (,stream-arg)
+                  (declare (ignore ,stream-arg))
+                  ,@body))
+           (declare (dynamic-extent #',continuation))
+           (let (,margins)
+             ,@(collect (margin)
+                 (when lp (margin `(setf (getf ,margins :left) ,left)))
+                 (when rp (margin `(setf (getf ,margins :right) ,right)))
+                 (when tp (margin `(setf (getf ,margins :top) ,top)))
+                 (when bp (margin `(setf (getf ,margins :bottom) ,bottom)))
+                 (margin))
+             (invoke-with-temporary-page ,stream #',continuation :margins ,margins ,@args)))))))
 
 
 ;;; Mixin is used to store text-style and ink when filling-output it is invoked.
@@ -148,43 +148,43 @@
                                   (after-line-break-subsequent t))
                           &body body)
   (declare (ignore fill-width break-characters))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-keywords-removed (args (:after-line-break
-                                :after-line-break-composed
-                                :after-line-break-initially
-                                :after-line-break-subsequent))
-    (with-gensyms (continuation old-fresh-line-fn fresh-line-fn
-                                initial-indent ink text-style)
-      (once-only (after-line-break
-                  after-line-break-composed
-                  after-line-break-initially
-                  after-line-break-subsequent)
-        `(let ((,initial-indent (stream-cursor-initial-position ,stream))
-               (,old-fresh-line-fn (after-line-break ,stream))
-               (,ink (medium-ink ,stream))
-               (,text-style (medium-text-style ,stream)))
-           (flet ((,continuation (,stream)
-                    ,@body)
-                  (,fresh-line-fn (,stream soft-newline-p)
-                    (when (and ,after-line-break-composed ,old-fresh-line-fn)
-                      (funcall ,old-fresh-line-fn ,stream soft-newline-p))
-                    (when (null ,after-line-break)
-                      (return-from ,fresh-line-fn))
-                    (multiple-value-bind (cx cy) (stream-cursor-position ,stream)
-                      (setf (stream-cursor-position ,stream) (values ,initial-indent cy))
-                      (when (or (and ,after-line-break-initially (null soft-newline-p))
-                                (and ,after-line-break-subsequent soft-newline-p))
-                        (with-end-of-line-action (,stream :allow) ; prevent infinite recursion
-                          (with-drawing-options (,stream :ink ,ink :text-style ,text-style)
-                            (etypecase ,after-line-break
-                              (string   (write-string ,after-line-break ,stream))
-                              (function (funcall ,after-line-break ,stream soft-newline-p))))))
-                      ;; When after-line-break goes beyond the
-                      ;; previous position we advance the cursor.
-                      (multiple-value-bind (nx ny) (stream-cursor-position ,stream)
-                        (stream-set-cursor-position ,stream (max cx nx) (max cy ny))))))
-             (declare (dynamic-extent #',continuation #',fresh-line-fn))
-             (invoke-with-filling-output ,stream #',continuation #',fresh-line-fn ,@args)))))))
+  (with-stream-designator (stream '*standard-output*)
+    (with-keywords-removed (args (:after-line-break
+                                  :after-line-break-composed
+                                  :after-line-break-initially
+                                  :after-line-break-subsequent))
+      (with-gensyms (continuation old-fresh-line-fn fresh-line-fn
+                                  initial-indent ink text-style)
+        (once-only (after-line-break
+                    after-line-break-composed
+                    after-line-break-initially
+                    after-line-break-subsequent)
+          `(let ((,initial-indent (stream-cursor-initial-position ,stream))
+                 (,old-fresh-line-fn (after-line-break ,stream))
+                 (,ink (medium-ink ,stream))
+                 (,text-style (medium-text-style ,stream)))
+             (flet ((,continuation (,stream)
+                      ,@body)
+                    (,fresh-line-fn (,stream soft-newline-p)
+                      (when (and ,after-line-break-composed ,old-fresh-line-fn)
+                        (funcall ,old-fresh-line-fn ,stream soft-newline-p))
+                      (when (null ,after-line-break)
+                        (return-from ,fresh-line-fn))
+                      (multiple-value-bind (cx cy) (stream-cursor-position ,stream)
+                        (setf (stream-cursor-position ,stream) (values ,initial-indent cy))
+                        (when (or (and ,after-line-break-initially (null soft-newline-p))
+                                  (and ,after-line-break-subsequent soft-newline-p))
+                          (with-end-of-line-action (,stream :allow) ; prevent infinite recursion
+                            (with-drawing-options (,stream :ink ,ink :text-style ,text-style)
+                              (etypecase ,after-line-break
+                                (string   (write-string ,after-line-break ,stream))
+                                (function (funcall ,after-line-break ,stream soft-newline-p))))))
+                        ;; When after-line-break goes beyond the
+                        ;; previous position we advance the cursor.
+                        (multiple-value-bind (nx ny) (stream-cursor-position ,stream)
+                          (stream-set-cursor-position ,stream (max cx nx) (max cy ny))))))
+               (declare (dynamic-extent #',continuation #',fresh-line-fn))
+               (invoke-with-filling-output ,stream #',continuation #',fresh-line-fn ,@args))))))))
 
 (defgeneric invoke-with-indenting-output
     (stream continuation &key indent move-cursor)
@@ -207,11 +207,11 @@
 
 (defmacro indenting-output ((stream indentation &rest args &key move-cursor) &body body)
   (declare (ignore move-cursor))
-  (setq stream (stream-designator-symbol stream '*standard-output*))
-  (with-gensyms (continuation)
-    `(flet ((,continuation (,stream) ,@body))
-       (declare (dynamic-extent #',continuation))
-       (invoke-with-indenting-output ,stream #',continuation :indent ,indentation ,@args))))
+  (with-stream-designator (stream '*standard-output*)
+    (with-gensyms (continuation)
+      `(flet ((,continuation (,stream) ,@body))
+         (declare (dynamic-extent #',continuation))
+         (invoke-with-indenting-output ,stream #',continuation :indent ,indentation ,@args)))))
 
 
 ;;; formatting functions

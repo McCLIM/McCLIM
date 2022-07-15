@@ -38,16 +38,6 @@
 (deftype command-designator ()
   `(or (cons function-designator) function-designator))
 
-(defun stream-designator-symbol (symbol default)
-  "Maps T to DEFAULT, barfs if argument does not look good.
-   To be used in the various WITH-... macros."
-  (cond ((eq symbol 't)
-         default)
-        ((symbolp symbol)
-         symbol)
-        (t
-         (error "~S Can not be a stream designator for ~S" symbol default))))
-
 ;;; Move this early so it can be used in presentations.lisp, which comes before
 ;;; commands.lisp.
 (defmacro do-command-table-inheritance ((command-table-var command-table)
