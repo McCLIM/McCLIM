@@ -1,0 +1,35 @@
+(in-package #:clim-user)
+
+(define-application-frame test-editor ()
+  ()
+  (:panes (edward-text (make-pane :text-field :text-style (make-text-style :fix nil :huge)  :value "DANIEL"))
+          (edward-area (make-pane :text-editor :text-style (make-text-style :fix nil :huge) :value "HELLO")))
+  (:reinitialize-frames t)
+  (:current-layout default)
+  (:layouts (default (labelling (:label "Edward" :label-alignment :bottom)
+                       (vertically ()
+                         (spacing (:thickness 10) edward-text)
+                         (spacing (:thickness 10) edward-area)))))
+  (:geometry :width 800 :height 600))
+
+(define-test-editor-command (com-circulate-layout :keystroke (#\1 :control))
+    ()
+  (with-application-frame (frame)
+    (let* ((layouts (frame-all-layouts frame))
+           (current (member (frame-current-layout frame) layouts)))
+      (assert current)
+      (if (rest current)
+          (setf (frame-current-layout frame) (second current))
+          (setf (frame-current-layout frame) (first  layouts))))))
+
+(define-test-editor-command (com-set-new-values :menu t)
+    ()
+  (with-application-frame (frame)
+    (setf (gadget-value (find-pane-named frame 'edward-text))
+          (format nil "Hello ~s~%bim bam bom~a"
+                  (get-universal-time) (random 100))
+          (gadget-value (find-pane-named frame 'edward-area))
+          (format nil "Uh oh ~s~%dim dom dam~a"
+                  (get-universal-time) (random 100)))))
+
+(find-application-frame 'test-editor)
