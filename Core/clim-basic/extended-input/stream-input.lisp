@@ -169,8 +169,7 @@
 
 ;;; This method is deliberately not specialized. -- jd 2019-08-23
 (defmethod stream-set-input-focus (stream)
-  (let ((port (or (port stream)
-                  (port *application-frame*))))
+  (let ((port (port stream)))
     (prog1 (port-keyboard-input-focus port)
       (setf (port-keyboard-input-focus port) stream))))
 

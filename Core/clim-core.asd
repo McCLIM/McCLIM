@@ -8,15 +8,9 @@
     :components ((:file "protocol-classes")
                  (:file "declarations")
                  (:file "utilities")
-                 (:file "theming")))
-   (:module "extended-streams"
-    :components ((:file "text-selection")
-                 (:file "encapsulate")
-                 (:file "dead-keys")       ; dead-key merging
-                 (:file "stream-input"      :depends-on ("dead-keys"))
-                 (:file "gestures")
-                 (:file "standard-gestures" :depends-on ("gestures"))
-                 (:file "pointer-tracking"  :depends-on ("stream-input"))))
+                 (:file "theming")
+                 (:file "describe")
+                 (:file "encapsulate")))
    (:module "presentations"
     :serial t
     :components ((:file "presentation-types")
@@ -32,7 +26,6 @@
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
     :depends-on ("input-editing" "presentations"))
-   (:file "describe" :depends-on ("presentations" "standard-presentations"))
    (:module "commands"
     :depends-on ("input-editing" "presentations" "standard-presentations")
     :serial t

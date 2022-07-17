@@ -21,34 +21,6 @@
 
 ;;; The numbers are section numbers from the spec. --GB
 
-;;; 22.2.1 The Extended Stream Input Protocol
-
-(defgeneric stream-input-buffer (stream))
-(defgeneric (setf stream-input-buffer) (buffer stream))
-(defgeneric stream-pointer-position (stream &key pointer))
-(defgeneric* (setf stream-pointer-position) (x y stream))
-(defgeneric stream-set-input-focus (stream))
-(defgeneric stream-read-gesture
-    (stream &key timeout peek-p input-wait-test
-            input-wait-handler pointer-button-press-handler))
-(defgeneric stream-input-wait (stream &key timeout input-wait-test))
-(defgeneric stream-unread-gesture (stream gesture))
-
-;;; 22.2.2 Extended Input Stream Conditions
-
-(defgeneric abort-gesture-event (condition))
-(defgeneric accelerator-gesture-event (condition))
-(defgeneric accelerator-gesture-numeric-argument (condition))
-
-;;; 22.5 Pointer Tracking
-
-;; tracking-pointer
-;; dragging-output
-
-(defgeneric drag-output-record
-    (stream output &key repaint erase feedback finish-on-release multiple-window))
-
-
 ;;; 23.2 Presentations
 
 (defgeneric presentation-object (presentation))
@@ -166,18 +138,6 @@ activated even if there is an activation character in it."))
   (:documentation "Erases the part of the display that
 corresponds to the input editor's buffer starting at the position
 `start-position'."))
-
-;;; McCLIM relies on a text editor class (by default
-;;; DREI-INPUT-EDITING-MIXIN) to perform the user interaction and
-;;; display for input editing. Also, that class must update the stream
-;;; buffer and the insertion pointer, cause rescans to happen, and
-;;; handle activation gestures.
-(defgeneric stream-process-gesture (stream gesture type)
-  (:documentation "If gesture is an input editing command,
-stream-process-gesture performs the input editing operation on
-the input editing stream `stream' and returns NIL. Otherwise, it
-returns the two values `gesture' and `type'."))
-
 ;;; 24.4 Reading and Writing of Tokens
 
 (defgeneric replace-input

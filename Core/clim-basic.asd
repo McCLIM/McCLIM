@@ -68,4 +68,13 @@
                                (:file "updating-stream")
                                (:file "updating-record")
                                (:file "redisplay")
-                               (:file "propagate")))))))
+                               (:file "propagate")))))
+   (:module "extended-input"
+    :depends-on ("system" "geometry" "windowing" "extended-output")
+    :components ((:file "protocol")
+                 (:file "text-selection")
+                 (:file "dead-keys")    ; dead-key merging
+                 (:file "stream-input"      :depends-on ("dead-keys"))
+                 (:file "gestures")
+                 (:file "standard-gestures" :depends-on ("gestures"))
+                 (:file "pointer-tracking"  :depends-on ("stream-input"))))))

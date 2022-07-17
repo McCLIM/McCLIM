@@ -11,22 +11,6 @@
 ;;;
 (in-package #:clim-internals)
 
-
-;;;; Part VI: Extended Stream Input Facilities
-
-;; CLIM Specification says that E-I-S is a subclass of INPUT-STREAM,
-;; but it does not say what is it. We infer it is a base class for
-;; all CLIM input streams (standard-input-stream included).
-(defclass input-stream (fundamental-input-stream) ())
-
-;;; 22.2 Extended Input Streams
-
-(define-protocol-class extended-input-stream (input-stream))
-
-;;; 22.4 The Pointer Protocol
-
-(define-protocol-class pointer ())
-
 ;;; 23.2 Presentations
 (define-protocol-class presentation ())
 
