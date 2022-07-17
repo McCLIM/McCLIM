@@ -110,9 +110,3 @@
 
 ;;; 30.3 Basic Gadget Classes
 (define-protocol-class gadget (pane))
-
-
-;;;; Part VIII: Appendices
-
-;;; C.1 Encapsulating Streams
-(define-protocol-class encapsulating-stream ())

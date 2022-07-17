@@ -9,7 +9,8 @@
                  (:file "protocol")
                  (:file "multiprocessing")
                  (:file "resources")
-                 (:file "setf-star")))
+                 (:file "setf-star")
+                 (:file "encapsulating-streams" :depends-on ("protocol"))))
    (:module "geometry"
     :depends-on ("system")
     :serial t

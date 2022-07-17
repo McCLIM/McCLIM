@@ -915,8 +915,7 @@ Returns a SPACE-REQUIREMENT object."))
    "Returns two values: the baseline of an output record and a boolean
 indicating if this baseline is definitive. McCLIM addition."))
 
-(defgeneric encapsulating-stream-stream (encapsulating-stream)
-  (:documentation "The stream encapsulated by an encapsulating stream"))
+
 
 #||
 
