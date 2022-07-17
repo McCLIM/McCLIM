@@ -55,6 +55,12 @@
 (pledge :macro defgeneric* (name lambda-list &body options))
 (pledge :macro defmethod* (name lambda-list &body body))
 
+;;; C Encapsulating Streams
+(define-protocol-class encapsulating-stream ()) ; initargs (:stream)
+(pledge :class standard-encapsulating-stream (encapsulating-stream))
+(defgeneric encapsulating-stream-stream (encapsulating-stream)
+  (:documentation "The stream encapsulated by an encapsulating stream"))
+
 ;;; Geometry Substrate
 
 ;;; 3 Regions
