@@ -182,9 +182,8 @@
   (:documentation "The class representing one-dimensional blocks of cells."))
 
 (defmethod replay-output-record ((bl block-output-record-mixin) stream
-                                 &optional region (x-offset 0) (y-offset 0))
-  (when (null region)
-    (setq region (or (pane-viewport-region stream) +everywhere+)))
+                                 &optional (region (sheet-visible-region stream))
+                                           (x-offset 0) (y-offset 0))
   (with-drawing-options (stream :clipping-region region)
     (let (other-records)
       (map-over-output-records-overlapping-region
@@ -276,9 +275,8 @@
           (slot-value table 'x-spacing))))
 
 (defmethod replay-output-record ((table standard-table-output-record) stream
-                                 &optional region (x-offset 0) (y-offset 0))
-  (when (null region)
-    (setq region (or (pane-viewport-region stream) +everywhere+)))
+                                 &optional (region (sheet-visible-region stream))
+                                           (x-offset 0) (y-offset 0))
   (with-drawing-options (stream :clipping-region region)
     (let (other-records)
       (map-over-output-records-overlapping-region
@@ -416,32 +414,22 @@
      (replay item-list stream)
      item-list)))
 
+;;; KLUDGE this function is later redefined to handle the argument
+;;; PRESENTATION-TYPE.
 (defun format-items (items &rest args
-                           &key (stream *standard-output*)
-                                printer presentation-type
-                                cell-align-x cell-align-y
-                           &allow-other-keys)
-  (let ((printer (if printer
-                     (if presentation-type
-                         (lambda (item stream)
-                           (with-output-as-presentation (stream item presentation-type)
-                             (funcall printer item stream)))
-                         printer)
-                     (if presentation-type
-                         (lambda (item stream)
-                           (present item presentation-type :stream stream))
-                         #'prin1)))
-        (args (alexandria:remove-from-plist
-               args :stream :printer :presentation-type
-                    :cell-align-x :cell-align-y)))
-    (apply #'invoke-formatting-item-list
-           stream
+                     &key (stream *standard-output*)
+                          (printer #'prin1) presentation-type
+                          cell-align-x cell-align-y
+                     &allow-other-keys)
+  (declare (ignore presentation-type))
+  (with-keywords-removed
+      (args '(:stream :printer :presentation-type :cell-align-x :cell-align-y))
+    (apply #'invoke-formatting-item-list stream
            (lambda (stream)
-             (map nil (lambda (item)
-                        (formatting-cell (stream :align-x cell-align-x
-                                                 :align-y cell-align-y)
-                          (funcall printer item stream)))
-                  items))
+             (dolist (item items)
+               (formatting-cell (stream :align-x cell-align-x
+                                        :align-y cell-align-y)
+                 (funcall printer item stream))))
            args)))
 
 ;;; Helper function

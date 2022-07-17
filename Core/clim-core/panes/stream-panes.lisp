@@ -34,7 +34,8 @@
   (declare (ignore force-p))
   (invoke-display-function frame pane))
 
-(defclass clim-stream-pane (updating-output-stream-mixin
+(defclass clim-stream-pane (text-selection-mixin
+                            updating-output-stream-mixin
                             pane-display-mixin
                             #-clim-mp standard-repainting-mixin
                             standard-output-recording-stream
@@ -61,6 +62,24 @@
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
+
+(defmethod redisplay-frame-pane
+    ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
+  (setf (id-counter pane) 0)
+  (let ((incremental-redisplay (pane-incremental-redisplay pane)))
+    (cond ((not incremental-redisplay)
+           (call-next-method))
+          ((or (null (updating-record pane))
+               force-p)
+           (setf (updating-record pane)
+                 (updating-output (pane :unique-id 'top-level)
+                   (call-next-method frame pane :force-p force-p))))
+          ;; Implements the extension to the :incremental-redisplay
+          ;; pane argument found in the Franz User Guide.
+          (t (let ((record (updating-record pane)))
+               (if (consp incremental-redisplay)
+                   (apply #'redisplay record pane incremental-redisplay)
+                   (redisplay record pane))) ))))
 
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))

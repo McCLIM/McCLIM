@@ -1,7 +1,7 @@
 (in-package #:asdf-user)
 
 (defsystem "clim-basic"
-  :depends-on ("clim-lisp" "bordeaux-threads" "trivial-garbage")
+  :depends-on ("clim-lisp" "spatial-trees" "bordeaux-threads" "trivial-garbage")
   :pathname "clim-basic"
   :components
   ((:module "system"
@@ -49,4 +49,23 @@
                  (:file "input"   :depends-on ("sheets" "ports"))
                  (:file "grafts"  :depends-on ("sheets" "ports"))
                  (:file "repaint" :depends-on ("sheets" "ports" "grafts" "events" "output"))
-                 (:file "with-output-to-drawing-stream" :depends-on ("ports"))))))
+                 (:file "with-output-to-drawing-stream" :depends-on ("ports"))))
+   (:module "extended-output"
+    :depends-on ("system" "geometry" "drawing")
+    :components ((:file "protocol")
+                 (:file "extra-colors")
+                 (:file "utilities"        :depends-on ("protocol"))
+                 (:file "views"            :depends-on ("protocol"))
+                 (:file "text-formatting"  :depends-on ("protocol" "utilities"))
+                 (:file "stream-output"    :depends-on ("protocol" "utilities" "views" "text-formatting"))
+                 (:file "recording"        :depends-on ("protocol" "text-formatting"))
+                 (:file "graph-formatting" :depends-on ("protocol" "stream-output" "recording"))
+                 (:file "bordered-output"  :depends-on ("utilities" "extra-colors" "protocol" "recording"))
+                 (:file "table-formatting" :depends-on ("utilities" "protocol" "recording"))
+                 (:module "incremental-redisplay"
+                  :serial t
+                  :components ((:file "cache")
+                               (:file "updating-stream")
+                               (:file "updating-record")
+                               (:file "redisplay")
+                               (:file "propagate")))))))

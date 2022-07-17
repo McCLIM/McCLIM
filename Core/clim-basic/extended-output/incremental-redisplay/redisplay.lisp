@@ -354,24 +354,6 @@ in an equalp hash table")
                                ,@(and parent-cache-p
                                       `(:parent-cache ,parent-cache))))))
 
-(defmethod redisplay-frame-pane
-    ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
-  (setf (id-counter pane) 0)
-  (let ((incremental-redisplay (pane-incremental-redisplay pane)))
-    (cond ((not incremental-redisplay)
-           (call-next-method))
-          ((or (null (updating-record pane))
-               force-p)
-           (setf (updating-record pane)
-                 (updating-output (pane :unique-id 'top-level)
-                   (call-next-method frame pane :force-p force-p))))
-          ;; Implements the extension to the :incremental-redisplay
-          ;; pane argument found in the Franz User Guide.
-          (t (let ((record (updating-record pane)))
-               (if (consp incremental-redisplay)
-                   (apply #'redisplay record pane incremental-redisplay)
-                   (redisplay record pane))) ))))
-
 (defun redisplay (record stream &key (check-overlapping t))
   (redisplay-output-record record stream check-overlapping))
 
@@ -439,7 +421,7 @@ in an equalp hash table")
 (defgeneric propagate-to-updating-output
     (record child mode old-bounding-rectangle)
   (:method ((record updating-output-record-mixin) child mode old-bbox)
-    (declare (ignore child old-bobox))
+    (declare (ignore child old-bbox))
     (when (and (eq mode :move)
                (eq (output-record-dirty record) :clean))
       (mark-updating-output-changed record)))
