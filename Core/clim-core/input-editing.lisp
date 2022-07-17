@@ -211,7 +211,7 @@ then repaint `sheet'."
        (make-bounding-rectangle 0 y sheet-x2 sheet-y2))
       ;; Only repaint within the visible region...
       (with-bounding-rectangle* (viewport-x1 nil viewport-x2 viewport-y2)
-          (or (pane-viewport-region sheet) sheet)
+          (sheet-visible-region sheet)
         (repaint-sheet sheet (make-bounding-rectangle viewport-x1 (- y (abs delta-y))
                                                       viewport-x2 viewport-y2))))))
 

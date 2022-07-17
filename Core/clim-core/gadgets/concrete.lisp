@@ -984,10 +984,10 @@ response to scroll wheel events."))
 (defmethod handle-repaint ((pane generic-list-pane) region)
   (with-bounding-rectangle* (sx0 sy0) (sheet-region pane)
     (with-bounding-rectangle* (rx0 ry0 rx1 ry1)
+        ;; workaround for +everywhere+
         (if (bounding-rectangle-p region)
             region
-            (or (pane-viewport-region pane) ; workaround for +everywhere+
-                (sheet-region pane)))
+            (sheet-visible-region pane))
       (let* ((values (generic-list-pane-item-values pane))
              (foreground-ink (pane-foreground pane))
              (background-ink (pane-background pane))

@@ -1967,8 +1967,8 @@ add output recording facilities. It is not instantiable."))
     ((stream standard-output-recording-stream) record)
   (add-output-record record (stream-current-output-record stream)))
 
-(defmethod stream-replay
-    ((stream standard-output-recording-stream) &optional region)
+(defmethod stream-replay ((stream standard-output-recording-stream)
+                          &optional (region (sheet-visible-region stream)))
   (replay (stream-output-history stream) stream region))
 
 (defun output-record-ancestor-p (ancestor child)
