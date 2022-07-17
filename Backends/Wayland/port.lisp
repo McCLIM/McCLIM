@@ -116,38 +116,21 @@
                      (port-device wayland-port-device)
                      (port-window wayland-port-window)
                      (port-wm-base %wayland-wm-base)
-                     (port-surface wayland-port-surface)
-                     (port-top-level %xdg-top-level))
+                     (port-surface wayland-port-surface))
         port
 
       (setf port-compositor compositor
 
             port-device device
 
-            port-window (wlc:wl-compositor-create-surface
-                         compositor
-                         (make-instance 'wlc:wl-surface))
-
             port-wm-base (bind-wayland-registry
                           port
                           (make-instance 'xdg-wm-base-pingpong :version 1)
-                          "xdg_wm_base" 1)
-
-            ;; Create XDG Surface
-            port-surface (xdg:xdg-wm-base-get-xdg-surface
-                          port-wm-base
-                          (make-instance 'xdg:xdg-surface)
-                          port-window)
-
-            ;; Assign toplevel role to XDG surface
-            port-top-level (xdg:xdg-surface-get-toplevel
-                            port-surface
-                            (make-instance 'wayland-xdg-toplevel))))
+                          "xdg_wm_base" 1)))
 
     ;; Make one more round trip to handle events triggered by bindings above
     ;; before the main event loop is started
-    (roundtrip port)
-    (wlc:wl-surface-commit (wayland-port-window port))))
+    (roundtrip port)))
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
   (with-slots (frame-managers) port

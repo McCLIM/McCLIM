@@ -81,25 +81,62 @@
      (multiple-value-setq (egl-display egl-surface egl-context)
        (create-egl-context port mirror)))))
 
-(defmethod realize-mirror ((port wayland-port) (sheet top-level-sheet-mixin))
-  (format *debug-io* "realizing mirror top-level~%"))
+(defmethod realize-mirror :before ((port wayland-port) (sheet top-level-sheet-mixin))
+  (format *debug-io* "realizing mirror top-level; assigning xdg toplevel role~%")
+  (with-accessors ((port-compositor wayland-port-compositor)
+                   (port-window wayland-port-window)
+                   (port-wm-base %wayland-wm-base)
+                   (port-surface wayland-port-surface)
+                   (toplevel-surface %xdg-top-level))
+      port
+    (unless port-window
+      ;; create compositor window if it's not there
+      (format *debug-io* "creating surface for compositor~%")
+      (setf port-window (wlc:wl-compositor-create-surface
+                         port-compositor
+                         (make-instance 'wlc:wl-surface))))
+    (setf
+     ;; Create XDG surface for top-level
+     port-surface
+     (xdg:xdg-wm-base-get-xdg-surface port-wm-base
+                                      (make-instance 'xdg:xdg-surface)
+                                      port-window)
+     ;; Assign toplevel role to XDG surface
+     toplevel-surface (xdg:xdg-surface-get-toplevel
+                       port-surface
+                       (make-instance 'wayland-xdg-toplevel)))
+    (wlc:wl-surface-commit port-window)))
 
 (defmethod destroy-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "destroying mirror~%")
-  (port-disable-sheet port sheet)
   (let ((mirror (sheet-direct-mirror sheet)))
-   (with-slots (egl-window egl-context egl-display egl-surface)
-       mirror
-     (cffi:foreign-free egl-window)
-     (cffi:foreign-free egl-context)
-     (cffi:foreign-free egl-surface)
-     (cffi:foreign-free egl-display)
-     (setf egl-window nil
-           egl-context nil
-           egl-surface nil
-           egl-display nil))))
+    ;; (break "destroy-mirror" mirror sheet)
+    (with-slots (egl-window egl-context egl-display egl-surface)
+        mirror
+      ;; Unmap the window
+      (port-disable-sheet port sheet)
+
+      (wl-egl:wl-egl-window-destroy egl-window)
+      (wlc:wl-display-flush (wayland-port-display port)))))
+
+(defmethod destroy-mirror :before ((port wayland-port)
+                                   (sheet top-level-sheet-mixin))
+  (format *debug-io* "destroying top-level-sheet-mixin step~%")
+  (with-accessors ((port-window wayland-port-window)
+                   (port-surface wayland-port-surface)
+                   (toplevel-surface %xdg-top-level))
+      port
+    ;; Destroy toplevel role and XDG surface
+    (wlc:wayland-destroy toplevel-surface)
+    (wlc:wayland-destroy port-surface)
+
+    ;; Ensure port slots are nil
+    (setf port-surface nil
+          toplevel-surface nil)
+    (wlc:wl-surface-commit port-window)))
 
 (defun %graft-force-output (graft)
+  ;; I no longer thing this is the right thing to do
   (let ((mirror (sheet-mirror graft)))
     (format t "egl swap buffers graft-force-output ~%")
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
