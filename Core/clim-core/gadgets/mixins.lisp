@@ -13,13 +13,11 @@
 
 (defmethod armed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
   (declare (ignore client id))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (dispatch-repaint gadget (sheet-visible-region gadget)))
 
 (defmethod disarmed-callback :after ((gadget arm/disarm-repaint-mixin) client id)
   (declare (ignore client id))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (dispatch-repaint gadget (sheet-visible-region gadget)))
 
 (defclass activate/deactivate-repaint-mixin ()
   ()
@@ -27,12 +25,10 @@
    "Mixin class for gadgets, whose appearence depends on its activatated state."))
 
 (defmethod activate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (dispatch-repaint gadget (sheet-visible-region gadget)))
 
 (defmethod deactivate-gadget :after ((gadget activate/deactivate-repaint-mixin))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (dispatch-repaint gadget (sheet-visible-region gadget)))
 
 (defclass value-changed-repaint-mixin ()
   ()
@@ -42,8 +38,7 @@
 (defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin)
                                        &key &allow-other-keys)
   (declare (ignore new-value))
-  (dispatch-repaint gadget (or (pane-viewport-region gadget)
-                               (sheet-region gadget))))
+  (dispatch-repaint gadget (sheet-visible-region gadget)))
 
 ;;;; Event handling mixins
 
