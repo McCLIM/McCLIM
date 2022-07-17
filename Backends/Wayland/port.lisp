@@ -194,14 +194,6 @@
   (map-over-grafts #'%graft-force-output port)
   (wlc:wl-surface-commit (wayland-port-window port)))
 
-;;; Port event handling
-(defmethod handle-event
-    ((port wayland-port) (event window-configuration-event))
-
-  (let ((sheet (event-sheet event))
-        (native-region (window-event-native-region event)))
-    (format t "window-configuration-event ~S ~S~%" sheet native-region)))
-
 (defmethod port-set-mirror-geometry
     ((port wayland-port) (sheet mirrored-sheet-mixin) region)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
