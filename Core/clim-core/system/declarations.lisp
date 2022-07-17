@@ -898,60 +898,6 @@ Returns a SPACE-REQUIREMENT object."))
 (defgeneric new-page (stream))
 
 
-;;;
-
-(defgeneric medium-miter-limit (medium)
-  (:documentation
-   "If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
-   consequent lines is less than the values return by
-   MEDIUM-MITER-LIMIT, :BEVEL is used instead."))
-
-(defgeneric line-style-effective-thickness (line-style medium)
-  (:documentation
-   "Returns the thickness in device units of a line,
-rendered on MEDIUM with the style LINE-STYLE."))
-
-(defgeneric line-style-effective-dashes (line-style medium)
-  (:documentation
-   "Return a dash length or a sequence of dash lengths device units
-for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
-
-;;;
-
-(declfun draw-rectangle (sheet point1 point2
-                         &rest args
-                         &key (filled t)
-                         ink clipping-region transformation line-style line-thickness
-                         line-unit line-dashes line-joint-shape
-                         &allow-other-keys))
-
-(declfun draw-rectangle* (sheet x1 y1 x2 y2
-                          &rest args
-                          &key (filled t)
-                          ink clipping-region transformation line-style line-thickness
-                          line-unit line-dashes line-joint-shape
-                          &allow-other-keys))
-
-;;; "exported" from a port
-
-(defgeneric port-text-style-mappings (port))
-(defgeneric port-enable-sheet (port sheet))
-(defgeneric port-disable-sheet (port sheet))
-(defgeneric port-shrink-sheet (port sheet))
-(defgeneric port-pointer (port))
-
-(defgeneric port-set-mirror-name (port sheet name))
-(defgeneric port-set-mirror-icon (port sheet icon))
-(defgeneric port-set-mirror-geometry (port sheet region))
-
-;;; Defined in Franz user guide sec. 15.1
-(defgeneric port-modifier-state (port))
-
-(defgeneric pointer-update-state (pointer event)
-  (:documentation "Called by port event dispatching code to update the modifier
-and button states of the pointer."))
-
-;;;
 
 ;; Used in stream-input.lisp, defined in frames.lisp
 (defgeneric frame-event-queue (frame))

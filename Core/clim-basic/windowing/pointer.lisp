@@ -14,23 +14,6 @@
    (button-state :initform 0 )
    (sheet :initform nil :initarg :sheet :accessor pointer-sheet)))
 
-(defgeneric pointer-sheet (pointer))
-
-(defgeneric (setf pointer-sheet) (sheet pointer))
-
-(defgeneric pointer-button-state (pointer))
-
-(defgeneric pointer-position (pointer))
-
-(defgeneric* (setf pointer-position) (x y pointer))
-
-(defgeneric synthesize-pointer-motion-event (pointer)
-  (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
-
-(defgeneric pointer-cursor (pointer))
-
-(defgeneric (setf pointer-cursor) (cursor pointer))
-
 (defmethod pointer-button-state ((pointer standard-pointer))
   (with-lock-held ((state-lock pointer))
     (slot-value pointer 'button-state)))

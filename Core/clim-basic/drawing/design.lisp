@@ -101,10 +101,6 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-  (defgeneric color-rgb (color))
-  (defgeneric color-rgba (color))
-  (defgeneric design-ink (design x y))
-
   (defmethod print-object ((color color) stream)
     (print-unreadable-object (color stream :identity nil :type t)
       (multiple-value-call #'format stream "~,4F ~,4F ~,4F" (color-rgb color))))
@@ -224,8 +220,6 @@
              (f2 (sqrt (- 1 (* f1 f1))))
              (saturation (atan f2 f1)))
         (values intensity hue saturation)))))
-
-(defgeneric color-ihs (color))
 
 (defmethod color-ihs ((color color))
   (multiple-value-call #'rgb-to-ihs (color-rgb color)))
@@ -391,8 +385,6 @@
     (print-unreadable-object (flipper stream :identity nil :type t)
       (format stream "~S ~S" design1 design2))))
 
-(defgeneric make-flipping-ink (design1 design2))
-
 (defmethod make-flipping-ink ((design1 design) (design2 design))
   (make-instance 'standard-flipping-ink :design1 design1 :design2 design2))
 
@@ -416,10 +408,6 @@
          (b3 (/ (+ (* b1 o1) (* (- 1 o1) o2 b2)) o3)))
     (values
      r3 g3 b3 o3)))
-
-(defgeneric compose-over (design1 design2))
-(defgeneric compose-in (ink mask))
-(defgeneric compose-out (ink mask))
 
 ;;;
 
@@ -902,8 +890,6 @@
 
 ;;; Comparison of designs.
 
-(defgeneric design-equalp (design1 design2))
-
 (defmethod design-equalp :around ((design1 t) (design2 t))
   (or (eql design1 design2)
       (call-next-method)))
@@ -921,11 +907,6 @@
            (= b1 b2)))))
 
 ;;; Color utilities
-
-(defgeneric highlight-shade (ink)
-  (:documentation
-  "Produce an alternate shade of the given ink for the purpose of highlighting.
-   Typically the ink will be brightened, but very light inks may be darkened."))
 
 (defmethod highlight-shade (ink) ink)
 

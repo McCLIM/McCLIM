@@ -79,11 +79,10 @@
   (when (and medium (not (slot-boundp obj 'line-style)))
     (setf (slot-value obj 'line-style) (graphics-state-line-style medium))))
 
-(defgeneric graphics-state-line-style-border (record medium)
-  (:method ((record gs-line-style-mixin) (medium medium))
-    (/ (line-style-effective-thickness (graphics-state-line-style record)
-                                       medium)
-       2)))
+(defmethod graphics-state-line-style-border ((record gs-line-style-mixin) (medium medium))
+  (/ (line-style-effective-thickness (graphics-state-line-style record)
+                                     medium)
+     2))
 
 (defclass gs-text-style-mixin (graphics-state)
   ((text-style :initarg :text-style :accessor graphics-state-text-style)))
@@ -100,19 +99,18 @@
     (gs-ink-mixin gs-clip-mixin gs-line-style-mixin gs-text-style-mixin gs-transformation-mixin)
   ())
 
-(defgeneric (setf graphics-state) (new-gs gs)
-  (:method ((new-gs graphics-state) (gs graphics-state))
-    #+(or) "This is a no-op, but :after methods don't work without a primary method.")
-  (:method :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
-    (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
-  (:method :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
-    (setf (graphics-state-clip gs) (graphics-state-clip new-gs)))
-  (:method :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
-    (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
-  (:method :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
-    (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs)))
-  (:method :after ((new-gs gs-transformation-mixin) (gs gs-transformation-mixin))
-    (setf (graphics-state-transformation gs) (graphics-state-transformation new-gs))))
+(defmethod (setf graphics-state) ((new-gs graphics-state) (gs graphics-state))
+  #+(or) "This is a no-op, but :after methods don't work without a primary method.")
+(defmethod (setf graphics-state) :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
+  (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
+(defmethod (setf graphics-state) :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
+  (setf (graphics-state-clip gs) (graphics-state-clip new-gs)))
+(defmethod (setf graphics-state) :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
+  (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
+(defmethod (setf graphics-state) :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
+  (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs)))
+(defmethod (setf graphics-state) :after ((new-gs gs-transformation-mixin) (gs gs-transformation-mixin))
+  (setf (graphics-state-transformation gs) (graphics-state-transformation new-gs)))
 
 
 ;;; MEDIUM class
@@ -198,37 +196,31 @@
 
 ;;; Medium Device functions
 
-(defgeneric medium-device-transformation (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-device-transformation sheet)
-      (medium-transformation medium))))
+(defmethod medium-device-transformation ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-device-transformation sheet)
+    (medium-transformation medium)))
 
-(defgeneric medium-device-region (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-device-region sheet)
-      (transform-region (medium-device-transformation medium)
-                        (medium-clipping-region medium)))))
+(defmethod medium-device-region ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-device-region sheet)
+    (transform-region (medium-device-transformation medium)
+                      (medium-clipping-region medium))))
 
-(defgeneric medium-native-transformation (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-native-transformation sheet)
-      +identity-transformation+)))
+(defmethod medium-native-transformation ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-native-transformation sheet)
+    +identity-transformation+))
 
-(defgeneric medium-native-region (medium)
-  (:method ((medium medium))
-    (if-let ((sheet (medium-sheet medium)))
-      (sheet-native-region sheet)
-      (transform-region (compose-transformations (medium-native-transformation medium)
-                                                 (medium-transformation medium))
-                        (medium-clipping-region medium)))))
+(defmethod medium-native-region ((medium medium))
+  (if-let ((sheet (medium-sheet medium)))
+    (sheet-native-region sheet)
+    (transform-region (compose-transformations (medium-native-transformation medium)
+                                               (medium-transformation medium))
+                      (medium-clipping-region medium))))
 
 
 ;;; Line-Style class
-
-(defgeneric line-style-equalp (arg1 arg2))
 
 (defclass standard-line-style (line-style)
   ((unit        :initarg :line-unit

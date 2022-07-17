@@ -31,10 +31,9 @@
             (t :clx-ttf))
     :null))
 
-(defgeneric find-port-type (port)
-  (:method ((port symbol))
-    (values (get port :port-type)
-            (get port :server-path-parser))))
+(defmethod find-port-type ((port symbol))
+  (values (get port :port-type)
+          (get port :server-path-parser)))
 
 (defvar *all-ports* nil)
 (defvar *all-ports-lock* (make-lock "All ports lock."))
@@ -118,12 +117,8 @@
    (pressed-sheet :initform nil :accessor port-pressed-sheet
                   :documentation "The sheet the pointer is pressed on, if any")))
 
-(defgeneric note-input-focus-changed (sheet state)
-  (:documentation "Called when a sheet receives or loses the keyboard input
-focus. STATE argument is T when the sheet gains focus and NIL otherwise. This
-is a McCLIM extension.")
-  (:method (sheet state)
-    (declare (ignore sheet state))))
+(defmethod note-input-focus-changed (sheet state)
+  (declare (ignore sheet state)))
 
 (defmethod (setf port-keyboard-input-focus)
     ((top-sheet top-level-sheet-mixin) (port basic-port))
@@ -439,8 +434,6 @@ is a McCLIM extension.")
        (declare (dynamic-extent #',fn))
        (invoke-with-port-locked ,port #',fn))))
 
-(defgeneric invoke-with-port-locked (port continuation))
-
 (defmethod invoke-with-port-locked ((port basic-port) continuation)
   (with-recursive-lock-held ((port-lock port))
     (funcall continuation)))
@@ -488,38 +481,33 @@ is a McCLIM extension.")
                    port)
   (make-graft port :orientation orientation :units units))
 
-(defgeneric port-force-output (port)
-  (:documentation "Flush the output buffer of PORT, if there is one."))
-
 (defmethod port-force-output ((port basic-port))
   (values))
 
 ;;; Design decision: Recursive grabs are a no-op.
 
-(defgeneric port-grab-pointer (port pointer sheet &key multiple-window)
-  (:documentation "Grab the specified pointer.")
-  (:method ((port basic-port) pointer sheet &key multiple-window)
-    (declare (ignore pointer sheet multiple-window))
-    (warn "Port ~A has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet &key multiple-window)
-    (declare (ignore pointer))
-    (unless (port-grabbed-sheet port)
-      (when (call-next-method)
-        (setf (port-grabbed-sheet port)
-              (if multiple-window
-                  t
-                  sheet))))))
+(defmethod port-grab-pointer ((port basic-port) pointer sheet &key multiple-window)
+  (declare (ignore pointer sheet multiple-window))
+  (warn "Port ~A has not implemented pointer grabbing." port))
 
-(defgeneric port-ungrab-pointer (port pointer sheet)
-  (:documentation "Ungrab the specified pointer.")
-  (:method ((port basic-port) pointer sheet)
-    (declare (ignore pointer sheet))
-    (warn "Port ~A  has not implemented pointer grabbing." port))
-  (:method :around ((port basic-port) pointer sheet)
-    (declare (ignore pointer sheet))
-    (when (port-grabbed-sheet port)
-      (setf (port-grabbed-sheet port) nil)
-      (call-next-method))))
+(defmethod port-grab-pointer :around ((port basic-port) pointer sheet &key multiple-window)
+  (declare (ignore pointer))
+  (unless (port-grabbed-sheet port)
+    (when (call-next-method)
+      (setf (port-grabbed-sheet port)
+            (if multiple-window
+                t
+                sheet)))))
+
+(defmethod port-ungrab-pointer ((port basic-port) pointer sheet)
+  (declare (ignore pointer sheet))
+  (warn "Port ~A  has not implemented pointer grabbing." port))
+
+(defmethod port-ungrab-pointer :around ((port basic-port) pointer sheet)
+  (declare (ignore pointer sheet))
+  (when (port-grabbed-sheet port)
+    (setf (port-grabbed-sheet port) nil)
+    (call-next-method)))
 
 (defmacro with-pointer-grabbed ((port sheet &key pointer multiple-window)
                                 &body body)
@@ -540,9 +528,6 @@ is a McCLIM extension.")
                                                ,the-sheet))))
                   ,@body)
              (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
-
-(defgeneric set-sheet-pointer-cursor (port sheet cursor)
-  (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
 
 (defmethod set-sheet-pointer-cursor ((port basic-port) sheet cursor)
   (declare (ignore sheet cursor))

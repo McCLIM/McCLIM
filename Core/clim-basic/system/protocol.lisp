@@ -97,7 +97,7 @@
 (defgeneric region-intersection (region1 region2))
 (defgeneric region-difference (region1 region2))
 (defgeneric region-complement (region))
-(defgeneric region-exclusive-or (region1 region2))
+(declfun region-exclusive-or (region1 region2))
 (pledge :condition region-set-not-rectangular (error))
 
 ;;; 3.2 Other Region Types
@@ -249,6 +249,7 @@
 (defgeneric even-scaling-transformation-p (transformation))
 (defgeneric scaling-transformation-p (transformation))
 (defgeneric rectilinear-transformation-p (transformation))
+;;; McCLIM extension:
 (defgeneric y-inverting-transformation-p (transformation))
 
 ;;; 5.3.2 Composition of Transformations
@@ -405,38 +406,38 @@
 ;;; 12.5.1 Basic Drawing Functions
 (pledge :macro def-sheet-trampoline (name (&rest args)))
 (pledge :macro def-graphic-op (name (&rest args)))
-(declfun draw-point (sheet point &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
-(declfun draw-point* (sheet x y &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
-(declfun draw-points (sheet point-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
-(declfun draw-points* (sheet position-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit &allow-other-keys))
-(declfun draw-line (sheet point1 point2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-line* (sheet x1 y1 x2 y2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-lines (sheet point-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-lines* (sheet position-seq &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-polygon (sheet point-seq &rest drawing-options &key (filled t) (closed t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
-(declfun draw-polygon* (sheet position-seq &rest drawing-options &key (filled t) (closed t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
-(declfun draw-rectangle (sheet point1 point2 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-rectangle* (sheet x1 y1 x2 y2 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-rectangles (sheet points &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-rectangles* (sheet position-seq &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-ellipse (sheet center rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-ellipse* (sheet cx cy rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-circle (sheet center radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-circle* (sheet cx cy radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-text (sheet text point &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-point nil toward-point-p) transform-glyphs ink clipping-region transformation text-style text-family text-face text-size &allow-other-keys))
-(declfun draw-text* (sheet text x y &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-x (1+ x)) (toward-y y) transform-glyphs ink clipping-region transformation text-style text-family text-face text-size &allow-other-keys))
-(declfun draw-triangle (sheet point1 point2 point3 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-triangle* (sheet x1 y1 x2 y2 x3 y3 &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape &allow-other-keys))
-(declfun draw-bezigon (sheet point-seq &rest drawing-args &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
-(declfun draw-bezigon* (sheet position-seq &rest drawing-args &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-joint-shape line-cap-shape &allow-other-keys))
+(declfun draw-point (sheet point &rest drawing-options &key &allow-other-keys))
+(declfun draw-point* (sheet x y &rest drawing-options &key  &allow-other-keys))
+(declfun draw-points (sheet point-seq &rest drawing-options &key &allow-other-keys))
+(declfun draw-points* (sheet position-seq &rest drawing-options &key &allow-other-keys))
+(declfun draw-line (sheet point1 point2 &rest drawing-options &key &allow-other-keys))
+(declfun draw-line* (sheet x1 y1 x2 y2 &rest drawing-options &key &allow-other-keys))
+(declfun draw-lines (sheet point-seq &rest drawing-options &key &allow-other-keys))
+(declfun draw-lines* (sheet position-seq &rest drawing-options &key &allow-other-keys))
+(declfun draw-polygon (sheet point-seq &rest drawing-options &key (filled t) (closed t) &allow-other-keys))
+(declfun draw-polygon* (sheet position-seq &rest drawing-options &key (filled t) (closed t) &allow-other-keys))
+(declfun draw-rectangle (sheet point1 point2 &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-rectangle* (sheet x1 y1 x2 y2 &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-rectangles (sheet points &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-rectangles* (sheet position-seq &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-ellipse (sheet center rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) &allow-other-keys))
+(declfun draw-ellipse* (sheet cx cy rdx1 rdy1 rdx2 rdy2 &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) &allow-other-keys))
+(declfun draw-circle (sheet center radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) &allow-other-keys))
+(declfun draw-circle* (sheet cx cy radius &rest drawing-options &key (filled t) (start-angle 0.0) (end-angle (* 2.0 pi)) &allow-other-keys))
+(declfun draw-text (sheet text point &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-point nil toward-point-p) transform-glyphs &allow-other-keys))
+(declfun draw-text* (sheet text x y &rest drawing-options &key (start 0) (end nil) (align-x :left) (align-y :baseline) (toward-x (1+ x)) (toward-y y) transform-glyphs &allow-other-keys))
+(declfun draw-triangle (sheet point1 point2 point3 &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-triangle* (sheet x1 y1 x2 y2 x3 y3 &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-bezigon (sheet point-seq &rest drawing-args &key (filled t) &allow-other-keys))
+(declfun draw-bezigon* (sheet position-seq &rest drawing-args &key (filled t) &allow-other-keys))
 (declfun draw-image (sheet pattern point &rest drawing-options))
 (declfun draw-image* (sheet pattern x y &rest drawing-options))
 
 ;;; 12.5.2 Compound Drawing Functions
-(declfun draw-arrow (medium point1 point2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
-(declfun draw-arrow* (medium x1 y1 x2 y2 &rest drawing-options &key ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
-(declfun draw-oval (medium center rx ry &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
-(declfun draw-oval* (medium cx cy rx ry &rest drawing-options &key (filled t) ink clipping-region transformation line-style line-thickness line-unit line-dashes line-cap-shape &allow-other-keys))
+(declfun draw-arrow (medium point1 point2 &rest drawing-options &key (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
+(declfun draw-arrow* (medium x1 y1 x2 y2 &rest drawing-options &key (to-head t) from-head (head-length 10) (head-width 5) (head-filled nil) angle &allow-other-keys))
+(declfun draw-oval (medium center rx ry &rest drawing-options &key (filled t) &allow-other-keys))
+(declfun draw-oval* (medium cx cy rx ry &rest drawing-options &key (filled t) &allow-other-keys))
 (declfun draw-rounded-rectangle* (sheet x1 y1 x2 y2 &rest args &key (radius 7) (radius-x radius) (radius-y radius) (radius-left radius-x) (radius-right radius-x) (radius-top radius-y) (radius-bottom radius-y) filled &allow-other-keys))
 
 ;;; 12.6 Pixmaps
@@ -445,8 +446,8 @@
 (defgeneric pixmap-width (instance))
 (defgeneric pixmap-height (instance))
 (defgeneric pixmap-depth (instance))
-(declfun copy-to-pixmap (source src-x src-y width height &optional pixmap dst-x dst-y))
-(declfun copy-from-pixmap (pixmap src-x src-y width height destination dst-x dst-y))
+(defgeneric copy-to-pixmap (source src-x src-y width height &optional pixmap dst-x dst-y))
+(defgeneric copy-from-pixmap (pixmap src-x src-y width height destination dst-x dst-y))
 (defgeneric copy-area (medium src-x src-y width height dst-x dst-y))
 (defgeneric medium-copy-area (source src-x src-y width height destination dst-x dst-y))
 (pledge :macro with-output-to-pixmap ((medium-var medium &key width height) &key body))
@@ -478,9 +479,22 @@
 (defgeneric invoke-with-output-buffered (medium cont &optional buffered-p))
 (pledge :macro with-output-to-drawing-stream ((stream backend destination &rest args) &body body))
 (defgeneric invoke-with-output-to-drawing-stream (cont backend destination &key &allow-other-keys))
-(defgeneric medium-miter-limit (instance))
-(defgeneric line-style-effective-thickness (line-style medium))
-(defgeneric line-style-effective-dashes (line-style medium))
+
+(defgeneric medium-miter-limit (medium)
+  (:documentation
+   "If LINE-STYLE-JOINT-SHAPE is :MITER and the angle between two
+   consequent lines is less than the values return by
+   MEDIUM-MITER-LIMIT, :BEVEL is used instead."))
+
+(defgeneric line-style-effective-thickness (line-style medium)
+  (:documentation
+   "Returns the thickness in device units of a line,
+rendered on MEDIUM with the style LINE-STYLE."))
+
+(defgeneric line-style-effective-dashes (line-style medium)
+  (:documentation
+   "Return a dash length or a sequence of dash lengths device units
+for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
 
 ;;; 13 Drawing in Color
 
@@ -494,8 +508,10 @@
 (defgeneric color-rgb (instance))
 (defgeneric color-ihs (instance))
 (defgeneric color-rgba (instance))
-(defgeneric highlight-shade (ink) (:documentation "Produce an alternate shade of the given ink for the purpose of highlighting.
-Typically the ink will be brightened, but very light inks may be darkened."))
+(defgeneric highlight-shade (ink)
+  (:documentation
+   "Produce an alternate shade of the given ink for the purpose of highlighting.
+    Typically the ink will be brightened, but very light inks may be darkened."))
 
 ;;; 13.3.1 Standard Color Names and Constants
 (pledge :constant +red+)
@@ -556,7 +572,8 @@ Typically the ink will be brightened, but very light inks may be darkened."))
 (declfun write-bitmap-file (image pathname &key (format :bitmap)))
 (defgeneric pattern-width (instance))
 (defgeneric pattern-height (instance))
-(define-protocol-class pattern (design))
+(define-protocol-class pattern (design) ()
+  (:documentation "Abstract class for all pattern-like designs."))
 (pledge :class stencil (pattern))
 (pledge :class indexed-pattern (pattern))
 (pledge :class image-pattern (pattern))
@@ -673,7 +690,8 @@ Typically the ink will be brightened, but very light inks may be darkened."))
 (defgeneric process-next-event (port &key wait-function timeout))
 (defgeneric port-keyboard-input-focus (instance))
 (defgeneric (setf port-keyboard-input-focus) (new-value instance))
-(defgeneric note-input-focus-changed (sheet state) (:documentation "Called when a sheet receives or loses the keyboard input
+(defgeneric note-input-focus-changed (sheet state)
+  (:documentation "Called when a sheet receives or loses the keyboard input
 focus. STATE argument is T when the sheet gains focus and NIL otherwise. This
 is a McCLIM extension."))
 (defgeneric distribute-event (port event))
@@ -692,6 +710,7 @@ depends on a port."))
 (defgeneric event-listen-or-wait (client &key timeout wait-function) (:documentation "When wait-function is nil then function waits for available event. Otherwise
 function returns when wait-function predicate yields true. Time of wait-function
 call depends on a port."))
+
 (define-protocol-class event-queue nil)
 (defgeneric event-queue-port (instance))
 (defgeneric (setf event-queue-port) (new-value instance))
@@ -701,27 +720,46 @@ call depends on a port."))
 (defgeneric (setf event-queue-tail) (new-value instance))
 (pledge :class simple-event-queue (event-queue))
 (pledge :class concurrent-event-queue (event-queue))
+
 (defgeneric schedule-event-queue (queue event delay))
-(defgeneric event-queue-read (event-queue) (:documentation "Reads one event from the queue, if there is no event, hang
+
+(defgeneric event-queue-read (event-queue)
+  (:documentation "Reads one event from the queue, if there is no event, hang
 until here is one."))
-(defgeneric event-queue-read-no-hang (event-queue) (:documentation "Reads one event from the queue, if there is no event just
+
+(defgeneric event-queue-read-no-hang (event-queue)
+  (:documentation "Reads one event from the queue, if there is no event just
 return NIL."))
-(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function) (:documentation "Waits until wait-function returns true, event queue
+
+(defgeneric event-queue-read-with-timeout (event-queue timeout wait-function)
+  (:documentation "Waits until wait-function returns true, event queue
 is not empty or none of the above happened before a timeout.
 
 - Returns (values nil :wait-function) if wait-function returns true
 - Reads and returns one event from the queue if it is not empty
 - Returns (values nil :timeout) otherwise."))
-(defgeneric event-queue-append (event-queue item) (:documentation "Append the item at the end of the queue. Does event compression."))
-(defgeneric event-queue-prepend (event-queue item) (:documentation "Prepend the item to the beginning of the queue."))
-(defgeneric event-queue-peek (event-queue) (:documentation "Peeks the first event in a queue. Queue is left unchanged.
+
+(defgeneric event-queue-append (event-queue item)
+  (:documentation "Append the item at the end of the queue. Does event compression."))
+
+(defgeneric event-queue-prepend (event-queue item)
+  (:documentation "Prepend the item to the beginning of the queue."))
+
+(defgeneric event-queue-peek (event-queue)
+  (:documentation "Peeks the first event in a queue. Queue is left unchanged.
 If queue is empty returns NIL."))
-(defgeneric event-queue-peek-if (predicate event-queue) (:documentation "Goes through the whole event queue and returns the first
+
+(defgeneric event-queue-peek-if (predicate event-queue)
+  (:documentation "Goes through the whole event queue and returns the first
 event, which satisfies PREDICATE. Queue is left unchanged. Returns NIL if there
 is no such event."))
-(defgeneric event-queue-listen (event-queue) (:documentation "Returns true if there are any events in the queue. Otherwise
+
+(defgeneric event-queue-listen (event-queue)
+  (:documentation "Returns true if there are any events in the queue. Otherwise
 returns NIL."))
-(defgeneric event-queue-listen-or-wait (event-queue &key timeout wait-function) (:documentation "Waits until wait-function returns true, event queue
+
+(defgeneric event-queue-listen-or-wait (event-queue &key timeout wait-function)
+  (:documentation "Waits until wait-function returns true, event queue
 is not empty or none of the above happened before a timeout.
 
 - Returns (values nil :wait-function) when wait-function returns true
@@ -777,10 +815,15 @@ is not empty or none of the above happened before a timeout.
 (defgeneric pointer-event-delta-y (instance))
 (pledge :class pointer-motion-event (pointer-event))
 (pledge :class pointer-boundary-event (pointer-motion-event))
-(defgeneric synthesize-pointer-motion-event (pointer) (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
+(defgeneric synthesize-pointer-motion-event (pointer)
+  (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
 (declfun synthesize-boundary-events (port event))
 (defgeneric pointer-boundary-event-kind (pointer-boundary-event))
-(defgeneric pointer-update-state (pointer event))
+
+(defgeneric pointer-update-state (pointer event)
+  (:documentation "Called by port event dispatching code to update the modifier
+and button states of the pointer."))
+
 (pledge :class pointer-enter-event (pointer-boundary-event))
 (pledge :class pointer-exit-event (pointer-boundary-event))
 (pledge :class pointer-grab-enter-event (pointer-enter-event))
@@ -918,25 +961,43 @@ is not empty or none of the above happened before a timeout.
 (declfun remove-stored-object (port selection))
 
 ;;; McCLIM extension: Font listing
-(defgeneric port-all-font-families (port &key invalidate-cache &allow-other-keys) (:documentation "Returns the list of all FONT-FAMILY instances known by PORT.
+(defgeneric port-all-font-families (port &key invalidate-cache &allow-other-keys)
+  (:documentation "Returns the list of all FONT-FAMILY instances known by PORT.
 With INVALIDATE-CACHE, cached font family information is discarded, if any."))
-(defgeneric font-family-name (font-family) (:documentation "Return the font family's name.  This name is meant for user display,
+
+(defgeneric font-family-name (font-family)
+  (:documentation "Return the font family's name.  This name is meant for user display,
 and does not, at the time of this writing, necessarily the same string
 used as the text style family for this port."))
-(defgeneric font-family-port (font-family) (:documentation "Return the port this font family belongs to."))
-(defgeneric font-family-all-faces (font-family) (:documentation "Return the list of all font-face instances for this family."))
-(defgeneric font-face-name (font-face) (:documentation "Return the font face's name.  This name is meant for user display,
+
+(defgeneric font-family-port (font-family)
+  (:documentation "Return the port this font family belongs to."))
+
+(defgeneric font-family-all-faces (font-family)
+  (:documentation "Return the list of all font-face instances for this family."))
+
+(defgeneric font-face-name (font-face)
+  (:documentation "Return the font face's name.  This name is meant for user display,
 and does not, at the time of this writing, necessarily the same string
 used as the text style face for this port."))
-(defgeneric font-face-family (font-face) (:documentation "Return the font family this face belongs to."))
-(defgeneric font-face-all-sizes (font-face) (:documentation "Return the list of all font sizes known to be valid for this font,
+
+(defgeneric font-face-family (font-face)
+  (:documentation "Return the font family this face belongs to."))
+
+(defgeneric font-face-all-sizes (font-face)
+  (:documentation "Return the list of all font sizes known to be valid for this font,
 if the font is restricted to particular sizes.  For scalable fonts, arbitrary
 sizes will work, and this list represents only a subset of the valid sizes.
 See font-face-scalable-p."))
-(defgeneric font-face-scalable-p (font-face) (:documentation "Return true if this font is scalable, as opposed to a bitmap font.  For
+
+(defgeneric font-face-scalable-p (font-face)
+  (:documentation "Return true if this font is scalable, as opposed to a bitmap font.  For
 a scalable font, arbitrary font sizes are expected to work."))
-(defgeneric font-face-text-style (font-face &optional size) (:documentation "Return an extended text style describing this font face in the specified
+
+(defgeneric font-face-text-style (font-face &optional size)
+  (:documentation "Return an extended text style describing this font face in the specified
 size.  If size is nil, the resulting text style does not specify a size."))
+
 (pledge :class font-family)
 (pledge :class font-face)
 (pledge :class basic-font-family)
@@ -945,7 +1006,7 @@ size.  If size is nil, the resulting text style does not specify a size."))
 ;;; 9.3 Grafts
 (pledge :class graft nil)
 (declfun graftp (graft))
-(declfun make-graft (port &key orientation units))
+(defgeneric make-graft (port &key orientation units))
 (defgeneric sheet-grafted-p (sheet))
 (declfun find-graft (&key (port nil) (server-path *default-server-path*) (orientation :default) (units :device)))
 (defgeneric graft (instance))
@@ -1003,6 +1064,11 @@ size.  If size is nil, the resulting text style does not specify a size."))
 (defgeneric pointer-cursor (instance))
 (defgeneric (setf pointer-cursor) (new-value instance))
 (pledge :macro with-pointer-grabbed ((port sheet &key pointer multiple-window) &body body))
-(defgeneric port-grab-pointer (port pointer sheet &key multiple-window) (:documentation "Grab the specified pointer."))
-(defgeneric port-ungrab-pointer (port pointer sheet) (:documentation "Ungrab the specified pointer."))
-(defgeneric set-sheet-pointer-cursor (port sheet cursor) (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))
+(defgeneric port-force-output (port)
+  (:documentation "Flush the output buffer of PORT, if there is one."))
+(defgeneric port-grab-pointer (port pointer sheet &key multiple-window)
+  (:documentation "Grab the specified pointer."))
+(defgeneric port-ungrab-pointer (port pointer sheet)
+  (:documentation "Ungrab the specified pointer."))
+(defgeneric set-sheet-pointer-cursor (port sheet cursor)
+  (:documentation "Sets the cursor associated with SHEET. CURSOR is a symbol, as described in the Franz user's guide."))

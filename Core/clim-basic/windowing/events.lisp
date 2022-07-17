@@ -234,21 +234,17 @@
                                        (or (sheet-parent sheet) sheet)))
                                     (,x ,event) (,y ,event))))))
 
-  (defgeneric window-configuration-event-x (event)
-    (:method ((event window-configuration-event))
-      (get-window-property :position 0 event)))
+  (defmethod window-configuration-event-x ((event window-configuration-event))
+    (get-window-property :position 0 event))
 
-  (defgeneric window-configuration-event-y (event)
-    (:method ((event window-configuration-event))
-      (get-window-property :position 1 event)))
+  (defmethod window-configuration-event-y ((event window-configuration-event))
+    (get-window-property :position 1 event))
 
-  (defgeneric window-configuration-event-width (event)
-    (:method ((event window-configuration-event))
-      (get-window-property :size 0 event)))
+  (defmethod window-configuration-event-width ((event window-configuration-event))
+    (get-window-property :size 0 event))
 
-  (defgeneric window-configuration-event-height (event)
-    (:method ((event window-configuration-event))
-      (get-window-property :size 1 event))))
+  (defmethod window-configuration-event-height ((event window-configuration-event))
+    (get-window-property :size 1 event)))
 
 (define-event-class window-map-event     (window-event) ())
 (define-event-class window-unmap-event   (window-event) ())

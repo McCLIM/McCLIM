@@ -86,35 +86,37 @@
       (declare (dynamic-extent #',fn))
       (invoke-with-sheet-medium-bound #',fn ,medium ,sheet))))
 
-(defgeneric invoke-with-sheet-medium-bound (continuation medium sheet)
-  (:argument-precedence-order sheet medium continuation)
-  (:method (continuation medium sheet)
-    (declare (ignore sheet))
-    (funcall continuation medium))
-  (:method (continuation medium (sheet permanent-medium-sheet-output-mixin))
-    (declare (ignore medium))
-    (funcall continuation (sheet-medium sheet)))
-  (:method (continuation medium (sheet temporary-medium-sheet-output-mixin))
-    (if-let ((sheet-medium (sheet-medium sheet)))
-      (funcall continuation sheet-medium)
-      (let ((port (port sheet)))
-        (if (null medium)
-            (let ((new-medium (allocate-medium port sheet)))
-              (unwind-protect
-                   (progn
-                     (engraft-medium new-medium port sheet)
-                     (setf (%sheet-medium sheet) new-medium)
-                     (funcall continuation new-medium))
-                (setf (%sheet-medium sheet) nil)
-                (degraft-medium new-medium port sheet)
-                (deallocate-medium port new-medium)))
+(defmethod invoke-with-sheet-medium-bound (continuation medium sheet)
+  (declare (ignore sheet))
+  (funcall continuation medium))
+
+(defmethod invoke-with-sheet-medium-bound
+    (continuation medium (sheet permanent-medium-sheet-output-mixin))
+  (declare (ignore medium))
+  (funcall continuation (sheet-medium sheet)))
+
+(defmethod invoke-with-sheet-medium-bound
+    (continuation medium (sheet temporary-medium-sheet-output-mixin))
+  (if-let ((sheet-medium (sheet-medium sheet)))
+    (funcall continuation sheet-medium)
+    (let ((port (port sheet)))
+      (if (null medium)
+          (let ((new-medium (allocate-medium port sheet)))
             (unwind-protect
                  (progn
-                   (engraft-medium medium port sheet)
-                   (setf (%sheet-medium sheet) medium)
-                   (funcall continuation medium))
+                   (engraft-medium new-medium port sheet)
+                   (setf (%sheet-medium sheet) new-medium)
+                   (funcall continuation new-medium))
               (setf (%sheet-medium sheet) nil)
-              (degraft-medium medium port sheet)))))))
+              (degraft-medium new-medium port sheet)
+              (deallocate-medium port new-medium)))
+          (unwind-protect
+               (progn
+                 (engraft-medium medium port sheet)
+                 (setf (%sheet-medium sheet) medium)
+                 (funcall continuation medium))
+            (setf (%sheet-medium sheet) nil)
+            (degraft-medium medium port sheet))))))
 
 (defmethod do-graphics-with-options ((sheet sheet) func &rest options)
   (with-sheet-medium (medium sheet)
@@ -290,35 +292,22 @@
                      toward-x toward-y transform-glyphs))
 
 (defun draw-arrow (sheet point-1 point-2
-                   &rest args
-                   &key ink clipping-region transformation
-                        line-style line-thickness
-                        line-unit line-dashes line-cap-shape
-                        (to-head t) from-head (head-length 10) (head-width 5)
+                   &rest drawing-options
+                   &key (to-head t) from-head (head-length 10) (head-width 5)
                         (head-filled nil) angle
                    &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness
-                   line-unit line-dashes line-cap-shape
-                   to-head from-head head-length head-width
-                   head-filled angle))
+  (declare (ignore to-head from-head head-length head-width head-filled angle))
   (multiple-value-bind (x1 y1) (point-position point-1)
     (multiple-value-bind (x2 y2) (point-position point-2)
-      (apply #'draw-arrow* sheet x1 y1 x2 y2 args))))
+      (apply #'draw-arrow* sheet x1 y1 x2 y2 drawing-options))))
 
 (defun draw-arrow* (sheet x1 y1 x2 y2
-                    &rest args
-                    &key ink clipping-region transformation
-                         line-style line-thickness
-                         line-unit line-dashes line-cap-shape
-                         (to-head t) from-head (head-length 10) (head-width 5)
+                    &rest drawing-options
+                    &key (to-head t) from-head (head-length 10) (head-width 5)
                          (head-filled nil) angle
                     &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
   (with-stream-designator (sheet *standard-output*)
-    (with-medium-options (sheet args)
+    (with-medium-options (sheet drawing-options)
       (with-translation (sheet x2 y2)
         (unless angle
           (let ((dx (- x1 x2))
@@ -382,30 +371,19 @@
                     (draw-line* sheet q 0 p 0))))))))))
 
 (defun draw-oval (sheet center-pt x-radius y-radius
-                  &rest args
-                  &key (filled t) ink clipping-region transformation
-                       line-style line-thickness line-unit
-                       line-dashes line-cap-shape
-                  &allow-other-keys)
-  (declare (ignore filled ink clipping-region transformation
-                   line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
+                  &rest drawing-options
+                  &key (filled t) &allow-other-keys)
+  (declare (ignore filled))
   (multiple-value-bind (x1 y1) (point-position center-pt)
-    (apply #'draw-oval* sheet x1 y1 x-radius y-radius args)))
+    (apply #'draw-oval* sheet x1 y1 x-radius y-radius drawing-options)))
 
 (defun draw-oval* (sheet center-x center-y x-radius y-radius
-                   &rest args
-                   &key (filled t) ink clipping-region transformation
-                        line-style line-thickness line-unit
-                        line-dashes line-cap-shape
-                   &allow-other-keys)
-  (declare (ignore ink clipping-region transformation
-                   line-style line-thickness
-                   line-unit line-dashes line-cap-shape))
+                   &rest drawing-options
+                   &key (filled t) &allow-other-keys)
   (check-type x-radius (real 0))
   (check-type y-radius (real 0))
   (with-stream-designator (sheet *standard-output*)
-    (with-medium-options (sheet args)
+    (with-medium-options (sheet drawing-options)
       (if (or (coordinate= x-radius 0) (coordinate= y-radius 0))
           (draw-circle* sheet center-x center-y (max x-radius y-radius)
                         :filled filled)

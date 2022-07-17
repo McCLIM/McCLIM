@@ -134,7 +134,7 @@ infinite recursion on (setf sheet-*).")
               (port-set-mirror-geometry (port sheet) sheet region)))
     geometry))
 
-(defun update-mirror-geometry (sheet)
+(defmethod update-mirror-geometry ((sheet mirrored-sheet-mixin))
   ;; We can't manipulate grafts (and rasters)
   (when-let ((parent (sheet-parent sheet)))
     (assert (sheet-direct-mirror sheet))

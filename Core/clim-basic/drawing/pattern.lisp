@@ -80,9 +80,6 @@
 
 (in-package #:clim-internals)
 
-(define-protocol-class pattern (design) ()
-  (:documentation "Abstract class for all pattern-like designs."))
-
 (defclass %array-pattern (pattern)
   ((array :initarg :array :reader pattern-array))
   (:documentation "Abstract class for all patterns based on an array (indexed

@@ -356,14 +356,6 @@ real numbers, and default to 0."
         (and (coordinate/= mxx 0) (coordinate= mxy 0)
              (coordinate= myx 0) (coordinate/= myy 0)))))
 
-;;; The generic function Y-INVERTING-TRANSFORMATION-P is not part of
-;;; the CLIM II spec, so it is McCLIM specific.  For that reason, it
-;;; does not have a DEFGENERIC form in decls.lisp.  However, in order
-;;; to avoid a style warning emitted by some Common Lisp compilers, we
-;;; should have an explicit DEFGENERIC form somewhere.  We therefore
-;;; include it here.
-(defgeneric y-inverting-transformation-p (transformation))
-
 (defmethod y-inverting-transformation-p ((transformation standard-transformation))
   (multiple-value-bind (mxx mxy myx myy) (get-transformation transformation)
     (and (coordinate= mxx 1)

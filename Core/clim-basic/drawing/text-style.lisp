@@ -56,9 +56,8 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
-  (defgeneric text-style-equalp (style1 style2)
-    (:method ((style1 text-style) (style2 text-style))
-      (eq style1 style2)))
+  (defmethod text-style-equalp ((style1 text-style) (style2 text-style))
+    (eq style1 style2))
 
   (defclass standard-text-style (text-style)
     ((family   :initarg :text-family
@@ -152,8 +151,8 @@
        (eql (text-style-size style1) (text-style-size style2))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defconstant *default-text-style* (make-text-style :sans-serif :roman :normal))
-  (defconstant *undefined-text-style* *default-text-style*)
+  (defvar *default-text-style* (make-text-style :sans-serif :roman :normal))
+  (defvar *undefined-text-style* *default-text-style*)
 
   (defconstant +smaller-sizes+ '(:huge :very-large :large :normal
                                  :small :very-small :tiny :tiny))
