@@ -50,10 +50,7 @@
 
 (defmethod slot-unbound (class (stream standard-page-layout) (slot (eql '%page-region)))
   (declare (ignore class))
-  (let* ((page (or (and (panep stream)
-                        (pane-viewport stream))
-                   stream))
-         (sheet-region (sheet-region page)))
+  (let* ((sheet-region (sheet-region stream)))
     (when (eql sheet-region +everywhere+)
       (let ((x2 (* 80 (text-style-width  (stream-text-style stream) stream)))
             (y2 (* 43 (text-style-height (stream-text-style stream) stream))))

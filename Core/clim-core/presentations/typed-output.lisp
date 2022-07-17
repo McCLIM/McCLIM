@@ -80,6 +80,34 @@
                     :sensitive sensitive
                     :record-type record-type)))
 
+(defun format-items (items &rest args
+                     &key (stream *standard-output*)
+                       (printer #'prin1) presentation-type
+                       cell-align-x cell-align-y
+                     &allow-other-keys)
+  (let ((printer (if printer
+                     (if presentation-type
+                         (lambda (item stream)
+                           (with-output-as-presentation (stream item presentation-type)
+                             (funcall printer item stream)))
+                         printer)
+                     (if presentation-type
+                         (lambda (item stream)
+                           (present item presentation-type :stream stream))
+                         #'prin1)))
+        (args (alexandria:remove-from-plist
+               args :stream :printer :presentation-type
+               :cell-align-x :cell-align-y)))
+    (apply #'invoke-formatting-item-list
+           stream
+           (lambda (stream)
+             (map nil (lambda (item)
+                        (formatting-cell (stream :align-x cell-align-x
+                                                 :align-y cell-align-y)
+                          (funcall printer item stream)))
+                  items))
+           args)))
+
 (defmethod stream-present ((stream output-recording-stream) object type
                            &key
                              (view (stream-default-view stream))
