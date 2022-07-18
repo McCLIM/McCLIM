@@ -197,17 +197,6 @@
   (declare (ignore client))
   (change-space-requirements pane))
 
-(defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
-  (etypecase x
-    (real x)
-    (cons (destructuring-bind (value type) x
-            (ecase type
-              (:pixel     value)
-              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
-              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
-              (:character (* value (stream-character-width pane #\m)))
-              (:line      (* value (stream-line-height pane))))))))
-
 (defmethod spacing-value-to-device-units ((pane composite-pane) x)
   (if (and (consp x) (member (second x) '(:character :line)))
       (loop for sheet in (sheet-children pane)
@@ -1282,16 +1271,10 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                              :height suggested-height))
                  (max-width (+ (space-requirement-max-width viewport-sr)
                                (if vscrollbar *scrollbar-thickness* 0)
-                               ;; I don't know why this is necessary.
-                               (if (extended-output-stream-p viewport-child)
-                                   (* 4 (stream-vertical-spacing viewport-child))
-                                   0)))
+                               (bounding-rectangle-width viewport-child)))
                  (max-height (+ (space-requirement-max-height viewport-sr)
                                 (if hscrollbar *scrollbar-thickness* 0)
-                                ;; I don't know why this is necessary.
-                                (if (extended-output-stream-p viewport-child)
-                                    (* 4 (stream-vertical-spacing viewport-child))
-                                    0))))
+                                (bounding-rectangle-height viewport-child))))
             (setq req (make-space-requirement
                        :width (min (space-requirement-width req)
                                    max-width)
@@ -1543,10 +1526,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
     (setf (gadget-value scroll-bar :invoke-callback t)
           (clamp
            (- (gadget-value scroll-bar)
-              (* direction
-                 (if (extended-output-stream-p client)
-                     (stream-line-height client)
-                     10)))              ; picked an arbitrary number - BTS
+              (* direction (scroll-quantum client)))
            (gadget-min-value scroll-bar)
            (gadget-max-value scroll-bar)))))
 

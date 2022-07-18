@@ -72,7 +72,6 @@
    (:module "extended-input"
     :depends-on ("system" "geometry" "windowing" "extended-output")
     :components ((:file "protocol")
-                 (:file "text-selection")
                  (:file "dead-keys")    ; dead-key merging
                  (:file "stream-input"      :depends-on ("dead-keys"))
                  (:file "gestures")

@@ -118,6 +118,17 @@
           (t nil))
     (finish-output pane)))
 
+(defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixel     value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character (* value (stream-character-width pane #\m)))
+              (:line      (* value (stream-line-height pane))))))))
+
 (defun change-stream-space-requirements (pane &key width height)
   (check-type pane clim-stream-pane)
   (when width
