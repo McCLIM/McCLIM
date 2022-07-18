@@ -1405,7 +1405,7 @@ y2."
 ;;; vectors, the semi-major axis, the semi-minor axis at a right angle
 ;;; to the semi-major axis, and the angle of the semi-major axis
 ;;; relative to the positive x-axis. So, given two radii, we call the
-;;; code in clim-basic/region.lisp that gives a, b, and theta.
+;;; code in geometry/region.lisp that gives a, b, and theta.
 
 (defun reparameterize-ellipse (rdx1 rdy1 rdx2 rdy2)
   "Returns three values, the length of radius 1, the length of radius 2,
