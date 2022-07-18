@@ -8,7 +8,6 @@
     :components ((:file "protocol-classes")
                  (:file "declarations")
                  (:file "utilities")
-                 (:file "theming")
                  (:file "describe")
                  (:file "encapsulate")))
    (:module "presentations"
@@ -22,6 +21,7 @@
                  (:file "translators")
                  (:file "drag-and-drop")
                  (:file "selection-object")))
+   (:file "text-selection" :depends-on ("presentations"))
    (:file "input-editing" :depends-on ("presentations"))
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
@@ -36,7 +36,8 @@
    (:module "panes"
     :depends-on ("presentations" "standard-presentations" "input-editing")
     :serial t
-    :components ((:file "construction")
+    :components ((:file "theming")
+                 (:file "construction")
                  (:file "layout-protocol")
                  (:file "composition")
                  (:file "stream-panes")))
