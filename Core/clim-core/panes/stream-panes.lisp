@@ -212,10 +212,9 @@
   (funcall-presentation-generic-function presentation-type-history type))
 
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
-  (declare (ignore action))
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
-    (unless (eq :allow (stream-end-of-page-action stream))
+    (when (eq action :scroll)
       (when-let ((viewport (pane-viewport stream)))
         (let ((child (sheet-child viewport)))
           (scroll-extent child
