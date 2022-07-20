@@ -34,19 +34,25 @@
 (defmethod xdg:xdg-toplevel-configure
     ((wayland-proxy wayland-xdg-toplevel) width height states)
   (declare (ignore wayland-proxy))
-  (format *debug-io* "toplevel configure event: w: ~a  h: ~a  states: ~s frame?: ~s ~%" width height states
+  (format *debug-io*
+          "toplevel configure event: w: ~a  h: ~a  states: ~s frame?: ~s ~%"
+          width height states
           (frame-manager-frames (find-frame-manager :port *wayland-port*)))
-  (when (every #'plusp (list width height))
-    (alx:when-let*
-        ((top-level-sheet (%hacky-top-level-sheet))
-         (clim-event (make-instance 'window-configuration-event
-                                    :width width
-                                    :height height
-                                    :x 0
-                                    :y 0
-                                    :sheet top-level-sheet
-                                    :region (make-bounding-rectangle 0 0 width height))))
-      (distribute-event *wayland-port* clim-event))))
+  (flet ((state-has-keyword-p (keyword)
+           (eql keyword
+                (rest (xdg:xdg-toplevel-unmarshal-state (first states))))))
+   (when (and (every #'plusp (list width height))
+              (not (state-has-keyword-p :activated)))
+     (format *debug-io* "distributing toplevel configure~%")
+     (alx:when-let* ((top-level-sheet (%hacky-top-level-sheet)))
+       (distribute-event *wayland-port*
+                         (make-instance 'window-configuration-event
+                                        :width width
+                                        :height height
+                                        :x 0
+                                        :y 0
+                                        :sheet top-level-sheet
+                                        :region (make-bounding-rectangle 0 0 width height)))))))
 
 (defmethod xdg:xdg-toplevel-close ((wayland-proxy wayland-xdg-toplevel))
   (declare (ignore wayland-proxy))
