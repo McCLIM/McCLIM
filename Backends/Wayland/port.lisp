@@ -185,7 +185,8 @@
                       (list x1 y1 x2 y2)
                       (list ox1 oy1 ox2 oy2))
             (format t "port-set-mirror-geometry~%")
-            ;TODO: determine if we need CLX's ROUND-COORDINATE
+            ;TODO: determine if we need CLX's ROUND-COORDINATE -- yes, wayland
+            ;only handles integers but CLIM allows the full Lisp rational types
             (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h))))
       (values x1 y1 x2 y2))))
 
