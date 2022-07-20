@@ -6,25 +6,14 @@
 (defmethod process-next-event ((port wayland-port) &key wait-function (timeout nil))
   (let ((*wayland-port* port)
         (*wayland-wait-func* wait-function))
-    (let ((event (progn (when timeout
-                          (sleep timeout))
-                        (wlc:wl-display-dispatch
-                         (wayland-port-display *wayland-port*)))))
-      (format t "process-next-event status? ~a~%" event)
-      ;; Return t for now since I seem beholden to the wlc event loop and I'm
-      ;; not sure when I should return nil
-      (case event
-        ((nil)
-         (if (maybe-funcall wait-function)
-             (values nil :wait-function)
-             (values nil :timeout)))
-        ((t)
-         (values nil :wait-function))
-        (otherwise
-         (prog1 t
-           (unless (numberp event) ; status numbers are returned for events we
-                                   ; haven't translated yet.
-             (distribute-event port event))))))))
+    (let ((dispatched-events-count (wlc:wl-display-dispatch
+                                    (wayland-port-display *wayland-port*))))
+      (format t "process-next-event status? ~a~%" dispatched-events-count)
+      ;; Return t for now since we still utilize the wlc event loop and its
+      ;; use of CLOS for eventing. I'm not sure if there is an analog for
+      ;; timeout or wait functions.
+
+      (values t dispatched-events-count))))
 
 ;;; Now we connect all of wayland-client events to our port's events
 (defun %hacky-top-level-sheet ()
