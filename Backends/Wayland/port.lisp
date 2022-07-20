@@ -26,7 +26,7 @@
   (values (find-class 'wayland-port) 'parse-server-path))
 
 (defmethod find-port-type :after ((port (eql :wayland-ffi)))
-  (format t "find-port-type wayland-ffi: ~a" port))
+  (format t "find-port-type wayland-ffi: ~a~%" port))
 
 ;;; wl-callbacks created from this class will call the callback fun
 (defclass %wayland-invoking-callback (wlc:wl-callback)
@@ -295,7 +295,7 @@
 
 (defmethod medium-clear-area :after
     ((medium wayland-egl-medium) left top right bottom)
-  (format t "EGL medium clear area called~%"))
+  (format t "EGL medium clear area called ~s~%" (list left top right bottom)))
 
 (defmethod medium-draw-polygon*
     ((medium wayland-egl-medium) coord-seq closed filled)

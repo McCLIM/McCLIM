@@ -76,7 +76,7 @@
    (with-slots (egl-window egl-context egl-display egl-surface)
        mirror
      (setf egl-window (create-native-window port))
-     (format *debug-io* "creating egl context")
+     (format *debug-io* "creating egl context~%")
      (multiple-value-setq (egl-display egl-surface egl-context)
        (create-egl-context port mirror)))))
 
