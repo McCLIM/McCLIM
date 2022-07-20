@@ -53,11 +53,11 @@
   (format *debug-io* "close toplevel event ~s~%" *application-frame*)
   ;; QQQQ this feels terrible but it seems *application-frame* isn't
   ;; bound. Extremely hacky way to get top-level-frame-sheet
-  (alx:when-let* ((sheet (%hacky-top-level-sheet))
-                  (clim-event (make-instance 'window-manager-delete-event
-                                             :sheet sheet)))
+  (alx:when-let ((sheet (%hacky-top-level-sheet)))
     ;; (break)
-    (distribute-event *wayland-port* clim-event)))
+    (distribute-event *wayland-port*
+                      (make-instance 'window-manager-delete-event
+                                     :sheet sheet))))
 
 (defclass wayland-port-screen (wlc:wl-output)
   ((x :initform 0 :accessor screen-x)
