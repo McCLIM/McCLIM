@@ -192,7 +192,10 @@
 (defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format t "port enable-sheet ~a ~a ~%" port sheet)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
-    (port-force-output port)))
+    ;; TODO: It appears killing the entire surface is the way to "unmap" a
+    ;; "window". To remap, I believe we need to recreate the surfaces and
+    ;; reattach the buffers with graphic data.
+    (wlc:wl-surface-commit (wayland-port-window port))))
 
 (defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format t "port disable-sheet ~a ~a ~%" port sheet)
