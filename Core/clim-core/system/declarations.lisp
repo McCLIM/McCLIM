@@ -383,6 +383,9 @@ FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE."))
 (defgeneric pane-viewport-region (pane))
 (defgeneric pane-scroller (pane))
 (defgeneric scroll-extent (pane x y))
+(defgeneric scroll-quantum (pane)
+  (:documentation "Returns the number of pixels respresenting a 'line', used
+to computed distance to scroll in response to mouse wheel events."))
 
 (deftype scroll-bar-spec () '(member t :both :vertical :horizontal nil))
 

@@ -81,6 +81,9 @@
                    (apply #'redisplay record pane incremental-redisplay)
                    (redisplay record pane))) ))))
 
+(defmethod scroll-quantum ((sheet clim-stream-pane))
+  (stream-line-height sheet))
+
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))
   (setf (port-keyboard-input-focus (port sheet)) sheet))

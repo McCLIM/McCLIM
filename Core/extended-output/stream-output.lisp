@@ -514,13 +514,6 @@ produces no more than one line of output i.e., doesn't wrap."))
                                    x y))
         (funcall cont medium)))))
 
-(defgeneric scroll-quantum (pane)
-  (:documentation "Returns the number of pixels respresenting a 'line', used
-to computed distance to scroll in response to mouse wheel events."))
-
-(defmethod scroll-quantum ((sheet standard-extended-output-stream))
-  (stream-line-height sheet))
-
 ;;; Backend part of the output destination mechanism
 ;;;
 ;;; See clim-core/commands.lisp for the "user interface" part.
