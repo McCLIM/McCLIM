@@ -168,12 +168,10 @@
 
 (defmethod port-force-output ((port wayland-port))
   (format t "PORT-FORCE-OUTPUT~%")
-  ;; (alx:when-let* ((graft (graft port))
-  ;;                 (mirror (sheet-mirror graft))
-  ;;                 (egl-display (wayland-egl-mirror-display mirror))
-  ;;                 (egl-surface (wayland-egl-mirror-surface mirror)))
-  ;;   (format t "egl swap buffers~%")
-  ;;   (egl:swap-buffers egl-display egl-surface))
+  ;; QQQQ It seems odd that we need to map over grafts and force output. This
+  ;; is a similar strategy that CLX-fb takes but it seems like something from
+  ;; the core protocol is missing or subverted.
+
   (map-over-grafts #'%graft-force-output port)
   (wlc:wl-surface-commit (wayland-port-window port)))
 
