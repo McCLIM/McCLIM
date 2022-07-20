@@ -211,6 +211,17 @@
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
+(defmethod %note-stream-end-of-line ((stream clim-stream-pane) action new-width)
+  (when (stream-drawing-p stream)
+    (change-stream-space-requirements stream :width new-width)
+    (when (eq action :scroll)
+      (when-let ((viewport (pane-viewport stream)))
+        (let ((child (sheet-child viewport)))
+          (scroll-extent child
+                         (max 0 (- (bounding-rectangle-width child)
+                                   (bounding-rectangle-height viewport)))
+                         0))))))
+
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)

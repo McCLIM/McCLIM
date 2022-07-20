@@ -114,6 +114,10 @@
   `(letf (((stream-end-of-line-action ,stream) ,action))
      ,@body))
 
+(defgeneric %note-stream-end-of-line (stream action new-width)
+  (:method (stream action new-width)
+    (declare (ignore stream action new-width))))
+
 (defmacro with-end-of-page-action ((stream action) &body body)
   (when (eq stream t)
     (setq stream '*standard-output*))
@@ -137,8 +141,7 @@
 
 (defgeneric %note-stream-end-of-page (stream action new-height)
   (:method (stream action new-height)
-    (declare (ignore stream action new-height))
-    nil))
+    (declare (ignore stream action new-height))))
 
 (defgeneric seos-write-newline (stream &optional soft-newline-p)
   (:method :after ((stream filling-output-mixin) &optional soft-newline-p)
@@ -171,69 +174,69 @@
   (setq end (or end (length string)))
   (when (= start end)
     (return-from seos-write-string))
-  (let* ((medium (sheet-medium stream))
-         (text-style (medium-text-style medium))
-         ;; fixme: remove assumption about the text direction (LTR).
-         (left-margin (stream-cursor-initial-position stream))
-         (right-margin (stream-cursor-final-position stream))
-         (text-style-height (text-style-height text-style medium)))
-    (maxf (slot-value stream 'baseline) (text-style-ascent text-style medium))
-    (maxf (stream-cursor-height stream) text-style-height)
+  (with-bounding-rectangle* (left-margin top-margin right-margin bottom-margin)
+      (stream-page-region stream)
+    (declare (ignore top-margin bottom-margin))
     (multiple-value-bind (cx cy) (stream-cursor-position stream)
-      (maybe-end-of-page-action stream (+ cy (stream-cursor-height stream)))
-      (let* ((width (stream-string-width stream string
-                                         :start start :end end
-                                         :text-style text-style))
-             (eol-action (stream-end-of-line-action stream))
-             (eol-p (> (+ cx width) right-margin)))
-        (when (or (null eol-p) (member eol-action '(:allow :scroll)))
-          (stream-write-output stream string start end)
-          (incf cx width)
-          (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
-          (when (and (> cx right-margin)
-                     (eql eol-action :scroll))
-            (multiple-value-bind (tx ty)
-                (bounding-rectangle-position (sheet-region stream))
-              (scroll-extent stream (+ tx width) ty)))
-          (return-from seos-write-string))
-        ;; All new lines from here on are soft new lines, we could skip
-        ;; closing the text-output-record and have multiline records to
-        ;; allow gimmics like a dynamic reflow). Also text-style doesn't
-        ;; change until the end of this function. -- jd 2019-01-10
-        ;;
-        ;; Writing a newline may cause the cursor increment, so we
-        ;; need to compute split for each line after the soft newline
-        ;; has been written. -- jd 2020-03-01
-        (loop with width = (if (text-style-fixed-width-p text-style medium)
-                               (text-style-width text-style medium)
-                               (lambda (string start end)
-                                 (text-size medium string
-                                            :text-style text-style
-                                            :start start :end end)))
-              with margin = (- right-margin left-margin)
-              with cursor = (stream-text-cursor stream)
-              with break  = (ecase eol-action
-                              (:wrap nil)
-                              (:wrap* t))
-              for offset = (- (cursor-position cursor) left-margin)
-              for split  = (car (line-breaks string width
-                                             :count 1
-                                             :initial-offset offset
-                                             :margin margin
-                                             :break-strategy break
-                                             :start start :end end))
-              do (maxf (stream-cursor-height stream) text-style-height)
-                 (stream-write-output stream string start split)
-                 (when (= split end)
-                   (setf (cursor-position cursor)
-                         (values (+ left-margin
-                                    (stream-string-width stream string
-                                                         :start start :end split
-                                                         :text-style text-style))
-                                 (nth-value 1 (cursor-position cursor))))
-                   (return))
-                 (seos-write-newline stream t)
-                 (setf start split))))))
+      (let* ((medium (sheet-medium stream))
+             (text-style (medium-text-style medium))
+             ;; fixme: remove assumption about the text direction (LTR).
+             (text-style-height (text-style-height text-style medium))
+             (text-style-ascent (text-style-ascent text-style medium))
+             (text-width (stream-string-width stream string
+                                              :start start :end end
+                                              :text-style text-style))
+             (text-height (stream-cursor-height stream)))
+        (maxf (slot-value stream 'baseline) text-style-ascent)
+        (maxf (stream-cursor-height stream) text-style-height)
+        (maybe-end-of-page-action stream (+ cy text-height))
+        (let* ((eol-action (stream-end-of-line-action stream))
+               (eol-p (> (+ cx text-width) right-margin)))
+          (when (or (null eol-p) (member eol-action '(:allow :scroll)))
+            (stream-write-output stream string start end)
+            (incf cx text-width)
+            (setf (cursor-position (stream-text-cursor stream)) (values cx cy))
+            (when (> cx right-margin)
+              (%note-stream-end-of-line stream eol-action cx))
+            (return-from seos-write-string))
+          ;; All new lines from here on are soft new lines, we could skip
+          ;; closing the text-output-record and have multiline records to
+          ;; allow gimmics like a dynamic reflow). Also text-style doesn't
+          ;; change until the end of this function. -- jd 2019-01-10
+          ;;
+          ;; Writing a newline may cause the cursor increment, so we
+          ;; need to compute split for each line after the soft newline
+          ;; has been written. -- jd 2020-03-01
+          (loop with width = (if (text-style-fixed-width-p text-style medium)
+                                 (text-style-width text-style medium)
+                                 (lambda (string start end)
+                                   (text-size medium string
+                                              :text-style text-style
+                                              :start start :end end)))
+                with margin = (- right-margin left-margin)
+                with cursor = (stream-text-cursor stream)
+                with break  = (ecase eol-action
+                                (:wrap nil)
+                                (:wrap* t))
+                for offset = (- (cursor-position cursor) left-margin)
+                for split  = (car (line-breaks string width
+                                               :count 1
+                                               :initial-offset offset
+                                               :margin margin
+                                               :break-strategy break
+                                               :start start :end end))
+                do (maxf (stream-cursor-height stream) text-style-height)
+                   (stream-write-output stream string start split)
+                   (when (= split end)
+                     (setf (cursor-position cursor)
+                           (values (+ left-margin
+                                      (stream-string-width stream string
+                                                           :start start :end split
+                                                           :text-style text-style))
+                                   (nth-value 1 (cursor-position cursor))))
+                     (return))
+                   (seos-write-newline stream t)
+                   (setf start split)))))))
 
 (defgeneric stream-write-output (stream line &optional start end)
   (:documentation
