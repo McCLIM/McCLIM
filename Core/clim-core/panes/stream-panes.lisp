@@ -45,16 +45,6 @@
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
   ((redisplay-needed :initarg :display-time)
-   (text-margin :initarg :text-margin
-                :reader pane-text-margin)
-   (vertical-spacing :initarg :vertical-spacing
-                     :reader pane-vertical-spacing)
-   (end-of-line-action :initform :wrap
-                       :initarg :end-of-line-action
-                       :reader pane-end-of-line-action)
-   (end-of-page-action :initform :scroll
-                       :initarg :end-of-page-action
-                       :reader pane-end-of-page-action)
    ;; size required by the stream
    (stream-width :initform 100 :accessor stream-width)
    (stream-height :initform 100 :accessor stream-height))
