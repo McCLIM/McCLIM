@@ -216,35 +216,39 @@
     ((sheet top-level-sheet-pane) (event window-configuration-event))
   ;; Is this where I should set the egl-window width and swap buffers?
   ;; Should this be handled by the medium? or te mirror?
-  (alx:when-let ((mirror (sheet-mirror sheet)))
-    (format *debug-io* "handle-event window-cfg-event: top level reconfigure? Should I resize all the children?~%")
-    ;; QQQQ Should I use port-set-mirror-geometry or is there some other way
-    ;; to trigger it?
-    ;; (break)
-    (unless (eql +everywhere+ (window-event-region event))
-      (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
-          (window-event-region event)
-        (when (every #'plusp (list w h))
-          (with-bounding-rectangle* (ox1 oy1 ox2 oy2)
-              ;; QQQQ why is this -5 1 -5 1 still
-              (sheet-mirror-geometry sheet)
-            (when (some #'/=
+  (flet ((should-resize-p (new-dimensions original-dimensions)
+           (some #'/= new-dimensions original-dimensions)))
+    (alx:when-let ((mirror (sheet-mirror sheet)))
+      (format *debug-io* "handle-event window-cfg-event: top level reconfigure? Should I resize all the children?~%")
+      ;; QQQQ Should I use port-set-mirror-geometry or is there some other way
+      ;; to trigger it?
+      ;; (break)
+      (unless (eql +everywhere+ (window-event-region event))
+        (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
+            (window-event-region event)
+          (when (every #'plusp (list w h))
+            (with-bounding-rectangle* (ox1 oy1 ox2 oy2)
+                ;; QQQQ why is this -5 1 -5 1 still
+                (sheet-mirror-geometry sheet)
+              (when (should-resize-p (list x1 y1 x2 y2)
+                                     (list ox1 oy1 ox2 oy2))
+                (format *debug-io* "resize surface geometry new:~s current:~s~%"
                         (list x1 y1 x2 y2)
                         (list ox1 oy1 ox2 oy2))
-              (format *debug-io* "resize surface geometry new:~s current:~s~%"
-                      (list x1 y1 x2 y2)
-                      (list ox1 oy1 ox2 oy2))
-              ;; TODO: determine if we need CLX's ROUND-COORDINATE
-              ;; This xdg request will cause another window configuration event.
-              (xdg:xdg-surface-set-window-geometry
-               (slot-value (port sheet) 'surface) x1 y1 w h)
+                ;; TODO: determine if we need CLX's ROUND-COORDINATE
+                ;; Wayland only sends integers in their events
+                (resize-sheet sheet w h)
 
-              (wl-egl:wl-egl-window-resize
-               (wayland-egl-mirror-window mirror) w h x1 y1)
-              ;; Is this overkill?
-              (port-force-output (port sheet))
-              ;; (wlc:wl-surface-commit (wayland-port-window (port sheet)))
-              )))))))
+                ;; This xdg request will cause another window configuration event.
+                ;; (xdg:xdg-surface-set-window-geometry
+                ;;  (slot-value (port sheet) 'surface) x1 y1 w h)
+
+                ;; (wl-egl:wl-egl-window-resize
+                ;;  (wayland-egl-mirror-window mirror) w h x1 y1)
+                ;; Is this overkill?
+                ;; (port-force-output (port sheet))
+                ;; (wlc:wl-surface-commit (wayland-port-window (port sheet)))
+                ))))))))
 
 (defmethod graft-width ((graft wayland-graft) &key (units :device))
   (let ((screen (wayland-port-device (port graft))))
