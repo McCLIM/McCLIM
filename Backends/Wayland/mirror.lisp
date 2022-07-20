@@ -59,8 +59,7 @@
 (defmethod port-set-mirror-name
     ((port wayland-port) (sheet mirrored-sheet-mixin) name)
   (alx:when-let ((top-level-window (%xdg-top-level port)))
-    (xdg:xdg-toplevel-set-title top-level-window name)
-    (port-force-output port)))
+    (xdg:xdg-toplevel-set-title top-level-window name)))
 
 (defmethod realize-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format t "realizing mirror~%")
