@@ -4,7 +4,7 @@
   :depends-on ("alexandria"
                "com.andrewsoutar.cl-wayland-client"
                "com.andrewsoutar.cl-wayland-client.protocol/stable/xdg-shell/xdg-shell"
-               "com.andrewsoutar.cl-wayland-client/egl-core"
+               "com.andrewsoutar.cl-wayland-client/egl"
                "cl-egl"
                "mcclim-backend-common"
                "cl-opengl")

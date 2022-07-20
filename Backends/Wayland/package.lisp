@@ -5,7 +5,7 @@
   (:local-nicknames (#:alx #:alexandria)
                     (#:wlc #:com.andrewsoutar.cl-wayland-client)
                     (#:wl-core #:com.andrewsoutar.cl-wayland-client/core)
-                    (#:wl-egl #:com.andrewsoutar.cl-wayland-client/egl-core)
+                    (#:wl-egl #:com.andrewsoutar.cl-wayland-client/egl)
                     (#:xdg #:com.andrewsoutar.cl-wayland-client.protocol/stable/xdg-shell/xdg-shell))
   (:import-from #:climi
                 #:basic-port
