@@ -105,6 +105,10 @@
                  (:file "utilities")
                  (:file "describe")
                  (:file "encapsulate")))
+   (:module "interactive-streams"
+    :components ((:file "input-editing-stream")
+                 (:file "parsing-conditions")
+                 (:file "reading-and-writing-tokens")))
    (:module "presentations"
     :serial t
     :components ((:file "presentation-types")
@@ -117,19 +121,20 @@
                  (:file "drag-and-drop")
                  (:file "selection-object")))
    (:file "text-selection" :depends-on ("presentations"))
-   (:file "input-editing" :depends-on ("presentations"))
+   (:file "completion" :depends-on ("presentations"))
+   (:file "input-editing" :depends-on ("presentations" "completion"))
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
-    :depends-on ("input-editing" "presentations"))
+    :depends-on ("presentations"))
    (:module "commands"
-    :depends-on ("input-editing" "presentations" "standard-presentations")
+    :depends-on ("presentations" "standard-presentations")
     :serial t
     :components ((:file "parsers")
                  (:file "commands")
                  (:file "tables")
                  (:file "processor")))
    (:module "panes"
-    :depends-on ("presentations" "standard-presentations" "input-editing")
+    :depends-on ("presentations" "standard-presentations")
     :serial t
     :components ((:file "theming")
                  (:file "construction")
@@ -147,7 +152,7 @@
                  (:file "window-stream")
                  (:file "default-frame")))
    (:module "gadgets"
-    :depends-on ("commands" "input-editing" "frames" "panes" "presentations")
+    :depends-on ("commands" "frames" "panes" "presentations")
     :serial t
     :components ((:file "base")
                  (:file "abstract")
@@ -156,13 +161,14 @@
                  (:file "concrete")
                  (:file "menu")))
    (:module "dialogs"
-    :depends-on ("panes" "frames" "input-editing" "commands" "presentations" "standard-presentations" "gadgets")
+    :depends-on ("panes" "frames" "commands" "presentations" "standard-presentations" "gadgets")
     :components ((:file "dialog")
                  (:file "dialog-views" :depends-on ("dialog"))
                  (:file "notify-user")
                  (:file "menu-choose")))
-   (:file "builtin-commands" :depends-on ("commands" "presentations" "standard-presentations" "input-editing"))
+   (:file "builtin-commands" :depends-on ("commands" "presentations" "standard-presentations"))
    (:module "input-editor"
     :components ((:file "editor")
                  (:file "edward")
-                 (:file "text-editing-gadget")))))
+                 ;(:file "text-editing-gadget")
+                 ))))
