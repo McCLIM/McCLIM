@@ -63,7 +63,7 @@
 ;; (defgeneric edward-insert (cursor object syntax numeric-argument))
 ;; ;;; (edward-insert cursor cursor #\newline <text> -1)
 
-(defmethod ie-forward-object ((sheet text-field)
+(defmethod ie-forward-object ((sheet edward-mixin)
                               (buffer cluffer:buffer)
                               event
                               &optional (numeric-argument 1))
@@ -77,7 +77,7 @@
                                (cluffer:attach-cursor cursor next)))))
     (cluffer:end-of-buffer ())))
 
-(defmethod ie-forward-word ((sheet text-field)
+(defmethod ie-forward-word ((sheet edward-mixin)
                             (buffer cluffer:buffer)
                             event
                             &optional (numeric-argument 1))
@@ -88,7 +88,7 @@
                            (cluffer:end-of-buffer-p cursor)
                            (char= (cluffer:item-after-cursor cursor) #\space)))))
 
-(defmethod ie-backward-object ((sheet text-field)
+(defmethod ie-backward-object ((sheet edward-mixin)
                                (buffer cluffer:buffer)
                                event
                                &optional (numeric-argument 1))
@@ -103,7 +103,7 @@
                                (cluffer:end-of-line cursor)))))
     (cluffer:beginning-of-buffer ())))
 
-(defmethod ie-backward-word ((sheet text-field)
+(defmethod ie-backward-word ((sheet edward-mixin)
                              (buffer cluffer:buffer)
                              event
                              &optional (numeric-argument 1))
@@ -114,14 +114,14 @@
                            (cluffer:beginning-of-buffer-p cursor)
                            (char= (cluffer:item-before-cursor cursor) #\space)))))
 
-(defmethod ie-beginning-of-line ((sheet text-field)
+(defmethod ie-beginning-of-line ((sheet edward-mixin)
                                  (buffer cluffer:buffer)
                                  event
                                  &optional numeric-argument)
   (declare (ignore numeric-argument))
   (cluffer:beginning-of-line (edward-cursor sheet)))
 
-(defmethod ie-end-of-line ((sheet text-field)
+(defmethod ie-end-of-line ((sheet edward-mixin)
                            (buffer cluffer:buffer)
                            event
                            &optional numeric-argument)
@@ -129,7 +129,7 @@
   (cluffer:end-of-line (edward-cursor sheet)))
 
 
-(defmethod ie-next-line ((sheet text-field)
+(defmethod ie-next-line ((sheet edward-mixin)
                          (buffer cluffer:buffer)
                          event
                          &optional (numeric-argument 1))
@@ -146,7 +146,7 @@
              (cluffer:end-of-line ()
                (cluffer:end-of-line cursor)))))
 
-(defmethod ie-previous-line ((sheet text-field)
+(defmethod ie-previous-line ((sheet edward-mixin)
                              (buffer cluffer:buffer)
                              event
                              &optional (numeric-argument 1))
@@ -163,7 +163,7 @@
              (cluffer:end-of-line ()
                (cluffer:end-of-line cursor)))))
 
-(defmethod ie-beginning-of-buffer ((sheet text-field)
+(defmethod ie-beginning-of-buffer ((sheet edward-mixin)
                                    (buffer cluffer:buffer)
                                    event
                                    &optional numeric-argument)
@@ -174,7 +174,7 @@
       (cluffer:detach-cursor cursor)
       (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))))
 
-(defmethod ie-end-of-buffer ((sheet text-field)
+(defmethod ie-end-of-buffer ((sheet edward-mixin)
                              (buffer cluffer:buffer)
                              event
                              &optional numeric-argument)
@@ -187,7 +187,7 @@
       (cluffer:attach-cursor cursor (cluffer:find-line buffer linum*)))
     (cluffer:end-of-line cursor)))
 
-(defmethod ie-erase-object ((sheet text-field)
+(defmethod ie-erase-object ((sheet edward-mixin)
                             (buffer cluffer:buffer)
                             event
                             &optional (numeric-argument 1))
@@ -203,7 +203,7 @@
                  (decf lineno)
                  (cluffer:join-line (cluffer:find-line buffer lineno)))))))
 
-(defmethod ie-erase-word ((sheet text-field)
+(defmethod ie-erase-word ((sheet edward-mixin)
                           (buffer cluffer:buffer)
                           event
                           &optional (numeric-argument 1))
@@ -215,7 +215,7 @@
                            (char= (cluffer:item-before-cursor cursor) #\space)))))
 
 (defmethod ie-delete-object
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -229,7 +229,7 @@
                (cluffer:end-of-line ()
                  (cluffer:join-line cursor))))))
 
-(defmethod ie-delete-word ((sheet text-field)
+(defmethod ie-delete-word ((sheet edward-mixin)
                           (buffer cluffer:buffer)
                           event
                           &optional (numeric-argument 1))
@@ -241,7 +241,7 @@
                            (char= (cluffer:item-after-cursor cursor) #\space)))))
 
 (defmethod ie-kill-line
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -258,7 +258,7 @@
                      do (cluffer:delete-item cursor)))))
 
 (defmethod ie-clear-input-buffer
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional numeric-argument)
@@ -266,7 +266,7 @@
   (reinitialize-instance sheet))
 
 (defmethod ie-insert-newline
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -275,7 +275,7 @@
         do (cluffer:split-line cursor)))
 
 (defmethod ie-insert-newline-after-cursor
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -288,7 +288,7 @@
                 (cluffer:attach-cursor cursor initial-line initial-position)))
 
 (defmethod ie-transpose-objects
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -306,7 +306,7 @@
 
 #+ (or)                                 ; requires more work
 (defmethod ie-transpose-words
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -332,7 +332,7 @@
 ;; ie-yank-next-item
 
 (defmethod ie-insert-object
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional (numeric-argument 1))
@@ -346,7 +346,7 @@
               do (cluffer:insert-item cursor ch)))))
 
 (defmethod ie-select-object
-    ((sheet text-field)
+    ((sheet edward-mixin)
      (buffer cluffer:buffer)
      event
      &optional numeric-argument)
@@ -382,13 +382,13 @@
         (setf (cluffer:cursor-position (edward-cursor sheet))
               (first line-breaks))))))
 
-(defmethod ie-scroll-forward ((sheet text-field)
+(defmethod ie-scroll-forward ((sheet edward-mixin)
                               (buffer cluffer:buffer)
                               event
                               &optional (numeric-arg 4))
   (ie-next-line sheet buffer event numeric-arg))
 
-(defmethod ie-scroll-backward ((sheet text-field)
+(defmethod ie-scroll-backward ((sheet edward-mixin)
                                (buffer cluffer:buffer)
                                event
                                &optional (numeric-arg 4))
