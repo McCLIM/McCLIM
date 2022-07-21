@@ -218,18 +218,27 @@
                 with break  = (ecase eol-action
                                 (:wrap nil)
                                 (:wrap* t))
-                for offset = (- (cursor-position cursor) left-margin)
-                for split  = (car (line-breaks string width
-                                               :count 1
-                                               :initial-offset offset
-                                               :margin margin
-                                               :break-strategy break
-                                               :start start :end end))
+                for cursor-x = (cursor-position cursor)
+                for offset   = (- cursor-x left-margin)
+                for split    = (car (line-breaks string width
+                                                 :count 1
+                                                 :initial-offset offset
+                                                 :margin margin
+                                                 :break-strategy break
+                                                 :start start :end end))
                 do (maxf (stream-cursor-height stream) text-style-height)
                    (stream-write-output stream string start split)
                    (when (= split end)
+                     ;; FIXME we don't know what will be the continuation, so
+                     ;; until the text record is closed we should not be eager
+                     ;; to print the last line. Otherwise we may be forced to
+                     ;; break in a middle the word that would be wrapped to a
+                     ;; new line otherwise. -- jd 2022-08-21
+                     ;;
+                     ;; XXX should we break after /all/ trailing spaces, even if
+                     ;; they'd take more space than a line?
                      (setf (cursor-position cursor)
-                           (values (+ left-margin
+                           (values (+ cursor-x
                                       (stream-string-width stream string
                                                            :start start :end split
                                                            :text-style text-style))

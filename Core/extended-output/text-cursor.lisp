@@ -10,6 +10,13 @@
 
 (in-package #:clim-internals)
 
+(defgeneric cursor-appearance (cursor))
+(defgeneric (setf cursor-appearance) (new-val cursor))
+(defgeneric stream-cursor-height (stream))
+(defgeneric cursor-height (cursor))
+(defgeneric flip-screen-cursor (cursor))
+(defgeneric display-cursor (cursor state))
+
 ;;; Cursor-Mixin class
 ;;;
 ;;; FIXME why a mixin? The only subclass is the standard-text-cursor. Also
@@ -30,14 +37,11 @@
    (cursor-active :initform nil :accessor cursor-active)
    (cursor-state :initform nil :accessor cursor-state)))
 
-(defgeneric cursor-height (cursor))
-
 (defmethod print-object ((cursor cursor-mixin) stream)
   (with-slots (x y) cursor
     (print-unreadable-object (cursor stream :type t :identity t)
       (format stream "~D ~D " x y))))
 
-(defgeneric flip-screen-cursor (cursor))
 
 ;;; XXX What to do when we can't draw the cursor immediately (like,
 ;;; we're not drawing?) The whole flip-screen-cursor idea breaks down.
@@ -91,7 +95,7 @@
                                    (:solid t) (:hollow nil))
                          :ink +flipping-ink+)))))
 
-(defgeneric display-cursor (cursor state))
+
 
 (defmethod display-cursor ((cursor cursor-mixin) state)
   (unless (stream-drawing-p (cursor-sheet cursor))
