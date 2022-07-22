@@ -2178,62 +2178,30 @@ according to the flags RECORD and DRAW."
 ;;; rotation, scaling or translation in the current medium transformation.
 (defmethod invoke-with-room-for-graphics (cont (stream output-recording-stream)
                                           &key (first-quadrant t)
+                                               width
                                                height
                                                (move-cursor t)
                                                (record-type
                                                 'standard-sequence-output-record))
-  ;; I am not sure what exactly :height should do.           ; [avengers pun]
-  ;; --GB 2003-05-25                                         ; -----------------
-  ;; The current behavior is consistent with 'classic' CLIM  ; where is genera?
-  ;; --Hefner 2004-06-19                                     ;
-  ;; Don't know if it still is :)                            ;  what is genera?
-  ;; -- Moore 2005-01-26                                     ;
-  ;; I think that it doesn't matter ;)                       ;   why is genera?
-  ;; -- jd 2018-08-11                                        ; -----------------
-  ;;
-  ;; More seriously though (comments left for giggles), HEIGHT defaults to the
-  ;; output-record height unless specified by the programmer. In that case
-  ;; output is clipped to that height and exactly that amount of space is
-  ;; reserved for drawing (so if the output-record is smaller we have some empty
-  ;; space, if it is bigger it is clipped). In case of panes which does not
-  ;; record it will be the only means to assure space in case of the
-  ;; FIRST-QUADRANT = T (Y-axis inverted). -- jd
-  ;;
-  ;; ADDME: add width argument for clipping (McCLIM extension)
-  (multiple-value-bind (cx cy) (stream-cursor-position stream)
-    (with-sheet-medium (medium stream)
-      (letf (((medium-transformation medium)
-              (if first-quadrant
-                  (make-scaling-transformation 1 -1)
-                  +identity-transformation+))
-             ((medium-clipping-region medium)
-              +everywhere+))
-        (let ((record (with-output-to-output-record (stream record-type)
-                        (funcall cont stream))))
-          ;; Bounding rectangle is in sheet coordinates!
-          (with-bounding-rectangle* (x1 y1 x2 y2) record
-            (declare (ignore x2))
-            (let* ((record-height (- y2 y1))
-                   (new-x         (max cx (+ cx x1)))
-                   (new-y         (cond ((not first-quadrant)
-                                         (max cy (+ cy y1)))
-                                        (height
-                                         (+ cy (- height record-height)))
-                                        (t
-                                         cy))))
-              (setf (output-record-position record) (values new-x new-y))
-              ;; And and/or replay the clipped and repositioned RECORD.
-              (when (stream-recording-p stream)
-                (stream-add-output-record stream record))
-              (when (stream-drawing-p stream)
-                (replay record stream))
-              ;; Restore the cursor position or move the cursor.
-              (setf (stream-cursor-position stream)
-                    (values cx (+ cy (if move-cursor
-                                         (max (if first-quadrant (- y1) y2)
-                                              (or height record-height))
-                                         0)))))
-            record))))))
+  (with-sheet-medium (medium stream)
+    (multiple-value-bind (cx cy) (stream-cursor-position stream)
+      (multiple-value-bind (cy* transformation)
+          (if (not first-quadrant)
+              (values cy +identity-transformation+)
+              (values (+ cy (stream-baseline stream))
+                      (make-scaling-transformation 1 -1)))
+        (letf (((medium-transformation medium)
+                (compose-transformation-with-translation transformation cx cy*)))
+          (let ((record (with-new-output-record (stream record-type)
+                          (funcall cont stream))))
+            (with-bounding-rectangle* (:x2 x2 :y2 y2) record
+              (orf width (- x2 cx))
+              (orf height (- y2 cy))))))
+      (maxf (stream-cursor-height stream) height)
+      (setf (stream-cursor-position stream)
+            (if move-cursor
+                (values (+ cx width) cy)
+                (values cx cy))))))
 
 ;;; Baseline
 
