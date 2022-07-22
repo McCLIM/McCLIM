@@ -61,7 +61,14 @@
 
 ;;; 15.4.1 Mixing Text and Graphics [complete]
 
-;; with-room-for-graphics (&optional stream &key (first-quadrant t) height (move-cursor t) record-type) &body body [Macro]
+(declmacro with-room-for-graphics
+           ((&optional stream &key (first-quadrant t) height (move-cursor t) record-type)
+            &body body))
+
+(defgeneric invoke-with-room-for-graphics
+    (cont stream &key first-quadrant height move-cursor record-type))
+
+(defgeneric output-record-baseline (record))
 
 ;;; 15.4.2 Wrapping of Text Lines [complete]
 
@@ -200,6 +207,13 @@ FUNCTION is a function of one or more arguments and called with all of
 FUNCTION-ARGS as APPLY arguments."
   (declare (ignore x-offset y-offset))
   (map-over-output-records-1 function record function-args))
+
+;;; These two aren't in the spec, but are needed to make indirect
+;;; adding/deleting of GADGET-OUTPUT-RECORDs work:
+
+(defgeneric note-output-record-lost-sheet (record sheet))
+(defgeneric note-output-record-got-sheet  (record sheet))
+
 
 ;;; 16.2.3. Output Record Change Notification Protocol
 

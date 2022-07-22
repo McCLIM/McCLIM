@@ -358,12 +358,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
 
 ;;; 16.2.2. The Output Record "Database" Protocol
 
-;;; These two aren't in the spec, but are needed to make indirect
-;;; adding/deleting of GADGET-OUTPUT-RECORDs work:
-
-(defgeneric note-output-record-lost-sheet (record sheet))
-(defgeneric note-output-record-got-sheet  (record sheet))
-
 (defmethod note-output-record-lost-sheet ((record output-record) sheet)
   (declare (ignore record sheet))
   (values))
@@ -2171,8 +2165,6 @@ according to the flags RECORD and DRAW."
 ;;; WITH-FIRST-QUADRANT-COORDINATES which both work on both mediums and
 ;;; streams. Also write a documentation chapter describing behavior and
 ;;; providing some examples.
-(defgeneric invoke-with-room-for-graphics
-    (cont stream &key first-quadrant height move-cursor record-type))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Complicated, underspecified...
@@ -2181,7 +2173,7 @@ according to the flags RECORD and DRAW."
 ;;; with-room-for-graphics is supposed to set the medium transformation to
 ;;; give the desired coordinate system; i.e., it doesn't preserve any
 ;;; rotation, scaling or translation in the current medium transformation.
-(defmethod invoke-with-room-for-graphics (cont (stream extended-output-stream)
+(defmethod invoke-with-room-for-graphics (cont (stream output-recording-stream)
                                           &key (first-quadrant t)
                                                height
                                                (move-cursor t)
@@ -2240,30 +2232,7 @@ according to the flags RECORD and DRAW."
                                          0)))))
             record))))))
 
-;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
-;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
-(defmethod invoke-with-room-for-graphics (cont stream
-                                          &key (first-quadrant t)
-                                            height
-                                            (move-cursor t)
-                                            (record-type nil))
-  (declare (ignore move-cursor record-type))
-  (with-sheet-medium (medium stream)
-    (multiple-value-bind (dx dy)
-        (transform-position (medium-transformation medium) 0 0)
-      (letf (((medium-transformation medium)
-              (compose-transformation-with-translation
-               (if first-quadrant
-                   (make-scaling-transformation 1 -1)
-                   +identity-transformation+)
-               dx (if first-quadrant
-                      (+ dy (or height 100))
-                      dy))))
-        (funcall cont stream)))))
-
 ;;; Baseline
-
-(defgeneric output-record-baseline (record))
 
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
