@@ -62,11 +62,10 @@
 ;;; 15.4.1 Mixing Text and Graphics [complete]
 
 (declmacro with-room-for-graphics
-           ((&optional stream &key (first-quadrant t) height (move-cursor t) record-type)
-            &body body))
+  ((&optional stream &key first-quadrant width height move-cursor record-type) &body body))
 
 (defgeneric invoke-with-room-for-graphics
-    (cont stream &key first-quadrant height move-cursor record-type))
+    (cont stream &key first-quadrant width height move-cursor record-type))
 
 (defgeneric output-record-baseline (record))
 
