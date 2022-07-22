@@ -16,7 +16,9 @@
    (wm-base :initform nil
             :accessor %wayland-wm-base)
    (top-level :initform nil
-              :accessor %xdg-top-level)))
+              :accessor %xdg-top-level)
+   (seat :initform nil
+         :accessor wayland-port-seat)))
 
 (defun parse-server-path (server-path)
   (format t "server path: ~a~%" server-path)
@@ -93,6 +95,19 @@
       (wlc:wl-registry-bind registry registry-match wl-protocol))))
 
 
+(defclass wayland-seat (wlc:wl-seat)
+  ((capabilities :type list :accessor capabilities :initform nil)
+   (name :type string :accessor name :initform "")))
+
+(defmethod wlc:wl-seat-capabilities ((seat wayland-seat) capabilities)
+  (pushnew capabilities (capabilities seat)))
+
+(defmethod wlc:wl-seat-name ((seat wayland-seat) name)
+  (setf (name seat) name))
+
+
+;;; Port protocols
+
 (defun initialize-wayland (port)
   (setf (wayland-port-display port) (wlc:wl-display-connect nil)
 
@@ -114,6 +129,7 @@
                            "wl_output" 3)))
     (with-accessors ((port-compositor wayland-port-compositor)
                      (port-device wayland-port-device)
+                     (port-seat wayland-port-seat)
                      (port-window wayland-port-window)
                      (port-wm-base %wayland-wm-base)
                      (port-surface wayland-port-surface))
@@ -122,6 +138,11 @@
       (setf port-compositor compositor
 
             port-device device
+
+            port-seat (bind-wayland-registry
+                         port
+                         (make-instance 'wayland-seat :version 7)
+                         "wl_seat" 7)
 
             port-wm-base (bind-wayland-registry
                           port
