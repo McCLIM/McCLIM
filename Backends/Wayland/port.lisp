@@ -97,10 +97,23 @@
 
 (defclass wayland-seat (wlc:wl-seat)
   ((capabilities :type list :accessor capabilities :initform nil)
-   (name :type string :accessor name :initform "")))
+   (name :type string :accessor name :initform "")
+   (%keyboard :initform nil :accessor %keyboard)
+   ))
 
 (defmethod wlc:wl-seat-capabilities ((seat wayland-seat) capabilities)
-  (pushnew capabilities (capabilities seat)))
+  (setf (capabilities seat) capabilities)
+
+  ;; init keyboard if capability exists
+  (alx:when-let ((has-keyboard-p (member :keyboard capabilities)))
+    (cond ((and has-keyboard-p
+                (not (%keyboard seat)))
+           (setf (%keyboard seat)
+                 (wlc:wl-seat-get-keyboard seat
+                                           (make-instance 'wlc:wl-keyboard))))
+          ((and (not has-keyboard-p) (%keyboard seat))
+           (wlc:wl-keyboard-release (%keyboard seat))
+           (setf (%keyboard seat) nil)))))
 
 (defmethod wlc:wl-seat-name ((seat wayland-seat) name)
   (setf (name seat) name))
