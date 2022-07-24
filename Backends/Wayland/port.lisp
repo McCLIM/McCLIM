@@ -98,11 +98,24 @@
 (defclass wayland-seat (wlc:wl-seat)
   ((capabilities :type list :accessor capabilities :initform nil)
    (name :type string :accessor name :initform "")
+   (%pointer :initform nil :accessor %pointer)
    (%keyboard :initform nil :accessor %keyboard)
    ))
 
 (defmethod wlc:wl-seat-capabilities ((seat wayland-seat) capabilities)
   (setf (capabilities seat) capabilities)
+
+  ;; init pointer if capability exists
+  (alx:when-let ((has-pointer-p (member :pointer capabilities)))
+    (with-slots (%pointer) seat
+      (cond ((and has-pointer-p (not %pointer))
+             (setf %pointer
+                   (wlc:wl-seat-get-pointer seat
+                                            (make-instance 'wlc:wl-pointer))))
+            ;; release when capability lost
+            ((and (not has-pointer-p) %pointer)
+             (wlc:wl-pointer-release %pointer)
+             (setf %pointer nil)))))
 
   ;; init keyboard if capability exists
   (alx:when-let ((has-keyboard-p (member :keyboard capabilities)))
@@ -118,6 +131,14 @@
 (defmethod wlc:wl-seat-name ((seat wayland-seat) name)
   (setf (name seat) name))
 
+(defmethod wlc:wl-pointer-enter ((pointer wlc:wl-pointer) serial surface surface-x surface-y)
+  (format *debug-io* "WL pointer ENTER (we should set cursor image) ~s~%" (list surface-x surface-y serial surface)))
+
+(defmethod wlc:wl-pointer-motion ((pointer wlc:wl-pointer) time surface-x surface-y)
+  (format *debug-io* "WL pointer MOTION ~s~%" (list time surface-x surface-y)))
+
+(defmethod wlc:wl-pointer-frame ((pointer wlc:wl-pointer))
+  (format *debug-io* "WL pointer FRAME~%"))
 
 ;;; Port protocols
 
