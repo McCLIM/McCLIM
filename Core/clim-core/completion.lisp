@@ -23,18 +23,6 @@
               (and *current-input-stream* (stream-scan-pointer ,stream-var))))
        ,@body)))
 
-(defvar *completion-gestures* '(:complete))
-(defvar *help-gestures* '(:help))
-(defvar *possibilities-gestures* '(:possibilities))
-
-;;; Helpers for complete-input, which is just getting too long.
-
-(defun gesture-match (gesture list)
-  "Returns t if gesture matches any gesture spec in list."
-  (some #'(lambda (name)
-            (gesture-matches-spec-p gesture name))
-        list))
-
 (defun complete-gesture-p (gesture)
   (or (delimiter-gesture-p gesture)
       (activation-gesture-p gesture)))

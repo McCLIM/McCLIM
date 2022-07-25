@@ -88,10 +88,10 @@
    (:module "extended-input"
     :depends-on ("windowing" "extended-output")
     :components ((:file "protocol")
-                 (:file "dead-keys")    ; dead-key merging
-                 (:file "stream-input"      :depends-on ("dead-keys"))
                  (:file "gestures")
                  (:file "standard-gestures" :depends-on ("gestures"))
+                 (:file "dead-keys")    ; dead-key merging
+                 (:file "stream-input"      :depends-on ("dead-keys" "standard-gestures"))
                  (:file "pointer-tracking"  :depends-on ("stream-input"))))))
 
 ;;; TODO separate modules, move directories toplevel aftwards.

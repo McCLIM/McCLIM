@@ -212,80 +212,6 @@
           (eql modifier-state (third physical-gesture)))
         (gethash gesture-name *gesture-names*)))
 
-;;; Activation and delimiter gestures
-
-(defvar *activation-gestures* nil)
-(defvar *standard-activation-gestures* '(:newline :return))
-(defvar *delimiter-gestures* nil)
-
-;;; These helper functions take the arguments of ACCEPT so that they
-;;; can be used directly by ACCEPT.
-
-(defun make-activation-gestures
-    (&key (activation-gestures nil activation-gestures-p)
-       (additional-activation-gestures nil additional-activations-p)
-       (existing-activation-gestures *activation-gestures*)
-     &allow-other-keys)
-  (cond (additional-activations-p
-         (append additional-activation-gestures existing-activation-gestures))
-        (activation-gestures-p
-         activation-gestures)
-        (t (or existing-activation-gestures
-               *standard-activation-gestures*))))
-
-(defun make-delimiter-gestures
-    (&key (delimiter-gestures nil delimiter-gestures-p)
-       (additional-delimiter-gestures nil additional-delimiters-p)
-       (existing-delimiter-gestures *delimiter-gestures*)
-     &allow-other-keys)
-  (cond (additional-delimiters-p
-         (append additional-delimiter-gestures existing-delimiter-gestures))
-        (delimiter-gestures-p
-         delimiter-gestures)
-        (t existing-delimiter-gestures)))
-
-(defmacro with-activation-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh. We permit both CLIM 2.0-style gesture names and CLIM 2.2 style
-  ;; characters.
-  (let ((gesture-form (cond ((or (and (symbolp gestures)
-                                      (gethash gestures *gesture-names*))
-                                 (characterp gestures))
-                             `(list ',gestures))
-                            (t gestures)))
-        (gestures (gensym))
-        (override-var (gensym)))
-    `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
-            (,override-var ,override)
-            (*activation-gestures* (apply #'make-activation-gestures
-                                          (if ,override-var
-                                              :activation-gestures
-                                              :additional-activation-gestures)
-                                          (list ,gestures))))
-       ,@body)))
-
-(defmacro with-delimiter-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh.  We permit both CLIM 2.0-style gesture names and CLIM 2.2 style
-  ;; characters.
-  (let ((gesture-form (cond ((or (and (symbolp gestures)
-                                      (gethash gestures *gesture-names*))
-                                 (characterp gestures))
-                             `(list ',gestures))
-                            (t gestures)))
-        (gestures (gensym))
-        (override-var (gensym)))
-    `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
-            (,override-var ,override)
-            (*delimiter-gestures* (if ,override-var
-                                      (make-delimiter-gestures
-                                       :delimiter-gestures
-                                       ,gestures)
-                                      (make-delimiter-gestures
-                                       :additional-delimiter-gestures
-                                       ,gestures))))
-       ,@body)))
-
 ;;; Wrapper around event-matches-gesture-name-p to match against characters too.
 (defgeneric gesture-matches-spec-p (gesture spec)
   (:documentation "Match a gesture against a gesture name or character.")
@@ -301,15 +227,3 @@
   (some #'(lambda (name)
             (gesture-matches-spec-p gesture name))
         list))
-
-(defun activation-gesture-p (gesture)
-  (loop for gesture-name in *activation-gestures*
-        when (gesture-matches-spec-p gesture gesture-name)
-          do (return t)
-        finally (return nil)))
-
-(defun delimiter-gesture-p (gesture)
-  (loop for gesture-name in *delimiter-gestures*
-        when (gesture-matches-spec-p gesture gesture-name)
-          do (return t)
-        finally (return nil)))
