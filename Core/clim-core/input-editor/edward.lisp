@@ -37,6 +37,17 @@
     (setf (slot-value object 'edward-buffer) buffer
           (slot-value object 'edward-cursor) cursor)))
 
+(defun edward-buffer-string (editor)
+  (with-output-to-string (str)
+    (loop with buffer = (input-editor-buffer editor)
+          with length = (cluffer:line-count buffer)
+          for lineno from 0 below length
+          for line = (cluffer:find-line buffer lineno)
+          for text = (coerce (cluffer:items line) 'string)
+          do (princ text str)
+          unless (= (1+ lineno) length)
+            do (terpri str))))
+
 ;;; editor function prototype
 
 ;; (defgeneric edward-move (cursor unit syntax numeric-argument))

@@ -100,11 +100,17 @@
     (values x0 y0)))
 
 (defmethod invoke-with-input-editing
-    ((stream standard-input-editing-stream) continuation input-sensitizer initial-contents class)
+    ((stream standard-input-editing-stream)
+     continuation input-sensitizer initial-contents class)
   (declare (ignore class))
-  (catch 'rescan
-    (reset-scan-pointer stream)
-    (loop (funcall continuation stream))))
+  (catch 'activate
+    (loop
+      (catch 'rescan
+        (reset-scan-pointer stream)
+        (loop (funcall continuation stream)))))
+  (let ((str (edward-buffer-string stream)))
+    (format *debug-io* "Stream activated! returnging ~s~%" str)
+    str))
 
 (defmethod invoke-with-input-editor-typeout
     ((stream standard-input-editing-stream) continuation &key erase)
@@ -121,11 +127,27 @@
 (defmethod input-editor-format ((stream standard-extended-output-stream) format-string &rest format-args)
   (apply #'format stream format-string format-args))
 
-(defmethod reset-scan-pointer ((stream standard-encapsulating-stream) &optional (scan-pointer 0)))
+;;; "Rescanning" is a fancy name for restarting the continuation, so it may
+;;; read gestures up to the current insertion pointer as if they were typed
+;;; anew.  This is to give a chance for the client code to exit early for
+;;; example to return a completion.
+(defmethod reset-scan-pointer
+    ((stream standard-encapsulating-stream) &optional (scan-pointer 0))
+  (setf (stream-scan-pointer stream) scan-pointer
+        (stream-rescanning-p stream) t
+        (stream-rescan-queued-p stream) nil))
 
-(defmethod immediate-rescan ((stream standard-encapsulating-stream)))
-(defmethod queue-rescan ((stream standard-encapsulating-stream)))
-(defmethod rescan-if-necessary ((stream standard-encapsulating-stream) &optional inhibit-activation))
+(defmethod immediate-rescan ((stream standard-encapsulating-stream))
+  (throw 'rescan t))
+
+(defmethod queue-rescan ((stream standard-encapsulating-stream))
+  (setf (stream-rescan-queued-p stream) t))
+
+(defmethod rescan-if-necessary
+    ((stream standard-encapsulating-stream) &optional inhibit-activation)
+  (when (stream-rescan-queued-p stream)
+    (setf (stream-rescan-queued-p stream) nil)
+    (immediate-rescan stream)))
 
 (defmethod erase-input-buffer ((stream standard-encapsulating-stream) &optional (start-position 0))
   (repaint-sheet (encapsulating-stream-stream stream) +everywhere+))
@@ -164,6 +186,8 @@
           (thunk sheet)))))
 
 (defmethod stream-process-gesture ((stream standard-input-editing-stream) gesture type)
+  (when (activation-gesture-p gesture)
+    (throw 'activate t))
   (if (handle-editor-event stream gesture)
       (with-output-recording-options (stream :record nil :draw t)
         (erase-input-buffer stream)
@@ -175,8 +199,14 @@
   (rescan-if-necessary stream)
   (loop
     (if (< (stream-scan-pointer stream)
-           (stream-fill-pointer stream))
-        (incf (stream-scan-pointer stream))
+           (stream-insertion-pointer stream))
+        ;; FIXME this assumes that there is only a single line (scan pointer
+        ;; is taken as is).
+        (let ((cursor (edward-cursor stream))
+              (scan-pointer (stream-scan-pointer stream)))
+          (incf (stream-scan-pointer stream))
+          (return-from stream-read-gesture
+            (cluffer:item-at-position (cluffer:line cursor) scan-pointer)))
         (multiple-value-bind (result reason) (call-next-method)
           (when (null result)
             (return-from stream-read-gesture (values result reason)))
@@ -184,6 +214,7 @@
             (return-from stream-read-gesture result*))))))
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream) gesture)
+  (assert (> (stream-scan-pointer stream) 0))
   (decf (stream-scan-pointer stream)))
 
 
