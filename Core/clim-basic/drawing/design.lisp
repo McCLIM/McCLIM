@@ -272,8 +272,9 @@
 (defun indirect-ink-p (design)
   (typep design 'indirect-ink))
 
-(defun indirect-ink-ink (design)
-  (check-type design indirect-ink)
+(defgeneric indirect-ink-ink (design))
+
+(defmethod indirect-ink-ink ((design indirect-ink))
   (with-slots (dynamic-variable-symbol default-ink) design
     (if (boundp dynamic-variable-symbol)
         (symbol-value dynamic-variable-symbol)
