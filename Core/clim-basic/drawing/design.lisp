@@ -84,7 +84,7 @@
 ;;;
 ;;;   INDIRECT-INK                                                    [class]
 ;;;   INDIRECT-INK-P ink                                              [predicate]
-;;;   INDIRECT-INK-INK ink                                            [function]
+;;;   INDIRECT-INK-INK ink                                            [generic function]
 ;;;
 ;;;      Indirect inks are underspecified in the standard. Class is exported for
 ;;;      specialization. Predicate INDIRECT-INK-P is defined. Initargs:
