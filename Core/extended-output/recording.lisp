@@ -297,9 +297,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (x y (record basic-output-record))
   (values x y))
 
-(defun replay (record stream &optional (region (sheet-visible-region stream)))
+(defun replay (record stream &optional region)
   (when (typep stream 'encapsulating-stream)
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (with-output-recording-options (stream :record nil)
