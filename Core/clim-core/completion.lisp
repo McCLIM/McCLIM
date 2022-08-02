@@ -95,9 +95,9 @@
                                 partial-completers
                                 help-displays-possibilities)
   (flet ((possibilitiesp (gesture)
-           (or (gesture-match gesture *possibilities-gestures*)
+           (or (possibilities-gesture-p gesture)
                (and help-displays-possibilities
-                    (gesture-match gesture *help-gestures*)))))
+                    (help-gesture-p gesture)))))
     (let ((*completion-possibilities-continuation*
             #'(lambda ()
                 (return-from read-completion-gesture
@@ -364,9 +364,7 @@
        ;; we want the partial-delimiters argument and we need to insure its
        ;; proper evaluation order with everything else.
        (let* ((complete-input-args (list ,@args))
-              (partial-completers (getf complete-input-args
-                                        :partial-completers
-                                        nil)))
+              (partial-completers (getf complete-input-args :partial-completers)))
          (apply #'complete-input
                 ,stream
                 #'(lambda (so-far mode)
