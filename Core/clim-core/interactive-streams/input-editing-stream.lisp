@@ -79,20 +79,39 @@
 
 (defclass standard-input-editing-stream (edward-mixin standard-encapsulating-stream input-editing-stream)
   (;; Editor-related
-   (input-editor-buffer :reader stream-input-buffer)
-   (insertion-pointer :accessor stream-insertion-pointer :initarg :ip)
-   (scan-pointer :accessor stream-scan-pointer :initarg :sp)
-   (fill-pointer :accessor stream-fill-pointer :initarg :fp)
    (rescanning-p :accessor stream-rescanning-p :initarg :rescanning-p)
    (rescan-queued-p :accessor stream-rescan-queued-p :initarg :rescan-queued-p)
    ;; Display-related
    (x0 :accessor x0)
    (y0 :accessor y0))
-  (:default-initargs :sp 0 :ip 0 :fp 0 :rescanning-p nil :rescan-queued-p nil))
+  (:default-initargs :rescanning-p nil :rescan-queued-p nil))
 
 (defmethod initialize-instance :after ((editing-stream standard-input-editing-stream) &key stream &allow-other-keys)
   (setf (values (x0 editing-stream) (y0 editing-stream))
         (stream-cursor-position (encapsulating-stream-stream editing-stream))))
+
+(defmethod stream-scan-pointer ((stream standard-input-editing-stream))
+  (cluffer:cursor-position (scan-cursor stream)))
+
+(defmethod (setf stream-scan-pointer) (position (stream standard-input-editing-stream))
+  (setf (cluffer:cursor-position (scan-cursor stream)) position))
+
+(defmethod stream-insertion-pointer ((stream standard-input-editing-stream))
+  (cluffer:cursor-position (edit-cursor stream)))
+
+(defmethod (setf stream-insertion-pointer) (position (stream standard-input-editing-stream))
+  (setf (cluffer:cursor-position (edit-cursor stream)) position))
+
+(defmethod stream-fill-pointer ((stream standard-input-editing-stream))
+  (let ((buffer (input-editor-buffer stream)))
+    (+ -1
+       (cluffer:item-count buffer)
+       ;; Each line stands for a "newline".
+       (cluffer:line-count buffer))))
+
+;;; XXX Conses a new string each time this is called.
+(defmethod stream-input-buffer ((stream standard-input-editing-stream))
+  (edward-buffer-string stream))
 
 ;;; XXX we should maintain a real cursor.
 (defmethod stream-cursor-initial-position ((stream standard-input-editing-stream))
@@ -161,7 +180,7 @@
     (flet ((thunk (sheet)
              (with-sheet-medium (medium stream)
                (loop with buffer = (input-editor-buffer stream)
-                     with cursor = (edward-cursor stream)
+                     with cursor = (edit-cursor stream)
                      with cursor-line = (cluffer:line cursor)
                      with cursor-position = (cluffer:cursor-position cursor)
                      with tstyle = (medium-text-style medium)
@@ -195,26 +214,31 @@
       nil)
   #|invoke the command|#)
 
+(defun try-scan-element (stream)
+  (let* ((scan (scan-cursor stream))
+         (edit (edit-cursor stream))
+         (linnum (signum (- (cluffer:line-number scan)
+                            (cluffer:line-number edit)))))
+    (when (or (= linnum -1)
+              (and (= linnum 0)
+                   (< (cluffer:cursor-position scan) (cluffer:cursor-position edit))))
+      (smooth-forward-item scan)
+      (handler-case (cluffer:item-before-cursor scan)
+        (cluffer:beginning-of-line ()
+          #\z)))))
+
 (defmethod stream-read-gesture ((stream standard-input-editing-stream) &key &allow-other-keys)
   (rescan-if-necessary stream)
-  (loop
-    (if (< (stream-scan-pointer stream)
-           (stream-insertion-pointer stream))
-        ;; FIXME this assumes that there is only a single line (scan pointer
-        ;; is taken as is).
-        (let ((cursor (edward-cursor stream))
-              (scan-pointer (stream-scan-pointer stream)))
-          (incf (stream-scan-pointer stream))
-          (return-from stream-read-gesture
-            (cluffer:item-at-position (cluffer:line cursor) scan-pointer)))
-        (multiple-value-bind (result reason) (call-next-method)
-          (when (null result)
-            (return-from stream-read-gesture (values result reason)))
-          (when-let ((result* (stream-process-gesture stream result t)))
-            (return-from stream-read-gesture result*))))))
+  (loop for elt = (try-scan-element stream)
+        while (null elt) do
+          (format *debug-io* "items: ~s~%" (stream-fill-pointer stream))
+          (multiple-value-bind (result reason) (call-next-method)
+            (when (null result)
+              (return-from stream-read-gesture (values result reason)))
+            (stream-process-gesture stream result t))
+        finally (return elt)))
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream) gesture)
-  (assert (> (stream-scan-pointer stream) 0))
   (decf (stream-scan-pointer stream)))
 
 

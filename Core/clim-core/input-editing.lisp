@@ -119,7 +119,7 @@
 (defun empty-input-p
     (stream begin-scan-pointer activation-gestures delimiter-gestures)
   (let ((scan-pointer (stream-scan-pointer stream))
-        (fill-pointer (fill-pointer (stream-input-buffer stream))))
+        (fill-pointer (stream-fill-pointer stream)))
     ;; activated?
     (cond ((and (eql begin-scan-pointer scan-pointer)
                 (eql scan-pointer fill-pointer))
