@@ -214,7 +214,7 @@
                  (setf pdoc pane
                        (frame-pointer-documentation-output frame) stream)))
              (if (or menu pdoc)
-                 (make-instance 'vrack-pane
+                 (make-pane-1 fm frame 'vrack-pane
                                 :contents (remove nil (list menu root pdoc))
                                 :port (port frame))
                  root))))
