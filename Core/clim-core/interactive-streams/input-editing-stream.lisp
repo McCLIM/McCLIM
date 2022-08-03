@@ -91,16 +91,16 @@
         (stream-cursor-position (encapsulating-stream-stream editing-stream))))
 
 (defmethod stream-scan-pointer ((stream standard-input-editing-stream))
-  (cluffer:cursor-position (scan-cursor stream)))
+  (cursor-linear-position (scan-cursor stream)))
 
 (defmethod (setf stream-scan-pointer) (position (stream standard-input-editing-stream))
-  (setf (cluffer:cursor-position (scan-cursor stream)) position))
+  (setf (cursor-linear-position (scan-cursor stream)) position))
 
 (defmethod stream-insertion-pointer ((stream standard-input-editing-stream))
-  (cluffer:cursor-position (edit-cursor stream)))
+  (cursor-linear-position (edit-cursor stream)))
 
 (defmethod (setf stream-insertion-pointer) (position (stream standard-input-editing-stream))
-  (setf (cluffer:cursor-position (edit-cursor stream)) position))
+  (setf (cursor-linear-position (edit-cursor stream)) position))
 
 (defmethod stream-fill-pointer ((stream standard-input-editing-stream))
   (let ((buffer (input-editor-buffer stream)))
@@ -109,7 +109,9 @@
        ;; Each line stands for a "newline".
        (cluffer:line-count buffer))))
 
-;;; XXX Conses a new string each time this is called.
+;;; XXX Conses a new string each time this is called. We can do better by
+;;; utilizing cluffer update protocol (allocate one string with a fill pointer
+;;; and update it only when the buffer changes).
 (defmethod stream-input-buffer ((stream standard-input-editing-stream))
   (edward-buffer-string stream))
 
@@ -130,6 +132,32 @@
   (let ((str (edward-buffer-string stream)))
     (format *debug-io* "Stream activated! returnging ~s~%" str)
     str))
+
+(defmethod replace-input ((stream standard-input-editing-stream) (new-input array)
+                          &key (start 0)
+                               (end (length new-input))
+                               (buffer-start (stream-scan-pointer stream))
+                               (rescan nil rescan-supplied-p))
+  (let* ((buffer-str (stream-input-buffer stream))
+         (buffer-end (stream-scan-pointer stream))
+         (mismatch-p (mismatch new-input buffer-str :start1 start :end1 end
+                                                    :start2 buffer-start :end2 buffer-end)))
+    ;; Cursors are implicitly updated by the underlying buffer. -- jd 2022-08-03
+    (edward-replace-input stream new-input start end buffer-start)
+    (with-output-recording-options (stream :record nil :draw t)
+      (erase-input-buffer stream)
+      (redraw-input-buffer stream))
+    ;; XXX: This behavior for the :rescan parameter is not mentioned explicitly
+    ;; in any CLIM guide, but McCLIM input-editing machinery relies on it.
+    (if rescan-supplied-p
+        (when rescan
+          (queue-rescan stream))
+        (when mismatch-p
+          (queue-rescan stream))))
+  ;; The returned value is "the position in the input buffer" - we assume that
+  ;; it is the position from where the next gesture would be read. Mind that a
+  ;; queued rescan may change the scan pointer position afterwards.
+  (stream-scan-pointer stream))
 
 (defmethod invoke-with-input-editor-typeout
     ((stream standard-input-editing-stream) continuation &key erase)
@@ -222,10 +250,7 @@
     (when (or (= linnum -1)
               (and (= linnum 0)
                    (< (cluffer:cursor-position scan) (cluffer:cursor-position edit))))
-      (smooth-forward-item scan)
-      (handler-case (cluffer:item-before-cursor scan)
-        (cluffer:beginning-of-line ()
-          #\z)))))
+      (smooth-forward-item scan))))
 
 (defmethod stream-read-gesture ((stream standard-input-editing-stream) &key &allow-other-keys)
   (rescan-if-necessary stream)
