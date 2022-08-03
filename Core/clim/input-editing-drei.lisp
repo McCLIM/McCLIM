@@ -13,13 +13,8 @@
 
 (in-package #:clim-internals)
 
-(defclass empty-input-mixin ()
-  ()
-  (:documentation "A mixin class used for detecting empty input"))
-
 (defclass standard-input-editing-stream (drei:drei-input-editing-mixin
                                          drei:single-line-mixin
-                                         empty-input-mixin
                                          standard-input-editing-mixin
                                          input-editing-stream
                                          standard-encapsulating-stream)

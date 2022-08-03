@@ -49,6 +49,8 @@
 
 (in-package #:clim-internals)
 
+;;;  After hours of trial and error we know, that only drawing borders doesn't
+
 (defclass bordered-output-record (standard-sequence-output-record)
   ((stream :reader border-stream :initarg :stream)
    (shape :reader shape :initarg :shape)

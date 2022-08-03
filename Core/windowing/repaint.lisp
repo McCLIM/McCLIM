@@ -51,10 +51,12 @@
   (:method ((sheet graft))
     +everywhere+)
   (:method ((sheet mirrored-sheet-mixin))
-    (region-intersection
-     (sheet-region sheet)
-     (untransform-region (sheet-transformation sheet)
-                         (sheet-native-region* (sheet-parent sheet)))))
+    (if-let ((parent (sheet-parent sheet)))
+      (region-intersection
+       (sheet-region sheet)
+       (untransform-region (sheet-transformation sheet)
+                           (sheet-native-region* parent)))
+      (sheet-region sheet)))
   (:method ((sheet basic-sheet))
     (region-intersection
      (transform-region (sheet-native-transformation sheet) (sheet-region sheet))

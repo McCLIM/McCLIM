@@ -55,6 +55,12 @@
 (pledge :macro defgeneric* (name lambda-list &body options))
 (pledge :macro defmethod* (name lambda-list &body body))
 
+;;; C Encapsulating Streams
+(define-protocol-class encapsulating-stream ()) ; initargs (:stream)
+(pledge :class standard-encapsulating-stream (encapsulating-stream))
+(defgeneric encapsulating-stream-stream (encapsulating-stream)
+  (:documentation "The stream encapsulated by an encapsulating stream"))
+
 ;;; Geometry Substrate
 
 ;;; 3 Regions
@@ -1060,7 +1066,7 @@ size.  If size is nil, the resulting text style does not specify a size."))
 (defgeneric (setf pointer-sheet) (new-value instance))
 (defgeneric pointer-button-state (instance))
 (defgeneric pointer-position (instance))
-(defgeneric (setf pointer-position) (x y pointer))
+(defgeneric* (setf pointer-position) (x y pointer))
 (defgeneric pointer-cursor (instance))
 (defgeneric (setf pointer-cursor) (new-value instance))
 (pledge :macro with-pointer-grabbed ((port sheet &key pointer multiple-window) &body body))

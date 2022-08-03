@@ -2,19 +2,37 @@
 ;;;   License: LGPL-2.1+ (See file 'Copyright' for details).
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;;  (c) Copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 1998-2001 by Michael McDonald <mikemac@mikemac.com>
+;;;  (c) Copyright 2001 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;  (c) Copyright 2020-2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
+
+(in-package #:clim-internals)
+
+;;; Default Color Scheme Options
+
+;;; Motif-ish
+
+(defparameter *3d-dark-color*   (make-gray-color .45))
+(defparameter *3d-normal-color* (make-gray-color .75))
+(defparameter *3d-light-color*  (make-gray-color .92))
+(defparameter *3d-inner-color*  (make-gray-color .65))
+
+;;; Gtk-ish
+
+;; (defparameter *3d-dark-color*   (make-gray-color .59))
+;; (defparameter *3d-normal-color* (make-gray-color .84))
+;; (defparameter *3d-light-color*  (make-gray-color 1.0))
+;; (defparameter *3d-inner-color*  (make-gray-color .75))
 
 ;;; To regenerate this file use a function defined in the file
 ;;; Tools/generate-named-colors.lisp. Notice, that colors +white+ and +black+
 ;;; are defined in design.lisp, so they should be removed from the generated
 ;;; file. -- jd 2019-10-25
 
-(in-package #:climi)
-
-; $XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp $
+;;; $XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp $
 (defconstant +snow+ (make-named-color "snow" 1.0000 0.9804 0.9804))
 (defconstant +ghost-white+ (make-named-color "ghost-white" 0.9725 0.9725 1.0000))
 (defconstant +GhostWhite+ (make-named-color "GhostWhite" 0.9725 0.9725 1.0000))

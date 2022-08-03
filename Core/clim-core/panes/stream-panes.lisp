@@ -34,7 +34,8 @@
   (declare (ignore force-p))
   (invoke-display-function frame pane))
 
-(defclass clim-stream-pane (updating-output-stream-mixin
+(defclass clim-stream-pane (text-selection-mixin
+                            updating-output-stream-mixin
                             pane-display-mixin
                             #-clim-mp standard-repainting-mixin
                             standard-output-recording-stream
@@ -44,16 +45,6 @@
                             sheet-multiple-child-mixin   ; needed for GADGET-OUTPUT-RECORD
                             basic-pane)
   ((redisplay-needed :initarg :display-time)
-   (text-margin :initarg :text-margin
-                :reader pane-text-margin)
-   (vertical-spacing :initarg :vertical-spacing
-                     :reader pane-vertical-spacing)
-   (end-of-line-action :initform :wrap
-                       :initarg :end-of-line-action
-                       :reader pane-end-of-line-action)
-   (end-of-page-action :initform :scroll
-                       :initarg :end-of-page-action
-                       :reader pane-end-of-page-action)
    ;; size required by the stream
    (stream-width :initform 100 :accessor stream-width)
    (stream-height :initform 100 :accessor stream-height))
@@ -61,6 +52,27 @@
   (:documentation
    "This class implements a pane that supports the CLIM graphics,
     extended input and output, and output recording protocols."))
+
+(defmethod redisplay-frame-pane
+    ((frame application-frame) (pane updating-output-stream-mixin) &key force-p)
+  (setf (id-counter pane) 0)
+  (let ((incremental-redisplay (pane-incremental-redisplay pane)))
+    (cond ((not incremental-redisplay)
+           (call-next-method))
+          ((or (null (updating-record pane))
+               force-p)
+           (setf (updating-record pane)
+                 (updating-output (pane :unique-id 'top-level)
+                   (call-next-method frame pane :force-p force-p))))
+          ;; Implements the extension to the :incremental-redisplay
+          ;; pane argument found in the Franz User Guide.
+          (t (let ((record (updating-record pane)))
+               (if (consp incremental-redisplay)
+                   (apply #'redisplay record pane incremental-redisplay)
+                   (redisplay record pane))) ))))
+
+(defmethod scroll-quantum ((sheet clim-stream-pane))
+  (stream-line-height sheet))
 
 (defmethod handle-event ((sheet clim-stream-pane)
                          (event window-manager-focus-event))
@@ -98,6 +110,17 @@
            (funcall display-function frame pane))
           (t nil))
     (finish-output pane)))
+
+(defmethod spacing-value-to-device-units ((pane extended-output-stream) x)
+  (etypecase x
+    (real x)
+    (cons (destructuring-bind (value type) x
+            (ecase type
+              (:pixel     value)
+              (:point     (* value (graft-pixels-per-inch (graft pane)) 1/72))
+              (:mm        (* value (graft-pixels-per-millimeter (graft pane))))
+              (:character (* value (stream-character-width pane #\m)))
+              (:line      (* value (stream-line-height pane))))))))
 
 (defun change-stream-space-requirements (pane &key width height)
   (check-type pane clim-stream-pane)
@@ -188,11 +211,21 @@
     ((type t) (stream clim-stream-pane))
   (funcall-presentation-generic-function presentation-type-history type))
 
+(defmethod %note-stream-end-of-line ((stream clim-stream-pane) action new-width)
+  (when (stream-drawing-p stream)
+    (change-stream-space-requirements stream :width new-width)
+    (when (eq action :scroll)
+      (when-let ((viewport (pane-viewport stream)))
+        (let ((child (sheet-child viewport)))
+          (scroll-extent child
+                         (max 0 (- (bounding-rectangle-width child)
+                                   (bounding-rectangle-height viewport)))
+                         0))))))
+
 (defmethod %note-stream-end-of-page ((stream clim-stream-pane) action new-height)
-  (declare (ignore action))
   (when (stream-drawing-p stream)
     (change-stream-space-requirements stream :height new-height)
-    (unless (eq :allow (stream-end-of-page-action stream))
+    (when (eq action :scroll)
       (when-let ((viewport (pane-viewport stream)))
         (let ((child (sheet-child viewport)))
           (scroll-extent child

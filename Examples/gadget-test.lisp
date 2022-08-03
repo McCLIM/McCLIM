@@ -91,8 +91,10 @@
      (tf4        :push-button
                  :text-style (make-text-style :sans-serif '(:bold :italic) 24)
                  :label "Text Field")
-    (text-edit  :text-editor
-                :value "Text Editor")
+     (text-line  :text-field
+                 :value "Text Field")
+     (text-edit  :text-editor
+                 :value "Text Editor")
      (slider-h   :slider
                  :min-value 0
                  :max-value 100
@@ -175,7 +177,10 @@
                  tf1 tf2 tf3 tf4
                  slider-h))
              radar
-             text-edit)
+             (labelling (:label "Text Line")
+               text-line)
+             (labelling (:label "Text Area")
+               text-edit))
            (vertically ()
              push-btn
              table

@@ -499,7 +499,7 @@
              (disown-frame fm frame))
            (disable-frame frame)))))
 
-(defparameter +default-prompt-style+ (make-text-style :sans-serif :bold :normal))
+(defparameter +default-prompt-style+ (make-text-style nil :bold nil))
 
 (defmethod default-frame-top-level
     ((frame application-frame)
