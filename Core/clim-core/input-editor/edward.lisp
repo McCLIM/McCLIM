@@ -11,7 +11,11 @@
 
 (in-package #:climi)
 
-;;; cluffer utilities
+;;; Cluffer "smooth" utilities - CLIM spec operates on positions treating the
+;;; input buffer as a vector. On the other hand Cluffer keeps each line as a
+;;; separate entity, so we need to make things transparent and allow smooth
+;;; transitioning between lines and addressing positions with an integer.
+
 (defun cursor-previous-line (cursor)
   (let ((buf (cluffer:buffer cursor))
         (pos (1- (cluffer:line-number cursor))))
@@ -21,6 +25,29 @@
   (let ((buf (cluffer:buffer cursor))
         (pos (1+ (cluffer:line-number cursor))))
     (cluffer:find-line buf pos)))
+
+(defun cursor-linear-position (cursor)
+  (loop with buffer = (cluffer:buffer cursor)
+        with newlines = (cluffer:line-number cursor)
+        with position = (+ newlines (cluffer:cursor-position cursor))
+        for linum from 0 below newlines
+        for line = (cluffer:find-line buffer linum)
+        for count = (cluffer:item-count line)
+        do (incf position count)
+        finally (return (values position linum count))))
+
+(defun (setf cursor-linear-position) (new-position cursor)
+  (loop with buffer = (cluffer:buffer cursor)
+        with position = 0
+        for linum from 0 below (cluffer:line-count buffer)
+        for line = (cluffer:find-line buffer linum)
+        when (<= new-position (+ position (cluffer:item-count line))) do
+          (cluffer:detach-cursor cursor)
+          (cluffer:attach-cursor cursor line (- new-position position))
+          (return-from cursor-linear-position
+            (cluffer:cursor-position cursor))
+        do (incf position (cluffer:item-count line))
+        finally (error "~s points beyond the buffer!" new-position)))
 
 (defclass edward-mixin ()
   ((edward-buffer :reader input-editor-buffer)
@@ -32,6 +59,7 @@
    ))
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
+  (declare (ignore slot-names))
   (let* ((i-cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
          (s-cursor (make-instance 'cluffer-standard-line:left-sticky-cursor))
          (line (make-instance 'cluffer-standard-line:open-line))
@@ -51,9 +79,11 @@
         ((cluffer:end-of-line-p cursor)
          (let ((next (cursor-next-line cursor)))
            (cluffer:detach-cursor cursor)
-           (cluffer:attach-cursor cursor next)))
+           (cluffer:attach-cursor cursor next)
+           #\newline))
         (t
-         (cluffer:forward-item cursor))))
+         (cluffer:forward-item cursor)
+         (cluffer:item-before-cursor cursor))))
 
 (defun smooth-backward-item (cursor)
   (cond ((cluffer:beginning-of-buffer-p cursor)
@@ -62,9 +92,11 @@
          (let ((prev (cursor-previous-line cursor)))
            (cluffer:detach-cursor cursor)
            (cluffer:attach-cursor cursor prev)
-           (cluffer:end-of-line cursor)))
+           (cluffer:end-of-line cursor)
+           #\newline))
         (t
-         (cluffer:backward-item cursor))))
+         (cluffer:backward-item cursor)
+         (cluffer:item-after-cursor cursor))))
 
 (defun edward-buffer-string (editor)
   (with-output-to-string (str)
@@ -76,6 +108,22 @@
           do (princ text str)
           unless (= (1+ lineno) length)
             do (terpri str))))
+
+(defun edward-replace-input
+    (editor new-input start end buffer-start)
+  (let ((buffer (input-editor-buffer editor))
+        (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor)))
+    (cluffer:attach-cursor cursor (cluffer:find-line buffer 0))
+    (unwind-protect
+         (loop
+           initially
+              (setf (cursor-linear-position cursor)
+                    (if (integerp buffer-start)
+                        buffer-start
+                        (cursor-linear-position buffer-start)))
+           for i from start below end do
+             (cluffer:insert-item cursor (char new-input i)))
+      (cluffer:detach-cursor cursor))))
 
 ;;; editor function prototype
 
