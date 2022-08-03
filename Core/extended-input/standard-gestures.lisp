@@ -115,6 +115,22 @@
 
 (defvar *standard-activation-gestures* '(:newline))
 
+(defmacro with-dynamic-gestures ((variable gestures &key override default) &body body)
+  `(let ((,variable (or (if ,override
+                            (ensure-list ,gestures)
+                            (append ,variable (ensure-list ,gestures)))
+                        ,default)))
+     ,@body))
+
+(defmacro with-activation-gestures ((gestures &key override) &body body)
+  `(with-dynamic-gestures (*activation-gestures* ,gestures :override ,override
+                                                           :default *standard-activation-gestures*)
+     ,@body))
+
+(defmacro with-delimiter-gestures ((gestures &key override) &body body)
+  `(with-dynamic-gestures (*delimiter-gestures* ,gestures :override ,override)
+     ,@body))
+
 ;;; These helper functions take the arguments of ACCEPT so that they can be used
 ;;; directly by ACCEPT.
 
@@ -139,46 +155,4 @@
         (delimiter-gestures-p
          delimiter-gestures)
         (t existing-delimiter-gestures)))
-
-(defmacro with-activation-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh. We permit both CLIM 2.0-style gesture names and CLIM 2.2 style
-  ;; characters.
-  (let ((gesture-form (cond ((or (and (symbolp gestures)
-                                      (gethash gestures *gesture-names*))
-                                 (characterp gestures))
-                             `(list ',gestures))
-                            (t gestures)))
-        (gestures (gensym))
-        (override-var (gensym)))
-    `(let* ((,gestures ,gesture-form)	;Preserve evaluation order of arguments
-            (,override-var ,override)
-            (*activation-gestures* (if ,override-var
-                                       (make-activation-gestures
-                                        :activation-gestures ,gestures)
-                                       (make-activation-gestures
-                                        :additional-activation-gestures ,gestures))))
-       ,@body)))
-
-(defmacro with-delimiter-gestures ((gestures &key override) &body body)
-  ;; XXX Guess this implies that gestures need to be defined at compile time.
-  ;; Sigh.  We permit both CLIM 2.0-style gesture names and CLIM 2.2 style
-  ;; characters.
-  (let ((gesture-form (cond ((or (and (symbolp gestures)
-                                      (gethash gestures *gesture-names*))
-                                 (characterp gestures))
-                             `(list ',gestures))
-                            (t gestures)))
-        (gestures (gensym))
-        (override-var (gensym)))
-    `(let* ((,gestures ,gesture-form) ;Preserve evaluation order of arguments
-            (,override-var ,override)
-            (*delimiter-gestures* (if ,override-var
-                                      (make-delimiter-gestures
-                                       :delimiter-gestures ,gestures)
-                                      (make-delimiter-gestures
-                                       :additional-delimiter-gestures ,gestures))))
-       ,@body)))
-
-
 
