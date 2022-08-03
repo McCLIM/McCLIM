@@ -120,8 +120,6 @@
                          :complete)
                         (t nil))))))))
 
-(defparameter *trace-complete-input* nil)
-
 (defun complete-input (stream func &key
                                      partial-completers allow-any-input
                                      (possibility-printer #'possibility-printer)
@@ -175,9 +173,6 @@
                  (when (and success (eq mode :complete))
                    (unread-gesture gesture :stream stream))
                  ;; Get completion from menu
-                 (when *trace-complete-input*
-                   (format *trace-output* "nmatches = ~A, mode = ~A~%"
-                           nmatches mode))
                  (when (and (> nmatches 0) (eq mode :possibilities))
                    (print-possibilities possibilities possibility-printer stream)
                    (redraw-input-buffer stream)
