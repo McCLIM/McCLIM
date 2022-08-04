@@ -13,49 +13,6 @@
 (in-package #:clim-internals)
 
 
-;; (define-condition rescan-condition (condition)
-;;   ())
-
-;; (defun input-editing-rescan-loop (editing-stream continuation)
-;;   (let ((start-scan-pointer (stream-scan-pointer editing-stream)))
-;;     (loop (block rescan
-;;             (handler-bind ((rescan-condition
-;;                              #'(lambda (c)
-;;                                  (declare (ignore c))
-;;                                  (reset-scan-pointer editing-stream start-scan-pointer)
-;;                                  ;; Input-editing contexts above may be interested...
-;;                                  (return-from rescan nil))))
-;;               (return-from input-editing-rescan-loop
-;;                 (funcall continuation editing-stream)))))))
-
-;; (defgeneric finalize (editing-stream input-sensitizer)
-;;   (:documentation "Do any cleanup on an editing stream that is no
-;; longer supposed to be used for editing, like turning off the
-;; cursor, etc."))
-
-;; (defmethod finalize ((stream t) input-sensitizer)
-;;   (declare (ignore stream input-sensitizer))
-;;   nil)
-
-;; (defmethod finalize ((stream input-editing-stream) input-sensitizer)
-;;   (declare (ignore input-sensitizer))
-;;   (clear-typeout stream)
-;;   (redraw-input-buffer stream))
-
-
-;; (defmethod invoke-with-input-editing ((stream input-editing-stream)
-;;                                       continuation input-sensitizer
-;;                                       initial-contents class)
-;;   (declare (ignore continuation input-sensitizer class))
-;;   (unless (stream-rescanning-p stream)
-;;     (if (stringp initial-contents)
-;;         (replace-input stream initial-contents)
-;;         (presentation-replace-input stream
-;;                                     (first initial-contents)
-;;                                     (second initial-contents)
-;;                                     (stream-default-view stream))))
-;;   (call-next-method))
-
 ;; (defmethod invoke-with-input-editing :around ((stream extended-output-stream)
 ;;                                               continuation
 ;;                                               input-sensitizer
@@ -70,12 +27,6 @@
 ;;   (declare (ignore stream continuation input-sensitizer initial-contents class))
 ;;   (with-activation-gestures (*standard-activation-gestures*)
 ;;     (call-next-method)))
-
-;; (defgeneric input-editing-stream-output-record (stream)
-;;   (:documentation "Return the output record showing the display of the
-;; input-editing stream `stream' values. This function does not
-;; appear in the spec but is used by the command processing code for
-;; layout and to implement a general with-input-editor-typeout."))
 
 (defmethod input-editor-format ((stream t) format-string &rest format-args)
   (unless (and (typep stream 'string-stream)

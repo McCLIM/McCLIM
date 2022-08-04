@@ -56,14 +56,15 @@
                               &body body)
   (with-stream-designator (stream '*standard-input*)
     (with-keywords-removed (args (:input-sensitizer :initial-contents :class))
-      (let ((continuation (gensym)))
+      (let ((continuation (gensym))
+            (editing-stream (gensym)))
         `(flet ((,continuation (,stream) ,@body))
            (declare (dynamic-extent (function ,continuation)))
-           (invoke-with-input-editing (make-instance ,class :stream ,stream ,@args)
-                                      (function ,continuation)
-                                      ,input-sensitizer
-                                      ,initial-contents
-                                      nil))))))
+           (let ((,editing-stream (if (input-editing-stream-p ,stream)
+                                      ,stream
+                                      (make-instance ,class :stream ,stream ,@args))))
+             (invoke-with-input-editing ,editing-stream (function ,continuation)
+                                        ,input-sensitizer ,initial-contents nil)))))))
 
 (defmacro with-input-editor-typeout ((&optional stream &key erase) &body body)
   (with-stream-designator (stream '*standard-input*)
@@ -88,7 +89,7 @@
 
 (defmethod initialize-instance :after ((editing-stream standard-input-editing-stream) &key stream &allow-other-keys)
   (setf (values (x0 editing-stream) (y0 editing-stream))
-        (stream-cursor-position (encapsulating-stream-stream editing-stream))))
+        (stream-cursor-position stream)))
 
 (defmethod stream-scan-pointer ((stream standard-input-editing-stream))
   (cursor-linear-position (scan-cursor stream)))
@@ -120,18 +121,48 @@
   (with-slots (x0 y0) stream
     (values x0 y0)))
 
+;;; FIXME This code is for backward compatibility; but only internally in the
+;;; codebase. References to functions i-e-r-l and finalize should be purged.
+(defun input-editing-rescan-loop (stream continuation)
+  (loop with start-position = (stream-scan-pointer stream) do
+    (catch 'rescan
+      (reset-scan-pointer stream start-position)
+      (return-from input-editing-rescan-loop
+        (funcall continuation stream)))))
+
+(defun finalize (stream input-sensitizer)
+  (clear-typeout stream)
+  (erase-input-buffer stream)
+  (if input-sensitizer
+      (funcall input-sensitizer stream
+               (lambda () (redraw-input-buffer stream)))
+      (redraw-input-buffer stream)))
+
+(defmethod (setf cursor-visibility) (visibility (stream standard-input-editing-stream))
+  visibility)
+
+;; (defgeneric input-editing-stream-output-record (stream)
+;;   (:documentation "Return the output record showing the display of the
+;; input-editing stream `stream' values. This function does not
+;; appear in the spec but is used by the command processing code for
+;; layout and to implement a general with-input-editor-typeout."))
+
+;;; ~
+
 (defmethod invoke-with-input-editing
     ((stream standard-input-editing-stream)
      continuation input-sensitizer initial-contents class)
   (declare (ignore class))
-  (catch 'activate
-    (loop
-      (catch 'rescan
-        (reset-scan-pointer stream)
-        (loop (funcall continuation stream)))))
-  (let ((str (edward-buffer-string stream)))
-    (format *debug-io* "Stream activated! returnging ~s~%" str)
-    str))
+  (when (and initial-contents (not (stream-rescanning-p stream)))
+    (if (stringp initial-contents)
+        (replace-input stream initial-contents)
+        (presentation-replace-input stream
+                                    (first initial-contents)
+                                    (second initial-contents)
+                                    (stream-default-view stream))))
+  (unwind-protect (input-editing-rescan-loop stream continuation)
+    (format *debug-io* "i-w-i-e: finalizing! result ~s~%" (edward-buffer-string stream))
+    (finalize stream input-sensitizer)))
 
 (defmethod replace-input ((stream standard-input-editing-stream) (new-input array)
                           &key (start 0)
@@ -233,30 +264,22 @@
           (thunk sheet)))))
 
 (defmethod stream-process-gesture ((stream standard-input-editing-stream) gesture type)
-  (when (activation-gesture-p gesture)
-    (throw 'activate t))
-  (if (handle-editor-event stream gesture)
-      (with-output-recording-options (stream :record nil :draw t)
-        (erase-input-buffer stream)
-        (redraw-input-buffer stream))
-      nil)
-  #|invoke the command|#)
+  (when (handle-editor-event stream gesture)
+    (with-output-recording-options (stream :record nil :draw t)
+      (erase-input-buffer stream)
+      (redraw-input-buffer stream))))
 
 (defun try-scan-element (stream)
-  (let* ((scan (scan-cursor stream))
-         (edit (edit-cursor stream))
-         (linnum (signum (- (cluffer:line-number scan)
-                            (cluffer:line-number edit)))))
-    (when (or (= linnum -1)
-              (and (= linnum 0)
-                   (< (cluffer:cursor-position scan) (cluffer:cursor-position edit))))
-      (smooth-forward-item scan))))
+  (let ((scan (scan-cursor stream)))
+    (if (< (stream-scan-pointer stream)
+           (stream-fill-pointer stream))
+        (smooth-forward-item scan)
+        (setf (stream-rescanning-p stream) nil))))
 
 (defmethod stream-read-gesture ((stream standard-input-editing-stream) &key &allow-other-keys)
   (rescan-if-necessary stream)
   (loop for elt = (try-scan-element stream)
         while (null elt) do
-          (format *debug-io* "items: ~s~%" (stream-fill-pointer stream))
           (multiple-value-bind (result reason) (call-next-method)
             (when (null result)
               (return-from stream-read-gesture (values result reason)))
