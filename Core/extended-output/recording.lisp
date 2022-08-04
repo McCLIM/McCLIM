@@ -297,9 +297,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (x y (record basic-output-record))
   (values x y))
 
-(defun replay (record stream &optional (region (sheet-visible-region stream)))
+(defun replay (record stream &optional region)
   (when (typep stream 'encapsulating-stream)
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (with-output-recording-options (stream :record nil)
@@ -311,9 +313,15 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
                ((medium-transformation medium) +identity-transformation+))
           (replay-output-record record stream region))))))
 
+(defmethod replay-output-record ((record compound-output-record) (stream encapsulating-stream)
+                                 &optional region (x-offset 0) (y-offset 0))
+  (replay-output-record record (encapsulating-stream-stream stream)
+                        region x-offset y-offset))
+
 (defmethod replay-output-record ((record compound-output-record) stream
-                                 &optional (region (sheet-visible-region stream))
-                                           (x-offset 0) (y-offset 0))
+                                 &optional region (x-offset 0) (y-offset 0))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (with-drawing-options (stream :clipping-region region)
     (map-over-output-records-overlapping-region
      #'replay-output-record record region x-offset y-offset
