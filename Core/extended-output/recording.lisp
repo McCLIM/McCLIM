@@ -312,8 +312,13 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
           (replay-output-record record stream region))))))
 
 (defmethod replay-output-record ((record compound-output-record) stream
-                                 &optional (region (sheet-visible-region stream))
-                                           (x-offset 0) (y-offset 0))
+                                 &optional region (x-offset 0) (y-offset 0))
+  (when (typep stream 'encapsulating-stream)
+    (return-from replay-output-record
+      (replay-output-record record (encapsulating-stream-stream stream)
+                            region x-offset y-offset)))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (with-drawing-options (stream :clipping-region region)
     (map-over-output-records-overlapping-region
      #'replay-output-record record region x-offset y-offset
