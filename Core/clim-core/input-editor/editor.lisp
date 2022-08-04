@@ -73,21 +73,28 @@
 ;; (define-command-table editor-cua    :inherit-from '(editor-command-table))
 ;; (define-command-table editor-vim    :inherit-from '(editor-command-table))
 
-(defmacro define-input-editor-command
-    (name gestures)
-  (let ((gesture-name (make-keyword name)))
-    `(progn
-       (defgeneric ,name (sheet input-buffer event &optional numeric-argument))
-       (defmethod ,name (s i e &optional n)
-         (declare (ignorable s i e n))
-         (format *debug-io* "~a not defined for args ~a.~%" ',name
-                 (mapcar (alexandria:compose #'class-name #'class-of)
-                         (list s i e))))
-       ;; add-keystroke-to-command-table?
-       (delete-gesture-name ,gesture-name)
-       ,@(loop for (type . gesture-spec) in gestures
-               collect `(add-gesture-name ,gesture-name ,type ',gesture-spec))
-       (add-input-editor-command '(,gesture-name) (function ,name)))))
+(defmacro define-input-editor-command (name-and-options gestures)
+  (destructuring-bind (name &key (rescan t) type) (ensure-list name-and-options)
+    (declare (ignore type))
+    (let ((gesture-name (make-keyword name)))
+      `(progn
+         (defgeneric ,name (sheet input-buffer event &optional numeric-argument))
+         (defmethod ,name :after (sheet input-buffer event &optional numeric-arg)
+           (declare (ignore input-buffer event numeric-arg))
+           ,(ecase rescan
+              ((t) `(queue-rescan sheet))
+              (:immediate `(immediate-rescan sheet))
+              ((nil) nil)))
+         (defmethod ,name (sheet input-buffer event &optional numeric-arg)
+           (declare (ignorable sheet input-buffer event numeric-arg))
+           (format *debug-io* "~a not defined for args ~a.~%" ',name
+                   (mapcar (alexandria:compose #'class-name #'class-of)
+                           (list sheet input-buffer event))))
+         ;; add-keystroke-to-command-table?
+         (delete-gesture-name ,gesture-name)
+         ,@(loop for (type . gesture-spec) in gestures
+                 collect `(add-gesture-name ,gesture-name ,type ',gesture-spec))
+         (add-input-editor-command '(,gesture-name) (function ,name))))))
 
 #+ (or)
 (defmacro define-input-stream-command
@@ -111,114 +118,127 @@
   (declare (ignore s i e n)))
 
 ;;; Commands proposed in the spec.
-(define-input-editor-command ie-forward-object
+
+;;; Motion
+(define-input-editor-command (ie-forward-object :rescan nil :type :motion)
     ((:keyboard #\f :control)
      (:keyboard :right)))
 
-(define-input-editor-command ie-forward-word
+(define-input-editor-command (ie-forward-word :rescan nil :type :motion)
     ((:keyboard #\f :meta)
      (:keyboard :right :control)))
 
-(define-input-editor-command ie-backward-object
+(define-input-editor-command (ie-backward-object :rescan nil :type :motion)
     ((:keyboard #\b :control)
      (:keyboard :left)))
 
-(define-input-editor-command ie-backward-word
+(define-input-editor-command (ie-backward-word :rescan nil :type :motion)
     ((:keyboard #\b :meta)
      (:keyboard :left :control)))
 
-(define-input-editor-command ie-beginning-of-line
+(define-input-editor-command (ie-beginning-of-line :rescan nil :type :motion)
     ((:keyboard #\a :control)
      (:keyboard :home)))
 
-(define-input-editor-command ie-end-of-line
+(define-input-editor-command (ie-end-of-line :rescan nil :type :motion)
     ((:keyboard #\e :control)
      (:keyboard :end)))
 
-(define-input-editor-command ie-next-line
+(define-input-editor-command (ie-next-line :rescan nil :type :motion)
     ((:pointer-scroll :wheel-down)
      (:keyboard #\n :control)
      (:keyboard :down)))
 
-(define-input-editor-command ie-previous-line
+(define-input-editor-command (ie-previous-line :rescan nil :type :motion)
     ((:pointer-scroll :wheel-up)
      (:keyboard #\p :control)
      (:keyboard :up)))
 
-(define-input-editor-command ie-beginning-of-buffer
+(define-input-editor-command (ie-beginning-of-buffer :rescan nil :type :motion)
     ((:keyboard #\< :meta)
      (:keyboard :home :control)))
 
-(define-input-editor-command ie-end-of-buffer
+(define-input-editor-command (ie-end-of-buffer :rescan nil :type :motion)
     ((:keyboard #\> :meta)
      (:keyboard :end :control)))
 
-(define-input-editor-command ie-delete-object
+;;; I'd like to have a different _default_ numeric argument for each gesture:
+;;; for the keyboard gesture and C-wheel_down it would be one page, and for
+;;; :wheel-down it would be four lines.
+(define-input-editor-command (ie-scroll-forward :rescan nil :type :motion)
+    ((:pointer-scroll :wheel-down :control)
+     (:keyboard #\v :control)
+     (:keyboard :page-down)
+     (:keyboard :next)))
+
+(define-input-editor-command (ie-scroll-backward :rescan nil :type :motion)
+    ((:pointer-scroll :wheel-up :control)
+     (:keyboard #\v :meta)
+     (:keyboard :page-up)
+     (:keyboard :prior)))
+
+(define-input-editor-command (ie-select-object :rescan nil :type :motion)
+    (#+ (or) :select ; <- support named gesturs to copy their specs?
+     (:pointer-button-press :left)))
+
+;;; Deletion commands
+
+(define-input-editor-command (ie-delete-object :type :deletion)
     ((:keyboard #\d :control)
      (:keyboard #\rubout)))
 
 ;;; XXX don't use the character #\delete because some (ekhm CCL) implementations
 ;;; think that it is the same as #\backspace. To avoid confusion use #\rubout.
 
-(define-input-editor-command ie-delete-word
+(define-input-editor-command (ie-delete-word :type :deletion)
     ((:keyboard #\d :meta)
      (:keyboard #\rubout :control)))
 
-(define-input-editor-command ie-erase-object
+(define-input-editor-command (ie-erase-object :type :deletion)
     ((:keyboard #\backspace)))
 
-(define-input-editor-command ie-erase-word
+(define-input-editor-command (ie-erase-word :type :deletion)
     ((:keyboard #\Backspace :meta)
      (:keyboard #\Backspace :control)))
 
-(define-input-editor-command ie-kill-line
+(define-input-editor-command (ie-kill-line :type :deletion)
     ((:keyboard #\k :control)))
 
-(define-input-editor-command ie-clear-input-buffer
+(define-input-editor-command (ie-clear-input-buffer :type :deletion)
     ((:keyboard #\backspace :control :meta)))
 
-(define-input-editor-command ie-insert-newline
+(define-input-editor-command (ie-insert-newline :type :editing)
     ((:keyboard #\j :control)
+     ;(:keyboard #\1 :control)
      (:keyboard #\Newline)
      (:keyboard #\Return)
      (:keyboard :kp-enter)))
 
-(define-input-editor-command ie-insert-newline-after-cursor
+(define-input-editor-command (ie-insert-newline-after-cursor :type :editing)
     ((:keyboard #\o :control)))
 
 ;;; Transposition commands seem to be savoured by some Emacs users, so we'll
 ;;; leave them be. They don't seem to be present in the "cua" world.
-(define-input-editor-command ie-transpose-objects ((:keyboard #\t :control)))
-(define-input-editor-command ie-transpose-words   ((:keyboard #\t :meta)))
+(define-input-editor-command (ie-transpose-objects :type :editing)
+    ((:keyboard #\t :control)))
+
+(define-input-editor-command (ie-transpose-words :type :editing)
+    ((:keyboard #\t :meta)))
 
 ;;; IE-YANK-HISTORY is for input editing streams. Should IE-YANK-KILL-RING
 ;;; first look in the clipboard? Should IE-KILL-* put killed content in the
 ;;; clipboard? The answer to both question is "rather yes".
-(define-input-editor-command ie-yank-kill-ring    ((:keyboard #\y :control)))
-(define-input-editor-command ie-yank-history      ((:keyboard #\y :control :meta)))
-(define-input-editor-command ie-yank-next-item    ((:keyboard #\y :meta)))
+(define-input-editor-command (ie-yank-kill-ring :type :editing)
+    ((:keyboard #\y :control)))
+
+(define-input-editor-command (ie-yank-history :type :editing)
+    ((:keyboard #\y :control :meta)))
+
+(define-input-editor-command (ie-yank-next-item :type :editing)
+    ((:keyboard #\y :meta)))
 
 ;;; implementme(?) C-z (cua) C-/ (emacs), redo C-y (cua) C-spooky (emacs)
 
-;;; I'd like to have a different _default_ numeric argument for each gesture:
-;;; for the keyboard gesture and C-wheel_down it would be one page, and for
-;;; :wheel-down it would be four lines.
-(define-input-editor-command ie-scroll-forward
-    ((:pointer-scroll :wheel-down :control)
-     (:keyboard #\v :control)
-     (:keyboard :page-down)
-     (:keyboard :next)))
-
-(define-input-editor-command ie-scroll-backward
-    ((:pointer-scroll :wheel-up :control)
-     (:keyboard #\v :meta)
-     (:keyboard :page-up)
-     (:keyboard :prior)))
-
 ;;; Inserts an object in the buffer.
-(define-input-editor-command ie-insert-object
+(define-input-editor-command (ie-insert-object :rescan nil :type :editing)
     ((:keyboard t)))
-
-(define-input-editor-command ie-select-object
-    (#+ (or) :select ; <- support named gesturs to copy their specs?
-     (:pointer-button-press :left)))
