@@ -269,16 +269,19 @@
       (erase-input-buffer stream)
       (redraw-input-buffer stream))))
 
-(defun try-scan-element (stream)
+(defun try-scan-element (stream peek-p)
   (let ((scan (scan-cursor stream)))
     (if (< (stream-scan-pointer stream)
            (stream-fill-pointer stream))
-        (smooth-forward-item scan)
+        (if peek-p
+            (smooth-peek-item scan)
+            (smooth-forward-item scan))
         (setf (stream-rescanning-p stream) nil))))
 
-(defmethod stream-read-gesture ((stream standard-input-editing-stream) &key &allow-other-keys)
+(defmethod stream-read-gesture ((stream standard-input-editing-stream)
+                                &key peek-p &allow-other-keys)
   (rescan-if-necessary stream)
-  (loop for elt = (try-scan-element stream)
+  (loop for elt = (try-scan-element stream peek-p)
         while (null elt) do
           (multiple-value-bind (result reason) (call-next-method)
             (when (null result)

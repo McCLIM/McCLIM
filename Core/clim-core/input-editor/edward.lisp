@@ -46,7 +46,7 @@
           (cluffer:attach-cursor cursor line (- new-position position))
           (return-from cursor-linear-position
             (cluffer:cursor-position cursor))
-        do (incf position (cluffer:item-count line))
+        do (incf position (1+ (cluffer:item-count line)))
         finally (error "~s points beyond the buffer!" new-position)))
 
 (defclass edward-mixin ()
@@ -72,6 +72,14 @@
           (slot-value object 'scan-cursor) s-cursor)))
 
 ;;; "Smooth" operations glide over line boundaries as if we had a linear buffer.
+
+(defun smooth-peek-item (cursor)
+  (cond ((cluffer:end-of-buffer-p cursor)
+         nil)
+        ((cluffer:end-of-line-p cursor)
+         #\newline)
+        (t
+         (cluffer:item-after-cursor cursor))))
 
 (defun smooth-forward-item (cursor)
   (cond ((cluffer:end-of-buffer-p cursor)
