@@ -21,14 +21,14 @@
          :accessor wayland-port-seat)))
 
 (defun parse-server-path (server-path)
-  (format t "server path: ~a~%" server-path)
+  (format *debug-io* "server path: ~a~%" server-path)
   (list :display-id (get-environment-variable "WAYLAND_DISPLAY")))
 
 (defmethod find-port-type ((port (eql :wayland-ffi)))
   (values (find-class 'wayland-port) 'parse-server-path))
 
 (defmethod find-port-type :after ((port (eql :wayland-ffi)))
-  (format t "find-port-type wayland-ffi: ~a~%" port))
+  (format *debug-io* "find-port-type wayland-ffi: ~a~%" port))
 
 ;;; wl-callbacks created from this class will call the callback fun
 (defclass %wayland-invoking-callback (wlc:wl-callback)
@@ -91,7 +91,7 @@
     (let ((registry-match (wl-registry-find-or-lose registry
                                                     registry-string
                                                     version)))
-      (format t "binding: ~S ~S ~S ~S~%" port wl-protocol registry-string version)
+      (format *debug-io* "binding: ~S ~S ~S ~S~%" port wl-protocol registry-string version)
       (wlc:wl-registry-bind registry registry-match wl-protocol))))
 
 
@@ -193,7 +193,7 @@
           frame-managers))
   (initialize-wayland port)
   (make-graft port)
-  (format t "Starting Event Loop~%")
+  (format *debug-io* "Starting Event Loop~%")
   (when clim-sys:*multiprocessing-p*
     (flet ((wayland-port-event-loop ()
              (loop
@@ -222,7 +222,7 @@
     (wlc:wl-display-disconnect display)))
 
 (defmethod port-force-output ((port wayland-port))
-  (format t "PORT-FORCE-OUTPUT~%")
+  (format *debug-io* "PORT-FORCE-OUTPUT~%")
   ;; QQQQ It seems odd that we need to map over grafts and force output. This
   ;; is a similar strategy that CLX-fb takes but it seems like something from
   ;; the core protocol is missing or subverted.
@@ -239,14 +239,14 @@
           (when (some #'/=
                       (list x1 y1 x2 y2)
                       (list ox1 oy1 ox2 oy2))
-            (format t "port-set-mirror-geometry~%")
+            (format *debug-io* "port-set-mirror-geometry~%")
             ;TODO: determine if we need CLX's ROUND-COORDINATE -- yes, wayland
             ;only handles integers but CLIM allows the full Lisp rational types
             (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h))))
       (values x1 y1 x2 y2))))
 
 (defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
-  (format t "port enable-sheet ~a ~a ~%" port sheet)
+  (format *debug-io* "port enable-sheet ~a ~a ~%" port sheet)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     ;; TODO: It appears killing the entire surface is the way to "unmap" a
     ;; "window". To remap, I believe we need to recreate the surfaces and
@@ -254,7 +254,7 @@
     (wlc:wl-surface-commit (wayland-port-window port))))
 
 (defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
-  (format t "port disable-sheet ~a ~a ~%" port sheet)
+  (format *debug-io* "port disable-sheet ~a ~a ~%" port sheet)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     (wlc:wl-surface-attach (wayland-port-window port) nil 0 0)
     (wlc:wl-surface-commit (wayland-port-window port))))
@@ -361,20 +361,20 @@
 
 (defmethod medium-finish-output ((medium wayland-egl-medium))
   (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
-    (format t "medium-finish-output~%")
+    (format *debug-io* "medium-finish-output~%")
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
                       (wayland-egl-mirror-window mirror))))
 
 (defmethod medium-force-output ((medium wayland-egl-medium))
   (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
     (gl:flush)
-    (format t "medium-force-output~%")
+    (format *debug-io* "medium-force-output~%")
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
                       (wayland-egl-mirror-window mirror))))
 
 (defmethod medium-clear-area :after
     ((medium wayland-egl-medium) left top right bottom)
-  (format t "EGL medium clear area called ~s~%" (list left top right bottom)))
+  (format *debug-io* "EGL medium clear area called ~s~%" (list left top right bottom)))
 
 (defmethod medium-draw-polygon*
     ((medium wayland-egl-medium) coord-seq closed filled)

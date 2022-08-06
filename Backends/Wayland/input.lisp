@@ -8,7 +8,7 @@
         (*wayland-wait-func* wait-function))
     (let ((dispatched-events-count (wlc:wl-display-dispatch
                                     (wayland-port-display *wayland-port*))))
-      (format t "process-next-event status? ~a~%" dispatched-events-count)
+      (format *debug-io* "process-next-event status? ~a~%" dispatched-events-count)
       ;; Return t for now since we still utilize the wlc event loop and its
       ;; use of CLOS for eventing. I'm not sure if there is an analog for
       ;; timeout or wait functions.
@@ -114,6 +114,6 @@
                                                :height height
                                                :sheet sheet
                                                :region (sheet-native-region sheet))))
-      (format t "ALL OUTPUT EVENTS FINISHED ~S~%" screen)
+      (format *debug-io* "ALL OUTPUT EVENTS FINISHED ~S~%" screen)
 
       clim-event)))

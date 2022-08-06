@@ -76,7 +76,7 @@ It shows the window on the screen but there is still a lot that doesn't work and
 
 ;; This isn't working yet.
 (defun draw-gl (pane)
-  (format t "calling draw-gl ~%")
+  (format *debug-io* "calling draw-gl ~%")
   (gl:clear-color 0.3 0.3 0.1 1.0)
 
   (gl:clear :color-buffer-bit)
@@ -95,7 +95,7 @@ It shows the window on the screen but there is still a lot that doesn't work and
   )
 
 (defmethod compose-space :after ((pane opengl-pane) &key width height)
-  (format t "compose-space opengl-pane ~a ~a ~%" width height))
+  (format *debug-io* "compose-space opengl-pane ~a ~a ~%" width height))
 
 (defmethod handle-repaint ((pane opengl-pane) region)
   (draw-gl pane))

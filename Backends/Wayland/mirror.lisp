@@ -13,7 +13,7 @@
    (egl-surface  :initform nil :accessor wayland-egl-mirror-surface)))
 
 (defun create-native-window (port)
-  (format t "starting CREATE-NATIVE-WINDOW~%")
+  (format *debug-io* "starting CREATE-NATIVE-WINDOW~%")
     (with-accessors ((port-compositor wayland-port-compositor)
                      (port-window wayland-port-window))
       port
@@ -32,7 +32,7 @@
   (with-accessors ((native-display wayland-port-display))
       port
     (let* ((egl-display (egl:get-display (wl-core:pointer native-display))))
-      (format t "egl init ~s~%"
+      (format *debug-io* "egl init ~s~%"
               (multiple-value-list (egl:initialize egl-display)))
       (egl:bind-api :opengl-api)
 
@@ -62,7 +62,7 @@
     (xdg:xdg-toplevel-set-title top-level-window name)))
 
 (defmethod realize-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
-  (format t "realizing mirror~%")
+  (format *debug-io* "realizing mirror~%")
   (let (
          ;; QQQQ I'm still having conceptual ignorance on the lifecycle of graft
          ;; mirror instantiation and realize mirror. I hope it's not too
@@ -137,7 +137,7 @@
 (defun %graft-force-output (graft)
   ;; I no longer thing this is the right thing to do
   (let ((mirror (sheet-mirror graft)))
-    (format t "egl swap buffers graft-force-output ~%")
+    (format *debug-io* "egl swap buffers graft-force-output ~%")
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
                       (wayland-egl-mirror-surface mirror))))
 
