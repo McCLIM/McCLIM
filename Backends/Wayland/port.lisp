@@ -340,6 +340,25 @@
 (defmethod make-medium ((port wayland-port) sheet)
   (make-instance 'wayland-egl-medium :port port :sheet sheet))
 
+;; The standard behavior is to check for and use a the %drawable slot on the
+;; medium otherwise it will fallback to the mirror. I think this is what we
+;; want already. But is it more appropriate to store the opengl context on the
+;; medium?
+;; (defmethod medium-drawable ((medium wayland-egl-medium)))
+
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (backend (eql :wayland-ffi)) destination &rest args &key)
+  (let ((port (find-port :server-path (list* backend args))))
+    (apply #'invoke-with-output-to-drawing-stream continuation port destination args)))
+
+(defmethod invoke-with-output-to-drawing-stream
+    (continuation (backend wayland-port) (destination stream) &rest args)
+  ;; the "wrapper" for opengl / etc rendering it looks like...
+  ;; for windowing systems, is destination the sheet-medium here?
+  ;; sheet-mirror?
+  (break backend destination args)
+  )
+
 (defmethod medium-finish-output ((medium wayland-egl-medium))
   (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
     (format t "medium-finish-output~%")
