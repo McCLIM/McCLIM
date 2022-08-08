@@ -51,7 +51,7 @@ it is necessary to ``rescan'' the input buffer, that is, reset the scan pointer
 $SP$ to its original state and reparse the contents of the input editor buffer
 before reading any other gestures from the user.  While this rescanning
 operation is taking place, the ``rescan in progress'' flag is set to
-\term{true}.  The relationship $SP \leq IP \leq FP$ always holds.
+\term{true}.  Relationships $SP \leq FP$ and $IP \leq FP$ always hold.
 
 The overall control structure of the input editor is:
 
