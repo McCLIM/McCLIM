@@ -82,7 +82,7 @@
 
 (defun format-items (items &rest args
                      &key (stream *standard-output*)
-                       (printer #'prin1) presentation-type
+                       printer presentation-type
                        cell-align-x cell-align-y
                      &allow-other-keys)
   (let ((printer (if printer
