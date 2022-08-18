@@ -24,6 +24,7 @@
 (defgeneric invoke-with-input-editing
     (stream continuation input-sensitizer initial-contents class)
   (:method (stream continuation input-sensitizer initial-contents class)
+    (declare (ignore input-sensitizer initial-contents class))
     (funcall continuation stream)))
 
 ;;; The specification of the typeout is somewhat lacking. A typeout is
@@ -83,6 +84,7 @@
    (rescanning-p :accessor stream-rescanning-p :initarg :rescanning-p)
    (rescan-queued-p :accessor stream-rescan-queued-p :initarg :rescan-queued-p)
    ;; Display-related
+   (output-record :initform nil :accessor input-editing-stream-output-record)
    (x0 :accessor x0)
    (y0 :accessor y0))
   (:default-initargs :rescanning-p nil :rescan-queued-p nil))
@@ -124,22 +126,46 @@
 ;;; FIXME This code is for backward compatibility; but only internally in the
 ;;; codebase. References to functions i-e-r-l and finalize should be purged.
 (defun input-editing-rescan-loop (stream continuation)
-  (loop with start-position = (stream-scan-pointer stream) do
-    (catch 'rescan
-      (reset-scan-pointer stream start-position)
-      (return-from input-editing-rescan-loop
-        (funcall continuation stream)))))
+  (let ((changed nil)
+        (results nil)
+        (start-position (stream-scan-pointer stream)))
+    (catch 'activate
+      (loop
+        (catch 'rescan
+          (reset-scan-pointer stream start-position)
+          (setf results (multiple-value-list (funcall continuation stream))
+                changed t))))
+    (if changed
+        (apply #'values results)
+        (subseq (stream-input-buffer stream)
+                start-position
+                (stream-scan-pointer stream)))))
 
 (defun finalize (stream input-sensitizer)
+  (format *debug-io* "clearing tyupeout... ")
   (clear-typeout stream)
-  (erase-input-buffer stream)
+  (format *debug-io* "done~%")
+  (format *debug-io* "sensitizing!~%")
   (if input-sensitizer
       (funcall input-sensitizer stream
-               (lambda () (redraw-input-buffer stream)))
-      (redraw-input-buffer stream)))
+               (lambda ()
+                 (refresh-input-buffer stream)))
+      (refresh-input-buffer stream))
+  (format *debug-io* "... done!~%")
+  (format *debug-io* "... scanning through trailing delims !~%")
+  ;; Scan through trailing delimiters and activators..
+  (loop with scan = (scan-cursor stream)
+        for elt = (try-scan-element stream t)
+        while (or (delimiter-gesture-p elt)
+                  (activation-gesture-p elt))
+        do (smooth-forward-item scan))
+  (format *debug-io* "... done !~%"))
 
-(defmethod (setf cursor-visibility) (visibility (stream standard-input-editing-stream))
-  visibility)
+(defun refresh-input-buffer (stream)
+  (erase-input-buffer stream)
+  (redraw-input-buffer stream)
+  ;;(display-cursor (stream-text-cursor stream) :draw)
+  (finish-output stream))
 
 ;; (defgeneric input-editing-stream-output-record (stream)
 ;;   (:documentation "Return the output record showing the display of the
@@ -153,6 +179,7 @@
     ((stream standard-input-editing-stream)
      continuation input-sensitizer initial-contents class)
   (declare (ignore class))
+  (format *debug-io* "xxx ~s~%" stream)
   (when (and initial-contents (not (stream-rescanning-p stream)))
     (if (stringp initial-contents)
         (replace-input stream initial-contents)
@@ -160,9 +187,11 @@
                                     (first initial-contents)
                                     (second initial-contents)
                                     (stream-default-view stream))))
+  (refresh-input-buffer stream)
   (unwind-protect (input-editing-rescan-loop stream continuation)
     (format *debug-io* "i-w-i-e: finalizing! result ~s~%" (edward-buffer-string stream))
-    (finalize stream input-sensitizer)))
+    (finalize stream input-sensitizer)
+    (format *debug-io* "i-w-i-e: finalizing! the result has been finalized~%")))
 
 (defmethod replace-input ((stream standard-input-editing-stream) (new-input array)
                           &key (start 0)
@@ -175,9 +204,7 @@
                                                     :start2 buffer-start :end2 buffer-end)))
     ;; Cursors are implicitly updated by the underlying buffer. -- jd 2022-08-03
     (edward-replace-input stream new-input start end buffer-start)
-    (with-output-recording-options (stream :record nil :draw t)
-      (erase-input-buffer stream)
-      (redraw-input-buffer stream))
+    (refresh-input-buffer stream)
     ;; XXX: This behavior for the :rescan parameter is not mentioned explicitly
     ;; in any CLIM guide, but McCLIM input-editing machinery relies on it.
     (if rescan-supplied-p
@@ -190,20 +217,42 @@
   ;; queued rescan may change the scan pointer position afterwards.
   (stream-scan-pointer stream))
 
+;; (defclass drei:accept-result ())
+
+#+ ()
+(defmethod presentation-replace-input ((stream input-editing-stream) object type view
+                                       &key (buffer-start nil buffer-start-supplied-p)
+                                         (rescan nil rescan-supplied-p)
+                                         query-identifier
+                                         (for-context-type type))
+  (make-instance 'accept-))
+
+(defparameter *wooo*
+  (if (ignore-errors (sheet-grafted-p *wooo*))
+      *wooo*
+      (ignore-errors (open-window-stream))))
+
 (defmethod invoke-with-input-editor-typeout
     ((stream standard-input-editing-stream) continuation &key erase)
-  (erase-input-buffer stream)
-  (fresh-line stream)
-  (if erase
-      (surrounding-output-with-border (stream :filled t :ink +background-ink+)
-        (funcall continuation stream))
-      (funcall continuation stream))
-  (fresh-line stream)
-  (redraw-input-buffer stream))
+  
+  ;; (erase-input-buffer stream)
+  ;; (fresh-line stream)
+  ;; (if erase
+  ;;     (surrounding-output-with-border (stream :filled t :ink +background-ink+)
+  ;;       (funcall continuation stream))
+  ;;     (funcall continuation stream))
+  ;; (fresh-line stream)
+  ;; (redraw-input-buffer stream)
+  (format *wooo* "typeout!~%")
+  (funcall continuation *wooo*)
+  (stream-fresh-line *wooo*)
+  (format *wooo* "typeout done!~%")
+  (finish-output *wooo*))
 
 ;;; FIXME implement noise strings!
 (defmethod input-editor-format ((stream standard-extended-output-stream) format-string &rest format-args)
-  (apply #'format stream format-string format-args))
+  ;(apply #'format stream format-string format-args)
+  )
 
 ;;; "Rescanning" is a fancy name for restarting the continuation, so it may
 ;;; read gestures up to the current insertion pointer as if they were typed
@@ -228,68 +277,84 @@
     (immediate-rescan stream)))
 
 (defmethod erase-input-buffer ((stream standard-encapsulating-stream) &optional (start-position 0))
-  (repaint-sheet (encapsulating-stream-stream stream) +everywhere+))
+  (when-let ((old-record (input-editing-stream-output-record stream)))
+    (repaint-sheet stream old-record)))
 
 ;;; We probably must add an output record in a case of repaint (i.e on scroll).
 ;;; Otherwise we must somehow know that the input buffer needs to be redrawn.
-(defmethod redraw-input-buffer ((stream standard-encapsulating-stream) &optional (start-position 0))
-  (setf (stream-cursor-position stream)
-        (stream-cursor-initial-position stream))
-  (let ((sheet (encapsulating-stream-stream stream)))
-    (flet ((thunk (sheet)
-             (with-sheet-medium (medium stream)
-               (loop with buffer = (input-editor-buffer stream)
-                     with cursor = (edit-cursor stream)
-                     with cursor-line = (cluffer:line cursor)
-                     with cursor-position = (cluffer:cursor-position cursor)
-                     with tstyle = (medium-text-style medium)
-                     with height = (text-style-height tstyle medium)
-                     with sfocus = (port-keyboard-input-focus (port stream))
-                     for lineno from 0 below (cluffer:line-count buffer)
-                     for line = (cluffer:find-line buffer lineno)
-                     for text = (coerce (cluffer:items line) 'string)
-                     for cury from 0 by height
-                     if (eq line cursor-line) do
-                       (stream-write-string sheet text 0 cursor-position)
-                       (with-room-for-graphics (sheet :move-cursor nil :first-quadrant nil)
-                         (draw-rectangle* sheet 0 0 2 height))
-                       (stream-write-string sheet text cursor-position)
-                       (terpri sheet)
-                     else do
-                       (princ text sheet)
-                       (terpri sheet)))))
-      (if (member (stream-end-of-line-action stream) '(:wrap :wrap*))
-          (filling-output (sheet :after-line-break "↳ ")
-            (thunk sheet))
-          (thunk sheet)))))
+(defmethod redraw-input-buffer ((stream standard-input-editing-stream) &optional (start-position 0))
+  (let* ((sheet (encapsulating-stream-stream stream))
+         (record (with-output-to-output-record (stream)
+                   (setf (stream-cursor-position stream)
+                         (stream-cursor-initial-position stream))
+                   (setf (stream-cursor-position stream)
+                         (if (member (stream-end-of-line-action stream) '(:wrap :wrap*))
+                             (filling-output (sheet :after-line-break "↳ ")
+                               (declare (ignorable sheet))
+                               (print-buffer-contents stream))
+                             (print-buffer-contents stream))))))
+    (setf (input-editing-stream-output-record stream) record)
+    (replay-output-record record stream)))
+
+;;; This function assumes that the cursor is in the appropriate position.
+(defun print-buffer-contents (stream)
+  (multiple-value-bind (cx cy)
+      (stream-cursor-position stream)
+    (with-sheet-medium (medium stream)
+      (loop with buffer = (input-editor-buffer stream)
+            with cursor = (edit-cursor stream)
+            with cursor-line = (cluffer:line cursor)
+            with cursor-position = (cluffer:cursor-position cursor)
+            with tstyle = (medium-text-style medium)
+            with height = (text-style-height tstyle medium)
+            ;; with sfocus = (port-keyboard-input-focus (port stream))
+            for lineno from 0 below (cluffer:line-count buffer)
+            for line = (cluffer:find-line buffer lineno)
+            for text = (coerce (cluffer:items line) 'string)
+            for cury from 0 by height
+            if (eq line cursor-line) do
+              (stream-write-string stream text 0 cursor-position)
+              (setf (values cx cy) (stream-cursor-position stream))
+              (with-room-for-graphics (stream :move-cursor nil :first-quadrant nil)
+                (draw-rectangle* stream 0 0 2 height))
+               (stream-write-string stream text cursor-position)
+            else do
+              (princ text stream)
+            unless (cluffer:last-line-p line) do
+              (terpri stream)))
+    (values cx cy)))
 
 (defmethod stream-process-gesture ((stream standard-input-editing-stream) gesture type)
+  (declare (ignore type))
+  ;; We add the activation gesture for the caller to process.
   (when (handle-editor-event stream gesture)
-    (with-output-recording-options (stream :record nil :draw t)
-      (erase-input-buffer stream)
-      (redraw-input-buffer stream))))
+    (refresh-input-buffer stream)))
 
 (defun try-scan-element (stream peek-p)
-  (let ((scan (scan-cursor stream)))
-    (if (< (stream-scan-pointer stream)
-           (stream-fill-pointer stream))
-        (if peek-p
-            (smooth-peek-item scan)
-            (smooth-forward-item scan))
-        (setf (stream-rescanning-p stream) nil))))
+  (flet ((maybe-activate-stream (gesture)
+           (when (activation-gesture-p gesture)
+             (setf (stream-rescan-queued-p stream) nil)
+             (throw 'activate gesture))))
+    (let ((scan (scan-cursor stream)))
+      (if (< (stream-scan-pointer stream)
+             (stream-fill-pointer stream))
+          (if peek-p
+              (smooth-peek-item scan)
+              (progn
+                (maybe-activate-stream (smooth-peek-item scan))
+                (smooth-forward-item scan)))
+          (setf (stream-rescanning-p stream) nil)))))
 
 (defmethod stream-read-gesture ((stream standard-input-editing-stream)
                                 &key peek-p &allow-other-keys)
-  (rescan-if-necessary stream)
-  (loop for elt = (try-scan-element stream peek-p)
-        while (null elt) do
-          (multiple-value-bind (result reason) (call-next-method)
-            (when (null result)
-              (return-from stream-read-gesture (values result reason)))
-            (stream-process-gesture stream result t))
-        finally (return elt)))
+  (loop
+    (rescan-if-necessary stream)
+    (if-let ((elt (try-scan-element stream peek-p)))
+      (return-from stream-read-gesture elt)      
+      (multiple-value-bind (result reason) (call-next-method)
+        (when (or (null result) peek-p)
+          (return-from stream-read-gesture (values result reason)))
+        (stream-process-gesture stream result t)))))
 
 (defmethod stream-unread-gesture ((stream standard-input-editing-stream) gesture)
   (decf (stream-scan-pointer stream)))
-
-

@@ -82,9 +82,11 @@
          (defmethod ,name :after (sheet input-buffer event &optional numeric-arg)
            (declare (ignore input-buffer event numeric-arg))
            ,(ecase rescan
-              ((t) `(queue-rescan sheet))
+              ((t) `(progn
+                      (format *debug-io* "calling queue rescan~%")
+                      (queue-rescan sheet)))
               (:immediate `(immediate-rescan sheet))
-              ((nil) nil)))
+              ((nil) (format *debug-io* "not calling rescan~%"))))
          (defmethod ,name (sheet input-buffer event &optional numeric-arg)
            (declare (ignorable sheet input-buffer event numeric-arg))
            (format *debug-io* "~a not defined for args ~a.~%" ',name
@@ -240,5 +242,5 @@
 ;;; implementme(?) C-z (cua) C-/ (emacs), redo C-y (cua) C-spooky (emacs)
 
 ;;; Inserts an object in the buffer.
-(define-input-editor-command (ie-insert-object :rescan nil :type :editing)
+(define-input-editor-command (ie-insert-object :rescan t :type :editing)
     ((:keyboard t)))

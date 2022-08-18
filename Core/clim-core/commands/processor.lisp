@@ -61,7 +61,7 @@
                  (case type
                    ((:arg :key :val)
                     (let ((gesture (read-gesture :stream stream :peek-p t)))
-                      (when (or (null gesture)
+                      (when (or ;(null gesture)
                                 (activation-gesture-p gesture))
                         (read-gesture :stream stream)
                         (return-from command-line-command-parser

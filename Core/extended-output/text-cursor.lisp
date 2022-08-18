@@ -26,9 +26,9 @@
   ((sheet :initarg :sheet :reader cursor-sheet)
    (x :initform 0 :initarg :x-position)
    (y :initform 0 :initarg :y-position)
-   (width :initform 8)
+   (width :initform 2)
    (appearance :type (member :solid :hollow)
-               :initarg :appearance :initform :hollow
+               :initarg :appearance :initform :solid
                :accessor cursor-appearance)
    ;; XXX what does "cursor is active" mean?
    ;; It means that the sheet (stream) updates the cursor, though

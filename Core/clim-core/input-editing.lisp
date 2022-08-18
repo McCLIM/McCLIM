@@ -119,6 +119,8 @@
 
 
 ;;; I believe this obsolete... --moore
+;;; Not only obsolete, but also incorrect! -- jd 2022-08-03
+;#+ (or)
 (defmethod presentation-replace-input
     ((stream input-editing-stream) object type view
      &key (buffer-start nil buffer-start-supplied-p)
