@@ -291,7 +291,7 @@
                          (funcall cont drawable)))))
                (configure-text ()
                  (multiple-value-bind (family face size)
-                     (text-style-components (parse-text-style* (medium-text-style medium)))
+                     (text-style-components (parse-text-style* (clim:port medium) (medium-text-style medium)))
                    (let ((font-family (svg-parse-text-style-family family)))
                      (multiple-value-bind (font-style font-weight font-variant)
                          (svg-parse-text-style-face face)

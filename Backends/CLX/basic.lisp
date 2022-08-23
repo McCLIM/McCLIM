@@ -23,7 +23,12 @@
            :accessor clx-port-window)
    (font-families :initform nil :accessor font-families)
    (cursor-table :initform (make-hash-table :test #'eq)
-                 :accessor clx-port-cursor-table)))
+                 :accessor clx-port-cursor-table)
+   (font-scale :initform 1
+               :accessor clx-port-font-scale)))
+
+(defmethod climi::port-font-scale ((port clx-basic-port))
+  (clx-port-font-scale port))
 
 (defclass clx-basic-pointer (standard-pointer)
   ((cursor :accessor pointer-cursor :initform :upper-left)))
@@ -62,6 +67,7 @@
     (setf (clx-port-window port) (xlib:screen-root (clx-port-screen port)))
     (make-cursor-table port)
     (make-graft port)
+    (setf (clx-port-font-scale port) (compute-font-scale port))
     (when clim-sys:*multiprocessing-p*
       (setf (port-event-process port)
         (clim-sys:make-process
@@ -73,6 +79,16 @@
                  (loop
                    (process-next-event port)) )))
          :name (format nil "~S's event process." port))))))
+
+(defun compute-font-scale (port)
+  (let* ((display (clim-clx:clx-port-display port))
+         (db (xlib:root-resources (xlib:display-default-screen display)))
+         (res (xlib:get-resource db :|dpi| :|Dpi| '(:xft) '(:|Xft|)))
+         (default-sizes '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)))
+    (or (when res
+          (alexandria:when-let ((font-size (parse-integer res :junk-allowed t)))
+            (/ font-size 96)))
+        1)))
 
 (defmethod destroy-port :before ((port clx-basic-port))
   (when-let ((display (clx-port-display port)))

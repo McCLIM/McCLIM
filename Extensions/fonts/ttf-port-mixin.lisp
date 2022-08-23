@@ -104,7 +104,7 @@
 
 (defmethod text-style-mapping ((port ttf-port-mixin) (text-style standard-text-style) &optional charset)
   (declare (ignore charset))
-  (setf text-style (parse-text-style* text-style))
+  (setf text-style (parse-text-style* port text-style))
   (or (gethash text-style (slot-value port 'text-style-cache))
       (multiple-value-bind (family face size) (text-style-components text-style)
         (when-let ((source (assoc-value *families/faces* (list family face) :test #'equal)))

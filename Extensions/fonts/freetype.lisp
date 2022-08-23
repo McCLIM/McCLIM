@@ -612,15 +612,15 @@ or NIL if the current transformation is the identity transformation."
         (find-best-match family face)
       (let* ((family-obj (find-font-family port found-family))
              (face-obj (alexandria:ensure-gethash found-style (freetype-font-family/faces family-obj)
-                                                  (make-instance 'freetype-font-face
-                                                                 :family family-obj
-                                                                 :name found-style
-                                                                 :file found-file
-                                                                 :charset found-charset))))
+                         (make-instance 'freetype-font-face
+                                        :family family-obj
+                                        :name found-style
+                                        :file found-file
+                                        :charset found-charset))))
         (make-instance 'freetype-font
                        :port port
                        :face face-obj
-                       :size (climb:normalize-font-size size)
+                       :size (climb:normalize-font-size port size)
                        :font-replace (typecase text-style
                                        (font-replacement-text-style text-style)
                                        (otherwise nil)))))))

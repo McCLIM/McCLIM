@@ -31,7 +31,7 @@
       (xlib:open-font display (first fonts)))))
 
 (defmethod text-style-mapping ((port clx-port) (text-style text-style) &optional character-set
-                               &aux (text-style (climb:parse-text-style* text-style)))
+                               &aux (text-style (climb:parse-text-style* port text-style)))
   (declare (ignore character-set))
   (labels
       ((find-and-make-xlib-face (display family face size)

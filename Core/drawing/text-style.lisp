@@ -140,6 +140,10 @@
                    :text-face face
                    :text-size size)))
 
+(defgeneric port-font-scale (port)
+  (:method ((port port))
+    1))
+
 (defmethod print-object ((self standard-text-style) stream)
   (print-unreadable-object (self stream :type t :identity nil)
     (format stream "~{~S~^ ~}" (multiple-value-list (text-style-components self)))))
@@ -168,30 +172,34 @@
     '(:normal 14 :tiny 8 :very-small 10 :small 12 :large 18 :very-large 20 :huge 24)
     "Mapping between keyword and a font size."))
 
-(declaim (inline normalize-font-size))
-(defun normalize-font-size (size)
-  (cond ((null size)
-         (let ((size* (text-style-size *default-text-style*)))
-           (etypecase size*
-             (number size*)
-             (symbol (getf +font-sizes+ size* nil)))))
-        ((eq size :smaller)
-         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
-        ((eq size :larger)
-         (getf +font-sizes+ (text-style-size *default-text-style*) nil))
-        ((realp size)
-         (round (max size 2)))
-        ((getf +font-sizes+ size nil))
-        (t
-         (error "~s is not a valid text style size!" size))))
+;(declaim (inline normalize-font-size))
 
-(defun parse-text-style* (style)
+(defun normalize-font-size (port size)
+  (let ((result-size (cond ((null size)
+                            (let ((size* (text-style-size *default-text-style*)))
+                              (etypecase size*
+                                (number size*)
+                                (symbol (getf +font-sizes+ size* nil)))))
+                           ((eq size :smaller)
+                            (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+                           ((eq size :larger)
+                            (getf +font-sizes+ (text-style-size *default-text-style*) nil))
+                           ((realp size)
+                            (round (max size 2)))
+                           ((getf +font-sizes+ size nil))
+                           (t
+                            (error "~s is not a valid text style size!" size)))))
+    (if result-size
+        (* result-size (port-font-scale port))
+        nil)))
+
+(defun parse-text-style* (port style)
   "Returns complete text-style without NIL components and with numeric size."
   (handler-case (flet ((new-text-style (family face size)
                          (let ((default *default-text-style*))
                            (make-text-style (or family (text-style-family default))
                                             (or face   (text-style-face   default))
-                                            (normalize-font-size size)))))
+                                            (normalize-font-size port size)))))
                   (cond ((device-font-text-style-p style)
                          style)
                         ((text-style-p style)
@@ -202,7 +210,7 @@
                                style
                                (new-text-style family face size))))
                         ((null style)
-                         (parse-text-style* *default-text-style*))
+                         (parse-text-style* port *default-text-style*))
                         ((and (listp style) (alexandria:length= 3 style))
                          (destructuring-bind (family face size) style
                            (new-text-style family face size)))
