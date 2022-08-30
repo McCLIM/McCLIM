@@ -670,10 +670,14 @@ this might be different from the sheet's native region and transformation.")))
 (defmethod sheet-mirror ((sheet mirrored-sheet-mixin))
   (sheet-direct-mirror sheet))
 
+(defmethod realize-mirror :before (port (sheet mirrored-sheet-mixin))
+  (setf (port sheet) port))
+
+(defmethod destroy-mirror :after (port (sheet mirrored-sheet-mixin))
+  (setf (port sheet) nil))
+
 (defmethod note-sheet-grafted :before ((sheet mirrored-sheet-mixin))
-  (unless (port sheet)
-    (error "~S called on sheet ~S, which has no port?!" 'note-sheet-grafted sheet))
-  (realize-mirror (port sheet) sheet))
+  (realize-mirror (port (sheet-parent sheet)) sheet))
 
 (defmethod note-sheet-degrafted :after ((sheet mirrored-sheet-mixin))
   (destroy-mirror (port sheet) sheet))
