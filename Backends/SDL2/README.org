@@ -553,3 +553,158 @@ MCCLM-SDL2> (open-plain-sheet :clx)
 MCCLIM-SDL2> (close-plain-sheet *)
 NIL
 #+end_example
+
+* Managing windows
+
+In CLIM a mirrored sheet represent a host windows. The mirror is an actual
+handle to the window. There are three mixins for mirrored sheets:
+
+- mirrored-sheet-mixin  :: the sheet is mirrored on the display host
+- top-level-sheet-mixin :: the sheet is a top-level window
+- unmanaged-sheet-mixin :: the sheet is not managed by a window manager
+
+They may be used in various combinations depending on needs. For example a top
+level sheet without a mirror /could/ be realized on a special type of graft
+that is also a mirrored sheet that may drawn on. The port is only concerned
+with mirrored sheets (and the rest is handled by the core).
+
+The mirror managament protocol is composed of the following functions:
+
+- realize-mirror :: the constructor
+- destroy-mirror :: the destructor
+- port-set-mirror-name :: set the window title
+- port-set-mirror-icon :: set the window icon
+- port-set-mirror-geometry :: set the mirror shape - handling mirrors with a
+  shape other than a rectangle is optional and it is permissible to use the
+  bounding rectangle of the region
+- raise-mirror, bury-mirror :: manipulates the z-order of the window stack
+- port-enable-sheet, port-disable-sheet :: map and unmap the sheet - this is
+  different than realize and destroy because the same window may be mapped
+  again after disabling it
+- port-shrink-sheet, port-unshrink-sheet :: iconfiy/deiconfiy the window
+
+For details of the implementation see the file ~mirror.lisp~. A general rule
+is for the clim method to trampline to a request that maps directly to SDL2
+ffi calls. It is a responsibility of the request to signal an error.
+
+For example:
+
+#+begin_src lisp
+  (defmethod port-set-mirror-geometry
+      ((port sdl2-port) (sheet mirrored-sheet-mixin) region)
+    (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
+      (change-window-size (sheet-direct-mirror sheet) x1 y1 w h)
+      (values x1 y1 x2 y2)))
+
+  (define-sdl2-request change-window-size (mirror x y w h)
+    (let ((window (sdl2-mirror-window mirror)))
+      (sdl2-ffi.functions:sdl-set-window-position window x y)
+      (sdl2-ffi.functions:sdl-set-window-size window w h)))
+#+end_src
+
+Functions ~realize-mirror~, ~destroy-mirror~, ~port-set-mirror-geometry~
+~port-enable-sheet~ and ~port-disable-sheet~ are the indespensible minimum for
+CLIM to work. Other functions still must have stub methods.
+
+Properties of the realized mirror depend on the sheet that is passed. Here is
+an example constructor:
+
+#+begin_src lisp
+  (defmethod realize-mirror ((port sdl2-port) (sheet top-level-sheet-mixin))
+    (with-bounding-rectangle* (x y :width w :height h) sheet
+      (let* ((title (sheet-pretty-name sheet))
+             (flags '(:shown :resizable))
+             (mirror (sdl2-create-mirror sheet title x y w h
+                                         flags :synchronize t)))
+        (register-resource port mirror)
+        (alx:when-let ((icon (sheet-icon sheet)))
+          (let ((resource (ensure-resource (port (alx:ensure-car icon))
+                            (sdl2-create-rgb-surface-from-image
+                             ^clim-object :synchronize t))))
+            (change-window-icon mirror resource)))
+        mirror)))
+
+  (defmethod destroy-mirror ((port sdl2-port) (sheet mirrored-sheet-mixin))
+    (let ((mirror (sheet-direct-mirror sheet)))
+      (destroy-window mirror :synchronize t)
+      (deregister-resource port mirror)))
+#+end_src
+
+It is time to create our first window:
+
+#+begin_example
+  MCCLIM-SDL2> (defparameter *plain* (open-plain-sheet :sdl2))
+  [log] Hello!
+  > MCCLIM-SDL2::CHANGE-WINDOW-ICON: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}> #<MCCLIM-SDL2::SDL2-IMAGE {100BAFE443}>)
+  ,*PLAIN*
+  [log] MCCLIM-SDL2::SHOW-WINDOW: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}>)
+  MCCLIM-SDL2> (change-window-title (sheet-direct-mirror *plain*) "JD's window")
+  NIL
+  [log] MCCLIM-SDL2::CHANGE-WINDOW-TITLE: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}> "JD's window")
+  MCCLIM-SDL2> (change-window-size (sheet-direct-mirror *plain*) 100 100 800 600)
+  NIL
+  [log] MCCLIM-SDL2::CHANGE-WINDOW-SIZE: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}> 100 100 800 600)
+  MCCLIM-SDL2> (close-plain-sheet *plain*)
+  NIL
+  [log] MCCLIM-SDL2::DESTROY-WINDOW: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}>)
+#+end_example
+
+#+begin_src lisp
+  ;;; Window SDL2 event handlers.
+
+  ;;; Between pressing quit and the actual close the user may still use the
+  ;;; window for a brief period, so i.e a window event may sneak in. The window
+  ;;; event handler should ignore events to windows that are already destroyed.
+
+  (define-sdl2-handler (ev :windowevent) (event window-id timestamp data1 data2)
+    (alx:when-let ((sheet (get-mirror-sheet *sdl2-port* window-id)))
+      (let ((event-key (autowrap:enum-key '(:enum (windowevent.event)) event)))
+        (handle-sdl2-window-event event-key sheet timestamp data1 data2))))
+
+  (defgeneric handle-sdl2-window-event (event-key sheet timestamp data1 data2)
+    (:method (event-key sheet timestamp data1 data2)
+      (log:debug "Unhandled window event ~s." event-key)))
+
+  (defmethod handle-sdl2-window-event ((key (eql :close)) sheet stamp d1 d2)
+    (log:info "Destroying a window.")
+    (make-instance 'window-manager-delete-event :sheet sheet :timestamp stamp))
+
+  (defmethod handle-sdl2-window-event ((key (eql :exposed)) sheet stamp d1 d2)
+    (log:info "Exposing a window.")
+    ;; The call to SDL-GET-WINDOW-SURFACE is for side the effect to ensure that
+    ;; the surface is allocated (to be able to call SDL-UPDATE-WINDOW-SURFACE).
+    (let ((window (sdl2-window (sheet-mirror sheet))))
+      ;; FIXME check returned values for errors.
+      (sdl2-ffi.functions:sdl-get-window-surface window)
+      (sdl2-ffi.functions:sdl-update-window-surface window)))
+#+end_src
+
+It is time to create our first window:
+
+#+begin_example
+MCCLIM-SDL2> (open-plain-sheet :sdl2)
+
+ <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-event :clim-create-window) -
+  Creating a new window.
+#<PLAIN-SHEET {100B692353}>
+ <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :exposed) -
+  Exposing a window.
+ <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :exposed) -
+  Exposing a window.
+ <INFO> [16:53:00] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :close) -
+  Destroying a window.
+ <INFO> [16:53:00] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:WINDOW-MANAGER-DELETE-EVENT has arrived.
+ <INFO> [16:53:00] mcclim-sdl2 port.lisp (handle-sdl2-event :quit) -
+  Quit requested... ignoring
+MCCLIM-SDL2> (close-plain-sheet *)
+NIL
+ <INFO> [16:53:11] mcclim-sdl2 mirror.lisp (handle-sdl2-event :clim-destroy-window) -
+  Destroying window 2.
+#+end_example
+
+Note that when the handler returns a clim event then this event is distributed
+to the target sheet; otherwise nothing happens. This is why only unhandled
+events of type ~window-manager-delete-event~ are seen. Enable the log level
+~:debug~ to see unprocessed sdl2 window events.
+>>>>>>> 00a5ee54 (backends: sdl2: implement necessary window (mirror) managament)

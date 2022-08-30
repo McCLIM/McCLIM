@@ -5,7 +5,7 @@
 
 ;;; Bitmasks, type accessors etc -- cl-libsdl2 has incomplete definitions, so
 ;;; we use these only as a reference, while the actual data is curbed from
-;;; wiki.libsdl.org and the library source code.
+;;; wiki.libsdl.org and the library source code (via autowrap and manually).
 
 ;;; https://wiki.libsdl.org/SDL_Init
 (autowrap:define-bitmask-from-constants (sdl-init-flags)
@@ -19,6 +19,7 @@
   sdl2-ffi:+sdl-init-sensor+
   sdl2-ffi:+sdl-init-noparachute+       ; ignored (compatibility)
   sdl2-ffi:+sdl-init-everything+)
+
 
 (autowrap:define-bitmask-from-enum
     (sdl2-cursor-flags sdl2-ffi:sdl-system-cursor))
@@ -39,6 +40,10 @@
                    ((:help)           :system-cursor-hand) ;not perfect
                    ;; AUTOWRAP:MASK will signal a warning and use 0 (arrow).
                    (otherwise :system-cursor-unknown))))
+
+;; https://wiki.libsdl.org/SDL2/SDL_WindowFlags
+(autowrap:define-bitmask-from-enum
+    (sdl-window-flags sdl2-ffi:sdl-window-flags))
 
 ;;; https://wiki.libsdl.org/SDL_Event - describes the event data structure.
 ;;; CL-SDL2 provides an abstraction that allows referring to SDL2 constants as
