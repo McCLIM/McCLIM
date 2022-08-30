@@ -61,12 +61,18 @@
 (defclass permanent-medium-sheet-output-mixin (sheet-with-medium-mixin)
   ())
 
-(defmethod initialize-instance :after
-    ((sheet permanent-medium-sheet-output-mixin) &key port)
-  ;; hmm,
-  (setf (%sheet-medium sheet) (make-medium port sheet))
-  ;; hmm...
-  (engraft-medium (sheet-medium sheet) (port sheet) sheet))
+(defmethod note-sheet-grafted :after ((sheet permanent-medium-sheet-output-mixin))
+  (let* ((port (port sheet))
+         (medium (make-medium port sheet)))
+    (setf (%sheet-medium sheet) medium)
+    (engraft-medium medium port sheet)))
+
+(defmethod note-sheet-degrafted :after ((sheet permanent-medium-sheet-output-mixin))
+  (let* ((medium (sheet-medium sheet))
+         (port (port medium)))
+    (setf (%sheet-medium sheet) nil)
+    (degraft-medium medium port sheet)
+    (deallocate-medium port medium)))
 
 (defmacro with-sheet-medium ((medium sheet) &body body)
   (check-type medium symbol)
