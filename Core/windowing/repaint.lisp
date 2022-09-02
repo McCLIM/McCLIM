@@ -171,11 +171,8 @@
       (medium-clear-area medium x1 y1 x2 y2))))
 
 ;;; Integration with region and transformation changes
-(defparameter *skip-repaint-p* nil)
-
 (defun dispatch-repaint-region (sheet old-region new-region)
-  (when (and (not *skip-repaint-p*)
-             (sheet-viewable-p sheet))
+  (when (sheet-viewable-p sheet)
     (let ((region (if (sheet-direct-mirror sheet)
                       (region-difference (rounded-bounding-rectangle new-region)
                                          (rounded-bounding-rectangle old-region))
@@ -186,29 +183,6 @@
                                         (rounded-bounding-rectangle old-region))))))
       (repaint-sheet sheet region))))
 
-(defmethod (setf sheet-region) :around (new-region (sheet basic-sheet))
-  (let ((old-region (sheet-region sheet)))
-    (unless (region-equal new-region old-region)
-      (let ((*skip-repaint-p* t))
-        (call-next-method))
-      (dispatch-repaint-region sheet old-region new-region)))
-  new-region)
-
-(defmethod (setf sheet-transformation) :around (new-transformation (sheet basic-sheet))
-  (let ((old-transformation (sheet-transformation sheet)))
-    (unless (transformation-equal new-transformation old-transformation)
-      (let ((*skip-repaint-p* t))
-        (call-next-method))
-      (let ((region (sheet-region sheet)))
-        (dispatch-repaint-region sheet region region))))
-  new-transformation)
-
 (defun %set-sheet-region-and-transformation (sheet new-region new-transformation)
-  (let ((old-transformation (sheet-transformation sheet))
-        (old-region (sheet-region sheet)))
-    (unless (and (region-equal new-region old-region)
-                 (transformation-equal new-transformation old-transformation))
-      (let ((*skip-repaint-p* t))
-        (setf (sheet-region sheet) new-region
-              (sheet-transformation sheet) new-transformation))
-      (dispatch-repaint-region sheet old-region new-region))))
+  (setf (sheet-region sheet) new-region
+        (sheet-transformation sheet) new-transformation))

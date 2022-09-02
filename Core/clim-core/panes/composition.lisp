@@ -291,11 +291,14 @@
         (width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
-      (%set-sheet-region-and-transformation
-       sheet
-       (make-bounding-rectangle 0 0 width height)
-       ;; negative offsets are handled by the native transformation?
-       (make-translation-transformation x y)))))
+      (let ((old-transformation (sheet-transformation sheet))
+            (new-transformation (make-translation-transformation x y))
+            (old-region (sheet-region sheet))
+            (new-region (make-bounding-rectangle 0 0 width height)))
+        (unless (and (region-equal new-region old-region)
+                     (transformation-equal new-transformation old-transformation))
+          (%set-sheet-region-and-transformation sheet new-region new-transformation)
+          (dispatch-repaint-region sheet old-region new-region))))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
                          (event window-manager-delete-event))
