@@ -166,12 +166,12 @@ infinite recursion on (setf sheet-*).")
             (return-from update-mirror-geometry)))
         (with-standard-rectangle* (x y) mirror-region
           (let* ((offset (make-translation-transformation (- x) (- y)))
-                 (old-n-tran (%%sheet-native-transformation sheet))
+                 (old-n-tran (%sheet-native-transformation sheet))
                  (new-n-tran (compose-transformations offset sheet->parent-mirror)))
-            (%%set-sheet-native-region (transform-region offset mirror-region) sheet)
+            (setf (%sheet-native-region sheet) (transform-region offset mirror-region))
             (unless (and old-n-tran (transformation-equal new-n-tran old-n-tran))
               (invalidate-cached-transformations sheet)
-              (%%set-sheet-native-transformation new-n-tran sheet)
+              (setf (%sheet-native-transformation sheet) new-n-tran)
               (when old-n-tran
                 ;; Native transformation has changed - repaint the sheet.
                 ;;

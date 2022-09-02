@@ -19,8 +19,6 @@
                 #:port-text-style-mappings
                 #:port-event-process
                 #:port-grafts
-                #:%%sheet-native-transformation
-                #:%%set-sheet-native-transformation
                 #:device-transformation
                 ;;
                 #:clamp
