@@ -46,7 +46,7 @@
   (font-families port))
 
 (defun ensure-truetype-font (port filename source size &optional preload)
-  (setf size (climb:normalize-font-size size))
+  (setf size (climb:normalize-font-size port size))
   (with-slots (font-loader-cache font-family-cache font-direct-cache text-style-cache) port
     (multiple-value-bind (loader loader-foundp) (gethash filename font-loader-cache)
       (let* ((loader (or loader (zpb-ttf:open-font-loader source)))
