@@ -2,7 +2,7 @@
 
 ;;; Mirror protocol?
 
-(defclass wayland-mirror (basic-sheet)
+(defclass wayland-mirror ()
   ((window :initarg :window :reader window))
   (:default-initargs :window (alx:required-argument :window)))
 
