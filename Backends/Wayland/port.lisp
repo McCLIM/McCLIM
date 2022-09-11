@@ -223,35 +223,82 @@
 
 (defmethod port-force-output ((port wayland-port))
   (format *debug-io* "PORT-FORCE-OUTPUT~%")
-  ;; QQQQ It seems odd that we need to map over grafts and force output. This
-  ;; is a similar strategy that CLX-fb takes but it seems like something from
-  ;; the core protocol is missing or subverted.
+  ;; XXX temporary double buffering hack. It seems the correct place to flip
+  ;; buffers is in medium-f*-output but there seem to be some elements that
+  ;; are causing the buffer to flip before the entire "scene" has been output
 
-  (map-over-grafts #'%graft-force-output port)
-  (wlc:wl-surface-commit (wayland-port-window port)))
+  (map-over-grafts (lambda (graft)
+                     (swap-buffers graft)
+                     (clear-buffered-drawable graft))
+                   port)
+  )
+
+;; (defmethod port-set-mirror-geometry
+;;     ((port wayland-port) (sheet mirrored-sheet-mixin) region)
+;;   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
+;;     (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
+;;       (format *debug-io* "port-set-mirror-geometry ~s~%" (list x1 y1 w h))
+;;       ;; TODO: determine if we need CLX's ROUND-COORDINATE -- yes, wayland
+;;       ;; only handles integers but CLIM allows the full Lisp rational types
+;;       (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h)
+;;       (wlc:wl-surface-commit (wayland-port-window port))
+;;       (wl-egl:wl-egl-window-resize
+;;        (wayland-egl-mirror-window mirror) w h x1 y1)
+
+;;       (values x1 y1 x2 y2))))
 
 (defmethod port-set-mirror-geometry
     ((port wayland-port) (sheet mirrored-sheet-mixin) region)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
       (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (sheet-mirror-geometry sheet)
-        (let ((window (window mirror)))
-          (when (some #'/=
-                      (list x1 y1 x2 y2)
-                      (list ox1 oy1 ox2 oy2))
-            (format *debug-io* "port-set-mirror-geometry~%")
-            ;TODO: determine if we need CLX's ROUND-COORDINATE -- yes, wayland
-            ;only handles integers but CLIM allows the full Lisp rational types
-            (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h))))
+        (when (some #'/=
+                    (list x1 y1 x2 y2)
+                    (list ox1 oy1 ox2 oy2))
+          (format *debug-io* "port-set-mirror-geometry ~s~%" (list x1 y1 w h))
+          ;; TODO: determine if we need CLX's ROUND-COORDINATE -- yes, wayland
+          ;; only handles integers but CLIM allows the full Lisp rational types
+          (xdg:xdg-surface-set-window-geometry (slot-value port 'surface) x1 y1 w h)
+          (wlc:wl-surface-commit (wayland-port-window port))
+          (wl-egl:wl-egl-window-resize
+           (wayland-egl-mirror-window mirror) w h x1 y1)
+          ))
       (values x1 y1 x2 y2))))
+
+(defun clear-buffered-drawable (mirrored-sheet)
+  (format *debug-io* "clearing back buffer~%")
+  (gl:clear :color-buffer-bit :depth-buffer-bit :stencil-buffer-bit)
+  (gl:clear-color 1.0 0.0 (/ 204 255) 1.0)
+  (gl:matrix-mode :projection)
+  (gl:load-identity)
+  (with-bounding-rectangle* (x1 y1 :width w :height h)
+      (graft mirrored-sheet)
+    ;; Getting the right bounding rectangle is what I need next. When it is
+    ;; hard-coded to the graft size, it rendered more correct than ever before.
+    ;; 2022-09-05
+    (format *debug-io* "buffer device region ~S~%" (list ':x x1 ':y y1 ':w w ':h h))
+    (gl:ortho 0.0 w 0.0 h -1.0 1.0))
+  (gl:matrix-mode :modelview)
+  (gl:load-identity))
+
+(defun swap-buffers (mirrored-sheet)
+  (alx:when-let ((mirror (sheet-mirror mirrored-sheet)))
+    (egl:swap-buffers (wayland-egl-mirror-display mirror)
+                      (wayland-egl-mirror-surface mirror))))
 
 (defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "port enable-sheet ~a ~a ~%" port sheet)
-  (alx:when-let ((mirror (sheet-direct-mirror sheet)))
-    ;; TODO: It appears killing the entire surface is the way to "unmap" a
-    ;; "window". To remap, I believe we need to recreate the surfaces and
-    ;; reattach the buffers with graphic data.
-    (wlc:wl-surface-commit (wayland-port-window port))))
+  (alx:when-let ((mirror (sheet-mirror sheet)))
+   (with-slots (egl-window egl-context egl-display egl-surface)
+       mirror
+     (with-accessors ((port-window wayland-port-window))
+         port
+       (egl:make-current egl-display egl-surface egl-surface egl-context)
+       ;; todo there's got to be a better place in McCLIMs lifecycle for this:
+      ;; (gl:viewport 0 0 (bounding-rectangle-width sheet) (bounding-rectangle-height sheet))
+       (clear-buffered-drawable sheet)
+       ;; (wlc:wl-surface-commit port-window)
+       ))))
 
 (defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "port disable-sheet ~a ~a ~%" port sheet)
@@ -264,10 +311,28 @@
 
 ;;; Grafts
 
-(defclass wayland-graft (graft)
+(defclass wayland-graft (sheet-y-inverting-transformation-mixin graft)
   ())
 
-(defmethod handle-event :before
+;; (defmethod distribute-event :before
+;;     ((port wayland-port) (event window-configuration-event))
+;;   (alx:when-let ((mirror (sheet-mirror (graft port))))
+;;     (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
+;;         (window-event-region event)
+;;       (format *debug-io* "before config-event ~s~%" (list x1 y1 x2 y2 w h))
+;;       (wl-egl:wl-egl-window-resize
+;;        (wayland-egl-mirror-window mirror) w h x1 y1))))
+
+;; From double buffer branch
+;; (defmethod handle-event
+;;     ((sheet top-level-sheet-mixin) (event window-configuration-event))
+;;   (format *debug-io* "Other top-level window-cfg-event")
+;;   (let ((*configuration-event-p* sheet))
+;;     (resize-sheet sheet
+;;                   (window-configuration-event-native-width event)
+;;                   (window-configuration-event-native-height event))))
+
+(defmethod handle-event
     ((sheet top-level-sheet-pane) (event window-configuration-event))
   ;; Is this where I should set the egl-window width and swap buffers?
   ;; Should this be handled by the medium? or te mirror?
@@ -281,29 +346,15 @@
       (unless (eql +everywhere+ (window-event-region event))
         (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
             (window-event-region event)
-          (when (every #'plusp (list w h))
-            (with-bounding-rectangle* (ox1 oy1 ox2 oy2)
-                ;; QQQQ why is this -5 1 -5 1 still
-                (sheet-mirror-geometry sheet)
-              (when (should-resize-p (list x1 y1 x2 y2)
-                                     (list ox1 oy1 ox2 oy2))
-                (format *debug-io* "resize surface geometry new:~s current:~s~%"
-                        (list x1 y1 x2 y2)
-                        (list ox1 oy1 ox2 oy2))
-                ;; TODO: determine if we need CLX's ROUND-COORDINATE
-                ;; Wayland only sends integers in their events
-                (resize-sheet sheet w h)
-
-                ;; This xdg request will cause another window configuration event.
-                ;; (xdg:xdg-surface-set-window-geometry
-                ;;  (slot-value (port sheet) 'surface) x1 y1 w h)
-
-                ;; (wl-egl:wl-egl-window-resize
-                ;;  (wayland-egl-mirror-window mirror) w h x1 y1)
-                ;; Is this overkill?
-                ;; (port-force-output (port sheet))
-                ;; (wlc:wl-surface-commit (wayland-port-window (port sheet)))
-                ))))))))
+          (let ((*configuration-event-p* sheet))
+            (resize-sheet sheet w h))
+          ;; (wl-egl:wl-egl-window-resize
+          ;;  (wayland-egl-mirror-window mirror) w h x1 y1)
+          ;; This xdg request will cause another window configuration event.
+          ;; (xdg:xdg-surface-set-window-geometry
+          ;;  (slot-value (port sheet) 'surface) x1 y1 w h)
+          ))
+      )))
 
 (defmethod graft-width ((graft wayland-graft) &key (units :device))
   (let ((screen (wayland-port-device (port graft))))
@@ -346,40 +397,112 @@
 ;; medium?
 ;; (defmethod medium-drawable ((medium wayland-egl-medium)))
 
-(defmethod invoke-with-output-to-drawing-stream
-    (continuation (backend (eql :wayland-ffi)) destination &rest args &key)
-  (let ((port (find-port :server-path (list* backend args))))
-    (apply #'invoke-with-output-to-drawing-stream continuation port destination args)))
 
 (defmethod invoke-with-output-to-drawing-stream
-    (continuation (backend wayland-port) (destination stream) &rest args)
+    (continuation backend destination &key)
   ;; the "wrapper" for opengl / etc rendering it looks like...
   ;; for windowing systems, is destination the sheet-medium here?
   ;; sheet-mirror?
-  (break backend destination args)
+  (break backend destination)
   )
 
-(defmethod medium-finish-output ((medium wayland-egl-medium))
-  (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
-    (format *debug-io* "medium-finish-output~%")
-    (egl:swap-buffers (wayland-egl-mirror-display mirror)
-                      (wayland-egl-mirror-window mirror))))
+;; (defmethod invoke-with-output-recording-options :before
+;;     (stream continuation record draw)
+;;   (format *debug-io* "ok getting somewhere~%")
+;;   (when draw
+;;     ;;     (gl:clear :color-buffer-bit :depth-buffer-bit :stencil-buffer-bit)
+;;     ;; (gl:load-identity)
+;;     ;; (gl:ortho 0.0
+;;     ;;           (bounding-rectangle-width mirror)
+;;     ;;           0.0
+;;     ;;           (bounding-rectangle-height mirror)
+;;     ;;           -1.0
+;;     ;;           1.0))
 
-(defmethod medium-force-output ((medium wayland-egl-medium))
-  (alx:when-let ((mirror (sheet-mirror (medium-sheet medium))))
-    (gl:flush)
-    (format *debug-io* "medium-force-output~%")
-    (egl:swap-buffers (wayland-egl-mirror-display mirror)
-                      (wayland-egl-mirror-window mirror))))
+;;   ))
+
+(macrolet
+    ((swap-buffer ()
+       `(when (medium-buffering-output-p medium)
+          (alx:when-let ((sheet (medium-sheet medium)))
+            (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
+                (sheet-native-region sheet)
+              (format *debug-io* "swapping drawable buffer ~a~%" (list 'sheet x1 y1 x2 y2 w h)))
+            (swap-buffers sheet)
+            (clear-buffered-drawable sheet)))))
+
+  (defmethod medium-finish-output :after ((medium wayland-egl-medium))
+    (format *debug-io* "medium-finish-output buffering? ~a~%" (medium-buffering-output-p medium))
+    ;; (swap-buffer)
+    )
+
+  (defmethod medium-force-output :after ((medium wayland-egl-medium))
+    (format *debug-io* "medium-force-output buffering? ~a~%" (medium-buffering-output-p medium))
+    ;;(swap-buffer)
+    ))
+
+(defmethod invoke-with-output-buffered
+    ((medium wayland-egl-medium) continuation &optional (buffered-p t))
+  ;; (declare (ignore continuation buffered-p))
+  ;; TODO: not sure if this should override basic-medium implementation or
+  ;; extend
+  ;; double buffering technique pulled from `backend-sdl2` branch
+  (when (null buffered-p)
+    (medium-force-output medium))
+  (unwind-protect
+       (format *debug-io* "buffering output? ~a~%" buffered-p)
+       (climi::letf (((medium-buffering-output-p medium) buffered-p))
+         (funcall continuation))
+    (when (and buffered-p (null (medium-buffering-output-p medium)))
+      (medium-force-output medium))))
+
+;; (defmethod medium-clear-area :around
+;;     ((medium wayland-egl-medium) left top right bottom)
+;;   (gl:with-pushed-matrix
+;;     (call-next-method medium left top right bottom)))
+
+;; (defmethod medium-clear-area
+;;     ((medium wayland-egl-medium) left top right bottom)
+;;   (multiple-value-bind (r g b a)
+;;       (clime:color-rgba (medium-background medium))
+;;     (gl:with-pushed-attrib (:scissor-bit)
+;;       (gl:scissor left top right bottom)
+;;       (gl:clear-color r g b a)
+;;       ;; (gl:ortho left right bottom top -1.0 1.0)
+;;       (gl:clear :color-buffer-bit))))
+
+(defmethod medium-clear-area :before
+    ((medium wayland-egl-medium) left top right bottom)
+  (format *debug-io* "calling EGL medium clear area ~s~%" (list left top right bottom)))
 
 (defmethod medium-clear-area :after
     ((medium wayland-egl-medium) left top right bottom)
   (format *debug-io* "EGL medium clear area called ~s~%" (list left top right bottom)))
 
+;; (defmethod medium-draw-polygon* :around
+;;     ((medium wayland-egl-medium) coord-seq closed filled)
+;;   (gl:with-pushed-matrix
+;;     (call-next-method medium coord-seq closed filled)))
+
 (defmethod medium-draw-polygon*
     ((medium wayland-egl-medium) coord-seq closed filled)
-  (declare (ignore coord-seq closed filled))
-  nil)
+  (alx:when-let ((drawable (medium-drawable medium)))
+    (multiple-value-bind (r g b a)
+        (clime:color-rgba (medium-ink medium))
+      (gl:color r g b a)
+      (gl:polygon-mode :front-and-back (if filled :fill :line))
+      (gl:with-pushed-attrib (:enable-bit)
+        (gl:enable :polygon-offset-fill)
+        ;; gl:with-pushed-matrix
+        (gl:with-primitive (if closed :polygon :line-strip)
+          (loop with transform = (medium-device-transformation medium)
+                for (x y) on coord-seq by #'cddr do
+                  (multiple-value-bind (tx ty)
+                      (transform-position transform x y)
+                    ;;   (break "insided draw-polygon ~S" (list transform tx ty))
+                    (format *debug-io* "poly* xy:~a txy:~a ink:~s~%" (list x y) (list tx ty) (list r g b a))
+                    ;; reverted to x y until transform-position error understood
+                    (gl:vertex tx ty))))))))
 
 (defmethod text-style-mapping
     ((port wayland-port) (text-style text-style) &optional character-set)
