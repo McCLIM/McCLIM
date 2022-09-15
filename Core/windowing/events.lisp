@@ -211,7 +211,7 @@
                       (window-event-native-region event)))
 
 (defmethod window-event-mirrored-sheet ((event window-event))
-  (sheet-mirror (event-sheet event)))
+  (sheet-mirrored-ancestor (event-sheet event)))
 
 (define-event-class window-configuration-event (window-event)
   ((x :initarg :x :reader window-configuration-event-native-x)
