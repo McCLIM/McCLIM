@@ -151,10 +151,12 @@
    ;; be secondary methods on it -RS 2001-08-23
    (text-style :initarg :text-style
                :initform *default-text-style*
-               :accessor medium-text-style)
+               :accessor medium-text-style
+               :type text-style)
    (default-text-style :initarg :default-text-style
                        :initform *default-text-style*
-                       :accessor medium-default-text-style)
+                       :accessor medium-default-text-style
+                       :type text-style)
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
