@@ -53,7 +53,7 @@
   (:default-initargs :menu-name nil
                      :type (alexandria:required-argument :type)
                      :value (alexandria:required-argument :value)
-                     :text-style nil
+                     :text-style *default-text-style*
                      :keystroke nil
                      :documentation nil))
 
@@ -107,7 +107,7 @@
                  :menu-name name :type type :value value
                  :documentation documentation
                  :keystroke (when keystroke (ensure-gesture keystroke))
-                 :text-style text-style
+                 :text-style (or text-style *default-text-style*)
                  :command-name command-name
                  :command-line-name command-line-name))
 
