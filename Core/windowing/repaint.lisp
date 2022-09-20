@@ -98,7 +98,8 @@
 
 (defmethod queue-repaint
     ((sheet standard-repainting-mixin) (region region))
-  (error "Not implemented yet!"))
+  (warn "Not implemented yet!")
+  (repaint-sheet sheet region))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
   (queue-repaint sheet region))
