@@ -57,7 +57,7 @@
                                     *drawing-tests*)))
     (drawing-test-display-function drawing-test)))
 
-(defclass drawing-app-pane (application-pane clime:never-repaint-background-mixin)
+(defclass drawing-app-pane (application-pane)
   ())
 
 (define-application-frame drawing-tests ()
