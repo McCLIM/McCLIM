@@ -184,26 +184,26 @@
                        ;; for TRACKED-SHEET (unless MULTIPLE-WINDOW is true). On
                        ;; the other hand, we pass events for TRACKED-SHEET (or
                        ;; all events if MULTIPLE-WINDOW is true) to TRACK-EVENT.
-                       do (cond ((not (or multiple-window
-                                          (eql tracked-sheet sheet)))
-                                 ;; Event is not intercepted.
-                                 (handle-event sheet event))
-                                ((typep event 'pointer-event)
-                                 (track-pointer-event event))
-                                (t
-                                 (track-event state event nil nil)))
-                          ;; As a special exception, whenever a device event changes
-                          ;; the modifier state, we synthesize an event, so that
-                          ;; mouse-only and non-MULTIPLE-WINDOW handling can still
-                          ;; react to changed keyboard modifiers.
-                       when (typep event 'device-event)
-                         do (let ((new-state (event-modifier-state event)))
-                              (when (not (eql modifier-state new-state))
-                                (track-pointer-event
-                                 (synthesize-pointer-motion-event pointer)))
-                              (setf modifier-state new-state))
-                       when (typep sheet 'sheet-with-medium-mixin)
-                       do (medium-finish-output sheet)))))
+                       do (with-output-buffered (tracked-sheet)
+                            (with-output-buffered (sheet)
+                              (cond ((not (or multiple-window
+                                              (eql tracked-sheet sheet)))
+                                     ;; Event is not intercepted.
+                                     (handle-event sheet event))
+                                    ((typep event 'pointer-event)
+                                     (track-pointer-event event))
+                                    (t
+                                     (track-event state event nil nil)))
+                              ;; As a special exception, whenever a device event changes
+                              ;; the modifier state, we synthesize an event, so that
+                              ;; mouse-only and non-MULTIPLE-WINDOW handling can still
+                              ;; react to changed keyboard modifiers.
+                              (when (typep event 'device-event)
+                                (let ((new-state (event-modifier-state event)))
+                                  (when (not (eql modifier-state new-state))
+                                    (track-pointer-event
+                                     (synthesize-pointer-motion-event pointer)))
+                                  (setf modifier-state new-state)))))))))
       (if (keyboard-handler state)
           (with-input-focus (tracked-sheet)
             (do-it))
