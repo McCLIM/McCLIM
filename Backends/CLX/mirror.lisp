@@ -7,14 +7,46 @@
 (defclass clx-mirror ()
   ((window
     :initarg :window
-    :reader window))
-  (:default-initargs :window (alexandria:required-argument :window)))
+    :reader window)
+   (buffer
+    :initarg :buffer
+    :accessor buffer)
+   (buffering-p
+    :initarg :buffering-p
+    :accessor buffering-p))
+  (:default-initargs :window (alexandria:required-argument :window)
+                     :buffer nil
+                     :buffering-p nil))
+
+(defmethod (setf buffering-p) :before (new-value (mirror clx-mirror))
+  (when (and new-value (null (buffering-p mirror)))
+    (let* ((window (window mirror))
+           (width (xlib:drawable-width window))
+           (height (xlib:drawable-height window))
+           (buffer (buffer mirror)))
+      (when (or (null buffer)
+                (< (xlib:drawable-width buffer) width)
+                (< (xlib:drawable-height buffer) height))
+        (and buffer (%deallocate-pixmap buffer))
+        (setf buffer (%allocate-pixmap window width height)
+              (buffer mirror) buffer))
+      (%drawable-copy-area window 0 0 width height buffer 0 0))))
+
+(defun swap-buffers (mirror)
+  (let* ((buffer (buffer mirror))
+         (window (window mirror)))
+    (%drawable-copy-area buffer 0 0
+                         (xlib:drawable-width buffer)
+                         (xlib:drawable-height buffer)
+                         window 0 0)))
 
 (defun clx-drawable (object)
   (etypecase object
     (sheet  (clx-drawable (sheet-mirror object)))
     (medium (clx-drawable (medium-drawable object)))
-    (clx-mirror (window object))
+    (clx-mirror (if (buffering-p object)
+                    (buffer object)
+                    (window object)))
     (xlib:drawable object)
     (null nil)))
 
@@ -103,7 +135,9 @@
     (let ((window (window mirror)))
       (remf (xlib:window-plist window) 'sheet)
       (xlib:destroy-window window)
-      (xlib:display-force-output (clx-port-display port)))))
+      (xlib:display-force-output (clx-port-display port)))
+    (when-let ((buffer (buffer mirror)))
+      (%deallocate-pixmap buffer))))
 
 (defmethod raise-mirror ((port clx-basic-port) (sheet basic-sheet))
   (when-let ((mirror (sheet-mirror sheet)))
