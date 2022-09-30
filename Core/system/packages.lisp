@@ -609,6 +609,7 @@
    #:disarmed-callback                  ;callback
    #:disown-frame                       ;generic function
    #:dispatch-event                     ;generic function
+   #:dispatch-repaint                   ;generic function
    #:display-command-menu               ;generic function
    #:display-command-table-menu         ;generic function
    #:display-exit-boxes                 ;generic function
@@ -1579,9 +1580,6 @@
    )
 
   ;;;; symbols, which were exported as of 2002-02-09, but no longer are.
-
-  ;; dispatch-repaint:
-  ;; several mentions in silica.tex.
 
   ;; invoke-accept-values-command-button
   ;; mentioned in dialogs.tex.

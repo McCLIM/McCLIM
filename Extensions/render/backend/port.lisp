@@ -21,7 +21,7 @@
     ;; -- jd 2022-04-28
     (setf (climi::%sheet-direct-mirror sheet) mirror)
     (climi::update-mirror-geometry sheet)
-    (climi::dispatch-repaint sheet +everywhere+)
+    (dispatch-repaint sheet +everywhere+)
     mirror))
 
 (defmethod destroy-mirror ((port render-port-mixin) (sheet mirrored-sheet-mixin))
