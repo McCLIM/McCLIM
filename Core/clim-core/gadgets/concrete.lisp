@@ -742,20 +742,18 @@
   ()
   (:default-initargs :background *3d-normal-color*))
 
-(defmethod initialize-instance :after ((pane radio-box-pane)
-                                       &key choices current-selection orientation (active t) &allow-other-keys)
+(defmethod initialize-instance :after
+    ((pane radio-box-pane)
+     &key choices current-selection orientation (active t) &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
-  (let ((children
-          (mapcar (lambda (c)
-                    (let ((c (if (stringp c)
-                                 (make-pane 'toggle-button-pane :label c :value nil)
-                                 c)))
-                      (setf (gadget-value c) (if (eq c (radio-box-current-selection pane)) t nil))
-                      (setf (gadget-client c) pane)
-                      c))
-                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children))
+  ;;; FIXME here we manipulate child gadgets before the sheet is grafted.
+  (dolist (c choices)
+    (when (stringp c)
+      (setf c (make-pane 'toggle-button-pane :label c :value nil)))
+    (setf (gadget-client c) pane)
+    (setf (gadget-value c) (eq c (radio-box-current-selection pane)))
+    (sheet-adopt-child pane c))
   (unless active
     (deactivate-gadget pane)))
 
