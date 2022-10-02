@@ -49,28 +49,27 @@
                                                   (object climb:selection-object)
                                                   object-type)
                 (declare (ignore port object-type))
-                (let* ((mirror (sheet-direct-mirror
-                                (climb:selection-object-owner object)))
-                       (window (window mirror))
-                       (display (xlib:window-display window)))
-                  ;; We're not actually supposed to call set-selection-owner without
-                  ;; a timestamp due to the following statemnt in ICCCM:
-                  ;;
-                  ;;     Clients attempting to acquire a selection must set the time
-                  ;;     value of the SetSelectionOwner request to the timestamp of
-                  ;;     the event triggering the acquisition attempt, not to
-                  ;;     CurrentTime. A zero-length append to a property is a way to
-                  ;;     obtain a timestamp for this purpose; the timestamp is in
-                  ;;     the corresponding PropertyNotify event.
-                  ;;
-                  ;; The reasons for his seems to be to ensure that the ownership is
-                  ;; actually transferred correctly. This shouldn't be a major issue
-                  ;; in practice, and it significantly simplifies the implementation.
-                  (xlib:set-selection-owner display selection window nil)
-                  (if (eq (xlib:selection-owner display selection) window)
-                      (call-next-method)
-                      (warn "Couldn't set X11 selection ~s owner to ~s."
-                            selection window))))))
+                (when-let ((mirror (sheet-mirror (climb:selection-object-owner object))))
+                  (let* ((window (window mirror))
+                         (display (xlib:window-display window)))
+                    ;; We're not actually supposed to call set-selection-owner without
+                    ;; a timestamp due to the following statemnt in ICCCM:
+                    ;;
+                    ;;     Clients attempting to acquire a selection must set the time
+                    ;;     value of the SetSelectionOwner request to the timestamp of
+                    ;;     the event triggering the acquisition attempt, not to
+                    ;;     CurrentTime. A zero-length append to a property is a way to
+                    ;;     obtain a timestamp for this purpose; the timestamp is in
+                    ;;     the corresponding PropertyNotify event.
+                    ;;
+                    ;; The reasons for his seems to be to ensure that the ownership is
+                    ;; actually transferred correctly. This shouldn't be a major issue
+                    ;; in practice, and it significantly simplifies the implementation.
+                    (xlib:set-selection-owner display selection window nil)
+                    (if (eq (xlib:selection-owner display selection) window)
+                        (call-next-method)
+                        (warn "Couldn't set X11 selection ~s owner to ~s."
+                              selection window)))))))
   (frob :primary)
   (frob :clipboard))
 
