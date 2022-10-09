@@ -159,7 +159,7 @@
                     updated-cy))
       ;; this will close the output record if recorded
       (unless nil ;soft-newline-p
-        (finish-output stream))
+        (force-output stream))
       (let* ((medium       (sheet-medium stream))
              (text-style   (medium-text-style medium))
              (new-baseline (text-style-ascent text-style medium))
