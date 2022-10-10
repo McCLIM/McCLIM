@@ -108,9 +108,9 @@
   (format nil "url(#~a)" id))
 
 (defgeneric medium-clip (medium region)
-  (:method ((medium svg-medium) (region (eql +nowhere+)))
+  (:method ((medium svg-medium) (region climi::nowhere-region))
     (values :none nil))
-  (:method ((medium svg-medium) (region (eql +everywhere+)))
+  (:method ((medium svg-medium) (region climi::everywhere-region))
     (values :clip "none"))
   (:method ((medium svg-medium) (region bounding-rectangle))
     (let ((id (ensure-resource-id (medium (cons :clip region))
