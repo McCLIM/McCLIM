@@ -171,4 +171,6 @@ infinite recursion on (setf sheet-*).")
             (setf (%sheet-native-region sheet) (transform-region offset mirror-region))
             (unless (and old-n-tran (transformation-equal new-n-tran old-n-tran))
               (invalidate-cached-transformations sheet)
-              (setf (%sheet-native-transformation sheet) new-n-tran))))))))
+              (setf (%sheet-native-transformation sheet) new-n-tran)
+              (when old-n-tran
+                (dispatch-repaint sheet (sheet-region sheet))))))))))

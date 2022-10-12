@@ -6,6 +6,7 @@
 ;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -14,15 +15,25 @@
 
 (in-package #:clim-internals)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Repaint protocol functions.
+
+;;; Input protocol functions.
 
-(defmethod dispatch-repaint ((sheet graft) region)
-  (declare (ignore sheet region)))
+(defmethod handle-event ((sheet basic-sheet)
+                         (event window-repaint-event))
+  (when-let ((msheet (sheet-mirrored-ancestor (event-sheet event))))
+    ;; Only dispatch repaints when the sheet has a mirror. Dispatch to the
+    ;; mirrored sheet to ensure that translucent backgrounds rendesr correctly.
+    ;; This also improves performance thanks to the better compression of the
+    ;; repaint events in the queue.
+    (dispatch-repaint msheet (window-event-native-region event))))
 
+;;; Backward compatibility.
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
-  (queue-event sheet event))
+  (when-let ((msheet (sheet-mirrored-ancestor (event-sheet event))))
+    (dispatch-repaint msheet (window-event-native-region event))))
+
+
+;;; Repaint protocol functions.
 
 (defmethod handle-repaint ((sheet basic-sheet) region)
   (declare (ignore region))
@@ -90,24 +101,12 @@
 
 (defclass standard-repainting-mixin () ())
 
-(defmethod dispatch-event
-    ((sheet standard-repainting-mixin) (event window-repaint-event))
-  (queue-repaint sheet event))
+(defmethod queue-repaint
+    ((sheet standard-repainting-mixin) (region region))
+  (error "Not implemented yet!"))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
-    ;; Only dispatch repaints, when the sheet has a mirror. Dispatch to the
-    ;; mirror sheet to ensure that translucent backgrounds render correctly.
-    ;; This also improves performance thanks to the better compression of the
-    ;; repaint events in the queue.
-    (let* ((reg (transform-region (sheet-native-transformation sheet)
-                                  (region-intersection (sheet-region sheet) region)))
-           (evt (make-instance 'window-repaint-event :sheet msheet :region reg)))
-      (queue-repaint msheet evt))))
-
-(defmethod handle-event ((sheet standard-repainting-mixin)
-                         (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+  (queue-repaint sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -115,16 +114,13 @@
 
 (defclass immediate-repainting-mixin () ())
 
-(defmethod dispatch-event
-    ((sheet immediate-repainting-mixin) (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+;;; Backward compatibility.
+(defmethod queue-repaint
+    ((sheet standard-repainting-mixin) (region region))
+  (repaint-sheet sheet region))
 
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
   (repaint-sheet sheet region))
-
-(defmethod handle-event ((sheet immediate-repainting-mixin)
-                         (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -133,23 +129,13 @@
 (defclass sheet-mute-repainting-mixin () ())
 
 (defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (when (sheet-mirror sheet)
-    ;; Only dispatch repaints, when the sheet has a mirror.
-    (queue-repaint sheet (make-instance 'window-repaint-event
-                           :sheet sheet
-                           :region (transform-region
-                                    (sheet-native-transformation sheet)
-                                    region)))))
-
-(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignore sheet region))
   (values))
 
-(defclass clim-repainting-mixin
-    (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
+(defclass clim-repainting-mixin (immediate-repainting-mixin)
+  ;; (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
   ()
-  (:documentation "Internal class that implements repainting protocol based on
-  whether or not multiprocessing is supported."))
+  (:documentation "Internal class that implements the repainting protocol."))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

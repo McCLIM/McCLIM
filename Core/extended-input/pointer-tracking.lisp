@@ -257,10 +257,10 @@
       (:erase
        (if (output-recording-stream-p sheet)
            (maybe-funcall erase record sheet)
-           (repaint-sheet sheet (bounding-rectangle record))))
+           (dispatch-repaint sheet (bounding-rectangle record))))
       (:repaint
        (when repaint
-         (repaint-sheet sheet (bounding-rectangle record))))
+         (dispatch-repaint sheet (bounding-rectangle record))))
       (:draw
        (replay-output-record record sheet))
       (:finish
