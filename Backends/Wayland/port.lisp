@@ -281,8 +281,8 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity))
 
-(defun swap-buffers (mirrored-sheet)
-  (alx:when-let ((mirror (sheet-mirror mirrored-sheet)))
+(defun swap-buffers (medium)
+  (alx:when-let ((mirror (medium-drawable medium)))
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
                       (wayland-egl-mirror-surface mirror))))
 
@@ -410,6 +410,16 @@
   (break backend destination)
   )
 
+(defmethod medium-buffering-output-p ((medium wayland-egl-medium))
+  (alx:if-let ((drawable (medium-drawable medium)))
+    (buffering-p drawable)
+    (call-next-method)))
+
+(defmethod (setf medium-buffering-output-p) (new-value (medium wayland-egl-medium))
+  (alx:if-let ((drawable (medium-drawable medium)))
+    (setf (buffering-p drawable) new-value)
+    (call-next-method)))
+
 ;; (defmethod invoke-with-output-recording-options :before
 ;;     (stream continuation record draw)
 ;;   (format *debug-io* "ok getting somewhere~%")
@@ -425,40 +435,20 @@
 
 ;;   ))
 
-(macrolet
-    ((swap-buffer ()
-       `(when (medium-buffering-output-p medium)
-          (alx:when-let ((sheet (medium-sheet medium)))
-            (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
-                (sheet-native-region sheet)
-              (format *debug-io* "swapping drawable buffer ~a~%" (list 'sheet x1 y1 x2 y2 w h)))
-            (swap-buffers sheet)
-            (clear-buffered-drawable sheet)))))
+(defmethod medium-finish-output ((medium wayland-egl-medium))
+  (format *debug-io* "medium-finish-output buffering? ~a~%"
+          (medium-buffering-output-p medium))
+  (when (medium-buffering-output-p medium)
+    (alx:when-let ((mirror (medium-drawable medium)))
+      (swap-buffers medium)
+      (clear-buffered-drawable (medium-sheet medium)))))
 
-  (defmethod medium-finish-output :after ((medium wayland-egl-medium))
-    (format *debug-io* "medium-finish-output buffering? ~a~%" (medium-buffering-output-p medium))
-    ;; (swap-buffer)
-    )
-
-  (defmethod medium-force-output :after ((medium wayland-egl-medium))
-    (format *debug-io* "medium-force-output buffering? ~a~%" (medium-buffering-output-p medium))
-    ;;(swap-buffer)
-    ))
-
-(defmethod invoke-with-output-buffered
-    ((medium wayland-egl-medium) continuation &optional (buffered-p t))
-  ;; (declare (ignore continuation buffered-p))
-  ;; TODO: not sure if this should override basic-medium implementation or
-  ;; extend
-  ;; double buffering technique pulled from `backend-sdl2` branch
-  (when (null buffered-p)
-    (medium-force-output medium))
-  (unwind-protect
-       (format *debug-io* "buffering output? ~a~%" buffered-p)
-       (climi::letf (((medium-buffering-output-p medium) buffered-p))
-         (funcall continuation))
-    (when (and buffered-p (null (medium-buffering-output-p medium)))
-      (medium-force-output medium))))
+(defmethod medium-force-output ((medium wayland-egl-medium))
+  (format *debug-io* "medium-FORCE-output buffering? ~a~%"
+          (medium-buffering-output-p medium))
+  ;; Anything more todo here? force wayland output?
+  ;; Better place to start a frame?
+  )
 
 ;; (defmethod medium-clear-area :around
 ;;     ((medium wayland-egl-medium) left top right bottom)
