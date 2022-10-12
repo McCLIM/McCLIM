@@ -117,7 +117,7 @@ current message was set."))
 
 (defun display-minibuffer (frame pane)
   (declare (ignore frame))
-  (handle-repaint pane +everywhere+))
+  (dispatch-repaint pane +everywhere+))
 
 (defmethod stream-accept :around ((pane minibuffer-pane) type &rest args)
   (declare (ignore args))

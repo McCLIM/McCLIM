@@ -84,8 +84,8 @@ then repaint `sheet'."
       ;; Only repaint within the visible region...
       (with-bounding-rectangle* (viewport-x1 nil viewport-x2 viewport-y2)
           (sheet-visible-region sheet)
-        (repaint-sheet sheet (make-bounding-rectangle viewport-x1 (- y (abs delta-y))
-                                                      viewport-x2 viewport-y2))))))
+        (dispatch-repaint sheet (make-bounding-rectangle viewport-x1 (- y (abs delta-y))
+                                                         viewport-x2 viewport-y2))))))
 
 (defmethod invoke-with-input-editor-typeout ((editing-stream standard-input-editing-mixin)
                                              (continuation function) &key erase)
@@ -126,7 +126,7 @@ then repaint `sheet'."
           ;; Reuse the old stream-typeout-record...
           (add-output-record new-typeout-record stream-typeout-record)
           ;; Now, let there be light!
-          (repaint-sheet encapsulated-stream stream-typeout-record))))))
+          (dispatch-repaint encapsulated-stream stream-typeout-record))))))
 
 (defun clear-typeout (&optional (stream t))
   "Blank out the input-editor typeout displayed on `stream',

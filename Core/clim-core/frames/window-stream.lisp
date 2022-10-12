@@ -87,7 +87,7 @@
 (defun standalone-event-loop ()
   "An simple event loop for applications that want all events to be handled by
  handle-event methods, which also handles FRAME-EXIT."
-  (let ((frame *application-frame*))
+  (with-application-frame (frame)
     (handler-case
         (let ((queue (frame-event-queue frame)))
           (loop for event = (event-queue-read queue)
