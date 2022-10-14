@@ -1589,7 +1589,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
             (not (space-requirement-equal requirements (compose-space pane))))
           t)
     (change-space-requirements pane))
-  (repaint-sheet pane (sheet-region pane)))
+  (dispatch-repaint pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))

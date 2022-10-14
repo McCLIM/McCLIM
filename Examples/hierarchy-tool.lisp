@@ -88,7 +88,8 @@
 
 
 (defmethod clime:note-input-focus-changed ((sheet layout-protocol-gadget) status)
-  (queue-repaint sheet (make-instance 'window-repaint-event :sheet sheet :region +everywhere+)))
+  (declare (ignore status))
+  (dispatch-repaint sheet +everywhere+))
 
 (defparameter *panes* (make-hash-table :test #'equalp))
 (defparameter *rpanes* (make-hash-table :test #'equalp))

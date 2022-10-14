@@ -173,9 +173,10 @@
     (if enabled-p
         (note-sheet-enabled sheet)
         (note-sheet-disabled sheet))
-    (dispatch-repaint (sheet-parent sheet)
-                      (transform-region (sheet-transformation sheet)
-                                        (sheet-region sheet)))))
+    (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
+      (dispatch-repaint mirrored-ancestor
+                        (transform-region (sheet-native-transformation sheet)
+                                          (sheet-region sheet))))))
 
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
