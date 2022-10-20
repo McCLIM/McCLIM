@@ -1113,10 +1113,7 @@
 (defclass viewport-pane (single-child-composite-pane) ())
 
 (defmethod initialize-instance :after ((pane viewport-pane) &key)
-  (let ((child (sheet-child pane)))
-    (if (panep child)
-        (setf (pane-background pane) (pane-background child))
-        (setf (pane-background pane) *background-ink*)))
+  (setf (pane-background pane) *3d-normal-color*)
   #+ (or) ;; useful for debugging
   (setf (pane-background pane) +deep-pink+))
 
