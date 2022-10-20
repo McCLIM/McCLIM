@@ -1139,8 +1139,10 @@
     ;; transformation and region of the child and the scrollbars.
     ;;
     ;; Step 1: Allocate space of CHILD. This will resize but not move CHILD.
-    (when (typep child 'layout-protocol-mixin)
-      (setf (pane-space-requirement child) nil))
+    (map-over-sheets (lambda (sheet)
+                       (when (typep sheet 'layout-protocol-mixin)
+                         (setf (pane-space-requirement sheet) nil)))
+                     child)
     (let* ((child-space (compose-space child :width width :height height))
            (child-width  (space-requirement-width child-space))
            (child-height (space-requirement-height child-space)))
