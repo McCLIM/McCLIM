@@ -71,7 +71,7 @@
   (format *debug-io* "realizing mirror mirrored-sheet-mixin~%")
   ;; (break "realize-mirror" sheet)
   (with-bounding-rectangle* (x y :width w :height h) sheet
-    (let ((native-region (make-bounding-rectangle 0 0 w h))
+    (let ((native-region (make-rectangle* 0 0 w h))
           (native-transformation (make-translation-transformation (- x) (- y)))
          ;; QQQQ I'm still having conceptual ignorance on the lifecycle of graft
          ;; mirror instantiation and realize mirror. I hope it's not too
@@ -85,6 +85,8 @@
       ;; (climi::update-mirror-geometry sheet)
       ;; (break "realize-mirror" sheet mirror)
       ;; (climi::dispatch-repaint sheet +everywhere+)
+      ;; (setf (climi::%sheet-native-region sheet) native-region
+      ;;       (climi::%sheet-native-transformation sheet) native-transformation)
 
       mirror)))
 
