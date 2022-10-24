@@ -343,16 +343,20 @@
       ;; QQQQ Should I use port-set-mirror-geometry or is there some other way
       ;; to trigger it?
       ;; (break)
-      (unless (eql +everywhere+ (window-event-region event))
+      (unless (eql +everywhere+ (window-event-native-region event))
         (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
-            (window-event-region event)
+            (window-event-native-region event)
           (let ((*configuration-event-p* sheet))
             (resize-sheet sheet w h))
-          ;; (wl-egl:wl-egl-window-resize
-          ;;  (wayland-egl-mirror-window mirror) w h x1 y1)
-          ;; This xdg request will cause another window configuration event.
-          ;; (xdg:xdg-surface-set-window-geometry
-          ;;  (slot-value (port sheet) 'surface) x1 y1 w h)
+          (progn
+            ;; FIXME: Why is resize-sheet above not calling
+            ;; port-set-mirror-geometry? This would be more desired. For now
+            ;; we resize the surface to aid visual debugging
+            (wl-egl:wl-egl-window-resize
+             (wayland-egl-mirror-window mirror) w h x1 y1)
+            ;; This xdg request will cause another window configuration event.
+            (xdg:xdg-surface-set-window-geometry
+             (slot-value (port sheet) 'surface) x1 y1 w h))
           ))
       )))
 
