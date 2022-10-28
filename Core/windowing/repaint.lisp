@@ -116,7 +116,7 @@
 
 ;;; Backward compatibility.
 (defmethod queue-repaint
-    ((sheet standard-repainting-mixin) (region region))
+    ((sheet immediate-repainting-mixin) (region region))
   (repaint-sheet sheet region))
 
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
