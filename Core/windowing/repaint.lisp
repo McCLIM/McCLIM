@@ -18,19 +18,12 @@
 
 ;;; Input protocol functions.
 
-(defmethod handle-event ((sheet basic-sheet)
-                         (event window-repaint-event))
-  (when-let ((msheet (sheet-mirrored-ancestor (event-sheet event))))
-    ;; Only dispatch repaints when the sheet has a mirror. Dispatch to the
-    ;; mirrored sheet to ensure that translucent backgrounds rendesr correctly.
-    ;; This also improves performance thanks to the better compression of the
-    ;; repaint events in the queue.
-    (dispatch-repaint msheet (window-event-native-region event))))
+(defmethod handle-event ((sheet basic-sheet) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
 
 ;;; Backward compatibility.
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
-  (when-let ((msheet (sheet-mirrored-ancestor (event-sheet event))))
-    (dispatch-repaint msheet (window-event-native-region event))))
+  (dispatch-repaint sheet (window-event-region event)))
 
 
 ;;; Repaint protocol functions.
@@ -103,7 +96,16 @@
 
 (defmethod queue-repaint
     ((sheet standard-repainting-mixin) (region region))
-  (error "Not implemented yet!"))
+  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
+    (error "Not implemented yet!")
+    ;; Only repaint when the sheet has a mirror. Repaint directly from the
+    ;; mirror to ensure, that transparent parts are rendered correctly.
+    #+ (or)
+    (if (eq msheet sheet)
+        (error "IMPLEMENTME")
+        (let* ((delta (sheet-delta-transformation sheet msheet))
+               (mregion (transform-region delta region)))
+          (error "IMPLEMENTME")))))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
   (queue-repaint sheet region))
@@ -117,10 +119,17 @@
 ;;; Backward compatibility.
 (defmethod queue-repaint
     ((sheet immediate-repainting-mixin) (region region))
-  (repaint-sheet sheet region))
+  (dispatch-repaint sheet region))
 
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
-  (repaint-sheet sheet region))
+  ;; Only repaint when the sheet has a mirror. Repaint directly from the mirror
+  ;; to ensure, that transparent parts are rendered correctly.
+  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
+    (if (eq msheet sheet)
+        (repaint-sheet sheet region)
+        (let* ((delta (sheet-delta-transformation sheet msheet))
+               (mregion (transform-region delta region)))
+          (repaint-sheet msheet mregion)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
