@@ -3,8 +3,10 @@
 ;;; Mirror protocol?
 
 (defclass wayland-mirror ()
-  ((window :initarg :window :reader window))
-  (:default-initargs :window (alx:required-argument :window)))
+  ((window :initarg :window :reader window)
+   (buffering-p :initarg :buffering-p :accessor buffering-p))
+  (:default-initargs :window (alx:required-argument :window)
+                     :buffering-p nil))
 
 (defclass wayland-egl-mirror (wayland-mirror)
   ((egl-window :initform nil :accessor wayland-egl-mirror-window)

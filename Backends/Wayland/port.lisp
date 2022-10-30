@@ -227,10 +227,10 @@
   ;; buffers is in medium-f*-output but there seem to be some elements that
   ;; are causing the buffer to flip before the entire "scene" has been output
 
-  (map-over-grafts (lambda (graft)
-                     (swap-buffers graft)
-                     (clear-buffered-drawable graft))
-                   port)
+  ;; (map-over-grafts (lambda (graft)
+  ;;                    (swap-buffers (sheet-direct-mirror graft))
+  ;;                    (clear-buffered-drawable (sheet-direct-mirror graft)))
+  ;;                  port)
   )
 
 ;; (defmethod port-set-mirror-geometry
@@ -438,17 +438,17 @@
 (defmethod medium-finish-output ((medium wayland-egl-medium))
   (format *debug-io* "medium-finish-output buffering? ~a~%"
           (medium-buffering-output-p medium))
-  (when (medium-buffering-output-p medium)
-    (alx:when-let ((mirror (medium-drawable medium)))
-      (swap-buffers medium)
-      (clear-buffered-drawable (medium-sheet medium)))))
+  )
 
 (defmethod medium-force-output ((medium wayland-egl-medium))
   (format *debug-io* "medium-FORCE-output buffering? ~a~%"
           (medium-buffering-output-p medium))
   ;; Anything more todo here? force wayland output?
   ;; Better place to start a frame?
-  )
+  (unless (medium-buffering-output-p medium)
+    (alx:when-let ((mirror (medium-drawable medium)))
+      (swap-buffers medium)
+      (clear-buffered-drawable (medium-sheet medium)))) )
 
 ;; (defmethod medium-clear-area :around
 ;;     ((medium wayland-egl-medium) left top right bottom)

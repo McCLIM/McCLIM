@@ -17,9 +17,9 @@
 
 ;;; Now we connect all of wayland-client events to our port's events
 (defun %hacky-top-level-sheet ()
-  (frame-top-level-sheet
-   (first (frame-manager-frames
-           (find-frame-manager :port *wayland-port*)))))
+  (alx:when-let ((frame (first (frame-manager-frames
+                                (find-frame-manager :port *wayland-port*)))))
+    (frame-top-level-sheet frame)))
 
 (defmethod xdg:xdg-surface-configure ((surface xdg:xdg-surface) serial)
   ;; We assume we handle configuration events immediately, so we can
