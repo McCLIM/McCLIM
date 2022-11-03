@@ -27,8 +27,8 @@
 (defun do-graphics-with-options-internal
     (medium orig-medium func &rest args
      &key ink clipping-region transformation
+       line-style
        line-unit line-thickness
-       (line-style nil line-style-p)
        (line-dashes nil dashes-p)
        line-joint-shape line-cap-shape
        (text-style nil text-style-p)
@@ -37,88 +37,77 @@
        (text-size nil text-size-p)
      &allow-other-keys)
   (declare (ignore args))
-  (let ((old-ink (medium-ink medium))
-        (old-clip (medium-clipping-region medium))
-        (old-transform (medium-transformation medium))
-        (old-line-style (medium-line-style medium))
-        (old-text-style (medium-text-style medium))
-        (changed-line-style line-style-p)
-        (changed-text-style text-style-p))
-    (unwind-protect
-         (progn
-           (when (eq ink old-ink) (setf ink nil))
-
+  (flet ((compute-ink ()
            (when ink
-             (setf (medium-ink medium) ink))
+             (unless (design-equalp ink (medium-ink medium))
+               ink)))
+         (compute-line ()
+           (when (or line-style line-unit line-thickness dashes-p
+                     line-joint-shape line-cap-shape)
+             (let* ((old-line-style (medium-line-style medium))
+                    (line-style (or line-style old-line-style))
+                    (line-unit (or line-unit (line-style-unit line-style)))
+                    (line-thickness (or line-thickness (line-style-thickness line-style)))
+                    (line-dashes (if dashes-p line-dashes (line-style-dashes line-style)))
+                    (line-joint-shape (or line-joint-shape
+                                          (line-style-joint-shape line-style)))
+                    (line-cap-shape (or line-cap-shape (line-style-cap-shape line-style)))
+                    (new-line-style (make-line-style :unit line-unit
+                                                     :thickness line-thickness
+                                                     :joint-shape line-joint-shape
+                                                     :cap-shape line-cap-shape
+                                                     :dashes line-dashes)))
+               (unless (line-style-equalp old-line-style new-line-style)
+                 new-line-style))))
+         (compute-text ()
+           (when (or text-style text-family-p text-face-p text-size-p)
+             (let* ((merged-text-style (medium-merged-text-style medium))
+                    (text-style (if text-style-p
+                                    (merge-text-styles text-style merged-text-style)
+                                    merged-text-style))
+                    (text-style (if (or text-family-p text-face-p text-size-p)
+                                    (merge-text-styles (make-text-style text-family
+                                                                        text-face
+                                                                        text-size)
+                                                       text-style)
+                                    text-style)))
+               (unless (text-style-equalp text-style merged-text-style)
+                 text-style))))
+         (compute-transformation ()
            (when transformation
-             (setf (medium-transformation medium)
-                   (compose-transformations old-transform transformation)))
-
-           (when (and clipping-region old-clip
-                      (or (eq clipping-region +everywhere+)
-                          (eq clipping-region old-clip)
-                          (region-contains-region-p clipping-region old-clip))
-                      #+NIL (region-equal clipping-region old-clip))
-             (setf clipping-region nil))
-
-           (when clipping-region
-             (setf (medium-clipping-region medium)
-                   (region-intersection
-                    (if transformation
-                        (transform-region transformation old-clip)
-                        old-clip)
-                    clipping-region)))
-           (when (null line-style)
-             (setf line-style old-line-style))
-           (when (or line-unit
-                     line-thickness
-                     dashes-p
-                     line-joint-shape
-                     line-cap-shape)
-             (setf changed-line-style t)
-             (setf line-style
-                   (make-line-style
-                    :unit (or line-unit
-                              (line-style-unit line-style))
-                    :thickness (or line-thickness
-                                   (line-style-thickness line-style))
-                    :dashes (if dashes-p
-                                line-dashes
-                                (line-style-dashes line-style))
-                    :joint-shape (or line-joint-shape
-                                     (line-style-joint-shape line-style))
-                    :cap-shape (or line-cap-shape
-                                   (line-style-cap-shape line-style)))))
-           (when changed-line-style
-             (setf (medium-line-style medium) line-style))
-           (if text-style-p
-               (setf text-style
-                     (merge-text-styles text-style
-                                        (medium-merged-text-style medium)))
-               (setf text-style (medium-merged-text-style medium)))
-           (when (or text-family-p text-face-p text-size-p)
-             (setf changed-text-style t)
-             (setf text-style (merge-text-styles (make-text-style text-family
-                                                                  text-face
-                                                                  text-size)
-                                                 text-style)))
-           (when changed-text-style
-             (setf (medium-text-style medium) text-style))
-
-           (when orig-medium
-             (funcall func orig-medium)))
-
-      (when ink
-        (setf (medium-ink medium) old-ink))
-      ;; First set transformation, then clipping!
-      (when transformation
-        (setf (medium-transformation medium) old-transform))
-      (when clipping-region
-        (setf (medium-clipping-region medium) old-clip))
-      (when changed-line-style
-        (setf (medium-line-style medium) old-line-style))
-      (when changed-text-style
-        (setf (medium-text-style medium) old-text-style)))))
+             (compose-transformations (medium-transformation medium) transformation)))
+         (compute-clipping-region ()
+           (let ((old-clipping-region (medium-clipping-region medium)))
+             (when (and clipping-region
+                        (not (and old-clipping-region
+                                  (or (eq clipping-region +everywhere+)
+                                      (eq clipping-region old-clipping-region)
+                                      (region-contains-region-p clipping-region
+                                                                old-clipping-region)))))
+               (region-intersection clipping-region old-clipping-region)))))
+    (macrolet ((with-options (bindings &body body)
+                 (loop for (place form) in bindings
+                       for old-value = (gensym "OLD")
+                       for new-value = (gensym "NEW")
+                       collect old-value into old-vars
+                       collect `(,new-value ,form) into new-vars
+                       collect `(when ,new-value
+                                  (setf ,old-value ,place
+                                        ,place ,new-value))
+                         into sets
+                       collect `(when ,new-value
+                                  (setf ,place ,old-value))
+                         into undo
+                       finally (return `(let (,@old-vars ,@new-vars)
+                                          (unwind-protect (progn ,@sets ,@body)
+                                            ,@(nreverse undo)))))))
+      (with-options (((medium-ink medium) (compute-ink))
+                     ((medium-line-style medium) (compute-line))
+                     ((medium-text-style medium) (compute-text))
+                     ((medium-transformation medium) (compute-transformation))
+                     ((medium-clipping-region medium) (compute-clipping-region)))
+        (when orig-medium
+          (funcall func orig-medium))))))
 
 ;;; The generic function DO-GRAPHICS-WITH-OPTIONS is internal to the
 ;;; CLIM-INTERNALS package.  It is used in the expansion of the macro
