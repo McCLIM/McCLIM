@@ -17,7 +17,7 @@
 ;;;  (c) copyright 2017 Cyrus Harmon <cyrus@bobobeach.com>
 ;;;  (c) copyright 2018 Elias Martenson <lokedhs@gmail.com>
 ;;;  (c) copyright 2018-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
-;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2016-2022 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -53,8 +53,6 @@
 ;;; - Rounding of coordinates.
 ;;;
 ;;; - Document carefully the interface of STANDARD-OUTPUT-RECORDING-STREAM.
-;;;
-;;; - COORD-SEQ is a sequence, not a list.
 ;;;
 ;;; - Some GFs are defined to have "a default method on CLIM's
 ;;;   standard output record class". What does it mean? What is
@@ -792,6 +790,13 @@ were added."
 (defun %remove-entry-from-children-cache (record child)
   (remhash child (%tree-record-children-cache record)))
 
+(defun %refresh-entry-in-children-cache (record child)
+  (let ((rtree (%tree-record-children record))
+        (entry (%entry-in-children-cache record child)))
+    (spatial-trees:delete entry rtree)
+    (setf (tree-output-record-entry-cached-rectangle entry) nil)
+    (spatial-trees:insert entry rtree)))
+
 (defmethod output-record-children ((record standard-tree-output-record))
   (map 'list #'tree-output-record-entry-record
        (spatial-trees:search %infinite-rectangle%
@@ -819,6 +824,12 @@ were added."
       (setf (output-record-parent child) nil))
     (when errorp
       (error "~S is not a child of ~S" child record))))
+
+(defmethod* (setf output-record-position) :after
+  (nx ny (record standard-tree-output-record))
+  (declare (ignore nx ny))
+  (dolist (child (output-record-children record))
+    (%refresh-entry-in-children-cache record child)))
 
 (defmethod clear-output-record ((record standard-tree-output-record))
   (map nil (lambda (child)
@@ -878,18 +889,12 @@ were added."
                 :most-recent-last
                 '()))))
 
-(defmethod recompute-extent-for-changed-child :around
+(defmethod recompute-extent-for-changed-child :before
     ((record standard-tree-output-record) child
      old-min-x old-min-y old-max-x old-max-y)
   (declare (ignore old-min-x old-min-y old-max-x old-max-y))
   (when (eql record (output-record-parent child))
-    ;; The child is _not_ being deleted. Update the spatial tree.
-    (let ((entry (%entry-in-children-cache record child))
-          (tree (%tree-record-children record)))
-      (spatial-trees:delete entry tree)
-      (setf (tree-output-record-entry-cached-rectangle entry) nil)
-      (spatial-trees:insert entry tree)))
-  (call-next-method))
+    (%refresh-entry-in-children-cache record child)))
 
 ;;;
 
