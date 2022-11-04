@@ -129,6 +129,10 @@
   (with-medium-options (sheet drawing-options)
     (funcall continuation sheet)))
 
+(defmethod invoke-with-clipping-region ((sheet sheet) cont region)
+  (with-sheet-medium (medium sheet)
+    (invoke-with-clipping-region medium cont region)))
+
 (defmethod invoke-with-identity-transformation
     ((sheet sheet) continuation)
   (with-sheet-medium (medium sheet)

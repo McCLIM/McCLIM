@@ -15,7 +15,7 @@
 ;;;  (c) copyright 2016 Alessandro Serra <gas2serra@gmail.com>
 ;;;  (c) copyright 2018 Elias Mårtenson <lokedhs@gmail.com>
 ;;;  (c) copyright 2019-2021 Jan Moringen <jmoringe@techfak.uni-bielefeld.de>
-;;;  (c) copyright 2016-2021 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2016-2022 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -74,17 +74,8 @@
                (unless (text-style-equalp text-style merged-text-style)
                  text-style))))
          (compute-transformation ()
-           (when transformation
-             (compose-transformations (medium-transformation medium) transformation)))
-         (compute-clipping-region ()
-           (let ((old-clipping-region (medium-clipping-region medium)))
-             (when (and clipping-region
-                        (not (and old-clipping-region
-                                  (or (eq clipping-region +everywhere+)
-                                      (eq clipping-region old-clipping-region)
-                                      (region-contains-region-p clipping-region
-                                                                old-clipping-region)))))
-               (region-intersection clipping-region old-clipping-region)))))
+           (when (and transformation (not (identity-transformation-p transformation)))
+             (compose-transformations (medium-transformation medium) transformation))))
     (macrolet ((with-options (bindings &body body)
                  (loop for (place form) in bindings
                        for old-value = (gensym "OLD")
@@ -104,9 +95,8 @@
       (with-options (((medium-ink medium) (compute-ink))
                      ((medium-line-style medium) (compute-line))
                      ((medium-text-style medium) (compute-text))
-                     ((medium-transformation medium) (compute-transformation))
-                     ((medium-clipping-region medium) (compute-clipping-region)))
-        (when orig-medium
+                     ((medium-transformation medium) (compute-transformation)))
+        (with-clipping-region (orig-medium clipping-region)
           (funcall func orig-medium))))))
 
 ;;; The generic function DO-GRAPHICS-WITH-OPTIONS is internal to the
