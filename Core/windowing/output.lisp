@@ -126,11 +126,8 @@
 
 (defmethod invoke-with-drawing-options
     ((sheet sheet) continuation &rest drawing-options)
-  (with-sheet-medium (medium sheet)
-    (with-medium-options (medium drawing-options)
-      ;; We need to pass SHEET to CONTINUATION (not MEDIUM, like we used to) so
-      ;; that output recording works.
-      (funcall continuation sheet))))
+  (with-medium-options (sheet drawing-options)
+    (funcall continuation sheet)))
 
 (defmethod invoke-with-identity-transformation
     ((sheet sheet) continuation)
