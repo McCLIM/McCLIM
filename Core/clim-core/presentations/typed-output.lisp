@@ -65,24 +65,25 @@
                   acceptably
                   (for-context-type type)
                   single-box
-                  (allow-sensitive-inferiors t)
                   (sensitive t)
+                  (allow-sensitive-inferiors sensitive)
                   (record-type 'standard-presentation))
-  (let* ((real-type (expand-presentation-type-abbreviation type))
-         (context-type (if (eq for-context-type type)
-                           real-type
-                           (expand-presentation-type-abbreviation
-                            for-context-type))))
-    (stream-present stream object real-type
-                    :view view :modifier modifier :acceptably acceptably
-                    :for-context-type context-type :single-box single-box
-                    :allow-sensitive-inferiors allow-sensitive-inferiors
-                    :sensitive sensitive
-                    :record-type record-type)))
+  (with-stream-designator (stream *standard-output*)
+    (let* ((real-type (expand-presentation-type-abbreviation type))
+           (context-type (if (eq for-context-type type)
+                             real-type
+                             (expand-presentation-type-abbreviation
+                              for-context-type))))
+      (stream-present stream object real-type
+                      :view view :modifier modifier :acceptably acceptably
+                      :for-context-type context-type :single-box single-box
+                      :allow-sensitive-inferiors allow-sensitive-inferiors
+                      :sensitive sensitive
+                      :record-type record-type))))
 
 (defun format-items (items &rest args
                      &key (stream *standard-output*)
-                       (printer #'prin1) presentation-type
+                       printer presentation-type
                        cell-align-x cell-align-y
                      &allow-other-keys)
   (let ((printer (if printer
@@ -115,23 +116,27 @@
                              acceptably
                              (for-context-type type)
                              single-box
-                             (allow-sensitive-inferiors t)
                              (sensitive t)
+                             (allow-sensitive-inferiors sensitive)
                              (record-type 'standard-presentation))
-  ;; *allow-sensitive-inferiors* controls whether or not
-  ;; with-output-as-presentation will emit a presentation
-  (let ((*allow-sensitive-inferiors* (and *allow-sensitive-inferiors*
-                                          sensitive)))
-    (with-output-as-presentation (stream object type
-                                         :view view
-                                         :modifier modifier
-                                         :single-box single-box
-                                         :allow-sensitive-inferiors
-                                         allow-sensitive-inferiors
-                                         :record-type record-type)
-      (funcall-presentation-generic-function
-       present object type stream view
-       :acceptably acceptably :for-context-type for-context-type))))
+  ;; *ALLOW-SENSITIVE-INFERIORS* controls whether or not
+  ;; WITH-OUTPUT-AS-PRESENTATION will emit a presentation.
+  (let ((*allow-sensitive-inferiors*
+          (and *allow-sensitive-inferiors* allow-sensitive-inferiors)))
+    (if (not sensitive)
+        (funcall-presentation-generic-function
+         present object type stream view
+         :acceptably acceptably :for-context-type for-context-type)
+        (with-output-as-presentation (stream object type
+                                             :view view
+                                             :modifier modifier
+                                             :single-box single-box
+                                             :allow-sensitive-inferiors
+                                             allow-sensitive-inferiors
+                                             :record-type record-type)
+          (funcall-presentation-generic-function
+           present object type stream view
+           :acceptably acceptably :for-context-type for-context-type)))))
 
 ;;; Should work well enough on non-CLIM streams...
 (defmethod stream-present (stream object type
@@ -141,8 +146,8 @@
                              acceptably
                              (for-context-type type)
                              single-box
-                             (allow-sensitive-inferiors t)
                              (sensitive t)
+                             (allow-sensitive-inferiors sensitive)
                              (record-type 'standard-presentation))
   (declare (ignore modifier single-box allow-sensitive-inferiors sensitive
                    record-type))

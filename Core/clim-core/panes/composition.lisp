@@ -291,11 +291,9 @@
         (width (window-configuration-event-width event))
         (height (window-configuration-event-height event)))
     (let ((*configuration-event-p* sheet))
-      (%set-sheet-region-and-transformation
-       sheet
-       (make-bounding-rectangle 0 0 width height)
-       ;; negative offsets are handled by the native transformation?
-       (make-translation-transformation x y)))))
+      (let ((new-transformation (make-translation-transformation x y))
+            (new-region (make-bounding-rectangle 0 0 width height)))
+        (%set-sheet-region-and-transformation sheet new-region new-transformation)))))
 
 (defmethod handle-event ((pane top-level-sheet-pane)
                          (event window-manager-delete-event))
@@ -1115,10 +1113,7 @@
 (defclass viewport-pane (single-child-composite-pane) ())
 
 (defmethod initialize-instance :after ((pane viewport-pane) &key)
-  (let ((child (sheet-child pane)))
-    (if (panep child)
-        (setf (pane-background pane) (pane-background child))
-        (setf (pane-background pane) *background-ink*)))
+  (setf (pane-background pane) *3d-normal-color*)
   #+ (or) ;; useful for debugging
   (setf (pane-background pane) +deep-pink+))
 
@@ -1141,8 +1136,10 @@
     ;; transformation and region of the child and the scrollbars.
     ;;
     ;; Step 1: Allocate space of CHILD. This will resize but not move CHILD.
-    (when (typep child 'layout-protocol-mixin)
-      (setf (pane-space-requirement child) nil))
+    (map-over-sheets (lambda (sheet)
+                       (when (typep sheet 'layout-protocol-mixin)
+                         (setf (pane-space-requirement sheet) nil)))
+                     child)
     (let* ((child-space (compose-space child :width width :height height))
            (child-width  (space-requirement-width child-space))
            (child-height (space-requirement-height child-space)))
@@ -1591,7 +1588,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
             (not (space-requirement-equal requirements (compose-space pane))))
           t)
     (change-space-requirements pane))
-  (repaint-sheet pane (sheet-region pane)))
+  (dispatch-repaint pane (sheet-region pane)))
 
 (defmacro labelling ((&rest options) &body contents)
   `(make-pane 'label-pane ,@options :contents (list ,@contents)))

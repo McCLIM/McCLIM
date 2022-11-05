@@ -306,8 +306,7 @@
     (draw-rectangle* pane 80 10 90 20 :ink +dark-cyan+)
     (draw-rectangle* pane 80 80 90 90 :ink +dark-green+)
     (draw-rectangle* pane 10 80 20 90 :ink +dark-blue+)
-    (draw-arrow* pane 30 30 70 70 :ink +deep-pink+ :line-thickness 4)
-    (medium-finish-output pane)))
+    (draw-arrow* pane 30 30 70 70 :ink +deep-pink+ :line-thickness 4)))
 
 (defmethod handle-repaint ((pane my-pane) region)
   (draw-pane pane))

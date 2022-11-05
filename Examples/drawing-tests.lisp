@@ -57,7 +57,7 @@
                                     *drawing-tests*)))
     (drawing-test-display-function drawing-test)))
 
-(defclass drawing-app-pane (application-pane clime:never-repaint-background-mixin)
+(defclass drawing-app-pane (application-pane)
   ())
 
 (define-application-frame drawing-tests ()
@@ -468,8 +468,7 @@
                                               :width *width* :height *height*)
                                     (draw-rectangle* stream 0 0 *width* *height* :filled t :ink +grey90+)
                                     (funcall (drawing-test-display-function item) frame stream))))
-                     (draw-pattern* output pattern 0 0)
-                     (medium-finish-output (sheet-medium output))))))
+                     (draw-pattern* output pattern 0 0)))))
         (if (slot-value *application-frame* 'signal-condition-p)
             (draw)
             (handler-case (draw)

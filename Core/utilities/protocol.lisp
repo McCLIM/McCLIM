@@ -701,10 +701,10 @@ for a dashed line, rendered on MEDIUM with the style LINE-STYLE."))
 focus. STATE argument is T when the sheet gains focus and NIL otherwise. This
 is a McCLIM extension."))
 (defgeneric distribute-event (port event))
-(defgeneric dispatch-event (port event))
-(defgeneric queue-event (port event))
+(defgeneric dispatch-event (client event))
+(defgeneric queue-event (client event))
 (defgeneric schedule-event (client event delay))
-(defgeneric handle-event (port event))
+(defgeneric handle-event (client event))
 (defgeneric event-read (client))
 (defgeneric event-read-no-hang (client))
 (defgeneric event-peek (client &optional event-type))
@@ -898,7 +898,7 @@ and button states of the pointer."))
 
 ;;; 8.4.1 Repaint Protocol Functions
 (defgeneric dispatch-repaint (sheet region))
-(defgeneric queue-repaint (sheet repaint-event))
+(defgeneric queue-repaint (sheet region))
 (defgeneric handle-repaint (sheet region))
 (defgeneric repaint-sheet (sheet region))
 

@@ -59,13 +59,11 @@
            :accessor sheet-region)
    (native-transformation :type (or null transformation)
                           :initform nil
-                          :writer %%set-sheet-native-transformation
-                          :reader %%sheet-native-transformation)
+                          :accessor %sheet-native-transformation)
    (native-region :type (or null region)
                   :initarg :native-region
                   :initform nil
-                  :writer %%set-sheet-native-region
-                  :reader %%sheet-native-region)
+                  :accessor %sheet-native-region)
    (device-transformation :type (or null transformation)
                           :initform nil)
    (device-region :type (or null region)
@@ -175,9 +173,10 @@
     (if enabled-p
         (note-sheet-enabled sheet)
         (note-sheet-disabled sheet))
-    (dispatch-repaint (sheet-parent sheet)
-                      (transform-region (sheet-transformation sheet)
-                                        (sheet-region sheet)))))
+    (let ((mirrored-ancestor (sheet-mirrored-ancestor sheet)))
+      (dispatch-repaint mirrored-ancestor
+                        (transform-region (sheet-native-transformation sheet)
+                                          (sheet-region sheet))))))
 
 (defmethod sheet-transformation ((sheet basic-sheet))
   (error "Attempting to get the TRANSFORMATION of a SHEET that doesn't contain one"))
@@ -703,12 +702,21 @@ this might be different from the sheet's native region and transformation.")))
 ;;; NIL when the mirror is not visible.
 
 (defmethod sheet-native-region ((sheet mirrored-sheet-mixin))
-  (unless (%%sheet-native-transformation sheet)
-    (return-from sheet-native-region +nowhere+))
-  (or (%%sheet-native-region sheet) +nowhere+))
+  (unless (%sheet-native-transformation sheet)
+    (return-from sheet-native-region +everywhere+))
+  (or (%sheet-native-region sheet) +everywhere+))
 
 (defmethod sheet-native-transformation ((sheet mirrored-sheet-mixin))
-  (or (%%sheet-native-transformation sheet) +identity-transformation+))
+  (or (%sheet-native-transformation sheet) +identity-transformation+))
+
+(defmethod handle-event :before
+    ((sheet mirrored-sheet-mixin) (event window-configuration-event))
+  (let ((x (window-configuration-event-x event))
+        (y (window-configuration-event-y event))
+        (width (window-configuration-event-width event))
+        (height (window-configuration-event-height event)))
+    (setf (rectangle-edges* (sheet-mirror-geometry sheet))
+          (values x y (+ x width) (+ y height)))))
 
 ;;; Top-level sheets
 

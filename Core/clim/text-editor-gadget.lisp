@@ -81,7 +81,9 @@
                                              &key invoke-callback)
   (declare (ignore invoke-callback))
   ;; Hm! I wonder if this can cause trouble.  I think not.
-  (drei:display-drei gadget))
+  ;; ... But it does! -- jd
+  (when (sheet-grafted-p gadget)
+    (drei:display-drei gadget)))
 
 (defclass drei-text-field-substrate (text-field-substrate-mixin
                                      drei-editor-substrate)

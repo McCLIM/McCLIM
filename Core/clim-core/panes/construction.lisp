@@ -145,7 +145,7 @@ returned or error is signaled depending on the argument ERRORP.")
                       :reader background)
    (text-style        :initarg :text-style
                       :reader pane-text-style
-                      :initform nil)
+                      :type text-style)
    ;; Display state
    (redisplay-needed  :accessor pane-redisplay-needed
                       :initarg :redisplay-needed :initform nil))
@@ -154,9 +154,10 @@ returned or error is signaled depending on the argument ERRORP.")
    :background *3d-normal-color*
    :text-style *default-text-style*))
 
-(defmethod initialize-instance :after ((obj basic-pane) &key text-style)
-  (when (consp text-style)
-    (setf (slot-value obj 'text-style) (apply #'make-text-style text-style))))
+;;; XXX this is for code ported from other CLIM implementations that seem to
+;;; allow text-style being passed as a cons. -- jd 2022-09-16
+(defmethod initialize-instance :before ((obj basic-pane) &key text-style)
+  (check-type text-style text-style))
 
 (defmethod print-object ((object basic-pane) stream)
   (print-unreadable-object (object stream :type t :identity t)

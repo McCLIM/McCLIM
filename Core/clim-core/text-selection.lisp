@@ -195,7 +195,7 @@
                             :initial-value +nowhere+))
         (new-region (reduce #'region-union (mapcar #'(lambda (x) (marking-region pane x)) new-markings)
                             :initial-value +nowhere+)))
-    (handle-repaint pane (region-exclusive-or old-region new-region))))
+    (dispatch-repaint pane (region-exclusive-or old-region new-region))))
 
 (defun map-over-text (record function)
   (cond ((typep record 'standard-text-displayed-output-record)

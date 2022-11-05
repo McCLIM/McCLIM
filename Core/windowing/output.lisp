@@ -149,6 +149,10 @@
          (with-medium-options (,sheet ,medium-options)
            ,@body)))))
 
+(define-drawing-function (draw-point sheet point) ()
+  (multiple-value-bind (x y) (point-position point)
+    (medium-draw-point* medium x y)))
+
 (define-drawing-function (draw-point* sheet x y) ()
   (medium-draw-point* medium x y))
 

@@ -227,7 +227,7 @@ Factor to reduce the size of the circles")
                        (town-name town)
                        (or (town-population town) "some"))
                :title (format nil "Information on ~A" (town-name town))
-               :text-style '(:serif :roman 15)))
+               :text-style (make-text-style :serif :roman 15)))
 
 ;;; show info on town :select gesture (left click)
 
@@ -257,4 +257,4 @@ Factor to reduce the size of the circles")
                        (town-name town-a)
                        (town-name town-b))
                :title "Distance"
-               :text-style '(:serif :roman 15)))
+               :text-style (make-text-style :serif :roman 15)))

@@ -25,12 +25,12 @@
 
 (define-coordinate-swizzling-command (com-fill :name t) ()
   (let ((pane (clim:find-pane-named clim:*application-frame* 'app))
-        (time (get-universal-time)))
+        (time (get-internal-real-time)))
     (loop for i from 0 to 4400
           do (format pane "~4,'0d~%" i))
-    (setf time (- (get-universal-time) time))
+    (setf time (- (get-internal-real-time) time))
     (let ((output (make-broadcast-stream *standard-input* *debug-io*)))
-      (format output "Fill took ~Ds.~%" time))))
+      (format output "Fill took ~,2fs.~%" (/ time internal-time-units-per-second)))))
 
 (define-coordinate-swizzling-command (com-quit :name t) ()
   (clim:frame-exit clim:*application-frame*))

@@ -742,20 +742,18 @@
   ()
   (:default-initargs :background *3d-normal-color*))
 
-(defmethod initialize-instance :after ((pane radio-box-pane)
-                                       &key choices current-selection orientation (active t) &allow-other-keys)
+(defmethod initialize-instance :after
+    ((pane radio-box-pane)
+     &key choices current-selection orientation (active t) &allow-other-keys)
   (setf (box-layout-orientation pane) orientation)
   (setf (gadget-value pane) current-selection)
-  (let ((children
-          (mapcar (lambda (c)
-                    (let ((c (if (stringp c)
-                                 (make-pane 'toggle-button-pane :label c :value nil)
-                                 c)))
-                      (setf (gadget-value c) (if (eq c (radio-box-current-selection pane)) t nil))
-                      (setf (gadget-client c) pane)
-                      c))
-                  choices)))
-    (mapc (curry #'sheet-adopt-child pane) children))
+  ;;; FIXME here we manipulate child gadgets before the sheet is grafted.
+  (dolist (c choices)
+    (when (stringp c)
+      (setf c (make-pane 'toggle-button-pane :label c :value nil)))
+    (setf (gadget-client c) pane)
+    (setf (gadget-value c) (eq c (radio-box-current-selection pane)))
+    (sheet-adopt-child pane c))
   (unless active
     (deactivate-gadget pane)))
 
@@ -964,7 +962,7 @@ response to scroll wheel events."))
   (check-type pane generic-list-pane)
   (setf (slot-value pane 'visible-items) new-value)
   (change-space-requirements pane)
-  (repaint-sheet pane +everywhere+))
+  (dispatch-repaint pane +everywhere+))
 
 (defmethod compose-space ((pane generic-list-pane) &key width height)
   (declare (ignore width height))
@@ -1159,7 +1157,7 @@ Returns two values, the item itself, and the index within the item list."
                (<= (+ new-origin (visible-items pane))
                    (generic-list-pane-items-length pane)))
       (setf (items-origin pane) new-origin)
-      (handle-repaint pane +everywhere+))))
+      (dispatch-repaint pane +everywhere+))))
 
 (defun meta-list-pane-call-presentation-menu (pane item)
   (let ((ptype (funcall (list-pane-presentation-type-key pane) item)))
@@ -1631,7 +1629,7 @@ if INVOKE-CALLBACK is given."))
       (if (not (and (= ox gx)
                     (= oy gy)))
           (move-sheet (gadget record) ox oy)
-          (repaint-sheet (gadget record) region)))))
+          (dispatch-repaint (gadget record) region)))))
 
 (defun setup-gadget-record (sheet record)
   (let* ((child (gadget record))

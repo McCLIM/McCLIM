@@ -151,10 +151,12 @@
    ;; be secondary methods on it -RS 2001-08-23
    (text-style :initarg :text-style
                :initform *default-text-style*
-               :accessor medium-text-style)
+               :accessor medium-text-style
+               :type text-style)
    (default-text-style :initarg :default-text-style
                        :initform *default-text-style*
-                       :accessor medium-default-text-style)
+                       :accessor medium-default-text-style
+                       :type text-style)
    (sheet :initarg :sheet
           :initform nil                 ; this means that medium is not linked to a sheet
           :reader medium-sheet
@@ -333,13 +335,17 @@
 
 (defmethod invoke-with-output-buffered
     ((medium basic-medium) continuation &optional (buffered-p t))
-  (unwind-protect
-       (letf (((medium-buffering-output-p medium) buffered-p))
-         (unless buffered-p
-           (medium-force-output medium))
-         (funcall continuation))
-    (unless (medium-buffering-output-p medium)
-      (medium-force-output medium))))
+  (let ((buffering-output-p (medium-buffering-output-p medium)))
+    ;; When the buffering state changes, then we ensure that all output is
+    ;; synchronized before and after invoking the continuation.
+    ;; MEDIUM-FINISH-OUTPUT may behave differently when buffering output.
+    (if (alexandria:xor buffered-p buffering-output-p)
+        (progn
+          (medium-finish-output medium)
+          (letf (((medium-buffering-output-p medium) buffered-p))
+            (funcall continuation)
+            (medium-finish-output medium)))
+        (funcall continuation))))
 
 ;;; Default method.
 (defmethod invoke-with-output-buffered

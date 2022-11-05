@@ -38,7 +38,8 @@
 (defmethod (setf gadget-value) :after (new-value (gadget value-changed-repaint-mixin)
                                        &key &allow-other-keys)
   (declare (ignore new-value))
-  (dispatch-repaint gadget (sheet-visible-region gadget)))
+  (when (sheet-grafted-p gadget)
+    (dispatch-repaint gadget (sheet-visible-region gadget))))
 
 ;;;; Event handling mixins
 

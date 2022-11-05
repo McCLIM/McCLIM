@@ -40,6 +40,16 @@
    ;; when configuring the clipping region.
    (clipping-region-tmp :initform (vector 0 0 0 0))))
 
+(defmethod medium-buffering-output-p ((medium clx-medium))
+  (if-let ((drawable (medium-drawable medium)))
+    (buffering-p drawable)
+    (call-next-method)))
+
+(defmethod (setf medium-buffering-output-p) (new-value (medium clx-medium))
+  (if-let ((drawable (medium-drawable medium)))
+    (setf (buffering-p drawable) new-value)
+    (call-next-method)))
+
 ;; Variable is used to deallocate lingering resources after the operation.
 (defvar ^cleanup)
 
@@ -742,10 +752,14 @@ translated, so they begin at different position than [0,0])."))
 ;;; Other Medium-specific Output Functions
 
 (defmethod medium-finish-output ((medium clx-medium))
+  (when (medium-buffering-output-p medium)
+    (when-let ((mirror (medium-drawable medium)))
+      (swap-buffers mirror)))
   (xlib:display-finish-output (clx-port-display (port medium))))
 
 (defmethod medium-force-output ((medium clx-medium))
-  (xlib:display-force-output (clx-port-display (port medium))))
+  (unless (medium-buffering-output-p medium)
+    (xlib:display-force-output (clx-port-display (port medium)))))
 
 (defmethod medium-clear-area ((medium clx-medium) left top right bottom)
   (let ((tr (medium-device-transformation medium)))

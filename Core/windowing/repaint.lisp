@@ -6,6 +6,7 @@
 ;;;  (c) Copyright 2000 by Iban Hatchondo <hatchond@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2000 by Julien Boninfante <boninfan@emi.u-bordeaux.fr>
 ;;;  (c) Copyright 2000,2014 by Robert Strandh <robert.strandh@gmail.com>
+;;;  (c) Copyright 2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -14,15 +15,18 @@
 
 (in-package #:clim-internals)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Repaint protocol functions.
+
+;;; Input protocol functions.
 
-(defmethod dispatch-repaint ((sheet graft) region)
-  (declare (ignore sheet region)))
+(defmethod handle-event ((sheet basic-sheet) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
 
+;;; Backward compatibility.
 (defmethod queue-repaint ((sheet basic-sheet) (event window-repaint-event))
-  (queue-event sheet event))
+  (dispatch-repaint sheet (window-event-region event)))
+
+
+;;; Repaint protocol functions.
 
 (defmethod handle-repaint ((sheet basic-sheet) region)
   (declare (ignore region))
@@ -90,24 +94,21 @@
 
 (defclass standard-repainting-mixin () ())
 
-(defmethod dispatch-event
-    ((sheet standard-repainting-mixin) (event window-repaint-event))
-  (queue-repaint sheet event))
+(defmethod queue-repaint
+    ((sheet standard-repainting-mixin) (region region))
+  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
+    (error "Not implemented yet!")
+    ;; Only repaint when the sheet has a mirror. Repaint directly from the
+    ;; mirror to ensure, that transparent parts are rendered correctly.
+    #+ (or)
+    (if (eq msheet sheet)
+        (error "IMPLEMENTME")
+        (let* ((delta (sheet-delta-transformation sheet msheet))
+               (mregion (transform-region delta region)))
+          (error "IMPLEMENTME")))))
 
 (defmethod dispatch-repaint ((sheet standard-repainting-mixin) region)
-  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
-    ;; Only dispatch repaints, when the sheet has a mirror. Dispatch to the
-    ;; mirror sheet to ensure that translucent backgrounds render correctly.
-    ;; This also improves performance thanks to the better compression of the
-    ;; repaint events in the queue.
-    (let* ((reg (transform-region (sheet-native-transformation sheet)
-                                  (region-intersection (sheet-region sheet) region)))
-           (evt (make-instance 'window-repaint-event :sheet msheet :region reg)))
-      (queue-repaint msheet evt))))
-
-(defmethod handle-event ((sheet standard-repainting-mixin)
-                         (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+  (queue-repaint sheet region))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -115,16 +116,20 @@
 
 (defclass immediate-repainting-mixin () ())
 
-(defmethod dispatch-event
-    ((sheet immediate-repainting-mixin) (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+;;; Backward compatibility.
+(defmethod queue-repaint
+    ((sheet immediate-repainting-mixin) (region region))
+  (dispatch-repaint sheet region))
 
 (defmethod dispatch-repaint ((sheet immediate-repainting-mixin) region)
-  (repaint-sheet sheet region))
-
-(defmethod handle-event ((sheet immediate-repainting-mixin)
-                         (event window-repaint-event))
-  (repaint-sheet sheet (window-event-region event)))
+  ;; Only repaint when the sheet has a mirror. Repaint directly from the mirror
+  ;; to ensure, that transparent parts are rendered correctly.
+  (when-let ((msheet (sheet-mirrored-ancestor sheet)))
+    (if (eq msheet sheet)
+        (repaint-sheet sheet region)
+        (let* ((delta (sheet-delta-transformation sheet msheet))
+               (mregion (transform-region delta region)))
+          (repaint-sheet msheet mregion)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -133,23 +138,13 @@
 (defclass sheet-mute-repainting-mixin () ())
 
 (defmethod dispatch-repaint ((sheet sheet-mute-repainting-mixin) region)
-  (when (sheet-mirror sheet)
-    ;; Only dispatch repaints, when the sheet has a mirror.
-    (queue-repaint sheet (make-instance 'window-repaint-event
-                           :sheet sheet
-                           :region (transform-region
-                                    (sheet-native-transformation sheet)
-                                    region)))))
-
-(defmethod repaint-sheet ((sheet sheet-mute-repainting-mixin) region)
   (declare (ignore sheet region))
   (values))
 
-(defclass clim-repainting-mixin
-    (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
+(defclass clim-repainting-mixin (immediate-repainting-mixin)
+  ;; (#+clim-mp standard-repainting-mixin #-clim-mp immediate-repainting-mixin)
   ()
-  (:documentation "Internal class that implements repainting protocol based on
-  whether or not multiprocessing is supported."))
+  (:documentation "Internal class that implements the repainting protocol."))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -173,25 +168,29 @@
 ;;; Integration with region and transformation changes
 (defparameter *skip-repaint-p* nil)
 
-(defun dispatch-repaint-region (sheet old-region new-region)
+(defun dispatch-repaint-region (sheet
+                                old-transformation old-region
+                                new-transformation new-region)
   (when (and (not *skip-repaint-p*)
              (sheet-viewable-p sheet))
-    (let ((region (if (sheet-direct-mirror sheet)
-                      (region-difference (rounded-bounding-rectangle new-region)
-                                         (rounded-bounding-rectangle old-region))
-                      (if (or (region-equal new-region +everywhere+)
-                              (region-equal old-region +everywhere+))
-                          +everywhere+
-                          (region-union (rounded-bounding-rectangle new-region)
-                                        (rounded-bounding-rectangle old-region))))))
-      (repaint-sheet sheet region))))
+    (if (sheet-direct-mirror sheet)
+        (dispatch-repaint sheet new-region)
+        (dispatch-repaint (sheet-parent sheet)
+                          (region-union
+                           (rounded-bounding-rectangle
+                            (transform-region old-transformation old-region))
+                           (rounded-bounding-rectangle
+                            (transform-region new-transformation new-region)))))))
 
 (defmethod (setf sheet-region) :around (new-region (sheet basic-sheet))
   (let ((old-region (sheet-region sheet)))
     (unless (region-equal new-region old-region)
       (let ((*skip-repaint-p* t))
         (call-next-method))
-      (dispatch-repaint-region sheet old-region new-region)))
+      (let ((transformation (sheet-transformation sheet)))
+        (dispatch-repaint-region sheet
+                                 transformation old-region
+                                 transformation new-region))))
   new-region)
 
 (defmethod (setf sheet-transformation) :around (new-transformation (sheet basic-sheet))
@@ -200,7 +199,9 @@
       (let ((*skip-repaint-p* t))
         (call-next-method))
       (let ((region (sheet-region sheet)))
-        (dispatch-repaint-region sheet region region))))
+        (dispatch-repaint-region sheet
+                                 old-transformation region
+                                 new-transformation region))))
   new-transformation)
 
 (defun %set-sheet-region-and-transformation (sheet new-region new-transformation)
@@ -211,4 +212,6 @@
       (let ((*skip-repaint-p* t))
         (setf (sheet-region sheet) new-region
               (sheet-transformation sheet) new-transformation))
-      (dispatch-repaint-region sheet old-region new-region))))
+      (dispatch-repaint-region sheet
+                               old-transformation old-region
+                               new-transformation new-region))))
