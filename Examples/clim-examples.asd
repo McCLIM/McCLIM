@@ -65,6 +65,7 @@
                (:file "graph-formatting-test")
                (:file "asynchronous-commands")
                (:file "reinitialize-frame")
+               (:file "nested-clipping")
                (:file "demodemo")
                (:module "images"
                 :components ((:static-file "glider.png")
