@@ -328,10 +328,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (declare (ignore x y))
   t)
 
-(defmethod output-record-refined-position-test
-    ((record gs-clip-mixin) x y)
-  (region-contains-position-p (graphics-state-clip record) x y))
-
 (defun highlight-output-record-rectangle (record stream state)
   (with-identity-transformation (stream)
     (ecase state
@@ -922,35 +918,6 @@ were added."
     (design-equalp (slot-value record 'ink) ink)))
 
 (defmethod replay-output-record :around
-    ((record gs-clip-mixin) stream &optional region x-offset y-offset)
-  (declare (ignore region x-offset y-offset))
-  (let ((record-clip (untransform-region (medium-transformation stream)
-                                         (graphics-state-clip record)))
-        (stream-clip (medium-clipping-region stream)))
-    (if (region-contains-region-p record-clip stream-clip)
-        (call-next-method)
-        (with-drawing-options (stream :clipping-region record-clip)
-          (call-next-method)))))
-
-
-;;; This may look like a good idea at first but it is not. The clip is copied
-;;; from the parent and means "external" context so it can't move with the
-;;; output record. -- jd 2022-03-28
-#+ (or)
-(defmethod* (setf output-record-position) :before
-  (new-x new-y (record gs-clip-mixin))
-  (with-standard-rectangle* (old-x old-y) record
-    (let* ((dx          (- new-x old-x))
-           (dy          (- new-y old-y))
-           (translation (make-translation-transformation dx dy)))
-      (setf (graphics-state-clip record)
-            (transform-region translation (graphics-state-clip record))))))
-
-(defrecord-predicate gs-clip-mixin (clipping-region)
-  (if-supplied (clipping-region)
-    (region-equal (slot-value record 'clipping-region) clipping-region)))
-
-(defmethod replay-output-record :around
     ((record gs-line-style-mixin) stream &optional region x-offset y-offset)
   (declare (ignore region x-offset y-offset))
   (with-drawing-options (stream :line-style (graphics-state-line-style record))
@@ -990,9 +957,8 @@ were added."
     (transformation-equal (graphics-state-transformation record) transformation)))
 
 ;;; 16.3.2. Graphics Displayed Output Records
-(defclass standard-displayed-output-record (gs-clip-mixin gs-ink-mixin
-                                            basic-output-record
-                                            displayed-output-record)
+(defclass standard-displayed-output-record
+    (gs-ink-mixin basic-output-record displayed-output-record)
   ((ink :reader displayed-output-record-ink)
    (stream :initarg :stream))
   (:documentation "Implementation class for DISPLAYED-OUTPUT-RECORD.")
@@ -1163,16 +1129,11 @@ were added."
              `((defclass ,class-name (,@mixins standard-graphics-displayed-output-record)
                  ,slots)
                (defmethod initialize-instance :after ((graphic ,class-name) &key)
-                 (with-slots (stream ink clipping-region line-style text-style ,@slot-names)
+                 (with-slots (stream ink line-style text-style ,@slot-names)
                      graphic
                    (let ((medium (sheet-medium stream)))
                      (setf (rectangle-edges* graphic)
-                           (progn ,@body)))
-                   (when (bounding-rectangle-p clipping-region)
-                     (let* ((rect (bounding-rectangle clipping-region))
-                            (clip (region-intersection rect graphic)))
-                       (setf (rectangle-edges* graphic)
-                             (bounding-rectangle* clip))))))))
+                           (progn ,@body)))))))
          ,@(when medium-fn
              `((defmethod ,method-name :around ((stream output-recording-stream) ,@arg-names)
                  ;; XXX STANDARD-OUTPUT-RECORDING-STREAM ^?
@@ -1689,7 +1650,7 @@ were added."
 
 ;;; 16.3.3. Text Displayed Output Record
 
-(defclass styled-string (gs-text-style-mixin gs-clip-mixin gs-ink-mixin)
+(defclass styled-string (gs-text-style-mixin gs-ink-mixin)
   ((start-x :initarg :start-x)
    (string :initarg :string :reader styled-string-string)))
 
@@ -1810,7 +1771,6 @@ were added."
               ;; Some optimization might be possible here.
               (with-identity-transformation (stream)
                 (with-drawing-options (stream :ink (graphics-state-ink substring)
-                                              :clipping-region (graphics-state-clip substring)
                                               :text-style (graphics-state-text-style substring))
                   (draw-text* (sheet-medium stream)
                               string start-x (+ start-y (stream-baseline stream))))))))))
@@ -2140,6 +2100,45 @@ according to the flags RECORD and DRAW."
   (declare (ignore record))
   (error "Not implemented."))
 
+
+(defclass clipping-output-record (standard-tree-output-record)
+  ((clipping-region :initarg :clipping-region :type region
+                    :accessor graphics-state-clip)))
+
+(defmethod replay-output-record
+    ((record clipping-output-record) stream &optional region x-offset y-offset)
+  (declare (ignore region x-offset y-offset))
+  (with-clipping-region (stream (graphics-state-clip record))
+    (call-next-method)))
+
+(defmethod* (setf output-record-position) :around
+  (nx ny (record clipping-output-record))
+  (with-bounding-rectangle* (x1 y1) (graphics-state-clip record)
+    (let* ((dx (- nx x1))
+           (dy (- ny y1))
+           (tr (make-translation-transformation dx dy)))
+      (multiple-value-prog1 (call-next-method)
+        (setf (graphics-state-clip record)
+              (transform-region tr (graphics-state-clip record)))))))
+
+(defmethod output-record-refined-position-test
+    ((record clipping-output-record) x y)
+  (region-contains-position-p (graphics-state-clip record) x y))
+
+(defmethod invoke-with-clipping-region
+    ((sheet output-recording-stream) continuation (region area))
+  (declare (ignore continuation))
+  (if (stream-recording-p sheet)
+      (with-sheet-medium (medium sheet)
+        (let* ((tr (medium-transformation medium))
+               (clip (transform-region tr region)))
+          (with-new-output-record (sheet 'clipping-output-record record
+                                         :clipping-region clip)
+            (call-next-method)
+            (setf (rectangle-edges* record)
+                  (bounding-rectangle* clip)))))
+      (call-next-method)))
+
 
 ;;; Additional methods
 (defmethod handle-repaint :around ((stream output-recording-stream) region)
@@ -2203,56 +2202,38 @@ according to the flags RECORD and DRAW."
   ;; ADDME: add width argument for clipping (McCLIM extension)
   (multiple-value-bind (cx cy) (stream-cursor-position stream)
     (with-sheet-medium (medium stream)
-      (let ((clip-region (graphics-state-clip medium)))
-        (letf (((medium-transformation medium)
-                (if first-quadrant
-                    (make-scaling-transformation 1 -1)
-                    +identity-transformation+))
-               ((medium-clipping-region medium)
-                +everywhere+))
-          (let ((record (with-output-to-output-record (stream record-type)
-                          (funcall cont stream))))
-            ;; Bounding rectangle is in sheet coordinates!
-            (with-bounding-rectangle* (x1 y1 x2 y2) record
-              (let* ((record-height (- y2 y1))
-                     (height-clip   (when (and height
-                                               (< height record-height))
-                                      (make-rectangle*
-                                       cx cy (+ cx (- x2 x1)) (+ cy height))))
-                     (new-x         (max cx (+ cx x1)))
-                     (new-y         (cond ((not first-quadrant)
-                                           (max cy (+ cy y1)))
-                                          (height
-                                           (+ cy (- height record-height)))
-                                          (t
-                                           cy))))
-                (setf (output-record-position record) (values new-x new-y))
-                ;; Clip all output records to HEIGHT and/or the medium clipping
-                ;; region. All clipping region are in sheet coordinates.
-                (when-let ((clip-region
-                            (cond ((and (not (eq clip-region +everywhere+))
-                                        height-clip)
-                                   (region-intersection clip-region height-clip))
-                                  (height-clip)
-                                  ((not (eq clip-region +everywhere+))
-                                   clip-region))))
-                  (map-over-output-records
-                   (lambda (record)
-                     (when (typep record 'gs-clip-mixin)
-                       (setf (graphics-state-clip record) clip-region)))
-                   record))
-                ;; And and/or replay the clipped and repositioned RECORD.
-                (when (stream-recording-p stream)
-                  (stream-add-output-record stream record))
-                (when (stream-drawing-p stream)
-                  (replay record stream))
-                ;; Restore the cursor position or move the cursor.
-                (setf (stream-cursor-position stream)
-                      (values cx (+ cy (if move-cursor
-                                           (max (if first-quadrant (- y1) y2)
-                                                (or height record-height))
-                                           0)))))
-              record)))))))
+      (letf (((medium-transformation medium)
+              (if first-quadrant
+                  (make-scaling-transformation 1 -1)
+                  +identity-transformation+))
+             ((medium-clipping-region medium)
+              +everywhere+))
+        (let ((record (with-output-to-output-record (stream record-type)
+                        (funcall cont stream))))
+          ;; Bounding rectangle is in sheet coordinates!
+          (with-bounding-rectangle* (x1 y1 x2 y2) record
+            (declare (ignore x2))
+            (let* ((record-height (- y2 y1))
+                   (new-x         (max cx (+ cx x1)))
+                   (new-y         (cond ((not first-quadrant)
+                                         (max cy (+ cy y1)))
+                                        (height
+                                         (+ cy (- height record-height)))
+                                        (t
+                                         cy))))
+              (setf (output-record-position record) (values new-x new-y))
+              ;; And and/or replay the clipped and repositioned RECORD.
+              (when (stream-recording-p stream)
+                (stream-add-output-record stream record))
+              (when (stream-drawing-p stream)
+                (replay record stream))
+              ;; Restore the cursor position or move the cursor.
+              (setf (stream-cursor-position stream)
+                    (values cx (+ cy (if move-cursor
+                                         (max (if first-quadrant (- y1) y2)
+                                              (or height record-height))
+                                         0)))))
+            record))))))
 
 ;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
 ;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
