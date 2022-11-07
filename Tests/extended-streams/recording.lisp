@@ -61,3 +61,28 @@
                                  (incf counter))
                                history)
       (is (= 2 counter)))))
+
+;;; Moving the compound output record may not update its internal structure.
+;;; Ensure that it does. See #1319.
+(test recording.parent-updates-its-structure
+  (let ((parent (make-instance 'standard-tree-output-record))
+        (child (make-instance 'basic-output-record :x1 0 :y1 0 :x2 100 :y2 100)))
+    (flet ((foundp (x y)
+             (let ((func (lambda (record) (return-from foundp record))))
+               (map-over-output-records-containing-position func parent x y)
+               nil)))
+      (add-output-record child parent)
+      ;; Base case
+      (is (foundp 50 50))
+      ;; Move the child
+      (setf (output-record-position child) (values 200 200))
+      (is (not (foundp 50 50)))
+      (is (foundp 250 250))
+      ;; Reset the child (for clarity)
+      (setf (output-record-position child) (values 0 0 ))
+      (is (foundp 50 50))
+      ;; Move the parent
+      (setf (output-record-position parent) (values 200 200))
+      (is (not (foundp 50 50)) "Child found at the old position.")
+      (is (foundp 250 250) "Child not found at the new position."))))
+

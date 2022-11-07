@@ -14,4 +14,4 @@
          (transform   (make-scaling-transformation .01 .01))
          (transformed (transform-region transform original)))
     (is-true (typep (mcclim-bezier:polygonalize original) 'standard-polygon))
-    (is (eq +nowhere+ (mcclim-bezier:polygonalize transformed)))))
+    (is (region-equal +nowhere+ (mcclim-bezier:polygonalize transformed)))))

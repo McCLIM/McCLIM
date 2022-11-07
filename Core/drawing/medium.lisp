@@ -5,7 +5,7 @@
 ;;;  (c) copyright 1998-2000 by Michael McDonald <mikemac@mikemac.com>
 ;;;  (c) copyright 2002-2003 by Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;  (c) copyright 2014 by Robert Strandh <robert.strandh@gmail.com>
-;;;  (c) copyright 2020 by Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2020-2022 by Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -101,14 +101,19 @@
 
 (defmethod (setf graphics-state) ((new-gs graphics-state) (gs graphics-state))
   #+(or) "This is a no-op, but :after methods don't work without a primary method.")
+
 (defmethod (setf graphics-state) :after ((new-gs gs-ink-mixin) (gs gs-ink-mixin))
   (setf (graphics-state-ink gs) (graphics-state-ink new-gs)))
+
 (defmethod (setf graphics-state) :after ((new-gs gs-clip-mixin) (gs gs-clip-mixin))
   (setf (graphics-state-clip gs) (graphics-state-clip new-gs)))
+
 (defmethod (setf graphics-state) :after ((new-gs gs-line-style-mixin) (gs gs-line-style-mixin))
   (setf (graphics-state-line-style gs) (graphics-state-line-style new-gs)))
+
 (defmethod (setf graphics-state) :after ((new-gs gs-text-style-mixin) (gs gs-text-style-mixin))
   (setf (graphics-state-text-style gs) (graphics-state-text-style new-gs)))
+
 (defmethod (setf graphics-state) :after ((new-gs gs-transformation-mixin) (gs gs-transformation-mixin))
   (setf (graphics-state-transformation gs) (graphics-state-transformation new-gs)))
 
@@ -352,6 +357,31 @@
     (sheet continuation &optional (buffered-p t))
   (declare (ignore buffered-p))
   (funcall continuation))
+
+(defmacro with-clipping-region ((medium clipping-region) &body body)
+  (let ((cont (gensym "CONT")))
+    `(flet ((,cont () ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-clipping-region ,medium (function ,cont) ,clipping-region))))
+
+;;; This operator is specializable to allow creating compound output records
+;;; responsible for clipping the output. -- jd 2022-11-03
+(defgeneric invoke-with-clipping-region (medium continuation region)
+  (:argument-precedence-order region medium continuation))
+
+(defmethod invoke-with-clipping-region (medium continuation (region null))
+  (declare (ignore medium region))
+  (funcall continuation))
+
+(defmethod invoke-with-clipping-region ((medium medium) continuation region)
+  (let ((old-region (medium-clipping-region medium)))
+    (if (or (eq region +everywhere+)
+            (eq region old-region)
+            (region-contains-region-p region old-region))
+        (funcall continuation)
+        (letf (((medium-clipping-region medium)
+                (region-intersection region old-region)))
+          (funcall continuation)))))
 
 
 ;;; Pixmaps

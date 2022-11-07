@@ -604,6 +604,21 @@ doesn't have to) trigger @gloss{layout-protocol}.  Macro
 @node Output Protocol
 @section Output Protocol
 
+The @clim{} specification says that the output record should capture
+its clipping region. However this is not a feasible solution because
+when the output record is moved, it is impossible to tell whether the
+clip should be moved with it or not.
+
+For example, we may want to clip all output to happen in a
+heart-shaped region - this clip should never move. Then we format a
+list of items and each item is clipped with a circle - these clips
+should be moved with their corresponding records.
+
+The only solution that embraces both cases is to treat the clipping
+region as a compound output record. Then whether it is moved or not
+depends on whether it is a child or a parent of the moved output
+record.
+
 @c extension
 @include fun-clim-extensions-medium-miter-limit.texi
 @include fun-clim-extensions-line-style-effective-thickness.texi
