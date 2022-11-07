@@ -101,9 +101,9 @@
              (,continuation left top right bottom))))))
 
 (defmacro surrounding-output-with-border
-    ((&optional stream &rest drawing-options &key (shape :rectangle)
-                (move-cursor t)
-                &allow-other-keys)
+    ((&optional (stream t)
+      &rest drawing-options
+      &key (shape :rectangle) (move-cursor t) &allow-other-keys)
      &body body)
   (declare (ignore shape move-cursor))
   (with-stream-designator (stream '*standard-output*)
