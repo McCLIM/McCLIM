@@ -115,7 +115,7 @@
   (setf (capabilities seat) capabilities)
 
   ;; init pointer if capability exists
-  (alx:when-let ((has-pointer-p (member :pointer capabilities)))
+  (let ((has-pointer-p (member :pointer capabilities)))
     (with-slots (%pointer) seat
       (cond ((and has-pointer-p (not %pointer))
              (setf %pointer
@@ -127,7 +127,7 @@
              (setf %pointer nil)))))
 
   ;; init keyboard if capability exists
-  (alx:when-let ((has-keyboard-p (member :keyboard capabilities)))
+  (let ((has-keyboard-p (member :keyboard capabilities)))
     (cond ((and has-keyboard-p
                 (not (%keyboard seat)))
            (setf (%keyboard seat)
