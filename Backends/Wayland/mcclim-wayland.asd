@@ -7,7 +7,8 @@
                "com.andrewsoutar.cl-wayland-client/egl"
                "cl-egl"
                "mcclim-backend-common"
-               "cl-opengl")
+               "cl-opengl"
+               "cl-xkb")
   :serial t
   :components
   ((:module "core" :pathname "" :components

@@ -102,6 +102,15 @@
    (%keyboard :initform nil :accessor %keyboard)
    ))
 
+(defclass wayland-keyboard (wlc:wl-keyboard)
+  ((xkb-context :initform (cffi:null-pointer) :accessor xkb-context)
+   (xkb-keymap :initform (cffi:null-pointer) :accessor xkb-keymap)
+   (xkb-state :initform (cffi:null-pointer) :accessor xkb-state)))
+
+(defmethod initialize-instance :after ((keyboard wayland-keyboard) &key)
+  (with-slots (xkb-context) keyboard
+    (setf xkb-context (xkb:xkb-context-new ()))))
+
 (defmethod wlc:wl-seat-capabilities ((seat wayland-seat) capabilities)
   (setf (capabilities seat) capabilities)
 
@@ -123,7 +132,7 @@
                 (not (%keyboard seat)))
            (setf (%keyboard seat)
                  (wlc:wl-seat-get-keyboard seat
-                                           (make-instance 'wlc:wl-keyboard))))
+                                           (make-instance 'wayland-keyboard))))
           ((and (not has-keyboard-p) (%keyboard seat))
            (wlc:wl-keyboard-release (%keyboard seat))
            (setf (%keyboard seat) nil)))))
@@ -139,6 +148,68 @@
 
 (defmethod wlc:wl-pointer-frame ((pointer wlc:wl-pointer))
   (format *debug-io* "WL pointer FRAME~%"))
+
+;;; Keyboard Events
+(defmethod wlc:wl-keyboard-enter :after
+    ((keyboard wlc:wl-keyboard) serial surface keys)
+  (format *debug-io* "WL keyboard ENTER! ~s~%"
+          (list keys serial surface)))
+
+(defmethod wlc:wl-keyboard-leave :after
+    ((keyboard wlc:wl-keyboard) serial surface)
+  (format *debug-io* "WL keyboard LEAVE ~s~%"
+          (list serial surface)))
+
+(defmethod wlc:wl-keyboard-key
+    ((keyboard wayland-keyboard) serial time key state)
+  (declare (ignorable serial time)
+           (fixnum key))
+  (with-slots (xkb-state) keyboard
+    (let* ((key-code (+ 8 key))         ; from wayland docs
+           (keysym (xkb:xkb-state-key-get-one-sym xkb-state key-code))
+           (key-name (clim-xcommon:keysym-to-keysym-name keysym))
+           (key-utf8 (xkb:xkb-keysym-to-utf8 key-code))
+           (key-character (and (characterp key-utf8)
+                               key-utf8)))
+      (distribute-event *wayland-port*
+                        (make-instance (if (eq state :pressed)
+                                           'key-press-event
+                                           'key-release-event)
+                                       :sheet (port-keyboard-input-focus *wayland-port*)
+                                       :x 0 :y 0 ; ?? appear to be required
+                                       :key-name key-name
+                                       :key-character key-character
+                                       :timestamp time))
+      (format *debug-io* "MAPPED KEY EVENT ~s~%"
+              (list key state key-code keysym)))))
+
+(defmethod wlc:wl-keyboard-key :after
+    ((keyboard wlc:wl-keyboard) serial time key state)
+  (format *debug-io* "WL keyboard KEY! ~s~%"
+          (list serial time key state)))
+
+(defmethod wlc:wl-keyboard-keymap
+    ((keyboard wayland-keyboard) format fd size)
+  (unwind-protect
+       (with-slots (xkb-keymap xkb-state xkb-context) keyboard
+         ;; FIXME: SBCL specific
+         (let* ((mem
+                  (sb-posix:mmap
+                   nil size sb-posix:prot-read sb-posix:map-private fd 0))
+                (keymap
+                  (xkb:xkb-keymap-new-from-string xkb-context mem :text-v1 nil))
+                (state (xkb:xkb-state-new keymap)))
+           (xkb:xkb-keymap-unref xkb-keymap)
+           (xkb:xkb-state-unref xkb-state)
+
+           (setf xkb-keymap keymap)
+           (setf xkb-state state)))
+    (sb-posix:close fd)))
+
+(defmethod wlc:wl-keyboard-keymap :after
+    ((keyboard wlc:wl-keyboard) format fd size)
+  (format *debug-io* "WL Keymap ready! ~s~%"
+          (list format fd size)))
 
 ;;; Port protocols
 
