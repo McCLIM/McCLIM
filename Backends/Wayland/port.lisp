@@ -249,7 +249,7 @@
                                        :key-character key-character
                                        :timestamp time))
       (format *debug-io* "MAPPED KEY EVENT ~s~%"
-              (list key state key-code keysym)))))
+              (list key state key-code keysym key-name key-utf8 key-character)))))
 
 (defmethod wlc:wl-keyboard-key :after
     ((keyboard wlc:wl-keyboard) serial time key state)
