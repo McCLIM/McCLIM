@@ -235,7 +235,7 @@
     (let* ((key-code (+ 8 key))         ; from wayland docs
            (keysym (xkb:xkb-state-key-get-one-sym xkb-state key-code))
            (key-name (clim-xcommon:keysym-to-keysym-name keysym))
-           (key-utf8 (xkb:xkb-keysym-to-utf8 key-code))
+           (key-utf8 (xkb:xkb-keysym-to-utf8 keysym))
            (key-character (and (characterp key-utf8)
                                key-utf8)))
       (distribute-event *wayland-port*
