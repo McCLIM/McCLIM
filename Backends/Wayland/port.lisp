@@ -107,6 +107,9 @@
    (xkb-keymap :initform (cffi:null-pointer) :accessor xkb-keymap)
    (xkb-state :initform (cffi:null-pointer) :accessor xkb-state)))
 
+(defclass wayland-pointer (wlc:wl-pointer)
+  (x y wl-surface timestamp))
+
 (defmethod initialize-instance :after ((keyboard wayland-keyboard) &key)
   (with-slots (xkb-context) keyboard
     (setf xkb-context (xkb:xkb-context-new ()))))
@@ -120,7 +123,7 @@
       (cond ((and has-pointer-p (not %pointer))
              (setf %pointer
                    (wlc:wl-seat-get-pointer seat
-                                            (make-instance 'wlc:wl-pointer))))
+                                            (make-instance 'wayland-pointer))))
             ;; release when capability lost
             ((and (not has-pointer-p) %pointer)
              (wlc:wl-pointer-release %pointer)
@@ -140,14 +143,78 @@
 (defmethod wlc:wl-seat-name ((seat wayland-seat) name)
   (setf (name seat) name))
 
-(defmethod wlc:wl-pointer-enter ((pointer wlc:wl-pointer) serial surface surface-x surface-y)
-  (format *debug-io* "WL pointer ENTER (we should set cursor image) ~s~%" (list surface-x surface-y serial surface)))
+;;; Pointer Events
 
-(defmethod wlc:wl-pointer-motion ((pointer wlc:wl-pointer) time surface-x surface-y)
-  (format *debug-io* "WL pointer MOTION ~s~%" (list time surface-x surface-y)))
+(defmethod wlc:wl-pointer-enter
+    ((pointer wayland-pointer) serial surface surface-x surface-y)
+  (with-slots (x y wl-surface) pointer
+    (setf x surface-x
+          y surface-y
+          wl-surface surface))
+  (distribute-event *wayland-port*
+                    (make-instance 'pointer-enter-event
+                                   :pointer (port-pointer *wayland-port*)
+                                   :button nil
+                                   :graft-x surface-x
+                                   :graft-y surface-y
+                                   :modifier-state nil
+                                   :sheet (%hacky-top-level-sheet))))
 
-(defmethod wlc:wl-pointer-frame ((pointer wlc:wl-pointer))
+(defmethod wlc:wl-pointer-enter :after
+    ((pointer wayland-pointer) serial surface surface-x surface-y)
+  (format *debug-io* "WL pointer ENTER (we should set cursor image)~%   ~s~%"
+          (list surface-x surface-y serial surface)))
+
+(defmethod wlc:wl-pointer-motion
+    ((pointer wayland-pointer) time surface-x surface-y)
+  (with-slots (x y timestamp) pointer
+    (setf x surface-x
+          y surface-y
+          timestamp time))
+  (distribute-event *wayland-port*
+                    (make-instance 'pointer-motion-event
+                                   :pointer (port-pointer *wayland-port*)
+                                   :button nil
+                                   :modifier-state nil
+                                   :graft-x surface-x
+                                   :graft-y surface-y
+                                   ;; FIXME, region intersection to find sheet?
+                                   :sheet (%hacky-top-level-sheet)
+                                   :timestamp time))
+  )
+
+(defmethod wlc:wl-pointer-motion :after
+    ((pointer wayland-pointer) time surface-x surface-y)
+  (format *debug-io* "WL pointer MOTION ~s~%"
+          (list time surface-x surface-y)))
+
+(defmethod wlc:wl-pointer-button :after
+    ((pointer wayland-pointer) serial time button state)
+  (format *debug-io* "WL pointer BUTTON ~s~%"
+          (list serial time button state)))
+
+(defmethod wlc:wl-pointer-axis :after
+    ((pointer wayland-pointer) time axis value)
+  (format *debug-io* "WL pointer AXIS ~s~%"
+          (list time axis value)))
+
+(defmethod wlc:wl-pointer-frame ((pointer wayland-pointer))
+  ;; atomic "commit" of pointer events. This is where we should distribute the
+  ;; event
+  )
+
+(defmethod wlc:wl-pointer-frame :after ((pointer wayland-pointer))
   (format *debug-io* "WL pointer FRAME~%"))
+
+(defmethod wlc:wl-pointer-axis-source :after
+    ((pointer wayland-pointer) axis-source)
+  (format *debug-io* "WL pointer AXIS-SOURCE ~s~%"
+          (list axis-source)))
+
+(defmethod wlc:wl-pointer-axis-stop :after
+    ((pointer wayland-pointer) time axis)
+  (format *debug-io* "WL pointer AXIS-STOP ~s~%"
+          (list time axis)))
 
 ;;; Keyboard Events
 (defmethod wlc:wl-keyboard-enter :after
@@ -177,6 +244,7 @@
                                            'key-release-event)
                                        :sheet (port-keyboard-input-focus *wayland-port*)
                                        :x 0 :y 0 ; ?? appear to be required
+                                       :modifier-state nil
                                        :key-name key-name
                                        :key-character key-character
                                        :timestamp time))
@@ -259,9 +327,10 @@
     (roundtrip port)))
 
 (defmethod initialize-instance :after ((port wayland-port) &key)
-  (with-slots (frame-managers) port
+  (with-slots (frame-managers pointer) port
     (push (apply #'make-instance 'standard-frame-manager :port port nil)
-          frame-managers))
+          frame-managers)
+    (setf pointer (make-instance 'standard-pointer :port port)))
   (initialize-wayland port)
   (make-graft port)
   (format *debug-io* "Starting Event Loop~%")
