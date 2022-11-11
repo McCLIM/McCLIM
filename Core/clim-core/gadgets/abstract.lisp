@@ -187,38 +187,38 @@ and must never be nil.")
       (setf (gadget-value c :invoke-callback invoke-callback) (member c buttons)) )))
 
 (defmacro with-radio-box ((&rest options
-                           &key (type :one-of) (orientation :vertical) &allow-other-keys)
+                           &key (type :one-of)
+                                (orientation :vertical)
+                                (background nil)
+                           &allow-other-keys)
                           &body body)
   (let ((contents (gensym "CONTENTS-"))
         (selected-p (gensym "SELECTED-P-"))
-        (initial-selection (gensym "INITIAL-SELECTION-")))
+        (initial-selection (gensym "INITIAL-SELECTION-"))
+        (bg-args (and background (list :background background))))
     `(let ((,contents nil)
            (,selected-p nil)
            (,initial-selection nil))
-       (declare (special ,selected-p))
        (flet ((make-pane (type &rest options)
-                (cond ((member type '(toggle-button :toggle-button))
-                       (let ((pane (apply #'make-pane type
-                                          :value ,selected-p
-                                          :indicator-type ',type
-                                          options)))
-                         (push pane ,contents)
-                         (when ,selected-p
-                           (push pane ,initial-selection))))
-                      (t
-                       (error "oops")))))
+                (check-type type (member toggle-button :toggle-button))
+                (let* ((options (append options (list ,@bg-args)))
+                       (pane (apply #'make-pane type
+                                    :value ,selected-p
+                                    :indicator-type ',type
+                                    options)))
+                  (push pane ,contents)
+                  (when ,selected-p
+                    (push pane ,initial-selection))
+                  pane)))
          (macrolet ((radio-box-current-selection (subform)
-                      `(let ((,',selected-p t))
-                         (declare (special ,',selected-p))
-                         ,(cond ((stringp subform)
-                                 `(make-pane 'toggle-button :label ,subform))
-                                (t
-                                 subform)))))
+                      `(letf ((,',selected-p t))
+                         ,(if (stringp subform)
+                              `(make-pane 'toggle-button :label ,subform)
+                              subform))))
            ,@(mapcar (lambda (form)
-                       (cond ((stringp form)
-                              `(make-pane 'toggle-button :label ,form))
-                             (t
-                              form)))
+                       (if (stringp form)
+                           `(make-pane 'toggle-button :label ,form)
+                           form))
                      body)))
        (make-pane ',(if (eq type :one-of)
                         'radio-box
