@@ -433,11 +433,16 @@
        mirror
      (with-accessors ((port-window wayland-port-window))
          port
+
+       (wlc:wl-surface-set-buffer-transform port-window
+                                            (case (graft-orientation (graft sheet))
+                                              (:default :flipped-180)
+                                              (:graphics :normal)))
+       (wlc:wl-surface-commit port-window)
        (egl:make-current egl-display egl-surface egl-surface egl-context)
        ;; todo there's got to be a better place in McCLIMs lifecycle for this:
       ;; (gl:viewport 0 0 (bounding-rectangle-width sheet) (bounding-rectangle-height sheet))
        (clear-buffered-drawable sheet)
-       ;; (wlc:wl-surface-commit port-window)
        ))))
 
 (defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
@@ -451,7 +456,7 @@
 
 ;;; Grafts
 
-(defclass wayland-graft (sheet-y-inverting-transformation-mixin graft)
+(defclass wayland-graft (graft)
   ())
 
 ;; (defmethod distribute-event :before
