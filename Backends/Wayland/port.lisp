@@ -239,22 +239,23 @@
   (declare (ignorable serial time)
            (fixnum key))
   (with-slots (xkb-state) keyboard
-    (let* ((key-code (+ 8 key))         ; from wayland docs
+    (let* ((key-code (+ 8 key))         ; from wayland docs. evdev->xkb
            (keysym (xkb:xkb-state-key-get-one-sym xkb-state key-code))
            (key-name (clim-xcommon:keysym-to-keysym-name keysym))
            (key-utf8 (xkb:xkb-keysym-to-utf8 keysym))
            (key-character (and (characterp key-utf8)
-                               key-utf8)))
-      (distribute-event *wayland-port*
-                        (make-instance (if (eq state :pressed)
-                                           'key-press-event
-                                           'key-release-event)
-                                       :sheet (port-keyboard-input-focus *wayland-port*)
-                                       :x 0 :y 0 ; ?? appear to be required
-                                       :modifier-state (modifier-mask keyboard)
-                                       :key-name key-name
-                                       :key-character key-character
-                                       :timestamp time))
+                               key-utf8))
+           (clim-key-event
+             (make-instance (if (eq state :pressed)
+                                'key-press-event
+                                'key-release-event)
+                            :sheet (port-keyboard-input-focus *wayland-port*)
+                            :x 0 :y 0   ; ?? appear to be required
+                            :modifier-state (modifier-mask keyboard)
+                            :key-name key-name
+                            :key-character key-character
+                            :timestamp time)))
+      (distribute-event *wayland-port* clim-key-event)
       (format *debug-io* "MAPPED KEY EVENT ~s~%"
               (list key state key-code keysym key-name key-utf8 key-character)))))
 
