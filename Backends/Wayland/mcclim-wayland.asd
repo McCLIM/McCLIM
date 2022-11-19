@@ -7,6 +7,7 @@
                "com.andrewsoutar.cl-wayland-client/egl"
                "cl-egl"
                "mcclim-backend-common"
+               "mcclim-fonts/truetype"
                "cl-opengl"
                "cl-xkb")
   :serial t

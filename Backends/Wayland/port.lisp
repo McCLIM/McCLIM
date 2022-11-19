@@ -1,6 +1,8 @@
 (in-package #:mcclim-wayland)
 
-(defclass wayland-port (basic-port)
+(defclass wayland-port (mcclim-truetype:ttf-port-mixin
+                        clim-xcommon:keysym-port-mixin
+                        basic-port)
   ((device :initform nil
            :accessor wayland-port-device)
    (display :initform nil
@@ -535,7 +537,8 @@
                                   :orientation orientation
                                   :units units)))
 
-(defclass wayland-egl-medium (basic-medium) ())
+(defclass wayland-egl-medium (mcclim-truetype:ttf-medium-mixin basic-medium)
+  ())
 
 (defmethod make-medium ((port wayland-port) sheet)
   (make-instance 'wayland-egl-medium :port port :sheet sheet))
@@ -642,71 +645,3 @@
                     (format *debug-io* "poly* xy:~a txy:~a ink:~s~%" (list x y) (list tx ty) (list r g b a))
                     ;; reverted to x y until transform-position error understood
                     (gl:vertex tx ty))))))))
-
-(defmethod text-style-mapping
-    ((port wayland-port) (text-style text-style) &optional character-set)
-  (declare (ignore port text-style character-set))
-  nil)
-
-(defmethod (setf text-style-mapping) (font-name
-                                      (port wayland-port)
-                                      (text-style text-style)
-                                      &optional character-set)
-  (declare (ignore font-name text-style character-set))
-  nil)
-
-
-(defmethod text-style-ascent (text-style (medium wayland-egl-medium))
-  (declare (ignore text-style))
-  1)
-
-(defmethod text-style-descent (text-style (medium wayland-egl-medium))
-  (declare (ignore text-style))
-  1)
-
-(defmethod text-style-height (text-style (medium wayland-egl-medium))
-  (+ (text-style-ascent text-style medium)
-     (text-style-descent text-style medium)))
-
-(defmethod text-style-character-width (text-style (medium wayland-egl-medium) char)
-  (declare (ignore text-style char))
-  1)
-
-(defmethod text-style-width (text-style (medium wayland-egl-medium))
-  (text-style-character-width text-style medium #\m))
-
-(defmethod text-size
-    ((medium wayland-egl-medium) string &key text-style (start 0) end)
-  (setf string (etypecase string
-                 (character (string string))
-                 (string string)))
-  (let ((width 0)
-        (height (text-style-height text-style medium))
-        (x (- (or end (length string)) start))
-        (y 0)
-        (baseline (text-style-ascent text-style medium)))
-    (do ((pos (position #\Newline string :start start :end end)
-              (position #\Newline string :start (1+ pos) :end end)))
-        ((null pos) (values width height x y baseline))
-      (let ((start start)
-            (end pos))
-        (setf x (- end start))
-        (setf y (+ y (text-style-height text-style medium)))
-        (setf width (max width x))
-        (setf height (+ height (text-style-height text-style medium)))
-        (setf baseline (+ baseline (text-style-height text-style medium)))))))
-
-(defmethod climb:text-bounding-rectangle*
-    ((medium wayland-egl-medium) string &key text-style (start 0) end align-x align-y direction)
-  (declare (ignore align-x align-y direction)) ; implement me!
-  (multiple-value-bind (width height x y baseline)
-      (text-size medium string :text-style text-style :start start :end end)
-    (declare (ignore baseline))
-    (values x y (+ x width) (+ y height))))
-
-(defmethod medium-draw-text* ((medium wayland-egl-medium) string x y
-                              start end
-                              align-x align-y
-                              toward-x toward-y transform-glyphs)
-  (declare (ignore string x y start end align-x align-y toward-x toward-y transform-glyphs))
-  nil)
