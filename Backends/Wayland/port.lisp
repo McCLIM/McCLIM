@@ -281,6 +281,19 @@
   (format *debug-io* "WL Keymap ready! ~s~%"
           (list format fd size)))
 
+(defmethod wlc:wl-keyboard-modifiers
+    ((keyboard wayland-keyboard) serial mods-depressed mods-latched mods-locked group)
+  (xkb:xkb-state-update-mask (xkb-state keyboard)
+                             mods-depressed
+                             mods-latched
+                             mods-locked
+                             0 0 group))
+
+(defmethod wlc:wl-keyboard-modifiers :after
+    ((keyboard wayland-keyboard) serial mods-depressed mods-latched mods-locked group)
+  (format *debug-io* "WL keyboard Modifiers : ~s~%"
+          (list serial mods-depressed mods-latched mods-locked group)))
+
 ;;; Port protocols
 
 (defun initialize-wayland (port)
