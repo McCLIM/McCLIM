@@ -160,7 +160,9 @@
                                    :button nil
                                    :graft-x surface-x
                                    :graft-y surface-y
-                                   :modifier-state nil
+                                   :modifier-state (modifier-mask
+                                                    (%keyboard
+                                                     (wayland-port-seat *wayland-port*)))
                                    :sheet (%hacky-top-level-sheet))))
 
 (defmethod wlc:wl-pointer-enter :after
@@ -178,7 +180,9 @@
                     (make-instance 'pointer-motion-event
                                    :pointer (port-pointer *wayland-port*)
                                    :button nil
-                                   :modifier-state nil
+                                   :modifier-state (modifier-mask
+                                                    (%keyboard
+                                                     (wayland-port-seat *wayland-port*)))
                                    :graft-x surface-x
                                    :graft-y surface-y
                                    ;; FIXME, region intersection to find sheet?
