@@ -107,7 +107,8 @@
 (defclass wayland-keyboard (wlc:wl-keyboard)
   ((xkb-context :initform (cffi:null-pointer) :accessor xkb-context)
    (xkb-keymap :initform (cffi:null-pointer) :accessor xkb-keymap)
-   (xkb-state :initform (cffi:null-pointer) :accessor xkb-state)))
+   (xkb-state :initform (cffi:null-pointer) :accessor xkb-state)
+   (modifier-mask :initform 0 :accessor modifier-mask)))
 
 (defclass wayland-pointer (wlc:wl-pointer)
   (x y wl-surface timestamp))
@@ -246,7 +247,7 @@
                                            'key-release-event)
                                        :sheet (port-keyboard-input-focus *wayland-port*)
                                        :x 0 :y 0 ; ?? appear to be required
-                                       :modifier-state nil
+                                       :modifier-state (modifier-mask keyboard)
                                        :key-name key-name
                                        :key-character key-character
                                        :timestamp time))
@@ -287,7 +288,9 @@
                              mods-depressed
                              mods-latched
                              mods-locked
-                             0 0 group))
+                             0 0 group)
+  ;; TODO: determine if CLIM handles locked and latched
+  (setf (modifier-mask keyboard) mods-depressed))
 
 (defmethod wlc:wl-keyboard-modifiers :after
     ((keyboard wayland-keyboard) serial mods-depressed mods-latched mods-locked group)
