@@ -11,12 +11,12 @@ I plan to rebase this branch again McCLIM/master frequently as I work.
 2. It resizes in sway as it's moved around
 3. The sway keychord for quitting an app (s-M-q on mine) kinda works, but not without error.
 4. =destroy-port= works
+5. Some keyboard and pointer... at least debug logging -- untested in a CLIM app.
+6. Basic rendering of window elements e.g. scroll bars
 
-* What doesn't work as of 2022-07-02
-1. Everything else :)
-2. No fonts
-3. No demo applications (hah!)
-4. No keyboard or pointer
+* What doesn't work as of 2022-11-19
+1. Everything else :) TODO list now being maintained below.
+
 
 * Running
 
@@ -28,7 +28,7 @@ I realize this is a weakness.
 ** Environment
 You'll need development library for wayland and mesa. For debian/ubuntu based distributions, it usually means the =*-dev= packages. On Guix, I'm doing this in a dedicated dev environment:
 #+begin_src sh
-guix shell sbcl mesa wayland wayland-protocols
+guix shell sbcl mesa wayland wayland-protocols libxkbcommon
 #+end_src
 
 I needed to start emacs in a way it could find the wayland protocal specs and libraries. You might not need this if you aren't sandboxing your environment:
@@ -107,3 +107,39 @@ It shows the window on the screen but there is still a lot that doesn't work and
   (let ((*default-server-path* :wayland-ffi)) ;force wayland backend
    (run-frame-top-level (make-application-frame 'opengl-test))))
 #+end_src
+
+* Remaining TODOs
+
+** TODO SHM buffers and medium
+
+** TODO EGL / OpenGL fonts
+ugh.
+
+** TODO OpenGL Medium rendering
+Currently it's /very/ naive and doesn't handle CLIM designs/inks well e.g. flipping inks. I'm beginning to think I'll need my own light, ui scene graph
+
+** TODO Good Double buffering / incremental rendering
+Currently we are preparing a fresh frame but the repaint doesn't happen that often so blank buffers get swapped.
+
+*** TODO Partial OpenGL buffer rendering
+updating only a damaged region.
+
+** TODO Pointer Drag N' Drop
+
+** TODO Context-based pointer images
+
+** TODO Support other non-WLroots based WMs
+
+*** TODO Mutter
+
+*** TODO Kwin
+
+** TODO Separate OpenGL pane gadget
+Even though we are rendering the whole UI via the wayland-egl-medium, I would still like there to be a pane that app developers could have as their own "canvas"
+- How does Blender do it?
+
+** TODO Run demos with wayland-ffi backend
+
+*** TODO gadget tests
+
+** TODO CJK input?
