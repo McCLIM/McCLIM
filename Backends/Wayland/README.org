@@ -109,6 +109,7 @@ It shows the window on the screen but there is still a lot that doesn't work and
 #+end_src
 
 * Remaining TODOs
+This is an Org-mode TODO list. It won't look right on Github.
 
 ** TODO SHM buffers and medium
 
