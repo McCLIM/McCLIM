@@ -69,33 +69,38 @@
   (alx:when-let ((top-level-window (%xdg-top-level port)))
     (xdg:xdg-toplevel-set-title top-level-window name)))
 
-(defmethod realize-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
-  (format *debug-io* "realizing mirror mirrored-sheet-mixin~%")
-  ;; (break "realize-mirror" sheet)
-  (with-bounding-rectangle* (x y :width w :height h) sheet
-    (let ((native-region (make-rectangle* 0 0 w h))
-          (native-transformation (make-translation-transformation (- x) (- y)))
-         ;; QQQQ I'm still having conceptual ignorance on the lifecycle of graft
-         ;; mirror instantiation and realize mirror. I hope it's not too
-         ;; cargo-culted from CLX.
-         (mirror (sheet-direct-mirror (graft port))))
-     ;; we'd like this set earlier than the basic-port specialization
+;; (defmethod realize-mirror ((port wayland-port) (sheet mirrored-sheet-mixin))
+;;   (format *debug-io* "realizing mirror mirrored-sheet-mixin~%")
+;;   ;; (break "realize-mirror" sheet)
+;;   (with-bounding-rectangle* (x y :width w :height h) sheet
+;;     (let ((native-region (make-rectangle* 0 0 w h))
+;;           (native-transformation (make-translation-transformation (- x) (- y)))
+;;          ;; QQQQ I'm still having conceptual ignorance on the lifecycle of graft
+;;          ;; mirror instantiation and realize mirror. I hope it's not too
+;;          ;; cargo-culted from CLX.
+;;          (mirror (sheet-direct-mirror (graft port))))
+;;      ;; we'd like this set earlier than the basic-port specialization
 
-      ;; (resize-sheet mirror w h)
+;;       ;; (resize-sheet mirror w h)
 
-      ;; (setf (climi::%sheet-direct-mirror sheet) mirror)
-      ;; (climi::update-mirror-geometry sheet)
-      ;; (break "realize-mirror" sheet mirror)
-      ;; (climi::dispatch-repaint sheet +everywhere+)
-      ;; (setf (climi::%sheet-native-region sheet) native-region
-      ;;       (climi::%sheet-native-transformation sheet) native-transformation)
+;;       ;; (setf (climi::%sheet-direct-mirror sheet) mirror)
+;;       ;; (climi::update-mirror-geometry sheet)
+;;       ;; (break "realize-mirror" sheet mirror)
+;;       ;; (climi::dispatch-repaint sheet +everywhere+)
+;;       ;; (setf (climi::%sheet-native-region sheet) native-region
+;;       ;;       (climi::%sheet-native-transformation sheet) native-transformation)
 
-      mirror)))
+;;       mirror)))
+
+(defmethod realize-mirror ((port wayland-port) (sheet top-level-sheet-mixin))
+  ;; TODO: This feels like the more appropriate place to give a wl_surface its
+  ;; xdg-top-level-surface role.
+  (format *debug-io* "Realizing new top-level-sheet's mirror~%")
+  (let ((top-level-surface (wayland-port-window port)))
+   (make-instance 'wayland-egl-mirror :window top-level-surface)))
 
 (defmethod realize-mirror :before
-    ((port wayland-port) (sheet mirrored-sheet-mixin))
-
-
+    ((port wayland-port) (sheet top-level-sheet-mixin))
   (with-accessors ((port-compositor wayland-port-compositor)
                    (port-window wayland-port-window)
                    (port-wm-base %wayland-wm-base)
@@ -125,18 +130,19 @@
 
   )
 
-(defmethod realize-mirror :before
+(defmethod realize-mirror :around
     ((port wayland-port) (sheet top-level-sheet-mixin))
   ;; this is probably too cute with CLOS precedence and should be merged into the
   ;; REALIZE-MIRROR for mirrored-sheet-mixin
-  (format *debug-io* "BEFORE realize-mirror top-level ~%")
-  (let ((mirror (sheet-direct-mirror (graft sheet))))
+  (format *debug-io* "AFTER realize-mirror top-level ~%")
+  (let ((mirror (call-next-method)))
     (with-slots (egl-window egl-context egl-display egl-surface)
         mirror
       (setf egl-window (create-native-window port))
       (format *debug-io* "creating egl context~%")
       (multiple-value-setq (egl-display egl-surface egl-context)
-        (create-egl-context port mirror)))))
+        (create-egl-context port mirror))
+      mirror)))
 
 ;; (defmethod realize-mirror :after
 ;;     ((port wayland-port) (sheet top-level-sheet-mixin))

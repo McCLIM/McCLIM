@@ -411,7 +411,7 @@
 ;;       (values x1 y1 x2 y2))))
 
 (defmethod port-set-mirror-geometry
-    ((port wayland-port) (sheet mirrored-sheet-mixin) region)
+    ((port wayland-port) (sheet top-level-sheet-mixin) region)
   (alx:when-let ((mirror (sheet-direct-mirror sheet)))
     (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h) region
       (with-bounding-rectangle* (ox1 oy1 ox2 oy2) (sheet-mirror-geometry sheet)
@@ -452,21 +452,18 @@
 (defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "port enable-sheet ~a ~a ~%" port sheet)
   (alx:when-let ((mirror (sheet-mirror sheet)))
-   (with-slots (egl-window egl-context egl-display egl-surface)
+   (with-slots (window egl-window egl-context egl-display egl-surface)
        mirror
-     (with-accessors ((port-window wayland-port-window))
-         port
-
-       (wlc:wl-surface-set-buffer-transform port-window
-                                            (case (graft-orientation (graft sheet))
-                                              (:default :flipped-180)
-                                              (:graphics :normal)))
-       (wlc:wl-surface-commit port-window)
-       (egl:make-current egl-display egl-surface egl-surface egl-context)
-       ;; todo there's got to be a better place in McCLIMs lifecycle for this:
-      ;; (gl:viewport 0 0 (bounding-rectangle-width sheet) (bounding-rectangle-height sheet))
-       (clear-buffered-drawable sheet)
-       ))))
+     (wlc:wl-surface-set-buffer-transform window
+                                          (case (graft-orientation (graft sheet))
+                                            (:default :flipped-180)
+                                            (:graphics :normal)))
+     (wlc:wl-surface-commit window)
+     (egl:make-current egl-display egl-surface egl-surface egl-context)
+     ;; todo there's got to be a better place in McCLIMs lifecycle for this:
+     ;; (gl:viewport 0 0 (bounding-rectangle-width sheet) (bounding-rectangle-height sheet))
+     (clear-buffered-drawable sheet)
+     )))
 
 (defmethod port-disable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "port disable-sheet ~a ~a ~%" port sheet)
