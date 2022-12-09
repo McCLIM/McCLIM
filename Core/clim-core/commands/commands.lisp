@@ -155,7 +155,7 @@
                           :stream stream
                           :acceptably nil
                           :sensitive nil)))
-             (make-define-gesture-translator (gesture-arg name ptype gesture)
+             (make-define-gesture-translator (tr-name gesture gesture-arg ptype)
                (let ((command-args
                        (loop for arg in args
                              for (nil nil . options) = arg
@@ -167,21 +167,23 @@
                      (if (listp gesture)
                          (values (car gesture) (cdr gesture))
                          (values gesture nil))
-                   `(define-presentation-to-command-translator
-                        ,(make-command-function-name
-                          command-name ':translate name)
+                   `(define-presentation-to-command-translator ,tr-name
                         (,(eval ptype) ,command-name ,command-table
                          :gesture ,gesture
                          ,@(unless (getf translator-options :documentation)
                              `(:documentation ,(make-default-documentation)))
                          ,@translator-options)
                         (object)
-                      (list ,@command-args))))))
+                      (list ,@command-args)))))
+             (make-delete-gesture-translator (tr-name)
+               `(remove-translator ',command-table ',tr-name)))
       (loop for arg in args
             for (name ptype . options) = arg
             for gesture = (getf options :gesture)
-            when gesture
-            collect (make-define-gesture-translator arg name ptype gesture)))))
+            for tr-name = (make-command-function-name command-name ':translate name)
+            collect (if gesture
+                        (make-define-gesture-translator tr-name gesture arg ptype)
+                        (make-delete-gesture-translator tr-name))))))
 
 (defparameter *command-parser-table* (make-hash-table)
   "Mapping from command names to argument parsing functions.")

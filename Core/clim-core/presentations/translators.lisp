@@ -119,7 +119,15 @@ and used to ensure that presentation-translators-caches are up to date.")
   translator)
 
 (defun remove-translator (table translator)
-  (remhash (name translator) (translators table))
+  (let ((presentation-translators
+          (if (symbolp table)
+              (translators (presentation-translators (find-command-table table)))
+              table))
+        (translator-name
+          (if (symbolp translator)
+              translator
+              (name translator))))
+    (remhash translator-name presentation-translators))
   (invalidate-translator-caches)
   translator)
 
