@@ -56,8 +56,7 @@ activated with GESTURE"))
 (defmethod activate-stream ((stream standard-input-editing-stream) gesture)
   (setf (drei::activation-gesture stream) gesture))
 
-(defmethod finalize ((stream drei:drei-input-editing-mixin)
-                     input-sensitizer)
+(defmethod finalize ((stream drei:drei-input-editing-mixin) input-sensitizer)
   (call-next-method)
   (setf (cursor-visibility stream) nil)
   (let ((real-stream (encapsulating-stream-stream stream))
@@ -70,13 +69,14 @@ activated with GESTURE"))
                         (stream-add-output-record real-stream record)
                         (when (stream-drawing-p real-stream)
                           (replay record real-stream)))))
-          ;; We still want to replay it for the cursor visibility
-          ;; change...
+          ;; We still want to replay it for the cursor visibility change...
           ((stream-drawing-p real-stream)
            (replay record real-stream) ))
+    ;; FIXME this causes a line break even on an empty input. A most notable
+    ;; example is when the command is accepted with :ECHO NIL -- jd 2022-12-09
     (setf (stream-cursor-position real-stream)
           (values (stream-cursor-initial-position real-stream)
-                  (bounding-rectangle-max-y (input-editing-stream-output-record stream))))))
+                  (bounding-rectangle-max-y record)))))
 
 ;; XXX: We are supposed to implement input editing for all
 ;; "interactive streams", but that's not really reasonable. We only
