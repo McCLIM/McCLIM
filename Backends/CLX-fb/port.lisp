@@ -79,4 +79,4 @@
     (when-let ((mirror (sheet-direct-mirror (event-sheet event))))
       (with-image-locked (mirror)
         (mcclim-render::%set-image-region
-         mirror (make-rectangle* 0 0 width height))))))
+         mirror (make-bounding-rectangle 0 0 width height))))))
