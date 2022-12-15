@@ -213,39 +213,7 @@
 (defmethod window-event-mirrored-sheet ((event window-event))
   (sheet-mirrored-ancestor (event-sheet event)))
 
-(define-event-class window-configuration-event (window-event)
-  ((x :initarg :x :reader window-configuration-event-native-x)
-   (y :initarg :y :reader window-configuration-event-native-y)
-   (width :initarg :width :reader window-configuration-event-native-width)
-   (height :initarg :height :reader window-configuration-event-native-height)))
-
-(macrolet ((get-window-property (kind which event)
-             (multiple-value-bind (transform x y)
-                 (ecase kind
-                   (:position (values 'untransform-position
-                                      'window-configuration-event-native-x
-                                      'window-configuration-event-native-y))
-                   (:size (values 'untransform-distance
-                                  'window-configuration-event-native-width
-                                  'window-configuration-event-native-height)))
-               `(nth-value
-                 ,which (,transform (sheet-native-transformation
-                                     (let ((sheet (event-sheet ,event)))
-                                       (or (sheet-parent sheet) sheet)))
-                                    (,x ,event) (,y ,event))))))
-
-  (defmethod window-configuration-event-x ((event window-configuration-event))
-    (get-window-property :position 0 event))
-
-  (defmethod window-configuration-event-y ((event window-configuration-event))
-    (get-window-property :position 1 event))
-
-  (defmethod window-configuration-event-width ((event window-configuration-event))
-    (get-window-property :size 0 event))
-
-  (defmethod window-configuration-event-height ((event window-configuration-event))
-    (get-window-property :size 1 event)))
-
+(define-event-class window-configuration-event (window-event) ())
 (define-event-class window-map-event     (window-event) ())
 (define-event-class window-unmap-event   (window-event) ())
 (define-event-class window-destroy-event (window-event) ())

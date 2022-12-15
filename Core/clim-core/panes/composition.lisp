@@ -286,10 +286,8 @@
 
 (defmethod handle-event ((sheet top-level-sheet-pane)
                          (event window-configuration-event))
-  (let ((x (window-configuration-event-x event))
-        (y (window-configuration-event-y event))
-        (width (window-configuration-event-width event))
-        (height (window-configuration-event-height event)))
+  (with-bounding-rectangle* (x y :width width :height height)
+      (window-event-native-region event)
     (let ((*configuration-event-p* sheet))
       (let ((new-transformation (make-translation-transformation x y))
             (new-region (make-bounding-rectangle 0 0 width height)))

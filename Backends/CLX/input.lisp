@@ -214,14 +214,16 @@
                                               (clx-port-window *clx-port*))
                 (make-instance 'window-configuration-event
                                :sheet sheet
-                               :x x
-                               :y y
-                               :width width :height height)))
+                               :region (make-rectangle* x y
+                                                        (+ x width)
+                                                        (+ y height)))))
              (t
               ;; nothing special here
               (make-instance 'window-configuration-event
                              :sheet sheet
-                             :x x :y y :width width :height height))))
+                             :region (make-rectangle* x y
+                                                      (+ x width)
+                                                      (+ y height))))))
       (:map-notify
        (if (and (typep sheet 'top-level-sheet-pane)
                 (eq (frame-state (pane-frame sheet)) :shrunk))

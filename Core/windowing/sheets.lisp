@@ -711,12 +711,8 @@ this might be different from the sheet's native region and transformation.")))
 
 (defmethod handle-event :before
     ((sheet mirrored-sheet-mixin) (event window-configuration-event))
-  (let ((x (window-configuration-event-x event))
-        (y (window-configuration-event-y event))
-        (width (window-configuration-event-width event))
-        (height (window-configuration-event-height event)))
-    (setf (rectangle-edges* (sheet-mirror-geometry sheet))
-          (values x y (+ x width) (+ y height)))))
+  (setf (rectangle-edges* (sheet-mirror-geometry sheet))
+        (bounding-rectangle* (window-event-native-region event))))
 
 ;;; Top-level sheets
 

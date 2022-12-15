@@ -74,10 +74,9 @@
 
 (defmethod distribute-event :before
     ((port clx-fb-port) (event window-configuration-event))
-  (let ((sheet (event-sheet event))
-        (width (climi::window-configuration-event-width event))
-        (height (climi::window-configuration-event-height event)))
-    (when-let ((mirror (sheet-direct-mirror sheet)))
+  (with-bounding-rectangle* (:width width :height height)
+      (window-event-native-region event)
+    (when-let ((mirror (sheet-direct-mirror (event-sheet event))))
       (with-image-locked (mirror)
         (mcclim-render::%set-image-region
          mirror (make-rectangle* 0 0 width height))))))
