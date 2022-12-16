@@ -498,6 +498,13 @@
 (defmethod graft ((sheet sheet-parent-mixin))
   (and (sheet-parent sheet) (graft (sheet-parent sheet))))
 
+;;; Computes the topmost sheet. When the sheet is grafted then it will be a
+;;; graft - otherwise its oldest ancestor.
+(defun graft* (sheet)
+  (if-let ((parent (sheet-parent sheet)))
+    (graft* parent)
+    sheet))
+
 (defmethod map-sheet-position-to-parent ((sheet sheet-parent-mixin) x y)
   (transform-position (sheet-transformation sheet) x y))
 

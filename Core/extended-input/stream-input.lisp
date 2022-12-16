@@ -375,19 +375,11 @@ keys read."))
                (return-from stream-read-gesture gesture))))))))
 
 (defmethod stream-pointer-position ((stream standard-extended-input-stream)
-                                    &key (pointer
-                                          (port-pointer (port stream))))
-  (multiple-value-bind (x y)
-      (pointer-position pointer)
-    (let ((graft (graft (port pointer))))
-      (untransform-position (sheet-delta-transformation stream graft) x y))))
+                                    &key (pointer (port-pointer (port stream))))
+  (sheet-pointer-position stream pointer))
 
 (defmethod* (setf stream-pointer-position) (x y (stream standard-extended-input-stream))
-  (let ((graft (graft stream))
-        (pointer (port-pointer (port stream))))
-    (multiple-value-bind (x y)
-        (transform-position (sheet-delta-transformation stream graft) x y)
-      (setf (pointer-position pointer) (values x y)))))
+  (set-sheet-pointer-position stream (port-pointer (port stream)) x y))
 
 ;;; These functions are for convenience - seos is not a character stream so it
 ;;; is not obligated to implement these. Reading a character discards all
