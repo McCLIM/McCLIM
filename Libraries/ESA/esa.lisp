@@ -974,7 +974,6 @@ used.")
          (event (make-instance 'key-press-event
                                :sheet nil
                                :x 0 :y 0
-                               :graft-x 0 :graft-y 0
                                :key-name nil
                                :key-character (car gesture)
                                :modifier-state modifier-state))

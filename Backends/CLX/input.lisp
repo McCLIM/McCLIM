@@ -122,8 +122,6 @@
                         :key-name keysym-name
                         :key-character (and (characterp keyname) keyname)
                         :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
                         :sheet sheet
                         :modifier-state modifier-state :timestamp time)))
       ((:button-press :button-release)
@@ -139,8 +137,6 @@
                (make-instance 'climi::pointer-scroll-event
                               :pointer (port-pointer *clx-port*)
                               :button button :x x :y y
-                              :graft-x root-x
-                              :graft-y root-y
                               :sheet sheet
                               :modifier-state modifier-state
                               :delta-x (case button
@@ -157,8 +153,6 @@
                                 'pointer-button-release-event)
                             :pointer (port-pointer *clx-port*)
                             :button button :x x :y y
-                            :graft-x root-x
-                            :graft-y root-y
                             :sheet sheet :modifier-state modifier-state
                             :timestamp time))))
       ((:leave-notify :enter-notify)
@@ -189,8 +183,6 @@
                                            (t 'pointer-enter-event))))
                         :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
                         :sheet sheet
                         :modifier-state (clim-xcommon:x-event-state-modifiers
                                          *clx-port* state)
@@ -239,8 +231,6 @@
          (make-instance 'pointer-motion-event
                         :pointer (port-pointer *clx-port*) :button code
                         :x x :y y
-                        :graft-x root-x
-                        :graft-y root-y
                         :sheet sheet
                         :modifier-state modifier-state
                         :timestamp time)))

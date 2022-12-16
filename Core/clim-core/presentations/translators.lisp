@@ -696,7 +696,6 @@ a presentation"
    (make-instance 'pointer-button-press-event
                   :sheet sheet
                   :x 0 :y 0
-                  :graft-x 0 :graft-y 0
                   :modifier-state 0
                   :button +pointer-left-button+)))
 

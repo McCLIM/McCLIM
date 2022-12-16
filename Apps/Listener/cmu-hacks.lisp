@@ -26,7 +26,7 @@
                                        :key-name gesture
                                        :key-character gesture
                                        :sheet estream
-                                       :x 0 :y 0 :graft-x 0 :graft-y 0)
+                                       :x 0 :y 0)
                         gesture)
                     (stream-input-buffer estream))))
 

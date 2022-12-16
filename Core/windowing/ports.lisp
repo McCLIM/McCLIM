@@ -255,7 +255,7 @@
                          :pointer pointer
                          :button (pointer-button-state pointer)
                          :modifier-state (port-modifier-state port)
-                         :x sheet-x :y sheet-y :graft-x graft-x :graft-y graft-y))))))
+                         :x sheet-x :y sheet-y))))))
 
 ;;; Synthesizing and dispatching boundary events
 ;;;

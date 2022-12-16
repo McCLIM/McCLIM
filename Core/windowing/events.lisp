@@ -96,22 +96,25 @@
 ;;;
 ;;; * (X Y) - native coordinates (the mirror)
 ;;; * (SHEET-X SHEET-Y) - sheet coordinates
-;;; * (GRAFT-X GRAFT-Y) - graft coordinates (the screen)
 (define-event-class device-event (standard-event)
   ((modifier-state :initarg :modifier-state :reader event-modifier-state)
    (x :initarg :x :reader device-event-native-x)
    (y :initarg :y :reader device-event-native-y)
    (sheet-x :reader device-event-x)
-   (sheet-y :reader device-event-y)
-   (graft-x :initarg :graft-x :reader device-event-native-graft-x)
-   (graft-y :initarg :graft-y :reader device-event-native-graft-y)))
+   (sheet-y :reader device-event-y)))
 
 ;;; This function is responsible for transforming the sheet of the event
 ;;; coordinates into target-sheet coordinates. Sheets may be cousins.
 (defun do-get-pointer-position (target-sheet event)
-  (sheet-position-from-screen-position target-sheet
-                                       (device-event-native-graft-x event)
-                                       (device-event-native-graft-y event)))
+  (multiple-value-bind (screen-x screen-y)
+      (screen-position-from-sheet-position (event-sheet event)
+                                           (pointer-event-x event)
+                                           (pointer-event-y event))
+    (multiple-value-bind (sheet-x sheet-y)
+        (sheet-position-from-screen-position target-sheet
+                                             screen-x
+                                             screen-y)
+      (values sheet-x sheet-y))))
 
 (defmacro get-pointer-position ((target-sheet event) &body body)
   `(multiple-value-bind (x y)
@@ -152,9 +155,7 @@
    (sheet-x :reader pointer-event-x)
    (sheet-y :reader pointer-event-y)
    (x :reader pointer-event-native-x)
-   (y :reader pointer-event-native-y)
-   (graft-x :reader pointer-event-native-graft-x)
-   (graft-y :reader pointer-event-native-graft-y)))
+   (y :reader pointer-event-native-y)))
 
 (defmethod print-object ((event pointer-event) stream)
   (print-unreadable-object (event stream :type t :identity nil)
