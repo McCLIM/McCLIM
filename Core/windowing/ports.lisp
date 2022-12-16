@@ -237,6 +237,26 @@
         (setf (slot-value new-event 'sheet) target-sheet)
         (dispatch-event target-sheet new-event))))
 
+;;; Synthesizing the pointer motion event (a portable method)
+(defmethod synthesize-pointer-motion-event ((port basic-port) (pointer pointer))
+  (multiple-value-bind (screen-x screen-y) (pointer-position pointer)
+    (when-let* (;; XXX Should we rely on pointer-sheet being correct? -- moore
+                ;; XXX Use the graft when there is no pointer-sheet?  -- jd
+                (sheet (pointer-sheet pointer))
+                (graft (graft sheet))
+                (graft-transformation (sheet-native-transformation graft))
+                (sheet-transformation (sheet-delta-transformation sheet graft)))
+      (multiple-value-bind (graft-x graft-y)
+          (untransform-position graft-transformation screen-x screen-y)
+        (multiple-value-bind (sheet-x sheet-y)
+            (untransform-position sheet-transformation graft-x graft-y)
+          (make-instance 'pointer-motion-event
+                         :sheet sheet
+                         :pointer pointer
+                         :button (pointer-button-state pointer)
+                         :modifier-state (port-modifier-state port)
+                         :x sheet-x :y sheet-y :graft-x graft-x :graft-y graft-y))))))
+
 ;;; Synthesizing and dispatching boundary events
 ;;;
 ;;; PORT only generates boundary-events for mirrored sheets. For

@@ -375,25 +375,6 @@
     (declare (ignore x y same-screen-p child))
     (clim-xcommon:x-event-state-modifiers port mask)))
 
-(defmethod synthesize-pointer-motion-event ((port clx-basic-port) (pointer pointer))
-  (when-let* (;; XXX Should we rely on pointer-sheet being correct? -- moore
-              (sheet (pointer-sheet pointer))
-              (ancestor (sheet-mirrored-ancestor sheet))
-              (mirror (sheet-direct-mirror ancestor)))
-    (multiple-value-bind (x y same-screen-p child mask root-x root-y)
-        (xlib:query-pointer (window mirror))
-      (declare (ignore child))
-      (when same-screen-p
-        (multiple-value-bind (x y)
-            (if (eq sheet ancestor)
-                (values x y)
-                (untransform-position (sheet-native-transformation sheet) x y))
-          (make-instance 'pointer-motion-event
-                         :pointer pointer :button (button-from-state mask)
-                         :x x :y y :graft-x root-x :graft-y root-y
-                         :sheet sheet
-                         :modifier-state (clim-xcommon:x-event-state-modifiers port mask)))))))
-
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
                               &key multiple-window)
   (let ((window (window (sheet-mirror sheet)))

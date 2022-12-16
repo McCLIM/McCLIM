@@ -26,7 +26,8 @@
                  :accessor clx-port-cursor-table)))
 
 (defclass clx-basic-pointer (standard-pointer)
-  ((cursor :accessor pointer-cursor :initform :upper-left)))
+  ()
+  (:default-initargs :cursor :upper-left))
 
 (defun clx-error-handler (display error-name
                           &rest args
@@ -101,7 +102,8 @@
         (transform-position (sheet-native-transformation graft) x y)
       (xlib:warp-pointer window (round x) (round y)))))
 
-(defmethod set-sheet-pointer-cursor ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
+(defmethod set-sheet-pointer-cursor
+    ((port clx-basic-port) (sheet mirrored-sheet-mixin) cursor)
   (let* ((cursor (gethash (or cursor :default) (clx-port-cursor-table port)))
          (mirror (sheet-direct-mirror sheet)))
     (when (and cursor mirror)

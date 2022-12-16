@@ -10,15 +10,10 @@
 
 (in-package #:clim-null)
 
-(defclass null-pointer (standard-pointer)
-  ((cursor :accessor pointer-cursor :initform :upper-left)
-   (x :initform 0)
-   (y :initform 0)))
-
 (defclass null-port (basic-port)
   ((id)
    (window :initform nil :accessor null-port-window))
-  (:default-initargs :pointer (make-instance 'null-pointer)))
+  (:default-initargs :pointer (make-instance 'standard-pointer)))
 
 (defmethod find-port-type ((type (eql :null)))
   (values 'null-port 'identity))
@@ -94,16 +89,7 @@
 (defmethod graft ((port null-port))
   (first (climi::port-grafts port)))
 
-(defmethod pointer-position ((pointer null-pointer))
-  (values (slot-value pointer 'x) (slot-value pointer 'y)))
-
-(defmethod pointer-button-state ((pointer null-pointer))
-  nil)
-
 (defmethod port-modifier-state ((port null-port))
-  nil)
-
-(defmethod synthesize-pointer-motion-event ((port null-port) (pointer null-pointer))
   nil)
 
 (defmethod (setf port-keyboard-input-focus) (focus (port null-port))
