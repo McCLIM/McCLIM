@@ -229,6 +229,7 @@
   ())
 
 ;;; Constants dealing with events
+(defconstant +pointer-no-button+     #x00)
 
 (defconstant +pointer-left-button+   #x01)
 (defconstant +pointer-middle-button+ #x02)
