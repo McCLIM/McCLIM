@@ -74,6 +74,13 @@
 (defmethod handle-event ((sheet plain-sheet) event)
   (log:info "Unhandled event ~s has arrived." (class-name (class-of event))))
 
+(defvar *title* "McCLIM Test Sheet")
+(defvar *extra* nil)
+
+(defun update-title (sheet)
+  (setf (sheet-pretty-name sheet)
+        (format nil "~a ~{~s~^ ~}" *title* *extra*)))
+
 (defun open-plain-sheet (path &optional restartp)
   (let ((port (find-port :server-path path)))
     (when restartp
@@ -90,3 +97,40 @@
 (defun close-plain-sheet (sheet)
   (sheet-disown-child (graft sheet) sheet)
   nil)
+
+(defmethod handle-event ((sheet plain-sheet) (event window-manager-delete-event))
+  (destroy-mirror (port sheet) sheet))
+
+(defmethod handle-event ((sheet plain-sheet) (event window-repaint-event))
+  (dispatch-repaint sheet (window-event-region event)))
+
+(defmethod handle-repaint ((sheet plain-sheet) region)
+  (log:info "Repainting a sheet ~s on region ~s." sheet  region))
+
+;;; It may be surprising that nobody updates SHEET-MIRROR-GEOMETRY but
+;;; HANDLE-SDL2-WINDOW-EVENT gets correct values. This is because of a
+;;; HANDLE-EVENT :BEFORE method specialized to MIRRORED-SHEET-MIXIN in core.
+;;; Whether that method stays depends on how we resolve the FIXME above.
+
+(defmethod handle-event ((sheet plain-sheet) (event window-configuration-event))
+  (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
+      (window-event-native-region event)
+    (log:info "Window configuration [~s ~s ~s ~s] (~s x ~s)" x1 y1 x2 y2 w h)
+    (setf (getf *extra* :dims)
+          (format nil "[~s ~s ~s ~s] (~s x ~s)" x1 y1 x2 y2 w h))
+    (update-title sheet))
+  (dispatch-repaint sheet (window-event-region event)))
+
+(defmethod handle-event ((sheet plain-sheet) (event window-manager-focus-event))
+  (log:info "Changing the keyboard focus to ~s" sheet)
+  (setf (port-keyboard-input-focus (port sheet)) sheet))
+
+(defmethod handle-event ((sheet plain-sheet) (event pointer-enter-event))
+  (log:info "Pointer enters ~s" sheet)
+  (setf (getf *extra* :pointer) "y")
+  (update-title sheet))
+
+(defmethod handle-event ((sheet plain-sheet) (event pointer-exit-event))
+  (log:info "Pointer leaves ~s" sheet)
+  (setf (getf *extra* :pointer) "n")
+  (update-title sheet))

@@ -649,6 +649,49 @@ It is time to create our first window:
   [log] MCCLIM-SDL2::DESTROY-WINDOW: (#<MCCLIM-SDL2::SDL2-MIRROR {100B80CEA3}>)
 #+end_example
 
+* Input processing
+
+When a handler defined with ~define-sdl2-handler~ returns an event to
+~process-next-event~ then this event is distributed to the target sheet. This
+is how we are going to implement input processing.
+
+In this section we will add numerous ~handle-event~ methods specialized on
+~plain-sheet~. Note however that this is not the backend responsibility to add
+them and that CLIM already defines methods specialized to the ~basic-pane~.
+
+** Window events
+
+We need to map [[https://wiki.libsdl.org/SDL_WindowEventID][SDL2 window events]] to [[http://bauhh.dyndns.org:8000/clim-spec/8-2.html#_364][CLIM2 window events]]. CLIM defines some
+actions by means of functions and we list troublesome SDL2 events separately.
+The order of events in this table is arbitrary.
+
+| SDL2 window event | CLIM2 event                 | comment                  |
+|-------------------+-----------------------------+--------------------------|
+| none              | none                        | (not used)               |
+| close             | window-manager-delete-event | alt-f4, "x" pressed      |
+| exposed           | window-repaint-event        | redraw window            |
+| size-changed      | window-configuration-event  | size changed (always)    |
+| focus-gained      | window-manager-focus-event  | gained keyboard focus    |
+| focus-lost        | (ignored)                   | lost keyboard focus      |
+|-------------------+-----------------------------+--------------------------|
+| enter             | pointer-enter-event         | gained mouse focus       |
+| leave             | pointer-leave-event         | lost mouse focus         |
+|-------------------+-----------------------------+--------------------------|
+| shown             | window-manager-event*       | window mapped            |
+| hidden            | window-manager-event*       | window unmapped          |
+| moved             | window-manager-event*       | window moved             |
+| resized           | window-manager-event*       | size changed (external)  |
+| restored          | window-manager-event*       | i.e un-maximized         |
+| maximized         | window-manager-event*       | maximized                |
+| minimized         | window-manager-event*       | iconified                |
+| take-focus        | ??? (sdl 2.0.5)             | was offered the focus    |
+| hit-test          | ??? (sdl 2.0.5)             | may be ignored right now |
+| iccprof-changed   | ??? (sdl 2.0.18)            | do we need this?         |
+| display-changed   | ??? (sdl 2.0.18)            | window moved to display  |
+
+First we need to creat a trampoline for window events. We define a handler
+that dispatches on the window event key to ~handle-sdl2-window-event~:
+
 #+begin_src lisp
   ;;; Window SDL2 event handlers.
 
@@ -664,47 +707,142 @@ It is time to create our first window:
   (defgeneric handle-sdl2-window-event (event-key sheet timestamp data1 data2)
     (:method (event-key sheet timestamp data1 data2)
       (log:debug "Unhandled window event ~s." event-key)))
-
-  (defmethod handle-sdl2-window-event ((key (eql :close)) sheet stamp d1 d2)
-    (log:info "Destroying a window.")
-    (make-instance 'window-manager-delete-event :sheet sheet :timestamp stamp))
-
-  (defmethod handle-sdl2-window-event ((key (eql :exposed)) sheet stamp d1 d2)
-    (log:info "Exposing a window.")
-    ;; The call to SDL-GET-WINDOW-SURFACE is for side the effect to ensure that
-    ;; the surface is allocated (to be able to call SDL-UPDATE-WINDOW-SURFACE).
-    (let ((window (sdl2-window (sheet-mirror sheet))))
-      ;; FIXME check returned values for errors.
-      (sdl2-ffi.functions:sdl-get-window-surface window)
-      (sdl2-ffi.functions:sdl-update-window-surface window)))
 #+end_src
 
-It is time to create our first window:
+Closing the window will be our first functionality.
 
-#+begin_example
-MCCLIM-SDL2> (open-plain-sheet :sdl2)
+#+begin_src lisp
+  (defmethod handle-sdl2-window-event ((key (eql :close)) sheet stamp d1 d2)
+    (make-instance 'window-manager-delete-event :sheet sheet :timestamp stamp))
 
- <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-event :clim-create-window) -
-  Creating a new window.
-#<PLAIN-SHEET {100B692353}>
- <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :exposed) -
-  Exposing a window.
- <INFO> [16:52:41] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :exposed) -
-  Exposing a window.
- <INFO> [16:53:00] mcclim-sdl2 mirror.lisp (handle-sdl2-window-event :close) -
-  Destroying a window.
- <INFO> [16:53:00] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
-  Unhandled event CLIM:WINDOW-MANAGER-DELETE-EVENT has arrived.
- <INFO> [16:53:00] mcclim-sdl2 port.lisp (handle-sdl2-event :quit) -
-  Quit requested... ignoring
-MCCLIM-SDL2> (close-plain-sheet *)
-NIL
- <INFO> [16:53:11] mcclim-sdl2 mirror.lisp (handle-sdl2-event :clim-destroy-window) -
-  Destroying window 2.
-#+end_example
+  (defmethod handle-event ((sheet plain-sheet) (event window-manager-delete-event))
+    (destroy-mirror (port sheet) sheet))
+#+end_src
 
-Note that when the handler returns a clim event then this event is distributed
-to the target sheet; otherwise nothing happens. This is why only unhandled
-events of type ~window-manager-delete-event~ are seen. Enable the log level
-~:debug~ to see unprocessed sdl2 window events.
->>>>>>> 00a5ee54 (backends: sdl2: implement necessary window (mirror) managament)
+Exposing the window requests a repaint. When the window changes size it is
+assumed to be invalidated wholesale. Currently ~handle-repaint~ method only
+reports that the sheet is being repainted.
+
+#+begin_src lisp
+  (defmethod handle-sdl2-window-event ((key (eql :exposed)) sheet stamp d1 d2)
+    (make-instance 'window-repaint-event :sheet sheet :region +everywhere+))
+
+  (defmethod handle-event ((sheet plain-sheet) (event window-repaint-event))
+    (dispatch-repaint sheet (window-event-region event)))
+
+  (defmethod handle-repaint ((sheet plain-sheet) region)
+    (log:info "Repainting a sheet ~s on region ~s." sheet  region))
+#+end_src
+
+Next we'll handle events that change the window geometry. There are ~:resize~
+and ~:size-changed~ events. The latter is signaled disregarding of whether the
+change was requested internally or externally so this is what we will use.
+Since there is no output yet we'll report the new size in the window title.
+
+This interface has a few problems and may change in the future. I've briefly
+elaborated why in comments.
+
+#+begin_src lisp
+  ;;; FIXME we access the internal interface sheet-mirror-geometry - we should
+  ;;; either query the window position with sdl2 interfaces, export the
+  ;;; interface, or move updating the mirror geometry to the backend. Because it
+  ;;; is not an obvious decision I'm leaving this until we resolve the issue.
+
+  (defmethod handle-sdl2-window-event ((key (eql :moved)) sheet stamp d1 d2)
+    (with-bounding-rectangle* (:width w :height h) (climi::sheet-mirror-geometry sheet)
+      (make-instance 'window-configuration-event
+                     :sheet sheet
+                     :region (make-bounding-rectangle d1 d2 (+ d1 w) (+ d2 h)))))
+
+  (defmethod handle-sdl2-window-event ((key (eql :size-changed)) sheet stamp d1 d2)
+    (with-bounding-rectangle* (x y) (climi::sheet-mirror-geometry sheet)
+      (make-instance 'window-configuration-event
+                     :sheet sheet
+                     :region (make-bounding-rectangle x y (+ x d1) (+ y d2)))))
+
+  ;;; It may be surprising that nobody updates SHEET-MIRROR-GEOMETRY but
+  ;;; HANDLE-SDL2-WINDOW-EVENT gets correct values. This is because of a
+  ;;; HANDLE-EVENT :BEFORE method specialized to MIRRORED-SHEET-MIXIN in core.
+  ;;; Whether that method stays depends on how we resolve the FIXME above.
+
+  (defmethod handle-event ((sheet plain-sheet) (event window-configuration-event))
+    (with-bounding-rectangle* (x1 y1 x2 y2 :width w :height h)
+        (window-event-native-region event)
+      (log:info "Window configuration [~s ~s ~s ~s] (~s x ~s)" x1 y1 x2 y2 w h)
+      (setf (getf *extra* :dims)
+            (format nil "[~s ~s ~s ~s] (~s x ~s)" x1 y1 x2 y2 w h))
+      (update-title sheet))
+    (dispatch-repaint sheet (window-event-region event)))
+
+  (defvar *title* "McCLIM Test Sheet")
+  (defvar *extra* nil)
+
+  (defun update-title (sheet)
+    (setf (sheet-pretty-name sheet)
+          (format nil "~a ~{~s~^ ~}" *title* *extra*)))
+#+end_src
+
+McCLIM updates the keyboard focus when it is gained. It does not notice that
+the focus is lost until the new sheet is assigned. SDL2 has more fine-grained
+set of events (although I'm not sure what ~take-focus~ is useful for).
+
+#+begin_src lisp
+  ;;; Keyboard focus
+
+  (defmethod handle-sdl2-window-event ((key (eql :focus-gained)) sheet stamp d1 d2)
+    (make-instance 'window-manager-focus-event :sheet sheet))
+
+  (defmethod handle-sdl2-window-event ((key (eql :focus-lost)) sheet stamp d1 d2)
+    (log:debug "Window keyboard focus lost (ignoring)"))
+
+  (defmethod handle-sdl2-window-event ((key (eql :take-focus)) sheet stamp d1 d2)
+    (log:debug "Window keyboard take focus opportunity (ignoring)"))
+
+  (defmethod handle-event ((sheet plain-sheet)
+                           (event window-manager-focus-event))
+    (log:info "Changing the keyboard focus to ~s" sheet)
+    (setf (port-keyboard-input-focus (port sheet)) sheet))
+#+end_src
+
+Finally the boundary event signifying that a pointer entered or exitted the
+window area. McCLIM specifies it as a pointer-boundary-event while SDL2 treats
+it as a window event. Due to this mismatch we need to query the pointer
+position to construct an event.
+
+#+begin_src lisp
+  ;;; Pointer focus
+
+  ;;; XXX SDL2 specifies both enter and leave events as window events while
+  ;;; McCLIM treats them as pointer events. To generate an appropriate boundary
+  ;;; event we need to query the pointer position.
+
+  (defmethod handle-sdl2-window-event ((key (eql :enter)) sheet stamp d1 d2)
+    (multiple-value-bind (sheet-x sheet-y)
+        (climi::sheet-pointer-position sheet (port-pointer *sdl2-port*))
+      (make-instance 'pointer-enter-event
+                     :sheet sheet
+                     :pointer (port-pointer *sdl2-port*)
+                     :x sheet-x :y sheet-y)))
+
+  (defmethod handle-sdl2-window-event ((key (eql :leave)) sheet stamp d1 d2)
+    (multiple-value-bind (sheet-x sheet-y)
+        (climi::sheet-pointer-position sheet (port-pointer *sdl2-port*))
+      (make-instance 'pointer-exit-event
+                     :sheet sheet
+                     :pointer (port-pointer *sdl2-port*)
+                     :x sheet-x :y sheet-y)))
+
+  (defmethod handle-event ((sheet plain-sheet)
+                           (event pointer-enter-event))
+    (log:info "Pointer enters ~s" sheet)
+    (setf (getf *extra* :pointer) "y")
+    (update-title sheet))
+
+  (defmethod handle-event ((sheet plain-sheet)
+                           (event pointer-exit-event))
+    (log:info "Pointer leaves ~s" sheet)
+    (setf (getf *extra* :pointer) "n")
+    (update-title sheet))
+#+end_src
+
+** Keyboard events

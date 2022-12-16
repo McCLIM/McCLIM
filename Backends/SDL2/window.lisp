@@ -123,3 +123,81 @@
 (define-sdl2-request bury-window (mirror)
   (let ((window (sdl2-mirror-window mirror)))
     (sdl2-ffi.functions:sdl-bury-window window)))
+
+
+;;; Window SDL2 event handlers.
+
+;;; Between pressing quit and the actual close the user may still use the
+;;; window for a brief period, so i.e a window event may sneak in. The window
+;;; event handler should ignore events to windows that are already destroyed.
+
+(define-sdl2-handler (ev :windowevent) (event window-id timestamp data1 data2)
+  (alx:when-let ((mirror (find-sdl2-resource *sdl2-port* window-id)))
+    (let ((sheet (sdl2-mirror-sheet mirror))
+          (event-key (autowrap:enum-key '(:enum (windowevent.event)) event)))
+      (handle-sdl2-window-event event-key sheet timestamp data1 data2))))
+
+(defgeneric handle-sdl2-window-event (event-key sheet timestamp data1 data2)
+  (:method (event-key sheet timestamp data1 data2)
+    (log:info "Unhandled window event ~s." event-key)))
+
+;;; Close and redraw.
+
+(defmethod handle-sdl2-window-event ((key (eql :close)) sheet stamp d1 d2)
+  (make-instance 'window-manager-delete-event :sheet sheet :timestamp stamp))
+
+(defmethod handle-sdl2-window-event ((key (eql :exposed)) sheet stamp d1 d2)
+  (make-instance 'window-repaint-event :sheet sheet :region +everywhere+))
+
+;;; FIXME we access the internal interface sheet-mirror-geometry - we should
+;;; either query the window position with sdl2 interfaces, export the
+;;; interface, or move updating the mirror geometry to the backend. Because it
+;;; is not an obvious decision I'm leaving this until we resolve the issue.
+
+(defmethod handle-sdl2-window-event ((key (eql :moved)) sheet stamp d1 d2)
+  (log:info "Window position changed to ~s ~s" d1 d2)
+  (with-bounding-rectangle* (:width w :height h)
+      (climi::sheet-mirror-geometry sheet)
+    (make-instance 'window-configuration-event
+                   :sheet sheet
+                   :region (make-bounding-rectangle d1 d2 (+ d1 w) (+ d2 h)))))
+
+(defmethod handle-sdl2-window-event ((key (eql :size-changed)) sheet stamp d1 d2)
+  (log:info "Window size changed to ~s ~s" d1 d2)
+  (with-bounding-rectangle* (x y) (climi::sheet-mirror-geometry sheet)
+    (make-instance 'window-configuration-event
+                   :sheet sheet
+                   :region (make-bounding-rectangle x y (+ x d1) (+ y d2)))))
+
+;;; Keyboard focus
+
+(defmethod handle-sdl2-window-event ((key (eql :focus-gained)) sheet stamp d1 d2)
+  (make-instance 'window-manager-focus-event :sheet sheet))
+
+(defmethod handle-sdl2-window-event ((key (eql :focus-lost)) sheet stamp d1 d2)
+  (log:debug "Window keyboard focus lost (ignoring)"))
+
+(defmethod handle-sdl2-window-event ((key (eql :take-focus)) sheet stamp d1 d2)
+  (log:debug "Window keyboard take focus opportunity (ignoring)"))
+
+;;; Pointer focus
+
+;;; XXX SDL2 specifies both enter and leave events as window events while
+;;; McCLIM treats them as pointer events. To generate an appropriate boundary
+;;; event we need to query the pointer position.
+
+(defmethod handle-sdl2-window-event ((key (eql :enter)) sheet stamp d1 d2)
+  (multiple-value-bind (sheet-x sheet-y)
+      (climi::sheet-pointer-position sheet (port-pointer *sdl2-port*))
+    (make-instance 'pointer-enter-event
+                   :sheet sheet
+                   :pointer (port-pointer *sdl2-port*)
+                   :x sheet-x :y sheet-y)))
+
+(defmethod handle-sdl2-window-event ((key (eql :leave)) sheet stamp d1 d2)
+  (multiple-value-bind (sheet-x sheet-y)
+      (climi::sheet-pointer-position sheet (port-pointer *sdl2-port*))
+    (make-instance 'pointer-exit-event
+                   :sheet sheet
+                   :pointer (port-pointer *sdl2-port*)
+                   :x sheet-x :y sheet-y)))
