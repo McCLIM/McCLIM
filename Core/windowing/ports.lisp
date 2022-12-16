@@ -283,7 +283,6 @@
 ;;; can be NIL). If EVENT is an enter or exit event, it is dispatched
 ;;; as part of this process.
 (defun synthesize-boundary-events (port event)
-  (declare (ignore port))
   (let* ((event-sheet (event-sheet event))
          (pointer (pointer-event-pointer event))
          (old-pointer-sheet (pointer-sheet pointer))
@@ -291,10 +290,10 @@
          (dispatch-event-p nil))
     ;; First phase: compute new pointer sheet for PORT.
     (flet ((update-pointer-sheet (new-sheet)
-             (when new-sheet
-               (unless (eql old-pointer-sheet new-sheet)
-                 (setf (pointer-sheet pointer) new-sheet
-                       new-pointer-sheet new-sheet)))))
+             (unless (or (eql old-pointer-sheet new-sheet)
+                         (and (port-grabbed-sheet port) (null new-sheet)))
+               (setf (pointer-sheet pointer) new-sheet
+                     new-pointer-sheet new-sheet))))
       (typecase event
         ;; Ignore grab-enter and ungrab-leave boundary events.
         ((or pointer-grab-enter-event pointer-ungrab-leave-event))
@@ -400,12 +399,13 @@
   ;; - Pointer motion may result in synthesized boundary events
   ;; - Events are delivered to the innermost child of the sheet
   (flet ((update-cursor (cursor-sheet)
-           (let* ((event-sheet (event-sheet event))
-                  (old-pointer-cursor
-                    (port-lookup-current-pointer-cursor port event-sheet))
-                  (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
-             (unless (eql old-pointer-cursor new-pointer-cursor)
-               (set-sheet-pointer-cursor port event-sheet new-pointer-cursor)))))
+           (when cursor-sheet
+             (let* ((event-sheet (event-sheet event))
+                    (old-pointer-cursor
+                      (port-lookup-current-pointer-cursor port event-sheet))
+                    (new-pointer-cursor (sheet-pointer-cursor cursor-sheet)))
+               (unless (eql old-pointer-cursor new-pointer-cursor)
+                 (set-sheet-pointer-cursor port event-sheet new-pointer-cursor))))))
     (when-let ((grabbed-sheet (port-grabbed-sheet port)))
       (unless (sheetp grabbed-sheet)
         (setf grabbed-sheet (synthesize-boundary-events port event)))
