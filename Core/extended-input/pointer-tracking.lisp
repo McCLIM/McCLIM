@@ -148,7 +148,8 @@
          (pointer (tracked-pointer state))
          (multiple-window (multiple-window state))
          (transformp (transformp state))
-         (modifier-state))
+         (modifier-state)
+         (port (port tracked-sheet)))
     (labels ((track-pointer-event (event)
                (multiple-value-call #'track-event state event
                  (let ((x (pointer-event-x event))
@@ -158,7 +159,7 @@
                        (with-sheet-medium (medium (event-sheet event))
                          (transform-position (medium-transformation medium) x y))))))
              (do-it ()
-               (with-pointer-grabbed ((port tracked-sheet) tracked-sheet
+               (with-pointer-grabbed (port tracked-sheet
                                       :pointer pointer :multiple-window multiple-window)
                  ;; Synthesize a pointer motion event for the current pointer
                  ;; position so that appropriate handlers are called even if no
@@ -173,7 +174,7 @@
                  ;; MULTIPLE-WINDOW is false, INVOKE-TRACKING-POINTER is invoked
                  ;; via, say, a keyboard gesture or programmatically and the
                  ;; pointer is not over TRACKED-SHEET.
-                 (let ((event (synthesize-pointer-motion-event pointer)))
+                 (let ((event (synthesize-pointer-motion-event port pointer)))
                    (setf modifier-state (event-modifier-state event))
                    (when (or multiple-window
                              (eql tracked-sheet (event-sheet event)))
@@ -202,7 +203,7 @@
                                 (let ((new-state (event-modifier-state event)))
                                   (when (not (eql modifier-state new-state))
                                     (track-pointer-event
-                                     (synthesize-pointer-motion-event pointer)))
+                                     (synthesize-pointer-motion-event port pointer)))
                                   (setf modifier-state new-state)))))))))
       (if (keyboard-handler state)
           (with-input-focus (tracked-sheet)

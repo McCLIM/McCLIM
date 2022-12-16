@@ -821,7 +821,7 @@ is not empty or none of the above happened before a timeout.
 (defgeneric pointer-event-delta-y (instance))
 (pledge :class pointer-motion-event (pointer-event))
 (pledge :class pointer-boundary-event (pointer-motion-event))
-(defgeneric synthesize-pointer-motion-event (pointer)
+(defgeneric synthesize-pointer-motion-event (port pointer)
   (:documentation "Create a CLIM pointer motion event based on the current pointer state."))
 (declfun synthesize-boundary-events (port event))
 (defgeneric pointer-boundary-event-kind (pointer-boundary-event))

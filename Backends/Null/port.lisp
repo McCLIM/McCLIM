@@ -103,7 +103,7 @@
 (defmethod port-modifier-state ((port null-port))
   nil)
 
-(defmethod synthesize-pointer-motion-event ((pointer null-pointer))
+(defmethod synthesize-pointer-motion-event ((port null-port) (pointer null-pointer))
   nil)
 
 (defmethod (setf port-keyboard-input-focus) (focus (port null-port))

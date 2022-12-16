@@ -46,8 +46,9 @@
                                             button-event))
 
 (defun highlight-current-presentation (frame input-context)
-  (when-let* ((port-pointer (port-pointer (port *application-frame*)))
-              (event (synthesize-pointer-motion-event port-pointer))
+  (when-let* ((port (port *application-frame*))
+              (port-pointer (port-pointer port))
+              (event (synthesize-pointer-motion-event port port-pointer))
               (sheet (event-sheet event)))
     (frame-input-context-track-pointer frame input-context sheet event)))
 

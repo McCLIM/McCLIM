@@ -375,9 +375,8 @@
     (declare (ignore x y same-screen-p child))
     (clim-xcommon:x-event-state-modifiers port mask)))
 
-(defmethod synthesize-pointer-motion-event ((pointer clx-basic-pointer))
-  (when-let* ((port (port pointer))
-              ;; XXX Should we rely on pointer-sheet being correct? -- moore
+(defmethod synthesize-pointer-motion-event ((port clx-basic-port) (pointer pointer))
+  (when-let* (;; XXX Should we rely on pointer-sheet being correct? -- moore
               (sheet (pointer-sheet pointer))
               (ancestor (sheet-mirrored-ancestor sheet))
               (mirror (sheet-direct-mirror ancestor)))
@@ -393,8 +392,7 @@
                          :pointer pointer :button (button-from-state mask)
                          :x x :y y :graft-x root-x :graft-y root-y
                          :sheet sheet
-                         :modifier-state (clim-xcommon:x-event-state-modifiers
-                                          port mask)))))))
+                         :modifier-state (clim-xcommon:x-event-state-modifiers port mask)))))))
 
 (defmethod port-grab-pointer ((port clx-basic-port) pointer sheet
                               &key multiple-window)
