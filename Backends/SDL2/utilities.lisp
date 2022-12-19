@@ -20,6 +20,26 @@
   sdl2-ffi:+sdl-init-noparachute+       ; ignored (compatibility)
   sdl2-ffi:+sdl-init-everything+)
 
+(autowrap:define-bitmask-from-enum
+    (sdl2-cursor-flags sdl2-ffi:sdl-system-cursor))
+
+(defun map-system-cursor (cursor-name)
+  (autowrap:mask 'sdl2-cursor-flags
+                 (case cursor-name
+                   ((:default :arrow) :system-cursor-arrow)
+                   ((:prompt :i-beam) :system-cursor-ibeam)
+                   ((:button :hand)   :system-cursor-hand)
+                   ((:busy :wait)     :system-cursor-wait)
+                   ((:not-allowed)    :system-cursor-no)
+                   ((:position)       :system-cursor-crosshair)
+                   ((:move)           :system-cursor-sizeall)
+                   ((:arrow-we)       :system-cursor-sizewe)
+                   ((:arrow-ns)       :system-cursor-sizens)
+                   ((:grab)           :system-cursor-hand) ;not perfect
+                   ((:help)           :system-cursor-hand) ;not perfect
+                   ;; AUTOWRAP:MASK will signal a warning and use 0 (arrow).
+                   (otherwise :system-cursor-unknown))))
+
 ;;; https://wiki.libsdl.org/SDL_Event - describes the event data structure.
 ;;; CL-SDL2 provides an abstraction that allows referring to SDL2 constants as
 ;;; keywords (via autowrap) - for example SDL_QuitEvent becomes :QUIT. Event

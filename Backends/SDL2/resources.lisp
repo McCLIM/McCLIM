@@ -130,3 +130,39 @@
     (cffi:foreign-array-free carray)
     (autowrap:invalidate surface)))
 
+
+;;; Cursor maintains a image. We could reuse the design cache but it will be
+;;; cleaner to have cursors in a separate collection.
+
+(defclass sdl2-cursor (sdl2-resource)
+  ((clim-object :reader sdl2-cursor-design)
+   (image :initarg :image :reader sdl2-cursor-image)
+   (cursor :initarg :cursor :reader sdl2-cursor-ptr)))
+
+(defun make-sdl2-cursor (&key object image cursor)
+  (make-instance 'sdl2-cursor :clim-object object :image image :cursor cursor))
+
+;;; SDL2 (unlike CLIM) allows specifying "hot-x" and "hot-y" as a tip of the
+;;; pointer. Perhaps this is a good opportunity for adding an extension.
+(define-sdl2-request sdl2-create-color-cursor (design)
+  (let* ((image (sdl2-create-rgb-surface-from-image design))
+         (surface (sdl2-image-surface image)) ;                      x y
+         (cursor (sdl2-ffi.functions:sdl-create-color-cursor surface 0 0)))
+    (make-sdl2-cursor :object (list :cursor design) :image image :cursor cursor)))
+
+(define-sdl2-request sdl2-create-system-cursor (cursor-name)
+  (let* ((cur-id (map-system-cursor cursor-name))
+         (cursor (sdl2-ffi.functions:sdl-create-system-cursor cur-id)))
+    (sdl2-ffi.functions:sdl-set-cursor cursor)
+    (make-sdl2-cursor :object (list :cursor cursor-name) :image nil :cursor cursor)))
+
+#+ (or) ;; black-white-transparent-inverted cursor.
+(define-sdl2-request sdl2-create-cursor (data mask w h hot-x hot-y)
+  (error "ENOTIMLEMENTED"))
+
+(defmethod free-sdl2-resource ((object sdl2-cursor))
+  (let ((cursor (sdl2-cursor-ptr object)))
+    (alx:when-let ((image (sdl2-cursor-image object)))
+      (free-sdl2-resource image))
+    (sdl2-ffi.functions:sdl-free-cursor cursor)
+    (autowrap:invalidate cursor)))

@@ -376,3 +376,71 @@ Now we can manage the port:
   MCCLIM-SDL2> (sdl2-exit-port :synchronize t)
   ; Evaluation aborted on #<SDL2::SDL-RC-ERROR {100BC61ED3}>.
 #+end_example
+
+* The pointer protocol
+
+The specification defines the pointer in the chapter about the extended stream
+iput, but it is clearly an abstraction belonging to the windowing substrate.
+This is because we are expected to access the pointer for pointer events.
+
+#+begin_src lisp
+  (defclass sdl2-pointer (standard-pointer) ())
+
+  (defmethod port-pointer ((port sdl2-port))
+    (or (call-next-method)
+        (setf (port-pointer port)
+              (make-instance 'sdl2-pointer :port port))))
+#+end_src
+
+Generally each port maintains one or more pointers but SDL2 treats all
+pointers as a single "mouse". Operations that port must implement are:
+
+1. Querying the pointer button state and position:
+- pointer-button-state
+- pointer-position
+
+2. Programatically changing (warping) the pointer position:
+
+- (setf pointer-position)
+
+3. Grabbing an ungrabbing the pointer
+
+- port-grab-pointer
+- port-ungrab-pointer
+
+Depending on the parameter ~multiple-window~ grabbing is done either globally
+or locally for the specified window.
+
+4. Changing the pointer cursor:
+
+- (setf pointer-cursor)
+- set-sheet-pointer-cursor
+
+There are two types of cursors:
+
+- system cursor :: denoted by a keyword
+- design cursor :: denoted by an image
+
+Cursors are resources that need to be freed after use. System cursors that are
+expected to be recognized by the bakend are: ~:default :prompt :button :busy
+:not-allowed :position :move :arow-we :arrow-ns :grab :help~. The backend
+should use the default cursor when an unknown keyword is encountered.
+
+5. Changing the sheet pointer cursor:
+
+McCLIM extends the pointer and the sheet protocol with a functionality
+inspired by X11 - namely each sheet has an assigned cursor. SDL2 allows only
+setting the cursor globally. That means that we should update the cursor when
+the pointer enters the sheet:
+
+#+begin_src lisp
+(defmethod set-sheet-pointer-cursor
+    ((port sdl2-port) (sheet mirrored-sheet-mixin) cursor)
+  (alx:when-let ((mirror (sdl2-get-mouse-focus :synchronize t)))
+    (when (eq mirror (sheet-direct-mirror sheet))
+      (setf (pointer-cursor (port-pointer (port sheet))) cursor))))
+
+(defmethod distribute-event :before ((port sdl2-port) (event pointer-enter-event))
+  (setf (pointer-cursor (pointer-event-pointer event))
+        (sheet-pointer-cursor (event-sheet event))))
+#+end_src
