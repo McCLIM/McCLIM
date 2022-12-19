@@ -3,6 +3,8 @@
 
 @menu
 * Coding conventions::
+* Pointer cursors::
+* Standard key names::
 * Writing backends::
 * PostScript backend::
 @end menu
@@ -41,23 +43,108 @@ put either directly in the package @code{clim-demo} or live in its own
 package the name of which should be start with @code{clim-demo.}, for
 instance @code{clim-demo.foobar-example}.
 
+@node Pointer cursors
+@section Pointer cursors
+
+@clim specifies the protocol to set the pointer cursor but does not
+specify what are its valid values.
+
+@mcclim specifies an obligaory set of system cursors designated by a
+symbol. They are listed in the table below.
+
+Backends may implement other valid cursor values. Backends are also
+encouraged to support designs of the class @code{image-pattern}.
+
+@table @code
+@item :default
+Normal cursor (i.e an arrow).
+@item :prompt
+The element underneath the cursor is editable (i.e an i-beam).
+@item :button
+The element underneath the cursor is actionable (i.e a hand).
+@item :busy
+Cursor signaling that the application is busy (i.e a hourglass).
+@item :not-allowed
+Cursor signaling that the action is not allowed.
+@item :position
+Precise cursor for selecting a point (i.e a crosshair).
+@item :move
+The element underneath the cursor is being moved (i.e four arrows).
+@item :arrow-we
+The element underneath the cursor may be dragged horizontally.
+@item :arrow-ns
+The element underneath the cursor may be dragged vertically.
+@item :grab
+The element underneath the cursor is being grabbed (i.e a clenched hand).
+@item :help
+The element underneath the cursor is inspectable (i.e a question mark).
+@end table
+
+@node Standard key names
+@section Standard key names
+
+@clim specifies that the implementation recognizes a standard set of
+key names interned in the keyword package. @mcclim defines the
+standard set of keys to have the following symbol names:
+
+@table @code
+@item A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+Letter keys. The concept of the letter ``case'' does not apply here.
+
+@item 0 1 2 3 4 5 6 7 8 9
+
+Digit keys.
+
+@item ! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ _ ` { | } ~
+
+Miscelanous keys.
+
+@item SHIFT-LEFT SHIFT-RIGHT CONTROL-LEFT CONTROL-RIGHT
+@itemx META-LEFT META-RIGHT ALT-LEFT ALT-RIGHT
+@itemx SUPER-LEFT SUPER-RIGHT HYPER-LEFT HYPER-RIGHT
+
+Modifier keys.
+
+@item MODE-SWITCH NUM-LOCK CAPS-LOCK SCROLL-LOCK
+
+Lock keys.
+
+@item UP DOWN LEFT RIGHT PAGE-UP PAGE-DOWN HOME END MENU
+
+Navigation keys.
+
+@item RETURN BACKSPACE INSERT DELETE ESCAPE TAB SPACE
+
+Editing keys.
+
+@end table
+
+When the backend makes an instance of the @code{keyboard-event}, it
+may supply the initarg @code{:key-character}. If it does so then the
+character associated with the event will be as specified (including
+@code{:key-character nil}).
+
+When the initarg @code{:key-character} is not specified, then McCLIM
+will perform a naive mapping of the standard key name and the modifier
+combination to a concrete character:
+
+@multitable @columnfractions 0.33 0.33 0.33
+@headitem Key name       @tab Character          @tab S-Character
+@item @code{A ... Z}     @tab @code{a ... z}     @tab @code{A ... Z}
+@item @code{0123456789}  @tab @code{0123456789}  @tab @code{)!@@#$%^&*(}
+@item @code{',-./;[\]`=} @tab @code{',-./;[\]`=} @tab @code{"<_>?:@{|@}~+}
+@item @code{:return}     @tab @code{#\newline}   @tab @code{#\newline}
+@end multitable
+
 @node Writing backends
 @section Writing backends
 
 @menu
-* Different types of backends::
-* Backend protocol::
-* Event handling::
-* Graft protocol::
-* Medium drawing::
-* Medium operations::
-* Port protocol::
-* Frame manager::
-* Pointer protocol (events?)::
-* Text size::
-* Additional output destinations::
-* Miscellaneous::
-* Obsolete::
+* Different types of backends:: Backend protocol:: Event handling::
+* Graft protocol:: Medium drawing:: Medium operations:: Port
+* protocol:: Frame manager:: Pointer protocol (events?):: Text size::
+* Additional output destinations:: Miscellaneous:: Obsolete::
 @end menu
 
 @node Different types of backends
