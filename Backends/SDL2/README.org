@@ -289,3 +289,90 @@ in the case of a software renderer as an output framebuffer.
       (cffi:foreign-array-free carray)
       (autowrap:invalidate surface)))
 #+end_src
+
+* Implementing the port
+
+The class ~sdl2-port~ represents a connection with the display server. Since
+there may be only one SDL2 context, it is shared by all instances the port by
+class-allocating relevant slots.
+
+Main functions that must be implemented by the port are:
+- initialize-instance that starts the port
+- destroy-port that stops it
+- restart-port that stops (when running) and resumes the port
+- process-next-event that reads and distributes events
+
+The function ~process-next-event~ has two keyword parameters ~wait-function~
+and ~timeout~. When running in a single process these parameters may be used
+to implement semantics of the event queue (and ~stream-read-gesture~).
+
+~wait-function~ requires some additional commentary. It is a predicate that
+returns ~t~ when the caller doesn't wait for the input anymore (even if there
+is no event to be distributed). This function is called by the port at least
+once, but may be called multiple times while reading the event. Some "host"
+events may not be mapped to "clim" events, but they may mutate a state that is
+checked by the ~wait-function~.
+
+~process-next-event~ reads host events until the clim event is returned or
+either the wait function or the timeout is reached:
+
+#+begin_src lisp
+  (defmethod process-next-event ((port sdl2-port) &key wait-function timeout)
+    (let ((*sdl2-port* port))
+      (loop (multiple-value-bind (result reason)
+                (%next-sdl2 wait-function timeout)
+              (cond ((eventp result)
+                     (distribute-event port result)
+                     (return-from process-next-event
+                       (values t reason)))
+                    ((member reason '(:wait-function :timeout))
+                     (return-from process-next-event
+                       (values result reason))))))))
+#+end_src
+
+The event loop provides a simple restart to ignore an error. Additionally when
+the error is signaled in the request that is synchronized, then the condition
+is returned as a value. In the future it is worth considering to differentiate
+in the event loop between "critical" host errors that invoke the debugger and
+"non-critical" user errors that are either quietly ignored (by the event loop)
+or logged.
+
+#+begin_src lisp
+  (defun %loop-port (port)
+    (%init-sdl2)
+    (unwind-protect
+         (handler-bind ((sdl2-exit-port
+                          (lambda (c)
+                            (declare (ignore c))
+                            (return-from %loop-port))))
+           (loop
+             (with-simple-restart (ignore "Ignore error and continue.")
+               (process-next-event port))))
+      (%quit-sdl2)))
+#+end_src
+
+When the port is run on a single-threaded host then the loop above is not
+started by the port, instead it is the user (i.e clim event queue) calls
+~process-next-event~ when it waits for input.
+
+Now we can manage the port:
+
+#+begin_example
+  MCCLIM-SDL2> (find-port :server-path :sdl2)
+  #<SDL2-PORT (active) {100AE448B3}>
+  NIL
+   <INFO> [13:04:13] mcclim-sdl2 utilities.lisp (%init-sdl2) - Hello!
+  MCCLIM-SDL2> (destroy-port *)
+   <INFO> [13:04:19] mcclim-sdl2 utilities.lisp (%quit-sdl2) - Good bye.
+  #<SDL2-PORT (inactive) {100AE448B3}>
+  MCCLIM-SDL2> (restart-port *)
+  #<SDL2-PORT (active) {100AE448B3}>
+   <INFO> [13:04:23] mcclim-sdl2 utilities.lisp (%init-sdl2) - Hello!
+  MCCLIM-SDL2> (sdl2-exit-port :synchronize t)
+  NIL
+   <INFO> [13:04:31] mcclim-sdl2 utilities.lisp (%quit-sdl2) - Good bye.
+  MCCLIM-SDL2> **
+  #<SDL2-PORT (inactive) {100AE448B3}>
+  MCCLIM-SDL2> (sdl2-exit-port :synchronize t)
+  ; Evaluation aborted on #<SDL2::SDL-RC-ERROR {100BC61ED3}>.
+#+end_example
