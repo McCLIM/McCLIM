@@ -1,0 +1,134 @@
+#+title: SDL2 backend architecture
+#+author: Daniel 'jackdaniel' Kochmański
+#+date: [2022-04-12 wto]
+
+* Introduction
+
+SDL2 is a fine choice for an interactive and portable backend. The abstraction
+is thin and the library supports all major operating systems.  The main
+limitation of the library is that it is not thread safe - all SDL2 functions
+are expected to be called from a single thread (pushing events is an
+exception).
+
+In Common Lisp ecosystem there is a library ~cl-sdl2~ that proposes some
+abstractions over a "raw" SDL2 library. This backend relies on ~cl-sdl2~ for
+ffi bindings (generated with autowrap) provided by it, but I will mostly
+ignore ~cl-sdl2~ abstractions (some are used as a temporary measure).
+
+This document purpose is to emphasize important features that each backend
+must or should implement. Many sdl2-specific details are not explained and the
+reader should read the code to understand them. Keep in mind that most of
+these recommendations are a result of figuring things out while writing this
+backend - this is not a definitive guide.
+
+* Syntactic sugar
+
+There are two approaches to ensure that SDL2 runs in a single thread.
+
+1. have a singular loop and communicate with it using a thread-safe channel
+2. assume that the environment is single-threaded
+
+McCLIM works fine with either model. That demands from the syntactic sugar to
+enable either style of interaction. For the multithreaded environment some
+synchronization primitives are introduced (most notably a condition variable
+to notify that the display server is already initialized).
+
+#+begin_src lisp
+  (defvar *initialized-p* nil)
+  (defvar *initialized-cv* (clim-sys:make-condition-variable))
+  (defvar *initialized-lock* (clim-sys:make-lock "SDL2 init cv lock"))
+
+  (defun %init-sdl2 ()
+    (unless *initialized-p*
+      (sdl2-ffi.functions:sdl-init (autowrap:mask-apply 'sdl-init-flags '(:everything)))
+      (setf *initialized-p* (clim-sys:current-process)) ; important
+      (clim-sys:condition-notify *initialized-cv*)
+      (log:info "Hello!")))
+
+  (defun %quit-sdl2 ()
+    (when *initialized-p*
+      (log:info "Good bye.")
+      (setf *initialized-p* nil)
+      (sdl2-ffi.functions:sdl-quit)))
+
+  (defun %read-sdl2 (event timeout)
+    (let ((rc (if (null timeout)
+                  (sdl2-ffi.functions:sdl-wait-event event)
+                  (sdl2-ffi.functions:sdl-wait-event-timeout event timeout))))
+      (= rc 1)))
+
+  ;;; This implements semantics of process-next-event but without distributing
+  ;;; the event - there is no need for the port argument.
+  (defun %next-sdl2 (wait-function timeout)
+    (when (maybe-funcall wait-function)
+      (return-from %next-sdl2 (values nil :wait-function)))
+    (sdl2:with-sdl-event (event)
+      (alx:if-let ((ev (%read-sdl2 event timeout)))
+        (let ((event-type (sdl2:get-event-type event)))
+          (values (handle-sdl2-event event-type event) event-type))
+        (if (maybe-funcall wait-function)
+            (values nil :wait-function)
+            (values nil :timeout)))))
+#+end_src
+
+The function ~handle-sdl2-event~ is used to implement event handling. When
+function that reads events calls ~handle-sdl2-event~ to dispatch on them.
+Methods for this function are defined with a macro ~define-sdl2-handler~.  For
+example:
+
+#+begin_src lisp
+  ;;; User-requested exit - this event is usually signaled when the last window
+  ;;; is closed (in addition to windowevent/close), but may be also prompted by
+  ;;; the window manager or an interrupt. The application may ignore it.
+  (defvar *quit-stops-the-port-p* nil)
+
+  (define-sdl2-handler (event :quit) ()
+    (log:info "Quit requested... ~a"
+              (if *quit-stops-the-port-p* "signaling" "ignoring"))
+    (when *quit-stops-the-port-p*
+      (signal 'sdl2-exit-port)))
+#+end_src
+
+The second argument to the macro is a list of arguments. The event is
+destructured (with the library ~autowrap~) to estabilish a lexical context for
+the handler body. For details see ~expand-handler-for-core-event~.
+
+To communicate with the main thread another convenience macro is defined:
+~define-sdl2-request~. For example:
+
+#+begin_src lisp
+  (define-sdl2-request sdl2-exit-port ()
+    (signal 'sdl2-exit-port))
+#+end_src
+
+This macro registers an user event type, defines a function ~sdl2-exit-port~
+that queues event of that type and a method on ~handle-sdl2-event~ that
+implements the body. In single-processing mode handler is called directly.
+
+The arglist is similar as with the "system events" but we expand them by a
+different mechanism. Request lambda list is (,@args &key synchronize) - the
+keyword argument allows to wait for the result returned by the handler.
+
+#+begin_src lisp
+  ;;; This function should be called with synchronization as a timeout - it will
+  ;;; return :pong only when the event is processed (so the loop is processing).
+  (define-sdl2-request sdl2-ping ()
+    :pong)
+
+  ;;; This function is for testing.
+  ;;; WARNING this will freeze the event loop for requested amount of time.
+  (define-sdl2-request sdl2-delay (ms)
+    (sdl2-ffi.functions:sdl-delay ms)
+    :done)
+#+end_src
+
+#+begin_example
+  MCCLIM-SDL2> (sdl2-ping)                       ;; NIL
+  MCCLIM-SDL2> (sdl2-ping :synchronize t)        ;; :PONG
+  MCCLIM-SDL2> (sdl2-delay 1000)                 ;; NIL
+  MCCLIM-SDL2> (sdl2-delay 1000 :synchronize .5) ;; NIL
+  MCCLIM-SDL2> (sdl2-delay 1000 :synchronize 2)  ;; :DONE
+#+end_example
+
+That concludes the syntactic sugar used by this project. The see
+implementation details see the file ~utilities.lisp~.
