@@ -9,4 +9,5 @@
                (:file "utilities")      ; sdl2 glue
                (:file "resources")      ; sdl2 memory
                (:file "port")           ; sdl2 <-> clim
-               (:file "pointer")))      ; mouse, cursors
+               (:file "pointer")        ; mouse, cursors
+               (:file "plain-sheet")))  ; testing

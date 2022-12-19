@@ -444,3 +444,112 @@ the pointer enters the sheet:
   (setf (pointer-cursor (pointer-event-pointer event))
         (sheet-pointer-cursor (event-sheet event))))
 #+end_src
+
+* Sheets represent windows
+
+Before we move to creating windows with SDL2 first we need to understand what
+is a window from the CLIM perspective. A sheet is an object that implements
+"input", "output", "genealogy", "repainting", "geometry" and "windowing"
+protocols. Each protocol has a set of mixins that allow defining a class
+representing a sheet with certain properties.
+
+The class that is used to create a sheet instance should implement all
+protocols however there are mixins that mean "doesn't implement that" - like
+~sheet-mute-output-mixin~. Using drawing operations on such sheet will result
+in an error. The base class for all instatiable sheets is ~basic-sheet~. It is
+worth noting that often the order of superclasses matters.
+
+The sheet is an abstract representation of the window. It does not have
+resolution and it may have an arbitrary region and transformation. The "real"
+window on the display server is represented by a mirror. "Grafting" as sheet
+means "assigning it to a mirror". Some sheets have a mirror indirectly from
+their parent while other (most notably top level sheets) have a direct mirror.
+
+Sheet is a low level abstraction in the windowing substrate. CLIM applications
+operate on "panes" that are specialized classes for the direct use. That said
+we will test the backend on a class ~plain-sheet~ because ports should not be
+concerned with high level abstractions and because we want to specialize
+variosu methods as we go. Without further ado:
+
+#+begin_src lisp
+  (defvar *glider*
+    (make-pattern-from-bitmap-file
+     (asdf:component-pathname
+      (asdf:find-component "clim-examples" '("images" "glider.png")))))
+
+  (defclass plain-sheet (;; repainting
+                         immediate-repainting-mixin
+                         ;; input
+                         immediate-sheet-input-mixin
+                         ;; output
+                         permanent-medium-sheet-output-mixin
+                         ;temporary-medium-sheet-output-mixin
+                         ;sheet-with-medium-mixin
+                         ;sheet-mute-output-mixin
+                         ;; geometry
+                         sheet-transformation-mixin
+                         ;; genealogy
+                         sheet-parent-mixin
+                         sheet-leaf-mixin
+                         ;; windowing
+                         top-level-sheet-mixin
+                         mirrored-sheet-mixin
+                         ;; the base class
+                         basic-sheet)
+    ()
+    (:default-initargs :icon *glider*
+                       :pretty-name "McCLIM Test Sheet"
+                       :region (make-rectangle* -200 -200 200 200)
+                       :transformation (make-scaling-transformation 2 2)))
+
+  (defmethod handle-event ((sheet plain-sheet) event)
+    (log:info "Unhandled event ~s has arrived." (class-name (class-of event))))
+#+end_src
+
+This sheet may be used with any backend so we will can compare results.
+
+#+begin_src lisp
+  (defun open-plain-sheet (path &optional restartp)
+    (let ((port (find-port :server-path path)))
+      (when restartp
+        (restart-port port))
+      (let (;; FIXME supplying the :PORT for the plain-sheet instance is a
+            ;; kludge in the core and shouldn't be necessary.
+            (sheet (make-instance 'plain-sheet :port port))
+            (graft (find-graft :port port)))
+        ;; FIXME CLX thinks that every tpl sheet is adopted by a frame.
+        (port-enable-sheet port sheet)
+        (sheet-adopt-child graft sheet)
+        sheet)))
+
+  (defun close-plain-sheet (sheet)
+    (sheet-disown-child (graft sheet) sheet)
+    nil)
+#+end_src
+
+Now we can start the sheet and see how (unhandled) events flow.
+
+#+begin_example
+MCCLM-SDL2> (open-plain-sheet :clx)
+#<PLAIN-SHEET {1007D00F03}>
+ <INFO> [16:28:26] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM-BACKEND:WINDOW-MAP-EVENT has arrived.
+ <INFO> [16:28:26] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:WINDOW-REPAINT-EVENT has arrived.
+ <INFO> [16:28:26] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM-EXTENSIONS:WINDOW-MANAGER-FOCUS-EVENT has arrived.
+ <INFO> [16:28:26] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:WINDOW-CONFIGURATION-EVENT has arrived.
+ <INFO> [16:28:26] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:WINDOW-REPAINT-EVENT has arrived.
+ <INFO> [16:28:28] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:POINTER-ENTER-EVENT has arrived.
+ <INFO> [16:28:28] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:POINTER-MOTION-EVENT has arrived.
+ <INFO> [16:28:28] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:POINTER-MOTION-EVENT has arrived.
+ <INFO> [16:28:59] mcclim-sdl2 plain-sheet.lisp (handle-event plain-sheet) -
+  Unhandled event CLIM:WINDOW-MANAGER-DELETE-EVENT has arrived.
+MCCLIM-SDL2> (close-plain-sheet *)
+NIL
+#+end_example
