@@ -6,4 +6,5 @@
   :depends-on ("mcclim" "sdl2" "log4cl" "lparallel")
   :serial t
   :components ((:file "packages")
-               (:file "utilities")))    ; sdl2 glue
+               (:file "utilities")      ; sdl2 glue
+               (:file "resources")))    ; sdl2 memory
