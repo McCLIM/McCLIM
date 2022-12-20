@@ -122,7 +122,7 @@
 
 (defmethod (setf port-keyboard-input-focus)
     ((top-sheet top-level-sheet-mixin) (port basic-port))
-  (let ((new-sheet (focused-sheet top-sheet))
+  (let ((new-sheet (or (focused-sheet top-sheet) top-sheet))
         (old-sheet (port-keyboard-input-focus port)))
     (unless (eq new-sheet old-sheet)
       (setf (port-focused-sheet port) new-sheet)
