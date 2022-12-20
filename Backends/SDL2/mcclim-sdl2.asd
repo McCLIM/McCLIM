@@ -10,5 +10,5 @@
                (:file "resources")      ; sdl2 memory
                (:file "port")           ; sdl2 <-> clim
                (:file "pointer")        ; mouse, cursors
-               (:file "plain-sheet")    ; testing
-               (:file "mirror")))       ; windowing
+               (:file "window")         ; mirrors
+               (:file "plain-sheet")))  ; testing
