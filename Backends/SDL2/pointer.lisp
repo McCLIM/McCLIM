@@ -126,3 +126,39 @@
 (defmethod distribute-event :before ((port sdl2-port) (event pointer-enter-event))
   (setf (pointer-cursor (pointer-event-pointer event))
         (sheet-pointer-cursor (event-sheet event))))
+
+
+;;; Pointer events [wip]
+
+;;; Mouse SDL2 event handlers.
+
+;;; The variable WHICH contains the mouse ID or SDL2-FFI:+SDL-TOUCH-MOUSEID+ for
+;;; touch events. If we decide to support finger events, then we should ignore
+;;; touch events or accept the fact that we receive duplicated input.
+
+#+ (or)
+(progn
+  (define-sdl2-handler (ev :mousemotion)
+      (event window-id which state x y #|timestamp xrel yrel|#)
+    sdl2-ffi:+sdl-touch-mouseid+)
+
+  (define-sdl2-handler (ev :mousewheel)
+      (event window-id which x y direction precise-x precise-y)
+    sdl2-ffi:+sdl-touch-mouseid+)
+
+  (define-sdl2-handler (ev :mousebuttondown)
+      (event window-id which button state clicks x y)
+    (let* ((port *sdl2-port*)
+           (mirror (find-sdl2-resource *sdl2-port* window-id))
+           (sheet (sdl2-resource-clim-object mirror)))
+      (make-instance 'pointer-button-press-event
+                     :sheet sheet
+                     :pointer (port-pointer port)
+                     :x x :y y
+                     :button (sdl2-button-to-clim-button button)
+                     :modifier-state (port-modifier-state port))))
+
+  (define-sdl2-handler (ev :mousebuttonup)
+      (event window-id which button state clicks x y)
+    )
+  )
