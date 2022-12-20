@@ -20,6 +20,8 @@
   sdl2-ffi:+sdl-init-noparachute+       ; ignored (compatibility)
   sdl2-ffi:+sdl-init-everything+)
 
+(autowrap:define-bitmask-from-enum
+    (sdl2-keymod sdl2-ffi:sdl-keymod))
 
 (autowrap:define-bitmask-from-enum
     (sdl2-cursor-flags sdl2-ffi:sdl-system-cursor))

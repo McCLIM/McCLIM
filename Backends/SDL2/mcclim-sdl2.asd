@@ -10,5 +10,6 @@
                (:file "resources")      ; sdl2 memory
                (:file "port")           ; sdl2 <-> clim
                (:file "pointer")        ; touch, mouse, cursors
+               (:file "keyboard")       ; keybaord, input methods
                (:file "window")         ; mirrors
                (:file "plain-sheet")))  ; testing

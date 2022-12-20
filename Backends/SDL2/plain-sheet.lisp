@@ -134,3 +134,13 @@
   (log:info "Pointer leaves ~s" sheet)
   (setf (getf *extra* :pointer) "n")
   (update-title sheet))
+
+(defmethod handle-event ((sheet plain-sheet) (event key-press-event))
+  (log:info "Key press ~s" event)
+  (setf (getf *extra* :key) (keyboard-event-key-name event))
+  (update-title sheet))
+
+(defmethod handle-event ((sheet plain-sheet) (event key-release-event))
+  (log:info "Key release ~s" event)
+  (setf (getf *extra* :key) nil)
+  (update-title sheet))

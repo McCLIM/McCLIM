@@ -845,4 +845,115 @@ position to construct an event.
     (update-title sheet))
 #+end_src
 
-** Keyboard events
+** Keyboard and Text Input events
+
+Generally text input is hard. Luckily SDL2 abstracts away input methods and we
+may simply reap benefits of that. There are two categories of events caused by
+using the keyboard:
+
+- keyboard events :: key press and key release, mostly concerned with keys
+- text input events :: text input that is a result of pressing keys
+
+CLIM II does not have an abstraction covering text input methods separately
+from the keyboard input events. The underlying assumption is that the the
+standard extended input stream will define appropriate ~stream-read-gesture~
+and ~stream-process-gesture~ methods that will act as the input method.
+
+This approach is fine but:
+
+1. McCLIM only merges dead keys - this is insufficient for text input
+2. The operating system usually knows better what is the optimal input method
+3. The operating system usually provides means to change the keyboard language
+
+That's why we will follow the SDL2 model of making keyboard and text input
+events separate entities.
+
+CLIM II standard defines the ~keyboard-event~ to contains three values:
+
+- key name :: a symbol denoting the pressed key
+- modifiers :: a set of modifiers pressed while the key was pressed
+- character :: a character associated with the event
+
+CLIM II mentions that "standard" key names are represented with keywords, and
+that platform-specific key names should be interned in a port package. McCLIM
+defines the standard set of keys as:
+
+#+begin_quote
+;;; letters     A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+;;; digits      0 1 2 3 4 5 6 7 8 9
+;;; misc        ! " # $ % & ' ( ) * + , - . / : ; < = > ? @ [ \ ] ^ _ ` { | } ~
+;;; mod keys    SHIFT-LEFT SHIFT-RIGHT CONTROL-LEFT CONTROL-RIGHT
+;;;             META-LEFT META-RIGHT ALT-LEFT ALT-RIGHT
+;;;             SUPER-LEFT SUPER-RIGHT HYPER-LEFT HYPER-RIGHT
+;;; lock keys   MODE-SWITCH NUM-LOCK CAPS-LOCK SCROLL-LOCK
+;;; navigation  UP DOWN LEFT RIGHT PAGE-UP PAGE-DOWN HOME END MENU
+;;; editing     RETURN BACKSPACE INSERT DELETE ESCAPE TAB SPACE
+#+end_quote
+
+SDL2 does not convert the pressed key to a character - it's keyboard event
+contains only a scancode, keycode and modifiers. There is a sublte difference
+between the scancode and the keycode:
+
+- scancode :: a physical key on the keyboard
+- keycode  :: a value of the physical key under the current layout
+
+For example on a QWERTY keyboard with a QWERTZ layout the scancode will
+correspond to a letter Y and the keycode will correspond to a character Z.
+The keycode does not account for the modifier (Shift+/ will give / not ?).
+
+Generally it could have been said that the character is a function of the
+pressed key, active modifiers and the current layout. That could have been
+said before the unicode and input methods were a thing - now producing a
+single character may involve multiple key presses and displaying the feedback
+in the meantime. This is why SDL2 keyboard event contains only codes.
+
+Instead of including the unicode character with the keyboard event SDL2
+produces two events: the keyboard event and the text input event. The latter
+contains only the unicode character (in principle this event may receive whole
+string when used with the input method, but that must be enabled separately).
+
+We want to eat the cake and have it too. In order to do that we will map the
+SDL2 both keyboard event to CLIM keyboard event:
+
+|--------------------+-------------+----------------+-------------------|
+| SDL2 event         | :key-name   | :key-character | :modifer-state    |
+|--------------------+-------------+----------------+-------------------|
+| SDL_KeyboardEvent  | #<key-name> | nil            | #<modifier-state> |
+| SDL_TextInputEvent | :text-input | character      | #<modifier-state> |
+|--------------------+-------------+----------------+-------------------|
+
+This means that for an event of pressing a key A we produce two events.
+
+
+
+~:key-character nil~, and the
+text-input event to CLIM key-press event ~:key-name :text-input :key-character
+
+We still want to process key combinations and assign the character to the
+keyboard event to make CLIM gestures work.
+
+
+|--------------+-------------+----------+-----------+--------------|
+| SDL scancode | SDL keycode | key-name | Char      | Char (shift) |
+|--------------+-------------+----------+-----------+--------------|
+|            4 |          97 | :a       | #\a       | #\A          |
+|            5 |          98 | :b       | #\b       | #\B          |
+|           44 |          32 | :space   | #\space   | #\space      |
+|           44 |          32 | :return  | #\newline | #\newline    |
+|--------------+-------------+----------+-----------+--------------|
+
+*** Text input
+
+# A brief note about keyboard events:
+#
+# Standard set of ASCII printable characters should have :key-character bound.
+#
+# CLX backend translates also the KEY-NAME according to the modifiers, however
+# IMHO we should leave the name from keycode untransformed (i.e :/ not :?).
+#
+# The standard set should be carefully documented in McCLIM manual. A list
+# should contain the key name (a keyword) and characters (shift, caps, mod).
+# 
+# http://www.xfree86.org/current/XKBproto.pdf
+
+
