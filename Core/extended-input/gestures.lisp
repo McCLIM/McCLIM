@@ -57,31 +57,11 @@
                             modifier-key-name
                             (map 'list #'car +gesture-modifier-key-to-event-modifier+))))))
 
-(defconstant +gesture-key-name-to-char+
-  '((:newline   . #\newline)
-    (:linefeed  . #\linefeed)
-    (:return    . #\return)
-    (:tab       . #\tab)
-    (:backspace . #\backspace)
-    (:page      . #\page)
-    (:rubout    . #\rubout)))
-
 (defun normalize-keyboard-physical-gesture (gesture-spec)
   (destructuring-bind (key-or-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((or (eq key-or-name t)
-                       (characterp key-or-name))
-                   key-or-name)
-                  ((assoc-value +gesture-key-name-to-char+ key-or-name))
-                  (t
-                   #+ (or)
-                   (warn "~@<~S is not a known symbolic key ~
-                          name. Known symbolic key names are ~{~S~^, ~
-                          ~}~@:>"
-                         key-or-name
-                         (map 'list #'car +gesture-key-name-to-char+))
-                   ;; Non-non-standard symbolic gesture.
-                   key-or-name))
+    (check-type key-or-name (or character symbol))
+    (values key-or-name
             (if (equal modifiers '(t))
                 t
                 (apply #'make-modifier-state modifiers)))))
@@ -162,15 +142,8 @@
     (typecase designator
       ((cons gesture-type) ; Physical gesture
        designator)
-      (cons
-       (make-keyboard-gesture designator))
-      (character
-       (make-keyboard-gesture designator))
-      (symbol ; could be a key name or a gesture name
-       (make-keyboard-gesture
-        (if-let ((character (assoc-value +gesture-key-name-to-char+ designator)))
-          character
-          designator))))))
+      ((or cons character symbol)
+       (make-keyboard-gesture designator)))))
 
 (defun ensure-gesture (designator)
   (if (and (symbolp designator) (find-gesture designator))
