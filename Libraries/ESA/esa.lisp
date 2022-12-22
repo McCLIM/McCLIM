@@ -933,16 +933,15 @@ used.")
 (defmethod convert-to-gesture ((ev symbol))
   ev)
 
-(defmethod convert-to-gesture ((ev key-press-event))
-  (let ((modifiers (event-modifier-state ev))
-        (event ev)
-        (char nil))
+;;; This is dubious. -- jd 2022-12-22
+(defmethod convert-to-gesture ((event key-press-event))
+  (let ((modifiers (event-modifier-state event)))
     (when (or (zerop modifiers)
               (eql modifiers +shift-key+))
-      (setq char (keyboard-event-character ev)))
-    (if char
-        (climi::char-for-read char)
-        event)))
+      (let ((char (keyboard-event-character event)))
+        (if (eql char #\return)
+            #\return
+            (or char event))))))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))
   ev)

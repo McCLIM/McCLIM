@@ -24,14 +24,6 @@
 ;;; here to allow sharing the input buffer between different streams.
 (defvar *input-buffer* nil)
 
-;;; X11 returns #\Return where we want to see #\Newline at the stream-read-char
-;;; level.  Dunno if this is the right place to do the transformation... --moore
-(defun char-for-read (char)
-  (check-type char (or character null))
-  (case char
-    (#\return #\newline)
-    (otherwise char)))
-
 (defun event-char (event)
   (let ((modifiers (event-modifier-state event)))
     (when (or (zerop modifiers)
