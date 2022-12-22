@@ -52,7 +52,8 @@
                  (:file "graphics" :depends-on ("design" "text-style" "medium"))))
    (:module "windowing"
     :depends-on ("drawing")
-    :components ((:file "events")
+    :components ((:file "standard-keys")
+                 (:file "events")
                  (:file "output")
                  (:file "pointer")
                  (:file "sheets")

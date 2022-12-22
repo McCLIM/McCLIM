@@ -137,6 +137,15 @@
    (key-character :initarg :key-character :reader keyboard-event-character
                   :initform nil)))
 
+(defmethod initialize-instance :after
+    ((event keyboard-event)
+     &key key-name modifier-state (key-character nil key-character-p))
+  (declare (ignore key-character))
+  ;; We don't overwrite a character if the backend initialized it.
+  (unless key-character-p
+    (setf (slot-value event 'key-character)
+          (compute-keyboard-event-character key-name modifier-state))))
+
 (defmethod print-object ((event keyboard-event) stream)
   (print-unreadable-object (event stream :type t :identity nil)
     (format stream "NAME ~s CHARACTER ~s"
@@ -226,14 +235,3 @@
 (defconstant +pointer-wheel-down+    #x10)
 (defconstant +pointer-wheel-left+    #x20)
 (defconstant +pointer-wheel-right+   #x40)
-
-(defconstant +shift-key+             #x0100)
-(defconstant +control-key+           #x0200)
-(defconstant +meta-key+              #x0400)
-(defconstant +super-key+             #x0800)
-(defconstant +hyper-key+             #x1000)
-(defconstant +alt-key+               #x2000)
-
-;; Key names are a symbol whose value is port-specific. Key names corresponding
-;; to the set of standard characters (such as the alphanumerics) will be a
-;; symbol in the keyword package.  ???!
