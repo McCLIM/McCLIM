@@ -400,8 +400,7 @@ that is not just the sole pressing of a modifier key."
   (or (characterp gesture)
       (and (typep gesture 'keyboard-event)
            (or (keyboard-event-character gesture)
-               (not (member (keyboard-event-key-name
-                             gesture)
+               (not (member (keyboard-event-key-name gesture)
                             '(:control-left :control-right
                               :shift-left :shift-right
                               :meta-left :meta-right
@@ -940,7 +939,7 @@ used.")
               (eql modifiers +shift-key+))
       (let ((char (keyboard-event-character event)))
         (if (eql char #\return)
-            #\return
+            #\newline
             (or char event))))))
 
 (defmethod convert-to-gesture ((ev pointer-button-press-event))

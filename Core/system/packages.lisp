@@ -1901,6 +1901,8 @@
    #:event-listen-or-wait
    #:schedule-event
    #:window-manager-focus-event
+   #:text-input-event
+   #:text-input-event-string
    ;; frame managers
    #:headless-frame-manager
    ;; frames
@@ -1985,7 +1987,6 @@
    ;; Font listing extension:
    #:font-family
    #:font-face
-   #:port-all-font-families
    #:font-family-name
    #:font-family-port
    #:font-family-all-faces
@@ -1999,6 +2000,9 @@
    #:unsupported-bitmap-format
    #:bitmap-format
    #:*default-vertical-scroll-bar-position*
+   ;; ports
+   #:port-all-font-families
+   #:port-handles-text-input-p
    ;; ports and frame managers
    #:note-input-focus-changed
    #:find-frame-type

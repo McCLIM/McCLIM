@@ -374,6 +374,22 @@
 (defmethod distribute-event ((port basic-port) event)
   (dispatch-event (event-sheet event) event))
 
+(defmethod port-handles-text-input-p ((port basic-port))
+  nil)
+
+(defun synthesize-text-input-event (port event)
+  (when-let* ((focused (port-keyboard-input-focus port))
+              (character (keyboard-event-character event)))
+    (let ((new-event (shallow-copy-object event (find-class 'text-input-event))))
+      (setf (slot-value new-event 'string) (string character)
+            (slot-value new-event 'sheet)  focused)
+      new-event)))
+
+(defmethod distribute-event :after ((port basic-port) (event key-press-event))
+  (unless (port-handles-text-input-p port)
+    (when-let ((new-event (synthesize-text-input-event port event)))
+      (dispatch-event (event-sheet new-event) new-event))))
+
 (defmethod distribute-event ((port basic-port) (event keyboard-event))
   (when-let ((focused (port-keyboard-input-focus port)))
     (dispatch-event-copy focused event)))

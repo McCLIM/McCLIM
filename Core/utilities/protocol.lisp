@@ -957,6 +957,7 @@ and button states of the pointer."))
 (defgeneric (setf port-pressed-sheet) (new-value instance))
 (declfun stored-object (port selection))
 (declfun remove-stored-object (port selection))
+(defgeneric port-handles-text-input-p (port))
 
 ;;; McCLIM extension: Font listing
 (defgeneric port-all-font-families (port &key invalidate-cache &allow-other-keys)

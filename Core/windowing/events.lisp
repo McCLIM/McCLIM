@@ -131,6 +131,9 @@
     (setf (slot-value event 'sheet-x) x
           (slot-value event 'sheet-y) y)))
 
+(define-event-class text-input-event (device-event)
+  ((string :initarg :string :reader text-input-event-string)))
+
 (define-event-class keyboard-event (device-event)
   ((key-name :initarg :key-name
              :reader keyboard-event-key-name)
