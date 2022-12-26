@@ -47,10 +47,6 @@
      (alx:when-let* ((top-level-sheet (%hacky-top-level-sheet)))
        (distribute-event *wayland-port*
                          (make-instance 'window-configuration-event
-                                        :width width
-                                        :height height
-                                        :x 0
-                                        :y 0
                                         :sheet top-level-sheet
                                         :region (make-bounding-rectangle 0 0 width height)))))))
 
@@ -110,8 +106,6 @@
       screen
     (alx:when-let* ((sheet (graft *wayland-port*))
                     (clim-event (make-instance 'window-configuration-event
-                                               :width width
-                                               :height height
                                                :sheet sheet
                                                :region (sheet-native-region sheet))))
       (format *debug-io* "ALL OUTPUT EVENTS FINISHED ~S~%" screen)
