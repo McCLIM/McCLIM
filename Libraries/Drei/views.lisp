@@ -517,7 +517,9 @@ subclass.")
 commands relevant for `view'.")
   (:method-combination append)
   (:method append ((view drei-view))
-    '(view-table)))
+    '(view-table))
+  (:method append ((view null))
+    '()))
 
 (defgeneric create-view-cursors (output-stream view)
   (:documentation "Create cursors for `view' that are to be

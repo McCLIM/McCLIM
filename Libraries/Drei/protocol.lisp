@@ -21,7 +21,7 @@ return `object'."))
 (defun drei-instance (&optional (object *esa-instance*))
   "Return the Drei instance of `object'. If `object' is not
 provided, the currently running Drei instance will be returned."
-  (drei-instance-of object))
+  (and object (drei-instance-of object)))
 
 (defun (setf drei-instance) (new-instance &optional (object *esa-instance*))
   (setf (drei-instance-of object) new-instance))
@@ -29,7 +29,7 @@ provided, the currently running Drei instance will be returned."
 (defun current-view (&optional (object (drei-instance)))
   "Return the view of the provided object. If no object is
 provided, the currently running Drei instance will be used."
-  (view object))
+  (and object (view object)))
 
 (defun (setf current-view) (new-view &optional (object (drei-instance)))
   (setf (view object) new-view))
