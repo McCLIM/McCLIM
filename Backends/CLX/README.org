@@ -1,0 +1,54 @@
+#+title: CLX backend work notes
+#+author: Daniel Kochmański
+#+date: [2022-12-27 Tue]
+
+* Keysym handling
+
+When the keyboard event is received from the display server we receive:
+
+- the event type (key-press or key-release)
+- the key code
+- the modifier state bitvector
+
+The entry point for handling these vents is the function
+~x-event-to-key-name-and-modifiers~ that returns:
+
+- a character
+- a bitvector of "clim" state modifiers
+- a keysym-name
+
+Let's see an example of how things are transformed:
+
+| key combination     | key code | modifier state |
+|---------------------+----------+----------------|
+| a                   |       38 |              0 |
+| (a :shift)          |       38 |              1 |
+| (a :control)        |       38 |              4 |
+| (a :shift :control) |       38 |              5 |
+
+For the key its code is consistently 38 and modifier states are changing.
+Now a bit of terminology:
+
+- keycode :: the code of a physical key (a number)
+- keysym :: the code of a logical key (a number) - modifier state dependent
+- character :: a character associated with a keysym (a character or nil)
+
+Translation from the keycode to the keysym is based on the mapping that is
+specific to the X11 server. See the file "translate.lisp" in CLX. This way of
+doing things is outdated by a huge margin and is called the "core protocol".
+Currently X11 servers use XKB[fn:1], Both McCLIM and CLX repositories have
+multiple tickets reported for this issue:
+
+- McCLIM :: [[https://github.com/McCLIM/McCLIM/issues/35][McCLIM#35]], [[https://github.com/McCLIM/McCLIM/issues/359][McCLIM#359]]
+- CLX :: [[https://github.com/sharplispers/clx/issues/190][CLX#190]], [[https://github.com/sharplispers/clx/issues/185][CLX#185]], [[https://github.com/sharplispers/clx/issues/176][CLX#176 (fcitx)]], [[https://github.com/sharplispers/clx/issues/119][CLX#119]], [[https://github.com/sharplispers/clx/issues/99][CLX#99]], [[https://github.com/sharplispers/clx/issues/30][CLX#30]]
+
+The XKB protocol puts a significant burden on the client. Moreover it is defined
+all over the place accounting for physical geometry of keyboards and other
+things that are not necessarily relevant to the text processing. A disaster :-).
+A good datapoint is that xcb does not support xkb (only xlib does), and that
+many toolkits go straight to a ffi library xkbcommon which does not implement a
+full protocol (but it works portably also on Wayland).
+
+* Footnotes
+
+[fn:1] https://www.x.org/releases/current/doc/libX11/XKB/xkblib.html

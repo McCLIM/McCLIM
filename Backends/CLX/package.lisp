@@ -9,7 +9,8 @@
            #:modifier-mapping
            #:keysym-name-to-keysym
            #:x-event-state-modifiers
-           #:x-keysym-to-clim-modifiers))
+           #:x-keysym-to-clim-modifiers
+           #:x-event-to-key-name-and-modifiers))
 
 (defpackage #:clim-clx
   (:use #:clim #:clim-lisp #:clim-backend #:clime #:mcclim-truetype)
