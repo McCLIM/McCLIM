@@ -360,9 +360,7 @@
 
 (defmethod get-frame-pane ((frame application-frame) pane-name)
   (let ((pane (find-pane-named frame pane-name)))
-    (if (typep pane 'clim-stream-pane)
-        pane
-        nil)))
+    (find-pane-of-type pane 'clim-stream-pane)))
 
 (defmethod find-pane-named ((frame application-frame) pane-name)
   (map-over-sheets #'(lambda (p)
