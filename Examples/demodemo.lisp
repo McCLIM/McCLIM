@@ -129,8 +129,8 @@ name."))
             (make-demo-button "Frame reinitialize" 'clim-demo.reinitialize-frame:example-frame)
             (make-demo-button "Nested clipping" 'clim-demo.nested-clipping:nested-clipping))))))))
 
-(defun demodemo ()
-  (run-frame-top-level (make-application-frame 'demodemo)))
+(defun demodemo (&rest args)
+  (apply #'find-application-frame 'demodemo args))
 
 (define-application-frame hbox-test ()
   ()
