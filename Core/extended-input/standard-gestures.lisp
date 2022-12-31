@@ -17,7 +17,7 @@
 
 (define-gesture-name :abort         :keyboard             (#\c :control))
 (define-gesture-name :clear-input   :keyboard             (#\u :control))
-(define-gesture-name :complete      :keyboard             (:tab))
+(define-gesture-name :complete      :keyboard             (#\tab))
 (define-gesture-name :help          :keyboard             (#\/ :control))
 (define-gesture-name :possibilities :keyboard             (#\? :control))
 
