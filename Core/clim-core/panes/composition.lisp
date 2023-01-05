@@ -1532,13 +1532,18 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         (pane-viewport parent))))
 
 (defmethod pane-viewport-region ((pane sheet))
-  (when-let ((viewport (pane-viewport pane)))
+  (if-let ((viewport (pane-viewport pane)))
     (untransform-region (sheet-delta-transformation pane viewport)
-                        (sheet-region viewport))))
+                        (sheet-region viewport))
+    (sheet-region pane)))
 
 (defmethod pane-scroller ((pane sheet))
   (when-let ((viewport (pane-viewport pane)))
     (sheet-parent viewport)))
+
+(defun get-scroll-extent (pane)
+  (when-let ((region (pane-viewport-region pane)))
+    (bounding-rectangle-position region)))
 
 (defmethod scroll-extent ((pane sheet) x y)
   (when-let ((viewport (pane-viewport pane)))
@@ -1551,8 +1556,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         (setf y (+ cur-y y))
         (clampf x min-x max-x)
         (clampf y min-y max-y)
-        (move-sheet (sheet-child viewport) (- x) (- y))))
-    (scroller-pane/update-scroll-bars (sheet-parent viewport))))
+        (move-sheet (sheet-child viewport) (- x) (- y))
+        (scroller-pane/update-scroll-bars (sheet-parent viewport))))))
 
 
 ;;; LABEL PANE
