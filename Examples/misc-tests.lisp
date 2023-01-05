@@ -31,11 +31,15 @@
                          :description ,description
                          :drawer (lambda ,arglist ,@body))))
 
+(defun draw-it (frame pane)
+  (let ((fn (display-fn frame)))
+    (and fn (funcall fn pane))))
+
 (define-application-frame misc-tests ()
-  ()
+  ((display-fn :initform nil :accessor display-fn))
   (:menu-bar nil)
   (:panes
-   (output :application-pane)
+   (output :application-pane :display-function 'draw-it)
    (description :application-pane :end-of-line-action :wrap*)
    (selector :list-pane
              :mode :exclusive
@@ -52,19 +56,21 @@
                  (with-text-style (description (make-text-style :sans-serif :roman :normal))
                    (write-string (misc-test-description item) description)
                    (finish-output description))
-                 (funcall (misc-test-drawer item) output)))))
+                 (with-application-frame (frame)
+                   (setf (display-fn frame) (misc-test-drawer item))
+                   (redisplay-frame-pane frame output :force-p t))))))
   (:layouts
    (default
-     (spacing (:thickness 3)
-       (horizontally ()
-         (spacing (:thickness 3) (clim-extensions:lowering () selector))
-         (vertically ()
-           (spacing (:thickness 3)
-             (clim-extensions:lowering ()
-               (scrolling (:width 600 :height 600) output)))
-           (spacing (:thickness 3)
-             (clim-extensions:lowering ()
-               (scrolling (:scroll-bar :vertical :height 200) description)))))))))
+    (spacing (:thickness 3)
+      (horizontally ()
+        (spacing (:thickness 3) (clim-extensions:lowering () selector))
+        (vertically ()
+          (spacing (:thickness 3)
+            (clim-extensions:lowering ()
+              (scrolling (:width 600 :height 600) output)))
+          (spacing (:thickness 3)
+            (clim-extensions:lowering ()
+              (scrolling (:scroll-bar :vertical :height 200) description)))))))))
 
 (defun misc-test-postscript (test &optional filename)
   (let* ((test (if (stringp test) (gethash test *misc-tests*) test))
