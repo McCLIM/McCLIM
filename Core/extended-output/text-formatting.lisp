@@ -50,12 +50,16 @@
 
 (defmethod slot-unbound (class (stream standard-page-layout) (slot (eql '%page-region)))
   (declare (ignore class))
-  (let* ((sheet-region (sheet-region stream)))
-    (when (eql sheet-region +everywhere+)
-      (let ((x2 (* 80 (text-style-width  (stream-text-style stream) stream)))
-            (y2 (* 43 (text-style-height (stream-text-style stream) stream))))
-        (setf sheet-region (make-rectangle* 0 0 x2 y2))))
-    (with-bounding-rectangle* (x1 y1 x2 y2) sheet-region
+  (with-bounding-rectangle* (x1 y1) (sheet-region stream)
+    (multiple-value-bind (x2 y2)
+        (let ((region (pane-viewport-region stream))
+              (text-style (stream-text-style stream)))
+          (if (region-equal region +everywhere+)
+              (values (+ x1 (* 80 (text-style-width  text-style stream)))
+                      (+ y1 (* 43 (text-style-height text-style stream))))
+              (with-bounding-rectangle* (:width w :height h) region
+                (values (+ x1 w)
+                        (+ y1 h)))))
       (macrolet ((thunk (margin edge sign orientation)
                    `(if (eql (first ,margin) :absolute)
                         (parse-space stream (second ,margin) ,orientation)
@@ -66,10 +70,6 @@
                                  (thunk top    y1 + :vertical)
                                  (thunk right  x2 - :horizontal)
                                  (thunk bottom y2 - :vertical))))))))
-
-(defmethod (setf sheet-region) :before (sheet-region (stream standard-page-layout))
-  (unless (region-equal sheet-region (sheet-region stream))
-    (slot-makunbound stream '%page-region)))
 
 (defmethod (setf stream-text-margins) :around
     (new-margins (stream standard-page-layout)
