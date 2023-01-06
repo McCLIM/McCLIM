@@ -24,7 +24,7 @@
 ;;; on updating-output-stream-mixin can override that method.
 
 (defclass pane-display-mixin ()
-  ((display-function :initform 'clim-stream-pane-default-display-function
+  ((display-function :initform (constantly nil)
                      :initarg :display-function
                      :accessor pane-display-function)))
 
@@ -95,12 +95,6 @@
 (defmethod interactive-stream-p ((stream clim-stream-pane))
   t)
 
-(defmethod redisplay-frame-pane :after ((frame application-frame)
-                                        (pane clim-stream-pane)
-                                        &key force-p)
-  (declare (ignore frame force-p))
-  (change-space-requirements pane))
-
 (defun invoke-display-function (frame pane)
   (let ((display-function (pane-display-function pane)))
     (cond ((consp display-function)
@@ -168,10 +162,6 @@
 
 (defmethod window-refresh ((pane clim-stream-pane))
   (window-erase-viewport pane)
-  (stream-replay pane))
-
-(defun clim-stream-pane-default-display-function (frame pane)
-  (declare (ignore frame))
   (stream-replay pane))
 
 (defmethod window-viewport ((pane clim-stream-pane))

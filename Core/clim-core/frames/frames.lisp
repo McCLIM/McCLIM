@@ -416,24 +416,29 @@
 ;;; resets the window dimensions and restores the scroll bars. Further
 ;;; improvements are possible - for example erase only the back buffer and
 ;;; blit it onto the window - this will avoid a flicker from window-erase.
-(defun do-redisplay-frame-pane (continuation frame pane clearp)
-  (flet ((erase-pane ()
-           (setf (frame-highlited-presentation frame) nil)
-           (stream-close-text-output-record pane)
-           (clear-output-record (stream-output-history pane))
-           (when-let ((cursor (stream-text-cursor pane)))
-             (setf (cursor-position cursor)
-                   (stream-cursor-initial-position pane)))
-           (setf (stream-width pane) 0)
-           (setf (stream-height pane) 0)))
+(defgeneric do-redisplay-pane (pane cont clearp)
+  (:method ((pane pane) cont clearp)
     (with-output-buffered (pane)
-      (with-output-recording-options (pane :record t :draw nil)
-        (when clearp
-          (erase-pane))
-        (funcall continuation))
-      (window-erase-viewport pane)
-      (change-space-requirements pane)
-      (stream-replay pane))))
+      (when clearp
+        (window-clear pane))
+      (funcall cont)))
+  (:method ((pane clim-stream-pane) cont clearp)
+    (flet ((erase-pane ()
+             (stream-close-text-output-record pane)
+             (clear-output-record (stream-output-history pane))
+             (when-let ((cursor (stream-text-cursor pane)))
+               (setf (cursor-position cursor)
+                     (stream-cursor-initial-position pane)))
+             (setf (stream-width pane) 0)
+             (setf (stream-height pane) 0)))
+      (with-output-buffered (pane)
+        (with-output-recording-options (pane :record t :draw nil)
+          (when clearp
+            (erase-pane))
+          (funcall cont))
+        (window-erase-viewport pane)
+        (change-space-requirements pane)
+        (stream-replay pane)))))
 
 (defmethod redisplay-frame-pane :around
     ((frame application-frame) pane &key force-p)
@@ -443,11 +448,10 @@
     (restart-case
         (multiple-value-bind (redisplayp clearp)
             (pane-needs-redisplay pane-object)
-          (when force-p
-            (setq redisplayp (or redisplayp t)
-                  clearp t))
-          (when redisplayp
-            (do-redisplay-frame-pane #'call-next-method frame pane-object clearp)
+          (when (or force-p clearp)
+            (setf (frame-highlited-presentation frame) nil))
+          (when (or force-p redisplayp)
+            (do-redisplay-pane pane-object #'call-next-method clearp)
             (unless (or (eq redisplayp :command-loop) (eq redisplayp :no-clear))
               (setf (pane-needs-redisplay pane-object) nil))))
       (clear-pane-try-again ()
