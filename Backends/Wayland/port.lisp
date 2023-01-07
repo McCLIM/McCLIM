@@ -436,18 +436,36 @@
   (gl:load-identity)
   (with-bounding-rectangle* (x1 y1 :width w :height h)
       (graft mirrored-sheet)
+      ;;mirrored-sheet
     ;; Getting the right bounding rectangle is what I need next. When it is
     ;; hard-coded to the graft size, it rendered more correct than ever before.
     ;; 2022-09-05
     (format *debug-io* "buffer device region ~S~%" (list ':x x1 ':y y1 ':w w ':h h))
-    (gl:ortho 0.0 w 0.0 h -1.0 1.0))
-  (gl:matrix-mode :modelview)
-  (gl:load-identity))
+    (gl:ortho 0.0 (round w) 0.0 (round h) -1.0 1.0)
+    (gl:matrix-mode :modelview)
+    (gl:load-identity)))
+
+(defun %blit-framebuffers (x y width height)
+  "Blit 1:1 from front buffer (glReadBuffer) to the back buffer (glDrawBuffer)"
+  (%gl:blit-framebuffer x y width height
+                        x y width height
+                        :color-buffer :linear))
 
 (defun swap-buffers (medium)
   (alx:when-let ((mirror (medium-drawable medium)))
     (egl:swap-buffers (wayland-egl-mirror-display mirror)
-                      (wayland-egl-mirror-surface mirror))))
+                      (wayland-egl-mirror-surface mirror))
+    ;; Blit from front (display) to back (draw) buffer
+    (with-bounding-rectangle* (x y :width w :height h)
+        (medium-sheet medium)
+      (alx:when-let* ((display (wayland-egl-mirror-display mirror))
+                      (surface (wayland-egl-mirror-surface mirror))
+                      (buffer-age (egl:query-surface display surface :buffer-age-ext)))
+        (when (> (first buffer-age) 1)
+          (%blit-framebuffers x y w h))
+        (format *debug-io* "FINISH: buffer age after swap: ~a ~a~%"
+                (egl:query-surface display surface :buffer-age-ext)
+                (list ':x x ':y y ':w w ':h h ))))))
 
 (defmethod port-enable-sheet ((port wayland-port) (sheet mirrored-sheet-mixin))
   (format *debug-io* "port enable-sheet ~a ~a ~%" port sheet)
@@ -604,17 +622,20 @@
 (defmethod medium-finish-output ((medium wayland-egl-medium))
   (format *debug-io* "medium-finish-output buffering? ~a~%"
           (medium-buffering-output-p medium))
-  )
+  (when (medium-buffering-output-p medium)
+    (swap-buffers medium)))
 
 (defmethod medium-force-output ((medium wayland-egl-medium))
-  (format *debug-io* "medium-FORCE-output buffering? ~a~%"
+  (format *debug-io* "medium-FORCE-output buffering? (no swap) ~a~%"
           (medium-buffering-output-p medium))
   ;; Anything more todo here? force wayland output?
   ;; Better place to start a frame?
   (unless (medium-buffering-output-p medium)
-    (alx:when-let ((mirror (medium-drawable medium)))
-      (swap-buffers medium)
-      (clear-buffered-drawable (medium-sheet medium)))) )
+    (alx:when-let* ((mirror (medium-drawable medium))
+                    (display (wayland-egl-mirror-display mirror))
+                    (surface (wayland-egl-mirror-surface mirror)))
+      (wlc:wl-surface-commit (wayland-port-window (port medium))))))
+
 
 ;; (defmethod medium-clear-area :around
 ;;     ((medium wayland-egl-medium) left top right bottom)
@@ -659,7 +680,6 @@
                 for (x y) on coord-seq by #'cddr do
                   (multiple-value-bind (tx ty)
                       (transform-position transform x y)
-                    ;;   (break "insided draw-polygon ~S" (list transform tx ty))
-                    (format *debug-io* "poly* xy:~a txy:~a ink:~s~%" (list x y) (list tx ty) (list r g b a))
-                    ;; reverted to x y until transform-position error understood
+                    (format *debug-io* "poly* xy:~a txy:~a ink:~s~%"
+                            (list x y) (list tx ty) (list r g b a))
                     (gl:vertex tx ty))))))))

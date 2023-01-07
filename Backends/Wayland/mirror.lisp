@@ -42,25 +42,41 @@
       (format *debug-io* "egl init ~s~%"
               (multiple-value-list (egl:initialize egl-display)))
       (egl:bind-api :opengl-api)
+      (format *debug-io* "EGL possible configs ~s~%"
+              (mapcar (lambda (config)
+                        (egl:get-config-attribs egl-display config))
+                      (egl::choose-config* egl-display
+                                           :surface-type :window-bit
+                                           :renderable-type :opengl-bit
+                                           :red-size 8
+                                           :green-size 8
+                                           :blue-size 8
+                                           :none)))
+      (let* ((config
+               (first (egl:choose-config egl-display 1
+                                         :surface-type :window-bit
+                                         :renderable-type :opengl-bit
+                                         :red-size 8
+                                         :green-size 8
+                                         :blue-size 8
+                                         :none)))
 
-      (let* ((config (first (egl:choose-config egl-display 1
-                                               :surface-type :window-bit
-                                               :renderable-type :opengl-bit
-                                               :red-size 8
-                                               :green-size 8
-                                               :blue-size 8
-                                               :none)))
-
-             (surface (egl:create-window-surface egl-display
-                                                 config
-                                                 (wayland-egl-mirror-window mirror)
-                                                 (cffi:null-pointer)))
-             (context (egl:create-context egl-display
+             (surface
+               (egl:create-window-surface egl-display
                                           config
-                                          (cffi:null-pointer)
-                                          :context-major-version 2
-                                          :none)))
+                                          (wayland-egl-mirror-window mirror)
+                                          :none))
+             (context
+               (egl:create-context egl-display
+                                   config
+                                   (cffi:null-pointer)
+                                   :context-major-version 3
+                                   :none)))
         (egl:make-current egl-display surface surface context)
+        (format *debug-io* "EGL surface info: ~s ~s ~s~%"
+                (egl:query-surface egl-display surface :render-buffer)
+                (gl:get* :read-buffer)
+                (gl:get* :draw-buffer))
         (values egl-display surface context)))))
 
 (defmethod port-set-mirror-name
@@ -115,20 +131,16 @@
       (setf port-window (wlc:wl-compositor-create-surface
                          port-compositor
                          (make-instance 'wlc:wl-surface))))
-    (setf
-     ;; Create XDG surface for top-level
-     port-surface
-     (xdg:xdg-wm-base-get-xdg-surface port-wm-base
-                                      (make-instance 'xdg:xdg-surface)
-                                      port-window)
-     ;; Assign toplevel role to XDG surface
-     toplevel-surface (xdg:xdg-surface-get-toplevel
-                       port-surface
-                       (make-instance 'wayland-xdg-toplevel)))
-    (wlc:wl-surface-commit port-window))
-
-
-  )
+    ;; Create XDG surface for top-level
+    (setf port-surface
+          (xdg:xdg-wm-base-get-xdg-surface port-wm-base
+                                           (make-instance 'xdg:xdg-surface)
+                                           port-window))
+    ;; Assign toplevel role to XDG surface
+    (setf toplevel-surface
+          (xdg:xdg-surface-get-toplevel port-surface
+                                        (make-instance 'wayland-xdg-toplevel)))
+    (wlc:wl-surface-commit port-window)))
 
 (defmethod realize-mirror :around
     ((port wayland-port) (sheet top-level-sheet-mixin))
@@ -142,6 +154,9 @@
       (format *debug-io* "creating egl context~%")
       (multiple-value-setq (egl-display egl-surface egl-context)
         (create-egl-context port mirror))
+      ;; Make the front buffer the read buffer for incremental swaps
+      (gl:read-buffer :front)
+      (gl:draw-buffer :back)
       mirror)))
 
 ;; (defmethod realize-mirror :after
