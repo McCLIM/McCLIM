@@ -158,8 +158,8 @@
                     (make-instance 'pointer-enter-event
                                    :pointer (port-pointer *wayland-port*)
                                    :button nil
-                                   :graft-x surface-x
-                                   :graft-y surface-y
+                                   :x surface-x
+                                   :y surface-y
                                    :modifier-state (modifier-mask
                                                     (%keyboard
                                                      (wayland-port-seat *wayland-port*)))
@@ -183,8 +183,8 @@
                                    :modifier-state (modifier-mask
                                                     (%keyboard
                                                      (wayland-port-seat *wayland-port*)))
-                                   :graft-x surface-x
-                                   :graft-y surface-y
+                                   :x surface-x
+                                   :y surface-y
                                    ;; FIXME, region intersection to find sheet?
                                    :sheet (%hacky-top-level-sheet)
                                    :timestamp time))
