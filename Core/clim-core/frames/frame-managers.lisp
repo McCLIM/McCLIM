@@ -40,7 +40,7 @@
 
 (defun map-over-frames (function &key port frame-manager)
   (cond (frame-manager
-         (mapc function (frame-manager-frames frame-manager)))
+         (map nil function (frame-manager-frames frame-manager)))
         (port
          (loop for manager in (frame-managers port)
                do (map-over-frames function :frame-manager manager)))
