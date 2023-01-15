@@ -152,10 +152,10 @@
                                               :_NET_WM_WINDOW_TYPE_DIALOG))
                                        :atom 32))
         ;; XXX undocumented, experimental, backend-specific.
-        (:dock (xlib:change-property mirror
+        (:dock (xlib:change-property window
                                      :_NET_WM_WINDOW_TYPE
                                      (list (xlib:intern-atom
-                                            (xlib:window-display mirror)
+                                            (xlib:window-display window)
                                             :_NET_WM_WINDOW_TYPE_DOCK))
                                      :atom 32)))
       (multiple-value-bind (w h x y) (climi::frame-geometry* frame)
