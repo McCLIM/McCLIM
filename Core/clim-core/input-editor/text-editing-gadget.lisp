@@ -12,8 +12,7 @@
    (nlines :initarg :nlines)
    (ncolumns :initarg :ncolumns)
    (resizable :initarg :resizable))
-  (:default-initargs :value ""
-                     :foreground +black+
+  (:default-initargs :foreground +black+
                      :background +white+))
 
 (defmethod gadget-value ((sheet text-editing-gadget))

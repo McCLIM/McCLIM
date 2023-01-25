@@ -51,7 +51,7 @@
 
 (defclass edward-mixin ()
   ((edward-buffer :reader input-editor-buffer)
-   (edit-cursor :reader edit-cursor)
+   (edit-cursor :reader edit-cursor :reader edward-cursor)
    (scan-cursor :reader scan-cursor)
    ;; (edward-kill-history :reader edward-killring)
    ;; (edward-undo-history :reader edward-undo-history)
