@@ -247,20 +247,6 @@
 
 ;;; 22.2 Extended Input Streams
 
-;;; 22.2.2 Extended Input Stream Conditions
-(defvar *abort-gestures* '(:abort))
-(defvar *accelerator-gestures* nil)
-
-(define-condition abort-gesture (condition)
-  ((event :reader abort-gesture-event :initarg :event)))
-
-(define-condition accelerator-gesture (condition)
-  ((event :reader accelerator-gesture-event :initarg :event)
-   (numeric-argument :reader accelerator-gesture-numeric-argument
-                     :initarg :numeric-argument
-                     :initform 1)))
-
-;;;
 (defclass dead-key-merging-mixin ()
   ((state :initform *dead-key-table*)
    ;; Avoid name clash with standard-extended-input-stream.

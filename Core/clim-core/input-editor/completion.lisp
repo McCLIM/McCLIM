@@ -12,26 +12,6 @@
 
 (in-package #:clim-internals)
 
-(defvar *completion-gestures* '(:complete)
-  "A list of the gesture names that cause `complete-input' to
-complete the user's input as fully as possible. The exact global
-contents of this list is unspecified, but must include the
-`:complete' gesture name.")
-
-(defvar *help-gestures* '(:help)
-  "A list of the gesture names that cause `accept' and
-`complete-input' to display a (possibly input context-sensitive)
-help message, and for some presentation types a list of
-possibilities as well. The exact global contents of this list is
-unspecified, but must include the `:help' gesture name.")
-
-(defvar *possibilities-gestures* '(:possibilities)
-  "A list of the gesture names that cause `complete-input' to
-display a (possibly input context-sensitive) help message and a
-list of possibilities. The exact global contents of this list is
-unspecified, but must include the `:possibilities' gesture
-name.")
-
 ;;; Helpers for complete-input, which is just getting too long.
 
 (defun complete-gesture-p (gesture)
@@ -117,9 +97,9 @@ stream. Output will be done to its typeout."
                                 partial-completers
                                 help-displays-possibilities)
   (flet ((possibilitiesp (gesture)
-           (or (gesture-match gesture *possibilities-gestures*)
+           (or (possibilities-gesture-p gesture)
                (and help-displays-possibilities
-                    (gesture-match gesture *help-gestures*)))))
+                    (help-gesture-p gesture)))))
     (let ((*completion-possibilities-continuation*
             #'(lambda ()
                 (return-from read-completion-gesture
