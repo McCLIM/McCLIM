@@ -88,10 +88,10 @@
    (:module "extended-input"
     :depends-on ("windowing" "extended-output")
     :components ((:file "protocol")
-                 (:file "dead-keys")    ; dead-key merging
-                 (:file "stream-input"      :depends-on ("dead-keys"))
                  (:file "gestures")
                  (:file "standard-gestures" :depends-on ("gestures"))
+                 (:file "dead-keys")    ; dead-key merging
+                 (:file "stream-input"      :depends-on ("dead-keys" "standard-gestures"))
                  (:file "pointer-tracking"  :depends-on ("stream-input"))))))
 
 ;;; TODO separate modules, move directories toplevel aftwards.
@@ -117,19 +117,24 @@
                  (:file "drag-and-drop")
                  (:file "selection-object")))
    (:file "text-selection" :depends-on ("presentations"))
-   (:file "input-editing" :depends-on ("presentations"))
+   (:module "input-editor" :depends-on ("presentations")
+    :serial t
+    :components ((:file "reading-and-writing-tokens")
+                 (:file "parsing-conditions")
+                 (:file "input-editing")
+                 (:file "completion")))
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
-    :depends-on ("input-editing" "presentations"))
+    :depends-on ("input-editor" "presentations"))
    (:module "commands"
-    :depends-on ("input-editing" "presentations" "standard-presentations")
+    :depends-on ("input-editor" "presentations" "standard-presentations")
     :serial t
     :components ((:file "parsers")
                  (:file "commands")
                  (:file "tables")
                  (:file "processor")))
    (:module "panes"
-    :depends-on ("presentations" "standard-presentations" "input-editing")
+    :depends-on ("presentations" "standard-presentations" "input-editor")
     :serial t
     :components ((:file "theming")
                  (:file "construction")
@@ -147,7 +152,7 @@
                  (:file "window-stream")
                  (:file "default-frame")))
    (:module "gadgets"
-    :depends-on ("commands" "input-editing" "frames" "panes" "presentations")
+    :depends-on ("commands" "input-editor" "frames" "panes" "presentations")
     :serial t
     :components ((:file "base")
                  (:file "abstract")
@@ -156,9 +161,9 @@
                  (:file "concrete")
                  (:file "menu")))
    (:module "dialogs"
-    :depends-on ("panes" "frames" "input-editing" "commands" "presentations" "standard-presentations" "gadgets")
+    :depends-on ("panes" "frames" "input-editor" "commands" "presentations" "standard-presentations" "gadgets")
     :components ((:file "dialog")
                  (:file "dialog-views" :depends-on ("dialog"))
                  (:file "notify-user")
                  (:file "menu-choose")))
-   (:file "builtin-commands" :depends-on ("commands" "presentations" "standard-presentations" "input-editing"))))
+   (:file "builtin-commands" :depends-on ("commands" "presentations" "standard-presentations" "input-editor"))))

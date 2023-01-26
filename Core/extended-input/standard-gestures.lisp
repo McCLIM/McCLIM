@@ -3,7 +3,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;;  (c) copyright 2001,2002 Tim Moore <moore@bricoworks.com>
-;;;  (c) copyright 2019,2020 Daniel Kochmański <daniel@turtleware.eu>
+;;;  (c) copyright 2019-2023 Daniel Kochmański <daniel@turtleware.eu>
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
@@ -74,3 +74,84 @@
        :test (lambda (condition)
                (typep condition 'abort-gesture))
        nil)))
+
+;;; Known gestures
+;;;
+;;; Abort and accelerator gestures are special - SEIS will signal a condition
+;;; whenever one of these is read. When the caller wants to handle the event,
+;;; then depending on the purpose they should use these conditions.
+;;;
+;;; For example "possibilities gestures" should be added to the set of
+;;; accelerators gestures and "completion gestures" to the set of aborts.
+
+(macrolet ((define-standard-gesture (base-name gesture-names)
+             (let ((gestures-var (symbol-concat '* base-name 's*))
+                   (predicate (symbol-concat base-name '-p)))
+               `(progn (defvar ,gestures-var (quote ,gesture-names))
+                       (defun ,predicate (gesture)
+                         (loop for gesture-name in ,gestures-var
+                               when (gesture-matches-spec-p gesture gesture-name)
+                                 do (return t)
+                               finally (return nil)))))))
+  ;; 22.2.2
+  (define-standard-gesture abort-gesture         (:abort))
+  (define-standard-gesture accelerator-gesture   ())
+  ;; 24.2
+  (define-standard-gesture activation-gesture    ())
+  (define-standard-gesture delimiter-gesture     ())
+  ;; 24.5
+  (define-standard-gesture completion-gesture    (:complete))
+  (define-standard-gesture help-gesture          (:help))
+  (define-standard-gesture possibilities-gesture (:possibilities)))
+
+(define-condition abort-gesture (condition)
+  ((event :reader abort-gesture-event :initarg :event)))
+
+(define-condition accelerator-gesture (condition)
+  ((event :reader accelerator-gesture-event :initarg :event)
+   (numeric-argument :reader accelerator-gesture-numeric-argument
+                     :initarg :numeric-argument
+                     :initform 1)))
+
+(defvar *standard-activation-gestures* '(:newline))
+
+(defmacro with-dynamic-gestures ((variable gestures &key override) &body body)
+  ;; Preserve the evaluation order of arguments.
+  (once-only (gestures override)
+    `(let* ((,variable (if ,override
+                           (ensure-list ,gestures)
+                           (append (ensure-list ,gestures) ,variable)))            )
+       ,@body)))
+
+(defmacro with-activation-gestures ((gestures &key override) &body body)
+  `(with-dynamic-gestures (*activation-gestures* ,gestures :override ,override)
+     ,@body))
+
+(defmacro with-delimiter-gestures ((gestures &key override) &body body)
+  `(with-dynamic-gestures (*delimiter-gestures* ,gestures :override ,override)
+     ,@body))
+
+;;; These helper functions take the arguments of ACCEPT so that they can be used
+;;; directly by ACCEPT.
+
+(defun make-activation-gestures
+    (&key (activation-gestures nil activation-gestures-p)
+       (additional-activation-gestures nil additional-activations-p)
+       (existing-activation-gestures *activation-gestures*)
+     &allow-other-keys)
+  (cond (additional-activations-p
+         (append additional-activation-gestures existing-activation-gestures))
+        (activation-gestures-p
+         activation-gestures)
+        (t (or existing-activation-gestures *standard-activation-gestures*))))
+
+(defun make-delimiter-gestures
+    (&key (delimiter-gestures nil delimiter-gestures-p)
+       (additional-delimiter-gestures nil additional-delimiters-p)
+       (existing-delimiter-gestures *delimiter-gestures*)
+     &allow-other-keys)
+  (cond (additional-delimiters-p
+         (append additional-delimiter-gestures existing-delimiter-gestures))
+        (delimiter-gestures-p
+         delimiter-gestures)
+        (t existing-delimiter-gestures)))

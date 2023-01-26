@@ -297,9 +297,11 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
     (x y (record basic-output-record))
   (values x y))
 
-(defun replay (record stream &optional (region (sheet-visible-region stream)))
+(defun replay (record stream &optional region)
   (when (typep stream 'encapsulating-stream)
     (return-from replay (replay record (encapsulating-stream-stream stream) region)))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (stream-close-text-output-record stream)
   (when (stream-drawing-p stream)
     (with-output-recording-options (stream :record nil)
@@ -311,9 +313,15 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
                ((medium-transformation medium) +identity-transformation+))
           (replay-output-record record stream region))))))
 
+(defmethod replay-output-record ((record compound-output-record) (stream encapsulating-stream)
+                                 &optional region (x-offset 0) (y-offset 0))
+  (replay-output-record record (encapsulating-stream-stream stream)
+                        region x-offset y-offset))
+
 (defmethod replay-output-record ((record compound-output-record) stream
-                                 &optional (region (sheet-visible-region stream))
-                                           (x-offset 0) (y-offset 0))
+                                 &optional region (x-offset 0) (y-offset 0))
+  (unless region
+    (setf region (sheet-visible-region stream)))
   (with-drawing-options (stream :clipping-region region)
     (map-over-output-records-overlapping-region
      #'replay-output-record record region x-offset y-offset
@@ -352,12 +360,6 @@ recording stream. If it is T, *STANDARD-OUTPUT* is used.")
   (highlight-output-record-rectangle record stream state))
 
 ;;; 16.2.2. The Output Record "Database" Protocol
-
-;;; These two aren't in the spec, but are needed to make indirect
-;;; adding/deleting of GADGET-OUTPUT-RECORDs work:
-
-(defgeneric note-output-record-lost-sheet (record sheet))
-(defgeneric note-output-record-got-sheet  (record sheet))
 
 (defmethod note-output-record-lost-sheet ((record output-record) sheet)
   (declare (ignore record sheet))
@@ -2166,8 +2168,6 @@ according to the flags RECORD and DRAW."
 ;;; WITH-FIRST-QUADRANT-COORDINATES which both work on both mediums and
 ;;; streams. Also write a documentation chapter describing behavior and
 ;;; providing some examples.
-(defgeneric invoke-with-room-for-graphics
-    (cont stream &key first-quadrant height move-cursor record-type))
 
 ;;; ----------------------------------------------------------------------------
 ;;; Complicated, underspecified...
@@ -2176,89 +2176,34 @@ according to the flags RECORD and DRAW."
 ;;; with-room-for-graphics is supposed to set the medium transformation to
 ;;; give the desired coordinate system; i.e., it doesn't preserve any
 ;;; rotation, scaling or translation in the current medium transformation.
-(defmethod invoke-with-room-for-graphics (cont (stream extended-output-stream)
+(defmethod invoke-with-room-for-graphics (cont (stream output-recording-stream)
                                           &key (first-quadrant t)
+                                               width
                                                height
                                                (move-cursor t)
                                                (record-type
                                                 'standard-sequence-output-record))
-  ;; I am not sure what exactly :height should do.           ; [avengers pun]
-  ;; --GB 2003-05-25                                         ; -----------------
-  ;; The current behavior is consistent with 'classic' CLIM  ; where is genera?
-  ;; --Hefner 2004-06-19                                     ;
-  ;; Don't know if it still is :)                            ;  what is genera?
-  ;; -- Moore 2005-01-26                                     ;
-  ;; I think that it doesn't matter ;)                       ;   why is genera?
-  ;; -- jd 2018-08-11                                        ; -----------------
-  ;;
-  ;; More seriously though (comments left for giggles), HEIGHT defaults to the
-  ;; output-record height unless specified by the programmer. In that case
-  ;; output is clipped to that height and exactly that amount of space is
-  ;; reserved for drawing (so if the output-record is smaller we have some empty
-  ;; space, if it is bigger it is clipped). In case of panes which does not
-  ;; record it will be the only means to assure space in case of the
-  ;; FIRST-QUADRANT = T (Y-axis inverted). -- jd
-  ;;
-  ;; ADDME: add width argument for clipping (McCLIM extension)
-  (multiple-value-bind (cx cy) (stream-cursor-position stream)
-    (with-sheet-medium (medium stream)
-      (letf (((medium-transformation medium)
-              (if first-quadrant
-                  (make-scaling-transformation 1 -1)
-                  +identity-transformation+))
-             ((medium-clipping-region medium)
-              +everywhere+))
-        (let ((record (with-output-to-output-record (stream record-type)
-                        (funcall cont stream))))
-          ;; Bounding rectangle is in sheet coordinates!
-          (with-bounding-rectangle* (x1 y1 x2 y2) record
-            (declare (ignore x2))
-            (let* ((record-height (- y2 y1))
-                   (new-x         (max cx (+ cx x1)))
-                   (new-y         (cond ((not first-quadrant)
-                                         (max cy (+ cy y1)))
-                                        (height
-                                         (+ cy (- height record-height)))
-                                        (t
-                                         cy))))
-              (setf (output-record-position record) (values new-x new-y))
-              ;; And and/or replay the clipped and repositioned RECORD.
-              (when (stream-recording-p stream)
-                (stream-add-output-record stream record))
-              (when (stream-drawing-p stream)
-                (replay record stream))
-              ;; Restore the cursor position or move the cursor.
-              (setf (stream-cursor-position stream)
-                    (values cx (+ cy (if move-cursor
-                                         (max (if first-quadrant (- y1) y2)
-                                              (or height record-height))
-                                         0)))))
-            record))))))
-
-;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
-;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
-(defmethod invoke-with-room-for-graphics (cont stream
-                                          &key (first-quadrant t)
-                                            height
-                                            (move-cursor t)
-                                            (record-type nil))
-  (declare (ignore move-cursor record-type))
   (with-sheet-medium (medium stream)
-    (multiple-value-bind (dx dy)
-        (transform-position (medium-transformation medium) 0 0)
-      (letf (((medium-transformation medium)
-              (compose-transformation-with-translation
-               (if first-quadrant
-                   (make-scaling-transformation 1 -1)
-                   +identity-transformation+)
-               dx (if first-quadrant
-                      (+ dy (or height 100))
-                      dy))))
-        (funcall cont stream)))))
+    (multiple-value-bind (cx cy) (stream-cursor-position stream)
+      (multiple-value-bind (cy* transformation)
+          (if (not first-quadrant)
+              (values cy +identity-transformation+)
+              (values (+ cy (stream-baseline stream))
+                      (make-scaling-transformation 1 -1)))
+        (letf (((medium-transformation medium)
+                (compose-transformation-with-translation transformation cx cy*)))
+          (let ((record (with-new-output-record (stream record-type)
+                          (funcall cont stream))))
+            (with-bounding-rectangle* (:x2 x2 :y2 y2) record
+              (orf width (- x2 cx))
+              (orf height (- y2 cy))))))
+      (maxf (stream-cursor-height stream) height)
+      (setf (stream-cursor-position stream)
+            (if move-cursor
+                (values (+ cx width) cy)
+                (values cx cy))))))
 
 ;;; Baseline
-
-(defgeneric output-record-baseline (record))
 
 (defmethod output-record-baseline ((record output-record))
   "Fall back method"
