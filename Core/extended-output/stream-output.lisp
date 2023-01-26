@@ -332,12 +332,18 @@ produces no more than one line of output i.e., doesn't wrap."))
     (declare (ignore y))
     (= x (stream-cursor-initial-position stream))))
 
+(defmethod beep (&optional medium)
+  (if medium
+      (medium-beep medium)
+      (when (sheetp *standard-output*)
+        (medium-beep (sheet-medium *standard-output*)))))
+
 (defmacro with-room-for-graphics ((&optional (stream t)
-                                             &rest arguments
-                                             &key (first-quadrant t)
-                                             height
-                                             (move-cursor t)
-                                             (record-type ''standard-sequence-output-record))
+                                   &rest arguments
+                                   &key (first-quadrant t)
+                                     height
+                                     (move-cursor t)
+                                     (record-type ''standard-sequence-output-record))
                                   &body body)
   (declare (ignore first-quadrant height move-cursor record-type))
   (let ((cont (gensym "CONT.")))
@@ -347,11 +353,26 @@ produces no more than one line of output i.e., doesn't wrap."))
          (declare (dynamic-extent #',cont))
          (invoke-with-room-for-graphics #',cont ,stream ,@arguments)))))
 
-(defmethod beep (&optional medium)
-  (if medium
-      (medium-beep medium)
-      (when (sheetp *standard-output*)
-        (medium-beep (sheet-medium *standard-output*)))))
+;;; FIXME: add clipping to HEIGHT and think of how MOVE-CURSOR could be
+;;; implemented (so i-w-r-f-g returns an imaginary cursor progress).
+(defmethod invoke-with-room-for-graphics (cont stream
+                                          &key (first-quadrant t)
+                                            height
+                                            (move-cursor t)
+                                            (record-type nil))
+  (declare (ignore move-cursor record-type))
+  (with-sheet-medium (medium stream)
+    (multiple-value-bind (dx dy)
+        (transform-position (medium-transformation medium) 0 0)
+      (letf (((medium-transformation medium)
+              (compose-transformation-with-translation
+               (if first-quadrant
+                   (make-scaling-transformation 1 -1)
+                   +identity-transformation+)
+               dx (if first-quadrant
+                      (+ dy (or height 100))
+                      dy))))
+        (funcall cont stream)))))
 
 (defmethod invoke-with-local-coordinates ((medium extended-output-stream) cont x y)
   ;; For now we do as real CLIM does.
