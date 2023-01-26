@@ -12,19 +12,6 @@
 
 (in-package #:clim-internals)
 
-(defvar *current-input-stream* nil)
-(defvar *current-input-position* 0)
-
-(defmacro with-input-position ((stream) &body body)
-  (let ((stream-var (gensym "STREAM")))
-    `(let* ((,stream-var ,stream)
-            (*current-input-stream* (and (typep ,stream-var
-                                                'input-editing-stream)
-                                         ,stream-var))
-            (*current-input-position* (and *current-input-stream*
-                                           (stream-scan-pointer ,stream-var))))
-       ,@body)))
-
 (defvar *completion-gestures* '(:complete)
   "A list of the gesture names that cause `complete-input' to
 complete the user's input as fully as possible. The exact global
@@ -155,8 +142,6 @@ stream. Output will be done to its typeout."
                          :complete)
                         (t nil))))))))
 
-(defparameter *trace-complete-input* nil)
-
 (defun complete-input (stream func &key
                                      partial-completers allow-any-input
                                      (possibility-printer #'possibility-printer)
@@ -165,83 +150,79 @@ stream. Output will be done to its typeout."
         (*accelerator-gestures* (append *help-gestures*
                                         *possibilities-gestures*
                                         *accelerator-gestures*)))
-    (with-input-position (stream)
-      (flet ((insert-input (input)
-               (adjust-array so-far (length input)
-                             :fill-pointer (length input))
-               (replace so-far input)
-               ;; XXX: Relies on non-specified behavior of :rescan.
-               (replace-input stream input :rescan nil))
-             (read-possibility (stream possibilities)
-               (unwind-protect
-                    (handler-case
-                        (with-input-context
-                            (`(completion ,possibilities) :override nil)
-                            (object type event)
-                            (prog1 nil (read-gesture :stream stream :peek-p t))
-                          (t object))
-                      (abort-gesture () nil))
-                 (clear-typeout stream))))
-        (multiple-value-bind (object success input)
-            (complete-input-rescan stream func partial-completers
-                                   so-far allow-any-input)
-          (when success
-            (return-from complete-input (values object success input))))
-        (loop
-          (multiple-value-bind (gesture mode)
-              (read-completion-gesture stream
-                                       partial-completers
-                                       help-displays-possibilities)
-            (cond
-              (mode
-               (multiple-value-bind
-                     (input success object nmatches possibilities)
-                   (funcall func (subseq so-far 0) mode)
-                 (when (and (zerop nmatches)
-                            (eq mode :complete-limited)
-                            (complete-gesture-p gesture))
-                   ;; Gesture is both a partial completer and a
-                   ;; delimiter e.g., #\space.  If no partial match,
-                   ;; try again with a total match.
-                   (setf (values input success object nmatches possibilities)
-                         (funcall func (subseq so-far 0) :complete))
-                   (setf mode :complete))
-                 ;; Preserve the delimiter
-                 (when (and success (eq mode :complete))
-                   (unread-gesture gesture :stream stream))
-                 ;; Get completion from menu
-                 (when *trace-complete-input*
-                   (format *trace-output* "nmatches = ~A, mode = ~A~%"
-                           nmatches mode))
-                 (when (and (> nmatches 0) (eq mode :possibilities))
-                   (print-possibilities possibilities possibility-printer stream)
-                   (redraw-input-buffer stream)
-                   (if-let ((possibility (read-possibility stream possibilities)))
-                     (setf input (first possibility)
-                           object (second possibility)
-                           success t
-                           nmatches 1)
-                     (setf success nil
-                           nmatches 0)))
-                 (unless (and (eq mode :complete) (not success))
-                   (if (> nmatches 0)
-                       (insert-input input)
-                       (beep)))
-                 (cond ((and success (eq mode :complete))
-                        (return-from complete-input
-                          (values object success input)))
-                       ((activation-gesture-p gesture)
-                        (if allow-any-input
-                            (return-from complete-input
-                              (values nil t (subseq so-far 0)))
-                            (error 'simple-completion-error
-                                   :format-control "Input ~S does not match"
-                                   :format-arguments (list so-far)
-                                   :input-so-far so-far))))))
-              ((null gesture) ; e.g. end-of-input if STREAM is a string stream
-               (return-from complete-input (values nil nil so-far)))
-              (t
-               (vector-push-extend gesture so-far)))))))))
+    (flet ((insert-input (input)
+             (adjust-array so-far (length input)
+                           :fill-pointer (length input))
+             (replace so-far input)
+             ;; XXX: Relies on non-specified behavior of :rescan.
+             (replace-input stream input :rescan nil))
+           (read-possibility (stream possibilities)
+             (unwind-protect
+                  (handler-case
+                      (with-input-context
+                          (`(completion ,possibilities) :override nil)
+                          (object type event)
+                          (prog1 nil (read-gesture :stream stream :peek-p t))
+                        (t object))
+                    (abort-gesture () nil))
+               (clear-typeout stream))))
+      (multiple-value-bind (object success input)
+          (complete-input-rescan stream func partial-completers
+                                 so-far allow-any-input)
+        (when success
+          (return-from complete-input (values object success input))))
+      (loop
+        (multiple-value-bind (gesture mode)
+            (read-completion-gesture stream
+                                     partial-completers
+                                     help-displays-possibilities)
+          (cond
+            (mode
+             (multiple-value-bind
+                   (input success object nmatches possibilities)
+                 (funcall func (subseq so-far 0) mode)
+               (when (and (zerop nmatches)
+                          (eq mode :complete-limited)
+                          (complete-gesture-p gesture))
+                 ;; Gesture is both a partial completer and a
+                 ;; delimiter e.g., #\space.  If no partial match,
+                 ;; try again with a total match.
+                 (setf (values input success object nmatches possibilities)
+                       (funcall func (subseq so-far 0) :complete))
+                 (setf mode :complete))
+               ;; Preserve the delimiter
+               (when (and success (eq mode :complete))
+                 (unread-gesture gesture :stream stream))
+               ;; Get completion from menu
+               (when (and (> nmatches 0) (eq mode :possibilities))
+                 (print-possibilities possibilities possibility-printer stream)
+                 (redraw-input-buffer stream)
+                 (if-let ((possibility (read-possibility stream possibilities)))
+                   (setf input (first possibility)
+                         object (second possibility)
+                         success t
+                         nmatches 1)
+                   (setf success nil
+                         nmatches 0)))
+               (unless (and (eq mode :complete) (not success))
+                 (if (> nmatches 0)
+                     (insert-input input)
+                     (beep)))
+               (cond ((and success (eq mode :complete))
+                      (return-from complete-input
+                        (values object success input)))
+                     ((activation-gesture-p gesture)
+                      (if allow-any-input
+                          (return-from complete-input
+                            (values nil t (subseq so-far 0)))
+                          (error 'simple-completion-error
+                                 :format-control "Input ~S does not match"
+                                 :format-arguments (list so-far)
+                                 :input-so-far so-far))))))
+            ((null gesture) ; e.g. end-of-input if STREAM is a string stream
+             (return-from complete-input (values nil nil so-far)))
+            (t
+             (vector-push-extend gesture so-far))))))))
 
 ;;; helper function
 

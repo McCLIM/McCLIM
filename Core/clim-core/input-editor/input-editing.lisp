@@ -482,68 +482,67 @@ protocol retrieving gestures from a provided string."))
                                (with-output-as-presentation
                                    (stream sensitizer-object sensitizer-type)
                                  (funcall cont))))
-      (with-input-position (stream) ; support for calls to replace-input
-        (when (and insert-default
-                   (not (stream-rescanning-p stream)))
-          ;; Insert the default value to the input stream. It should
-          ;; become fully keyboard-editable. We do not want to insert
-          ;; the default if we're rescanning, only during initial
-          ;; setup.
-          (presentation-replace-input stream default default-type view))
-        (setf (values sensitizer-object sensitizer-type)
-              (with-input-context (type)
-                  (object object-type event options)
-                  (with-activation-gestures ((if additional-activations-p
-                                                 additional-activation-gestures
-                                                 activation-gestures)
-                                             :override activationsp)
-                    (with-delimiter-gestures ((if additional-delimiters-p
-                                                  additional-delimiter-gestures
-                                                  delimiter-gestures)
-                                              :override delimitersp)
-                      (let ((accept-results nil))
-                        (handle-empty-input (stream)
-                            (setq accept-results
-                                  (multiple-value-list
-                                   (if defaultp
-                                       (funcall-presentation-generic-function
-                                        accept type stream view
-                                        :default default
-                                        :default-type default-type)
-                                       (funcall-presentation-generic-function
-                                        accept type stream view))))
-                          ;; User entered activation or delimiter
-                          ;; gesture without any input.
-                          (if defaultp
-                              (progn
-                                (presentation-replace-input
-                                 stream default default-type view :rescan nil))
-                              (simple-parse-error
-                               "Empty input for type ~S with no supplied default"
-                               type))
-                          (setq accept-results (list default default-type)))
-                        ;; Eat trailing activation gesture
-                        ;; XXX what about pointer gestures?
-                        ;; XXX and delimiter gestures?
-                        (unless *recursive-accept-p*
-                          (let ((ag (read-gesture :stream stream :timeout 0)))
-                            (unless (or (null ag) (eq ag stream))
-                              (unless (activation-gesture-p ag)
-                                (unread-gesture ag :stream stream)))))
-                        (values (first accept-results)
-                                (if (rest accept-results)
-                                    (second accept-results)
-                                    type)))))
-                ;; A presentation was clicked on, or something
-                (t
-                 (when (and replace-input
-                            (getf options :echo t)
-                            (not (stream-rescanning-p stream)))
-                   (presentation-replace-input stream object object-type view
-                                               :rescan nil))
-                 (values object object-type))))
-        ;; Just to make it clear that we're returning values
-        (values sensitizer-object sensitizer-type)))))
+      (when (and insert-default
+                 (not (stream-rescanning-p stream)))
+        ;; Insert the default value to the input stream. It should
+        ;; become fully keyboard-editable. We do not want to insert
+        ;; the default if we're rescanning, only during initial
+        ;; setup.
+        (presentation-replace-input stream default default-type view))
+      (setf (values sensitizer-object sensitizer-type)
+            (with-input-context (type)
+                (object object-type event options)
+                (with-activation-gestures ((if additional-activations-p
+                                               additional-activation-gestures
+                                               activation-gestures)
+                                           :override activationsp)
+                  (with-delimiter-gestures ((if additional-delimiters-p
+                                                additional-delimiter-gestures
+                                                delimiter-gestures)
+                                            :override delimitersp)
+                    (let ((accept-results nil))
+                      (handle-empty-input (stream)
+                          (setq accept-results
+                                (multiple-value-list
+                                 (if defaultp
+                                     (funcall-presentation-generic-function
+                                      accept type stream view
+                                      :default default
+                                      :default-type default-type)
+                                     (funcall-presentation-generic-function
+                                      accept type stream view))))
+                        ;; User entered activation or delimiter
+                        ;; gesture without any input.
+                        (if defaultp
+                            (progn
+                              (presentation-replace-input
+                               stream default default-type view :rescan nil))
+                            (simple-parse-error
+                             "Empty input for type ~S with no supplied default"
+                             type))
+                        (setq accept-results (list default default-type)))
+                      ;; Eat trailing activation gesture
+                      ;; XXX what about pointer gestures?
+                      ;; XXX and delimiter gestures?
+                      (unless *recursive-accept-p*
+                        (let ((ag (read-gesture :stream stream :timeout 0)))
+                          (unless (or (null ag) (eq ag stream))
+                            (unless (activation-gesture-p ag)
+                              (unread-gesture ag :stream stream)))))
+                      (values (first accept-results)
+                              (if (rest accept-results)
+                                  (second accept-results)
+                                  type)))))
+              ;; A presentation was clicked on, or something
+              (t
+               (when (and replace-input
+                          (getf options :echo t)
+                          (not (stream-rescanning-p stream)))
+                 (presentation-replace-input stream object object-type view
+                                             :rescan nil))
+               (values object object-type))))
+      ;; Just to make it clear that we're returning values
+      (values sensitizer-object sensitizer-type))))
 
 ;;; XXX This needs work! It needs to do everything that accept does for
 ;;; expanding ptypes and setting up recursive call processing
