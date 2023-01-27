@@ -9,41 +9,35 @@
 ;;;
 ;;;   (end-of-line-action :initarg :end-of-line-action)
 ;;;   (end-of-page-action :initarg :end-of-page-action)
-;;;   (allow-line-breaks  :initarg :allow-line-breaks)
-;;;   (gadget-resizeable  :initarg :gadget-resizable)
 ;;;
 
-(defclass text-editing-gadget (edward-mixin)
-  ((nlines :initarg :nlines)
-   (ncolumns :initarg :ncolumns)
-   (editable-p :initarg :editable-p)
+(defclass text-editing-gadget (edward-mixin text-editor)
+  ((allow-line-breaks :initarg :allow-line-breaks) ; single line?
+   (gadget-resizeable :initarg :gadget-resizeable) ; truncate output?
    (activation-gestures :accessor activation-gestures
                         :initarg :activation-gestures))
   (:default-initargs :foreground +black+
                      :background +white+
-                     :editable-p t))
+                     :allow-line-breaks t
+                     :activation-gestures '()))
+
+(defmethod ie-insert-newline :around
+    ((sheet text-editing-gadget) buffer event numarg)
+  (if (slot-value sheet 'allow-line-breaks)
+      (call-next-method)
+      (beep sheet)))
+
+(defmethod ie-insert-newline-after-cursor :around
+    ((sheet text-editing-gadget) buffer event numarg)
+  (if (slot-value sheet 'allow-line-breaks)
+      (call-next-method)
+      (beep sheet)))
 
 (defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
   (setf (gadget-value gadget) value))
 
 (defmethod gadget-value ((sheet text-editing-gadget))
-  ;; XXX retain the old string and update it with a fill pointer?
-  ;; XXX maintain a "dirty" status to return the "old" value on no change?
-  (loop with buffer = (input-editor-buffer sheet)
-        with nitems = (cluffer:item-count buffer)
-        with nlines = (cluffer:line-count buffer)
-        with width = (+ nitems nlines -1)
-        with value = (make-string width)
-        with index = 0
-        for line-no from 0 below nlines
-        for line = (cluffer:find-line buffer line-no)
-        do (loop for ch across (cluffer:items line)
-                 do (setf (aref value index) ch)
-                    (incf index))
-        unless (= index width)
-          do (setf (aref value index) #\newline)
-             (incf index)
-        finally (return value)))
+  (edward-buffer-string (input-editor-buffer sheet)))
 
 (defmethod (setf gadget-value) (new-value (sheet text-editing-gadget) &rest args)
   (declare (ignore args))
@@ -99,12 +93,12 @@
                                   :ink (if (eq sheet sfocus) +black+ +dark-grey+))))))
 
 
-(defclass text-field-pane (text-editing-gadget text-field)
+(defclass text-field-pane (text-editing-gadget)
   ()
   (:default-initargs :nlines 1
                      :ncolumns 20
                      ;; :end-of-line-action :scroll
-                     ;; :allow-line-breaks nil
+                     :allow-line-breaks nil
                      :activation-gestures *standard-activation-gestures*))
 
 (defmethod compose-space ((gadget text-field-pane) &key width height)
@@ -118,13 +112,12 @@
 			      :width width
                               :min-width width))))
 
-(defclass text-editor-pane (text-editing-gadget text-editor)
+(defclass text-editor-pane (text-editing-gadget)
   ()
   (:default-initargs :nlines 6
                      :ncolumns 20
                      ;; :end-of-line-action :wrap*
-                     ;; :allow-line-breaks t
-                     :activation-gestures nil))
+   ))
 
 (defmethod compose-space ((gadget text-editor-pane) &key width height)
   (declare (ignorable width height))

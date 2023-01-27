@@ -123,16 +123,23 @@
         (t
          (cluffer:erase-item cursor))))
 
-(defun edward-buffer-string (editor)
-  (with-output-to-string (str)
-    (loop with buffer = (input-editor-buffer editor)
-          with length = (cluffer:line-count buffer)
-          for lineno from 0 below length
-          for line = (cluffer:find-line buffer lineno)
-          for text = (coerce (cluffer:items line) 'string)
-          do (princ text str)
-          unless (= (1+ lineno) length)
-            do (terpri str))))
+(defun edward-map-over-lines (buffer function)
+  (loop with length = (cluffer:line-count buffer)
+        for lineno from 0 below length
+        for line = (cluffer:find-line buffer lineno)
+        do (funcall function line)))
+
+(defun edward-line-string (line)
+  (coerce (cluffer:items line) 'string))
+
+(defun edward-buffer-string (buffer)
+  (with-output-to-string (stream)
+    (flet ((add-line (line)
+             (princ (edward-line-string line) stream)
+             (unless (cluffer:last-line-p line)
+               (terpri stream))))
+      (declare (dynamic-extent (function add-line)))
+      (edward-map-over-lines buffer #'add-line))))
 
 (defun edward-replace-input
     (editor new-input start end buffer-start)
