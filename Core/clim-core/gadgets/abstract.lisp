@@ -281,7 +281,7 @@ and must never be nil.")
 ;;; 30.4.8 The abstract text-field Gadget
 
 (defclass text-field (value-gadget action-gadget)
-  ((editable-p :accessor editable-p :initarg editable-p :initform t))
+  ((editable-p :accessor editable-p :initarg :editable-p :initform t))
   (:documentation "The value is a string")
   (:default-initargs :value ""))
 
