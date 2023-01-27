@@ -160,6 +160,19 @@
       (unwind-protect (thunk)
         (cluffer:detach-cursor cursor)))))
 
+(defun edward-buffer-extent (editor)
+  "Computes the space requied to show all text in the buffer."
+  (with-sheet-medium (medium editor)
+    (let ((maximal-x 0)
+          (maximal-y 0)
+          (line-height (text-style-height (medium-text-style medium) medium)))
+      (flet ((account-for-line (line)
+               (incf maximal-y line-height)
+               (maxf maximal-x (text-size medium (edward-line-string line)))))
+        (declare (dynamic-extent (function account-for-line)))
+        (edward-map-over-lines (input-editor-buffer editor) #'account-for-line)
+        (values maximal-x maximal-y)))))
+
 ;;; editor function prototype
 
 ;; (defgeneric edward-move (cursor unit syntax numeric-argument))

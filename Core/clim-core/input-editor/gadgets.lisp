@@ -20,6 +20,7 @@
   (:default-initargs :foreground +black+
                      :background +white+
                      :allow-line-breaks t
+                     :gadget-resizeable nil
                      :activation-gestures '()))
 
 (defmethod ie-insert-newline :around
@@ -68,7 +69,10 @@
 (defmethod handle-event ((sheet text-editing-gadget) (event key-press-event))
   (if (and (editable-p sheet)
            (handle-editor-event sheet event))
-      (dispatch-repaint sheet +everywhere+)
+      (progn
+        (when (slot-value sheet 'gadget-resizeable)
+          (change-space-requirements sheet))
+        (dispatch-repaint sheet +everywhere+))
       (call-next-method)))
 
 (defmethod handle-event ((sheet text-editing-gadget) (event pointer-event))
@@ -109,7 +113,22 @@
         (edward-map-over-lines (input-editor-buffer sheet) #'draw-line)
         (draw-design sheet text-cursor)))))
 
-
+(defmethod compose-space ((sheet text-editing-gadget) &key width height)
+  (declare (ignore width height))
+  (multiple-value-bind (buffer-w buffer-h)
+      (edward-buffer-extent sheet)
+    (with-sheet-medium (medium sheet)
+      (let* ((text-style (medium-text-style medium))
+             (ts-w (text-style-width text-style medium))
+             (ts-h (text-style-height text-style medium))
+             (min-w (* ts-w (text-editor-ncolumns sheet)))
+	     (min-h (* ts-h (text-editor-nlines sheet))))
+        (when (slot-value sheet 'gadget-resizeable)
+          (setf buffer-w (maxf min-w buffer-w))
+          (setf buffer-h (maxf min-h buffer-h)))
+        (make-space-requirement :min-width min-w :min-height min-h
+                                :width buffer-w :height buffer-h)))))
+
 (defclass text-field-pane (text-editing-gadget)
   ()
   (:default-initargs :nlines 1
@@ -118,34 +137,9 @@
                      :allow-line-breaks nil
                      :activation-gestures *standard-activation-gestures*))
 
-(defmethod compose-space ((gadget text-field-pane) &key width height)
-  (declare (ignore width height))
-  (with-sheet-medium (medium gadget)
-    (let ((width (text-size medium (gadget-value gadget)))
-	  (height (text-style-height (medium-text-style medium) medium)))
-      (make-space-requirement :height height
-                              :min-height height
-                              :max-height height
-			      :width width
-                              :min-width width))))
-
 (defclass text-editor-pane (text-editing-gadget)
   ()
   (:default-initargs :nlines 6
                      :ncolumns 20
                      ;; :end-of-line-action :wrap*
    ))
-
-(defmethod compose-space ((gadget text-editor-pane) &key width height)
-  (declare (ignorable width height))
-  (with-sheet-medium (medium gadget)
-    (with-slots (ncolumns nlines) gadget
-      (let* ((text-style (medium-text-style medium))
-             (min-width (* ncolumns (text-style-width text-style medium)))
-	     (min-height (* nlines (text-style-height text-style medium)))
-             (width min-width)
-             (height min-width)
-             (max-width min-width)
-             (max-height min-width))
-        (make-space-requirement :min-width  min-width  :width  width  :max-width max-width
-                                :min-height min-height :height height :max-height max-height)))))
