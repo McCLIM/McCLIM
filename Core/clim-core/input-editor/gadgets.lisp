@@ -15,7 +15,8 @@
   ((allow-line-breaks :initarg :allow-line-breaks) ; single line?
    (gadget-resizeable :initarg :gadget-resizeable) ; truncate output?
    (activation-gestures :accessor activation-gestures
-                        :initarg :activation-gestures))
+                        :initarg :activation-gestures)
+   (text-cursor :accessor stream-text-cursor))
   (:default-initargs :foreground +black+
                      :background +white+
                      :allow-line-breaks t
@@ -34,7 +35,19 @@
       (beep sheet)))
 
 (defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
-  (setf (gadget-value gadget) value))
+  (setf (gadget-value gadget) value)
+  (with-sheet-medium (medium gadget)
+    (let* ((ts (medium-text-style medium))
+           (ht (text-style-height ts medium))
+           (editable (editable-p gadget)))
+      (setf (stream-text-cursor gadget)
+            (make-instance 'standard-text-cursor :sheet gadget
+                                                 :width 2
+                                                 :height ht
+                                                 :visibility editable)))))
+
+(defmethod (setf editable-p) :after (new-value (object text-editing-gadget))
+  (setf (cursor-visibility (stream-text-cursor object)) new-value))
 
 (defmethod gadget-value ((sheet text-editing-gadget))
   (edward-buffer-string (input-editor-buffer sheet)))
@@ -74,23 +87,27 @@
 
 (defmethod handle-repaint ((sheet text-editing-gadget) region)
   (with-sheet-medium (medium sheet)
-    (loop with buffer = (input-editor-buffer sheet)
-          with cursor = (edward-cursor sheet)
-          with cursor-line = (cluffer:line cursor)
-          with cursor-position = (cluffer:cursor-position cursor)
-          with tstyle = (medium-text-style medium)
-          with height = (text-style-height tstyle medium)
-          with sfocus = (port-keyboard-input-focus (port sheet))
-          with editable-p = (editable-p sheet)
-          for lineno from 0 below (cluffer:line-count buffer)
-          for line = (cluffer:find-line buffer lineno)
-          for text = (coerce (cluffer:items line) 'string)
-          for cury from 0 by height
-          do (draw-text* sheet text 0 cury :align-x :left :align-y :top)
-          when (and editable-p (eq line cursor-line))
-            do (let ((cursor-dx (nth-value 2 (text-size medium text :end cursor-position))))
-                 (draw-rectangle* sheet cursor-dx cury (+ cursor-dx 2) (+ cury height)
-                                  :ink (if (eq sheet sfocus) +black+ +dark-grey+))))))
+    (let* ((text-cursor (stream-text-cursor sheet))
+           (line-height (cursor-height text-cursor))
+           (cursor (edward-cursor sheet))
+           (cursor-line (cluffer:line cursor))
+           (cursor-position (cluffer:cursor-position cursor))
+           (current-y 0))
+      (flet ((draw-line (line)
+               (let ((text (edward-line-string line)))
+                 ;; Update the cursor.
+                 (when (and (eq line cursor-line)
+                            (cursor-active text-cursor))
+                   (let ((current-x (nth-value 2 (text-size medium text :end cursor-position))))
+                     (setf (cursor-position text-cursor)
+                           (values current-x current-y))))
+                 ;; Draw the line.
+                 (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
+                 ;; Increment the drawing position.
+                 (incf current-y line-height))))
+        (declare (dynamic-extent (function draw-line)))
+        (edward-map-over-lines (input-editor-buffer sheet) #'draw-line)
+        (draw-design sheet text-cursor)))))
 
 
 (defclass text-field-pane (text-editing-gadget)
