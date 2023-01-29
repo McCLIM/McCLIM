@@ -28,7 +28,8 @@
                  :accessor rectangle)
    (%hook        :initarg  :hook
                  :accessor hook
-                 :initform nil)))
+                 :initform nil))
+  (:default-initargs :text "(no text)"))
 
 (defmethod maybe-run-hook ((state state))
   (alexandria:when-let ((hook (hook state)))
