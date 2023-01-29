@@ -36,7 +36,7 @@
       (beep sheet)))
 
 (defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
-  (setf (gadget-value gadget) value)
+  (setf (gadget-value gadget :invoke-callback t) value)
   (with-sheet-medium (medium gadget)
     (let* ((ts (medium-text-style medium))
            (ht (text-style-height ts medium))
