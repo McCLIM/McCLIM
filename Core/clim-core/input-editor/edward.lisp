@@ -132,6 +132,8 @@
 (defun edward-line-string (line)
   (coerce (cluffer:items line) 'string))
 
+;;; FIXME we should cache the string with a fill pointer and lazily update it
+;;; if the internal buffer is dirty (instead of consing a new one ad nauseum).
 (defun edward-buffer-string (buffer)
   (with-output-to-string (stream)
     (flet ((add-line (line)

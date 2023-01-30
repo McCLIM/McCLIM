@@ -72,7 +72,11 @@
       (progn
         (when (slot-value sheet 'gadget-resizeable)
           (change-space-requirements sheet))
-        (dispatch-repaint sheet +everywhere+))
+        (dispatch-repaint sheet +everywhere+)
+        (value-changed-callback sheet
+                                (gadget-client sheet)
+                                (gadget-id sheet)
+                                (gadget-value sheet)))
       (call-next-method)))
 
 (defmethod handle-event ((sheet text-editing-gadget) (event pointer-event))
