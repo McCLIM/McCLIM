@@ -51,7 +51,7 @@
   (setf (cursor-visibility (stream-text-cursor object)) new-value))
 
 (defmethod gadget-value ((sheet text-editing-gadget))
-  (edward-buffer-string (input-editor-buffer sheet)))
+  (edward-buffer-string sheet))
 
 (defmethod (setf gadget-value) (new-value (sheet text-editing-gadget) &rest args)
   (declare (ignore args))
@@ -102,7 +102,7 @@
            (cursor-position (cluffer:cursor-position cursor))
            (current-y 0))
       (flet ((draw-line (line)
-               (let ((text (edward-line-string line)))
+               (let ((text (line-string line)))
                  ;; Update the cursor.
                  (when (and (eq line cursor-line)
                             (cursor-active text-cursor))
@@ -114,7 +114,7 @@
                  ;; Increment the drawing position.
                  (incf current-y line-height))))
         (declare (dynamic-extent (function draw-line)))
-        (edward-map-over-lines (input-editor-buffer sheet) #'draw-line)
+        (map-over-lines (input-editor-buffer sheet) #'draw-line)
         (draw-design sheet text-cursor)))))
 
 (defmethod compose-space ((sheet text-editing-gadget) &key width height)

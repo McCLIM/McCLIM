@@ -57,7 +57,17 @@
    ;; (edward-kill-history :reader edward-killring)
    ;; (edward-undo-history :reader edward-undo-history)
    ;; (edward-redo-history :reader edward-redo-history)
-   ))
+   (edward-update :accessor input-editor-timestamp)
+   (edward-string :reader input-editor-string
+                  ;; reinitializing the instance resets only a fill pointer.
+                  :initform (make-array 0 :element-type 'character
+                                          :adjustable t
+                                          :fill-pointer t))))
+
+(defmethod print-object ((object edward-mixin) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (let ((buffer (input-editor-buffer object)))
+      (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
@@ -70,7 +80,12 @@
     (cluffer:attach-cursor s-cursor line 0)
     (setf (slot-value object 'edward-buffer) buffer
           (slot-value object 'edit-cursor) i-cursor
-          (slot-value object 'scan-cursor) s-cursor)))
+          (slot-value object 'scan-cursor) s-cursor
+          (numeric-argument object) 1
+          ;; RS won't be amused with me for exploting an implementation detail
+          ;; of Cluffer. -- jd 2023-02-01
+          (input-editor-timestamp object) -1
+          (fill-pointer (input-editor-string object)) 0)))
 
 ;;; "Smooth" operations glide over line boundaries as if we had a linear buffer.
 
@@ -123,25 +138,52 @@
         (t
          (cluffer:erase-item cursor))))
 
-(defun edward-map-over-lines (buffer function)
+;;; Operations on cluffer's buffer and line instances.
+
+(defun map-over-lines (buffer function)
   (loop with length = (cluffer:line-count buffer)
         for lineno from 0 below length
         for line = (cluffer:find-line buffer lineno)
         do (funcall function line)))
 
-(defun edward-line-string (line)
+(defun line-string (line)
   (coerce (cluffer:items line) 'string))
 
-;;; FIXME we should cache the string with a fill pointer and lazily update it
-;;; if the internal buffer is dirty (instead of consing a new one ad nauseum).
-(defun edward-buffer-string (buffer)
-  (with-output-to-string (stream)
+;;; FIXME while this does not cons excessively (we accept an adjustable string
+;;; with a fill pointer as an argument), the operation time in the case of a
+;;; dirty buffer is linear to the size of the input. The CLUFFER:UPDATE protocol
+;;; is much faster but we need to come up with a scheme to remember line numbers
+;;; in the string to be able to synchronize. This is good enough for now.
+(defun buffer-string (buffer &optional string)
+  (with-output-to-string (stream string)
     (flet ((add-line (line)
-             (princ (edward-line-string line) stream)
+             (princ (line-string line) stream)
              (unless (cluffer:last-line-p line)
                (terpri stream))))
       (declare (dynamic-extent (function add-line)))
-      (edward-map-over-lines buffer #'add-line))))
+      (map-over-lines buffer #'add-line))))
+
+(defun buffer-timestamp (buffer)
+  (cluffer-standard-buffer::current-time buffer))
+
+;;; Edward operations.
+
+(defun edward-buffer-dirty-p (editor)
+  (let* ((buffer (input-editor-buffer editor))
+         (editor-timestamp (input-editor-timestamp editor))
+         (buffer-timestamp (buffer-timestamp buffer)))
+    (if (= editor-timestamp buffer-timestamp)
+        nil
+        buffer-timestamp)))
+
+(defun edward-buffer-string (editor)
+  (let ((string (input-editor-string editor)))
+    (when (edward-buffer-dirty-p editor)
+      (let ((buffer (input-editor-buffer editor)))
+        (setf (fill-pointer string) 0
+              (input-editor-timestamp editor) (buffer-timestamp buffer))
+        (buffer-string buffer string)))
+    string))
 
 (defun edward-replace-input
     (editor new-input start end buffer-start)
@@ -153,7 +195,7 @@
         (scan-cursor-position (cursor-linear-position (scan-cursor editor))))
     (flet ((thunk ()
              (setf (cursor-linear-position cursor) open-cursor-position)
-             ;; The scan cursor is "left sticky", so the order of operation
+             ;; The scan cursor is "left sticky" hence the order of operations.
              (loop for i from start below end do
                (cluffer:insert-item cursor (char new-input i)))
              (loop repeat (- scan-cursor-position open-cursor-position) do
@@ -170,9 +212,9 @@
           (line-height (text-style-height (medium-text-style medium) medium)))
       (flet ((account-for-line (line)
                (incf maximal-y line-height)
-               (maxf maximal-x (text-size medium (edward-line-string line)))))
+               (maxf maximal-x (text-size medium (line-string line)))))
         (declare (dynamic-extent (function account-for-line)))
-        (edward-map-over-lines (input-editor-buffer editor) #'account-for-line)
+        (map-over-lines (input-editor-buffer editor) #'account-for-line)
         (values maximal-x maximal-y)))))
 
 ;;; editor function prototype
