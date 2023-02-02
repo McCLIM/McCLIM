@@ -189,7 +189,7 @@
    (delta-y :initform 0 :initarg :delta-y
             :reader pointer-event-delta-y)))
 
-(define-event-class pointer-motion-event   (pointer-button-event)   ())
+(define-event-class pointer-motion-event   (pointer-event) ())
 (define-event-class pointer-boundary-event (pointer-motion-event)   ())
 (define-event-class pointer-enter-event    (pointer-boundary-event) ())
 (define-event-class pointer-exit-event     (pointer-boundary-event) ())
