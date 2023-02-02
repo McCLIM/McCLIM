@@ -368,7 +368,8 @@ and used to ensure that presentation-translators-caches are up to date.")
     (translator presentation context-type frame window x y
      &key event modifier-state for-menu button)
   (if (or modifier-state button (null event))
-      (setf modifier-state (or modifier-state 0))
+      (setf modifier-state (or modifier-state 0)
+            button (or button :ignore))
       (setf modifier-state (event-modifier-state event)
             button (pointer-event-button event)))
   (when (event-data-matches-gesture-p
