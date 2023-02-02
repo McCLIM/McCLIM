@@ -366,14 +366,16 @@ and used to ensure that presentation-translators-caches are up to date.")
 
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event modifier-state for-menu button)
-  (if (or modifier-state button (null event))
+     &key for-menu event gesture-type button modifier-state)
+  (if (or (null event) gesture-type button modifier-state)
       (setf modifier-state (or modifier-state 0)
-            button (or button :ignore))
+            button (or button :ignore)
+            gesture-type (or gesture-type :ignore))
       (setf modifier-state (event-modifier-state event)
-            button (pointer-event-button event)))
+            button (pointer-event-button event)
+            gesture-type (event-type event)))
   (when (event-data-matches-gesture-p
-         :ignore                        ; ignore type
+         (if for-menu :ignore gesture-type)
          (if for-menu :ignore button)
          (if for-menu :ignore modifier-state)
          (gesture translator))
