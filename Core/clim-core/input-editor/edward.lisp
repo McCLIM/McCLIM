@@ -480,21 +480,21 @@
       (when (>= linum licnt)
         (cluffer:end-of-line cursor)
         (return-from ie-select-object))
-      (when-let ((line-breaks (line-breaks
-                               (coerce (cluffer:items cline) 'string)
-                               (lambda (string start end)
-                                 (text-size sheet string :start start :end end))
-                               :break-strategy nil
-                               ;; If the initial offset is 0, then the utility
-                               ;; line-breaks breaks the line at least after
-                               ;; the first character. To avoid that we add 1
-                               ;; to both initial-ofset and margin and in
-                               ;; consequence "break" may occur at index 0).
-                               :initial-offset 1
-                               :margin (+ rel-x 1)
-                               :count 1)))
-        (setf (cluffer:cursor-position (edit-cursor sheet))
-              (first line-breaks))))))
+      (if-let ((line-breaks (line-breaks
+                             (coerce (cluffer:items cline) 'string)
+                             (lambda (string start end)
+                               (text-size sheet string :start start :end end))
+                             :break-strategy nil
+                             ;; If the initial offset is 0, then the utility
+                             ;; line-breaks breaks the line at least after
+                             ;; the first character. To avoid that we add 1
+                             ;; to both initial-offset and margin and in
+                             ;; consequence "break" may occur at index 0).
+                             :initial-offset 1
+                             :margin (+ rel-x 1)
+                             :count 1)))
+        (setf (cluffer:cursor-position cursor) (first line-breaks))
+        (cluffer:end-of-line cursor)))))
 
 (defmethod ie-scroll-forward
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
