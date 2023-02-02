@@ -355,24 +355,56 @@ and used to ensure that presentation-translators-caches are up to date.")
             (setf (gethash cache-key cache-table)
                   (remove-duplicates translators))))))))
 
-;;; :button is a pointer button state, for performing matches where we want to
-;;; restrict the match to certain gestures but don't have a real event and its
-;;; interpretation is similar to :modifier-state.
+;;; When we test the presentation translator we may do it for various reasons.
 ;;;
-;;; It is not specified what happens when both event and modifier-state is
-;;; passed - McCLIM expolits this undefined behavior and uses the following
-;;; interpretation: when either modifier-state or button is supplied, then the
-;;; event is ignored when performing the match. -- jd 2020-12-05
-
+;;; - display the presentation type menu (we ignore all gesture criteria)
+;;; - throw the applicable presentation matched with the input event
+;;; - display the pointer documentation under the pointer (partial match)
+;;; - highlight the applicable presentation under the pointer (ditto)
+;;;
+;;; To fulfill these requirements the function TEST-PRESENTATION-TRANSLATOR
+;;; accepts five keyword parameters:
+;;;
+;;; - FOR-MENU :: ignore all input criteria and test only for applicability
+;;; - GESTURE-TYPE, BUTTON and MODIFIER-STATE :: criteria for a partial match
+;;; - EVENT :: verify whether the argument matches the translator's gesture
+;;;
+;;; It is explicitly unspecified what happens when EVENT and MODIFIER-STATE
+;;; are supplied. McCLIM exploits this undefined behvaior as follows:
+;;;
+;;; 1. When FOR-MENU is not NIL then all matching criteria are :IGNORE.
+;;; 2. When any supplied criteria is not NIL then the event is ignored.
+;;; 3. Otherwise matching criteria are initialized based on EVENT.
+;;;
+;;; Matching criteria are:
+;;;
+;;; - gesture-type   :: the 2nd argument to DEFINE-GESTURE-NAME
+;;; - button         :: a bitmask of pressed pointer buttons
+;;; - modifier-state :: a bitmask of pressed keyboard modifiers
+;;;
+;;; -- jd 2023-02-02
 (defun test-presentation-translator
     (translator presentation context-type frame window x y
-     &key event modifier-state for-menu button)
-  (if (or modifier-state button (null event))
-      (setf modifier-state (or modifier-state 0))
-      (setf modifier-state (event-modifier-state event)
-            button (pointer-event-button event)))
+     &key for-menu event gesture-type button modifier-state)
+  (if (or (null event) gesture-type button modifier-state)
+      (setf modifier-state (or modifier-state 0)
+            button (or button :ignore)
+            gesture-type (or gesture-type :ignore))
+      (setf modifier-state (typecase event
+                             (device-event
+                              (event-modifier-state event))
+                             (otherwise
+                              :ignore))
+            button (typecase event
+                     (pointer-button-event
+                      (pointer-event-button event))
+                     (pointer-event
+                      (pointer-button-state event))
+                     (otherwise
+                      :ignore))
+            gesture-type (event-type event)))
   (when (event-data-matches-gesture-p
-         :ignore                        ; ignore type
+         (if for-menu :ignore gesture-type)
          (if for-menu :ignore button)
          (if for-menu :ignore modifier-state)
          (gesture translator))

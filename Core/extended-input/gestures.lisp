@@ -227,7 +227,9 @@
                     (matches-with-wildcards-p
                      modifier-state gesture-modifier-state)))))
     (or (eq physical-gestures t)
-        (and (eq type nil) (eq device-name nil) (eq modifier-state nil))
+        (and (eq type :ignore)
+             (eq device-name :ignore)
+             (eq modifier-state :ignore))
         (some #'physical-gesture-matches-p physical-gestures))))
 
 (defgeneric event-matches-gesture-p (event physical-gestures)

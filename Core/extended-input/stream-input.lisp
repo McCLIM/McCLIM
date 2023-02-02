@@ -100,6 +100,15 @@
         (*pointer-button-press-handler* pointer-button-press-handler)
         (input-buffer (stream-input-buffer stream)))
     (flet ((process-gesture (raw-gesture)
+             ;; XXX the specification of the POINTER-BUTTON-PRESS-HANDLER is
+             ;; bogus - translators may be accelerated by other gesture types
+             ;; (i.e :POINTER-BUTTON-RELEASE, :POINTER-MOTION or :TIMER).
+             ;;
+             ;; FIXME we can pass all gestures to POINTER-BUTTON-PRESS-HANDLER
+             ;; or ignore it wholesale and invoke the input-context function
+             ;; directly from INPUT-WAIT-HANDLER. Passing all gestures here
+             ;; has a drawback that only keyboard and pointer gestures are
+             ;; available in the input buffer so i.e :TIMER will be ignored.
              (when (and pointer-button-press-handler
                         (typep raw-gesture '(or pointer-button-press-event
                                                 pointer-scroll-event)))
