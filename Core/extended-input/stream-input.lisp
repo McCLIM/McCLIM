@@ -348,7 +348,8 @@ keys read."))
               ((abort-gesture-p gesture)
                (signal 'abort-gesture :event gesture))
               ((accelerator-gesture-p gesture)
-               (signal 'accelerator-gesture :event gesture))
+               (signal 'accelerator-gesture :event gesture
+                                            :numeric-argument (numeric-argument stream)))
               (t
                (return-from stream-read-gesture gesture))))))))
 

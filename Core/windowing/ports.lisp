@@ -253,7 +253,6 @@
           (make-instance 'pointer-motion-event
                          :sheet sheet
                          :pointer pointer
-                         :button (pointer-button-state pointer)
                          :modifier-state (port-modifier-state port)
                          :x sheet-x :y sheet-y))))))
 

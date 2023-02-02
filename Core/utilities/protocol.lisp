@@ -798,7 +798,7 @@ is not empty or none of the above happened before a timeout.
 (defgeneric keyboard-event-character (instance))
 (pledge :class key-press-event (keyboard-event))
 (pledge :class key-release-event (keyboard-event))
-(pledge :class pointer-event (device-event) nil (:default-initargs :pointer nil :button nil :x nil :y nil))
+(pledge :class pointer-event (device-event) nil (:default-initargs :pointer nil :x nil :y nil))
 (defgeneric pointer-event-x (instance))
 (defgeneric pointer-event-y (instance))
 (defgeneric pointer-event-native-x (instance))

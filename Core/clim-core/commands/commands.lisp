@@ -246,35 +246,6 @@
 (defmacro define-command (name-and-options args &body body)
   (unless (listp name-and-options)
     (setq name-and-options (list name-and-options)))
-  ;; According to the specification all argument description elements except
-  ;; the parameter name are evaluated. We lax this requirement a little and
-  ;; evaluate only type specifier *if* it is a list. Atom types are not
-  ;; evaluated to reasemble method specialization. Moreover we validate here
-  ;; argument description keyword arguments in destructuring-bind (as
-  ;; suggested by Xof in the spec annotation we require keywords being
-  ;; macroexpand-time constant). We allow two custom key arguments, but we
-  ;; should fix ESA instead. -- jd 2018-09-14
-  (loop for argument-description in args
-        unless (eq argument-description '&key)
-          do ;; Ensure correct structure and valid keywords.
-             (destructuring-bind
-                 (parameter type
-                  &key
-                    default default-type display-default mentioned-default
-                    prompt documentation when gesture
-                    ;; These two are not standard, but ESA uses them.
-                    prompt-mode insert-default)
-                 argument-description
-               (declare (ignore parameter default default-type display-default
-                                mentioned-default prompt documentation when
-                                gesture prompt-mode insert-default))
-               ;; Autoquoting is an ugly (and non-conforming) hack that should
-               ;; be removed. Signal a warning for now. -- jd 2021-11-09
-               (when (and (atom type) (not (constantp type)))
-                 (alexandria:simple-style-warning
-                  "Presentation type specifiers are evaluated.~@
-                   Autoquoting is deprected and will be removed soon.")
-                 (setf (second argument-description) `(quote ,type)))))
   (destructuring-bind (func &rest options
                        &key (provide-output-destination-keyword nil)
                        &allow-other-keys)

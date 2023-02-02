@@ -172,6 +172,9 @@
             (pointer-event-x event)
             (pointer-event-y event))))
 
+(defmethod pointer-button-state ((event pointer-event))
+  (pointer-button-state (pointer-event-pointer event)))
+
 (define-event-class pointer-button-event (pointer-event)
   ((button :initarg :button
            :reader pointer-event-button)))
@@ -189,7 +192,7 @@
    (delta-y :initform 0 :initarg :delta-y
             :reader pointer-event-delta-y)))
 
-(define-event-class pointer-motion-event   (pointer-button-event)   ())
+(define-event-class pointer-motion-event   (pointer-event) ())
 (define-event-class pointer-boundary-event (pointer-motion-event)   ())
 (define-event-class pointer-enter-event    (pointer-boundary-event) ())
 (define-event-class pointer-exit-event     (pointer-boundary-event) ())
@@ -223,7 +226,31 @@
 (define-event-class window-manager-deiconify-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
-  ())
+  ((qualifier :initarg :qualifier :reader timer-event-qualifier))
+  (:default-initargs :qualifier nil))
+
+(defun schedule-timer (sheet qualifier delay)
+  (let ((event (make-instance 'timer-event
+                              :sheet sheet
+                              :qualifier qualifier)))
+    (schedule-event sheet event delay)))
+
+#+ (or)
+(progn ;; Not yet..
+  (define-event-class pulse-event (timer-event)
+    ((delay :initarg :delay :accessor pulse-event-delay)))
+
+  (defmethod handle-event :after (sheet (event pulse-event))
+    (let ((delay (timer-event-delay event)))
+      (when delay
+        (schedule-event sheet event delay))))
+
+  (defun schedule-pulse (sheet qualifier delay)
+    (let ((event (make-instance 'pulse-event
+                                :sheet sheet
+                                :delay delay
+                                :qualifier qualifier)))
+      (schedule-event sheet event delay))))
 
 ;;; Constants dealing with events
 (defconstant +pointer-no-button+     #x00)

@@ -30,12 +30,20 @@
    (eol :initarg :end-of-line-action :accessor stream-end-of-line-action)
    (eop :initarg :end-of-page-action :accessor stream-end-of-page-action)
    (view :initarg :default-view :accessor stream-default-view)
-   (baseline :initform 0 :reader stream-baseline)
-   (height :accessor stream-cursor-height))
+   (baseline :initform 0 :reader stream-baseline))
   (:default-initargs
    :foreground +black+ :background +white+ :text-style *default-text-style*
    :vertical-spacing 2 :end-of-page-action :scroll :end-of-line-action :wrap
    :default-view +textual-view+))
+
+(defmethod stream-cursor-height ((sheet sheet))
+  (text-style-height (medium-text-style sheet) sheet))
+
+(defmethod stream-cursor-height ((sheet standard-extended-output-stream))
+  (cursor-height (stream-text-cursor sheet)))
+
+(defun (setf stream-cursor-height) (value stream)
+  (setf (cursor-height (stream-text-cursor stream)) value))
 
 (defmethod stream-force-output :after
     ((stream standard-extended-output-stream))
@@ -56,20 +64,21 @@
           (make-instance 'standard-text-cursor
                          :sheet stream
                          :x-position x-start
-                         :y-position y-start)))
+                         :y-position y-start
+                         :width 4
+                         :height (text-style-height (stream-text-style stream) stream))))
   (setf (cursor-active (stream-text-cursor stream)) t))
-
-(defmethod slot-unbound (class (stream standard-extended-output-stream) (slot (eql 'height)))
-  (declare (ignore class))
-  (setf (stream-cursor-height stream)
-        (text-style-height (stream-text-style stream) stream)))
 
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))
 
 (defmethod* (setf stream-cursor-position)
     (x y (stream standard-extended-output-stream))
-  (setf (cursor-position (stream-text-cursor stream)) (values x y)))
+  (let ((cursor (stream-text-cursor stream)))
+    (setf (cursor-position cursor) (values x y))
+    (when (and (cursor-active cursor)
+               (output-recording-stream-p stream))
+      (stream-close-text-output-record (cursor-sheet cursor)))))
 
 (defmethod stream-set-cursor-position ((stream standard-extended-output-stream) x y)
   (setf (stream-cursor-position stream) (values x y)))

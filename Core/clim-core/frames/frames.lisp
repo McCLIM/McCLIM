@@ -647,6 +647,15 @@
                                                  :frame frame
                                                  :command command)))))
 
+(defun schedule-command (frame command delay)
+  (let* ((sheet (frame-top-level-sheet frame))
+         (queue (sheet-event-queue sheet))
+         (event (make-instance 'execute-command-event
+                               :sheet sheet
+                               :frame frame
+                               :command command)))
+    (schedule-event-queue queue event delay)))
+
 (defmethod execute-frame-command ((frame application-frame) command)
   (check-type command cons)
   (apply (car command) (cdr command)))

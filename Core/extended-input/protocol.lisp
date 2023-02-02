@@ -24,6 +24,13 @@
 (defgeneric stream-input-wait (stream &key timeout input-wait-test))
 (defgeneric stream-unread-gesture (stream gesture))
 
+(defgeneric numeric-argument (stream)
+  (:method (stream)
+    (declare (ignore stream))
+    1))
+
+(defgeneric (setf numeric-argument) (value stream))
+
 ;;; 22.2.2 Extended Input Stream Conditions
 
 (defgeneric abort-gesture-event (condition))

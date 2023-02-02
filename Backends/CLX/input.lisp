@@ -86,16 +86,9 @@
 
 ;;; XXX :button code -> :button (decode-x-button-code code)
 ;;;
-;;; Only button and keypress events get a :code keyword argument! For
-;;; mouse button events, one should use decode-x-button-code;
-;;; otherwise one needs to look at the state argument to get the
-;;; current button state. The CLIM spec says that pointer motion
-;;; events are a subclass of pointer-event, which is reasonable, but
-;;; unfortunately they use the same button slot, whose value should
-;;; only be a single button. Yet pointer-button-state can return the
-;;; logical or of the button values... aaargh. For now I'll
-;;; canonicalize the value going into the button slot and think about
-;;; adding a pointer-event-buttons slot to pointer events. -- moore
+;;; Only button and keypress events get a :code keyword argument! For mouse
+;;; button events, one should use decode-x-button-code; otherwise one needs to
+;;; look at the state argument to get the current button state. -- moore
 
 (defvar *clx-port*)
 (defvar *wait-function*)
@@ -181,7 +174,7 @@
                                            (:grab 'pointer-grab-enter-event)
                                            (:ungrab 'pointer-ungrab-enter-event)
                                            (t 'pointer-enter-event))))
-                        :pointer (port-pointer *clx-port*) :button code
+                        :pointer (port-pointer *clx-port*)
                         :x x :y y
                         :sheet sheet
                         :modifier-state (clim-xcommon:x-event-state-modifiers
@@ -229,7 +222,7 @@
        (let ((modifier-state (clim-xcommon:x-event-state-modifiers *clx-port*
                                                                    state)))
          (make-instance 'pointer-motion-event
-                        :pointer (port-pointer *clx-port*) :button code
+                        :pointer (port-pointer *clx-port*)
                         :x x :y y
                         :sheet sheet
                         :modifier-state modifier-state
@@ -338,26 +331,13 @@
 (defconstant +wheel-down-mask+ #x1000)
 
 (defmethod pointer-button-state ((pointer clx-basic-pointer))
+  (port-button-state (port pointer)))
+
+(defun port-button-state (port)
   (multiple-value-bind (x y same-screen-p child mask)
-      (xlib:query-pointer (clx-port-window (port pointer)))
+      (xlib:query-pointer (clx-port-window port))
     (declare (ignore x y same-screen-p child))
     (ldb (byte 5 8) mask)))
-
-(defun button-from-state (mask)
-  ;; In button events we don't want to see more than one button,
-  ;; according to the spec, so pick a canonical ordering. :P The mask
-  ;; is that state mask from an X event.
-  (cond ((logtest +right-button-mask+ mask)
-         +pointer-right-button+)
-        ((logtest +middle-button-mask+ mask)
-         +pointer-middle-button+)
-        ((logtest +left-button-mask+ mask)
-         +pointer-left-button+)
-        ((logtest +wheel-up-mask+ mask)
-         +pointer-wheel-up+)
-        ((logtest +wheel-down-mask+ mask)
-         +pointer-wheel-down+)
-        (t 0)))
 
 (defmethod port-modifier-state ((port clx-basic-port))
   (multiple-value-bind (x y same-screen-p child mask)
