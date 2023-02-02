@@ -172,6 +172,9 @@
             (pointer-event-x event)
             (pointer-event-y event))))
 
+(defmethod pointer-button-state ((event pointer-event))
+  (pointer-button-state (pointer-event-pointer event)))
+
 (define-event-class pointer-button-event (pointer-event)
   ((button :initarg :button
            :reader pointer-event-button)))

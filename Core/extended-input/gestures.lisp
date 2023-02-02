@@ -29,21 +29,52 @@
   '(eql :keyboard))
 
 ;;; A correspondence between these keywords and POINTER-BUTTON-EVENTs is
-;;;defined by a result of the function (EVENT-TYPE EVENT).
+;;; defined by a result of the function (EVENT-TYPE EVENT).
 (deftype pointer-button-gesture-type ()
   '(member :pointer-button         ; standard
            :pointer-button-press   ; standard
            :pointer-button-release ; standard
            :pointer-scroll))       ; extension
 
+;;; FIXME EVENT-MATCHES-GESTURE-NAME-P handles correctly all this gesture type
+;;; but STREAM-READ-GESTURE does not call POINTER-BUTTON-PRESS-HANDLER for it
+;;; - that means that presentation translators won't work with these gestures.
+;;; The same issue applies to a type :POINTER-BUTTON-RELEASE. -- jd 2023-02-02
+(deftype pointer-motion-gesture-type ()
+  '(eql :pointer-motion))
+
 (deftype gesture-type ()
   '(or keyboard-gesture-type
-       pointer-button-gesture-type))
+       pointer-button-gesture-type
+       pointer-motion-gesture-type))
 
 (deftype physical-gesture ()
   '(cons gesture-type (cons (or symbol character integer) (cons integer null))))
 
 ;;; 22.3 Gestures and Gesture Names
+
+(defun error-unknown-name (what value members)
+  (error "~@<~S is not a known ~a name. ~
+          Valid ~a names are ~{~S~^, ~}.~@:>"
+         value what what (map 'list #'car members)))
+
+(defun normalize-union (what value members)
+  (cond ((assoc-value members value))
+        (t (error-unknown-name what value members))))
+
+(defun normalize-bmask (what values members)
+  (reduce #'logior values
+          :key (lambda (name)
+                 (or (assoc-value members name)
+                     (error-unknown-name what name members)))))
+
+(defun normalize-state-with-wildcards (type function value)
+  (when (or (eq value t)
+            (and (eq type :bmask) (equal value '(t))))
+    (return-from normalize-state-with-wildcards t))
+  (ecase type
+    (:union (funcall function value))
+    (:bmask (apply function (ensure-list value)))))
 
 (defconstant +gesture-modifier-key-to-event-modifier+
   `((:shift   . ,+shift-key+)
@@ -52,28 +83,9 @@
     (:super   . ,+super-key+)
     (:hyper   . ,+hyper-key+)))
 
-(defun make-modifier-state (&rest modifiers)
-  (reduce #'logior modifiers
-          :key (lambda (modifier-key-name)
-                 (or (assoc-value
-                      +gesture-modifier-key-to-event-modifier+ modifier-key-name)
-                     (error "~@<~S is not a known modifier key ~
-                            name. Valid modifier key names are ~{~S~^, ~
-                            ~}.~@:>"
-                            modifier-key-name
-                            (map 'list #'car +gesture-modifier-key-to-event-modifier+))))))
-
-(defun normalize-keyboard-physical-gesture (gesture-spec)
-  (destructuring-bind (key-or-name &rest modifiers)
-      (alexandria:ensure-list gesture-spec) ; extension
-    (check-type key-or-name (or character symbol))
-    (values key-or-name
-            (if (equal modifiers '(t))
-                t
-                (apply #'make-modifier-state modifiers)))))
-
 (defconstant +gesture-button-to-event-button+
-  `((:left        . ,+pointer-left-button+)
+  `((:none        . ,+pointer-no-button+)
+    (:left        . ,+pointer-left-button+)
     (:middle      . ,+pointer-middle-button+)
     (:right       . ,+pointer-right-button+)
     (:wheel-up    . ,+pointer-wheel-up+)
@@ -81,20 +93,38 @@
     (:wheel-left  . ,+pointer-wheel-left+)
     (:wheel-right . ,+pointer-wheel-right+)))
 
+(defun make-modifier-state (&rest modifiers)
+  (normalize-bmask "modifer key" modifiers +gesture-modifier-key-to-event-modifier+))
+
+(defun make-button-state (&rest buttons)
+  (normalize-bmask "pointer button" buttons +gesture-button-to-event-button+))
+
+(defun make-pointer-button (button)
+  (normalize-union "pointer button" button +gesture-button-to-event-button+))
+
+(defun normalize-keyboard-physical-gesture (gesture-spec)
+  (destructuring-bind (key-or-name &rest modifiers)
+      (alexandria:ensure-list gesture-spec) ; extension
+    (check-type key-or-name (or character symbol))
+    (values key-or-name
+            (normalize-state-with-wildcards
+             :bmask #'make-modifier-state modifiers))))
+
 (defun normalize-pointer-button-physical-gesture (gesture-spec)
   (destructuring-bind (button-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
-    (values (cond ((eq button-name t)
-                   button-name)
-                  ((assoc-value +gesture-button-to-event-button+ button-name))
-                  (t
-                   (error "~@<~S is not a known pointer button. Known ~
-                           buttons are ~{~S~^, ~}.~@:>"
-                          button-name
-                          (map 'list #'car +gesture-button-to-event-button+))))
-            (if (equal modifiers '(t))
-                t
-                (apply #'make-modifier-state modifiers)))))
+    (values (normalize-state-with-wildcards
+             :union #'make-pointer-button button-name)
+            (normalize-state-with-wildcards
+             :bmask #'make-modifier-state modifiers))))
+
+(defun normalize-pointer-motion-physical-gesture (gesture-spec)
+  (destructuring-bind (button-names &rest modifiers)
+      (alexandria:ensure-list gesture-spec) ; extension
+    (values (normalize-state-with-wildcards
+             :bmask #'make-button-state button-names)
+            (normalize-state-with-wildcards
+             :bmask #'make-modifier-state modifiers))))
 
 (defun normalize-physical-gesture (type gesture-spec)
   (multiple-value-call #'values
@@ -103,6 +133,8 @@
             (normalize-keyboard-physical-gesture gesture-spec))
            (pointer-button-gesture-type
             (normalize-pointer-button-physical-gesture gesture-spec))
+           (pointer-motion-gesture-type
+            (normalize-pointer-motion-physical-gesture gesture-spec))
            (t
             (error "~@<~S is not a known gesture type.~@:>" type)))))
 
@@ -125,9 +157,8 @@
   (check-gesture-name name)
   (remhash name *gesture-names*))
 
-;;; Extension: GESTURE-SPEC can be an atom which is treated like a
-;;; device name (that is pointer button or keyboard key) without
-;;; modifiers.
+;;; Extension: GESTURE-SPEC can be an atom which is treated like a device name
+;;; (that is pointer button or keyboard key) without modifiers.
 (defmacro define-gesture-name (name type gesture-spec &key (unique t))
   (with-current-source-form (name)
     (check-gesture-name name))
@@ -161,7 +192,8 @@
   (:method ((name symbol))
     (when-let ((entry (first (find-gesture name))))
       (destructuring-bind (type device-name modifier-state) entry
-        (when (and (eq type :keyboard) (eql modifier-state 0))
+        (when (and (typep type 'keyboard-gesture-type)
+                   (eql modifier-state 0))
           device-name)))))
 
 ;;; GESTURE is T or a list of normalized physical gestures.
@@ -201,6 +233,11 @@
   (:method ((event pointer-button-event) physical-gestures)
     (event-data-matches-gesture-p (event-type event)
                                   (pointer-event-button event)
+                                  (event-modifier-state event)
+                                  physical-gestures))
+  (:method ((event pointer-motion-event) physical-gestures)
+    (event-data-matches-gesture-p (event-type event)
+                                  (pointer-button-state event)
                                   (event-modifier-state event)
                                   physical-gestures)))
 
