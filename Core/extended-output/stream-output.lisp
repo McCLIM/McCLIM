@@ -66,8 +66,7 @@
                          :x-position x-start
                          :y-position y-start
                          :width 4
-                         :height (text-style-height (stream-text-style stream) stream))))
-  (setf (cursor-active (stream-text-cursor stream)) t))
+                         :height (text-style-height (stream-text-style stream) stream)))))
 
 (defmethod stream-cursor-position ((stream standard-extended-output-stream))
   (cursor-position (stream-text-cursor stream)))

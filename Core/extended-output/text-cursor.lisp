@@ -30,7 +30,8 @@
                      :width 4
                      :height 16))
 
-(defmethod initialize-instance :after ((object standard-text-cursor) &key visibility)
+(defmethod initialize-instance :after
+    ((object standard-text-cursor) &key (visibility :on))
   (setf (cursor-visibility object) visibility))
 
 (defmethod bounding-rectangle* ((cursor standard-text-cursor))
@@ -63,7 +64,8 @@
     (values x y)))
 
 (defmethod* (setf cursor-position) (nx ny (cursor standard-text-cursor))
-  (when (cursor-active cursor)
+  ;; FIXME is that right? seos seems to rely on the unconditional assignment.
+  (progn ;when (cursor-active cursor)
     (with-slots (x y) cursor
       (setf (values x y) (values nx ny)))))
 
