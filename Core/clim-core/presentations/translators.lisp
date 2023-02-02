@@ -372,9 +372,9 @@ and used to ensure that presentation-translators-caches are up to date.")
       (setf modifier-state (event-modifier-state event)
             button (pointer-event-button event)))
   (when (event-data-matches-gesture-p
-         nil ; ignore type
-         (if for-menu nil button)
-         (if for-menu nil modifier-state)
+         :ignore                        ; ignore type
+         (if for-menu :ignore button)
+         (if for-menu :ignore modifier-state)
          (gesture translator))
     (let ((from-type (from-type translator))
           (to-type (to-type translator))

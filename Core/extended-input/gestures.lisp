@@ -43,10 +43,16 @@
 (deftype pointer-motion-gesture-type ()
   '(eql :pointer-motion))
 
+;;; "Other" gestures are defined only by the type and the qualifier -
+;;; modifiers are ignored.
+(deftype other-gesture-type ()
+  '(member :timer))
+
 (deftype gesture-type ()
   '(or keyboard-gesture-type
        pointer-button-gesture-type
-       pointer-motion-gesture-type))
+       pointer-motion-gesture-type
+       other-gesture-type))
 
 (deftype physical-gesture ()
   '(cons gesture-type (cons (or symbol character integer) (cons integer null))))
@@ -104,7 +110,7 @@
 
 (defun normalize-keyboard-physical-gesture (gesture-spec)
   (destructuring-bind (key-or-name &rest modifiers)
-      (alexandria:ensure-list gesture-spec) ; extension
+      (ensure-list gesture-spec)        ; extension
     (check-type key-or-name (or character symbol))
     (values key-or-name
             (normalize-state-with-wildcards
@@ -112,7 +118,7 @@
 
 (defun normalize-pointer-button-physical-gesture (gesture-spec)
   (destructuring-bind (button-name &rest modifiers)
-      (alexandria:ensure-list gesture-spec) ; extension
+      (ensure-list gesture-spec)        ; extension
     (values (normalize-state-with-wildcards
              :union #'make-pointer-button button-name)
             (normalize-state-with-wildcards
@@ -120,11 +126,16 @@
 
 (defun normalize-pointer-motion-physical-gesture (gesture-spec)
   (destructuring-bind (button-names &rest modifiers)
-      (alexandria:ensure-list gesture-spec) ; extension
+      (ensure-list gesture-spec)        ; extension
     (values (normalize-state-with-wildcards
              :bmask #'make-button-state button-names)
             (normalize-state-with-wildcards
              :bmask #'make-modifier-state modifiers))))
+
+(defun normalize-other-gesture (gesture-spec)
+  (destructuring-bind (qualifier)
+      (ensure-list gesture-spec)
+    (values qualifier t)))
 
 (defun normalize-physical-gesture (type gesture-spec)
   (multiple-value-call #'values
@@ -135,6 +146,8 @@
             (normalize-pointer-button-physical-gesture gesture-spec))
            (pointer-motion-gesture-type
             (normalize-pointer-motion-physical-gesture gesture-spec))
+           (other-gesture-type
+            (normalize-other-gesture gesture-spec))
            (t
             (error "~@<~S is not a known gesture type.~@:>" type)))))
 
@@ -197,11 +210,11 @@
           device-name)))))
 
 ;;; GESTURE is T or a list of normalized physical gestures.
-(defun event-data-matches-gesture-p (type device-name modifier-state
-                                     physical-gestures)
+(defun event-data-matches-gesture-p
+    (type device-name modifier-state physical-gestures)
   (labels ((matches-with-wildcards-p (value gesture-value)
              (or (eq gesture-value t)
-                 (eq value nil)
+                 (eq value :ignore)
                  (eql value gesture-value)))
            (physical-gesture-matches-p (gesture)
              (destructuring-bind
@@ -239,6 +252,11 @@
     (event-data-matches-gesture-p (event-type event)
                                   (pointer-button-state event)
                                   (event-modifier-state event)
+                                  physical-gestures))
+  (:method ((event timer-event) physical-gestures)
+    (event-data-matches-gesture-p (event-type event)
+                                  (timer-event-qualifier event)
+                                  :ignore
                                   physical-gestures)))
 
 (defun event-matches-gesture-name-p (event gesture-name)

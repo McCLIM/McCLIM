@@ -226,7 +226,31 @@
 (define-event-class window-manager-deiconify-event  (window-manager-event) ())
 
 (define-event-class timer-event (standard-event)
-  ())
+  ((qualifier :initarg :qualifier :reader timer-event-qualifier))
+  (:default-initargs :qualifier nil))
+
+(defun schedule-timer (sheet qualifier delay)
+  (let ((event (make-instance 'timer-event
+                              :sheet sheet
+                              :qualifier qualifier)))
+    (schedule-event sheet event delay)))
+
+#+ (or)
+(progn ;; Not yet..
+  (define-event-class pulse-event (timer-event)
+    ((delay :initarg :delay :accessor pulse-event-delay)))
+
+  (defmethod handle-event :after (sheet (event pulse-event))
+    (let ((delay (timer-event-delay event)))
+      (when delay
+        (schedule-event sheet event delay))))
+
+  (defun schedule-pulse (sheet qualifier delay)
+    (let ((event (make-instance 'pulse-event
+                                :sheet sheet
+                                :delay delay
+                                :qualifier qualifier)))
+      (schedule-event sheet event delay))))
 
 ;;; Constants dealing with events
 (defconstant +pointer-no-button+     #x00)
