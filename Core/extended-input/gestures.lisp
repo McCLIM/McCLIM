@@ -25,14 +25,20 @@
   (unless (typep name 'gesture-name)
     (error "~S is not a valid gesture name." name)))
 
-(deftype pointer-gesture-type ()
+(deftype keyboard-gesture-type ()
+  '(eql :keyboard))
+
+;;; A correspondence between these keywords and POINTER-BUTTON-EVENTs is
+;;;defined by a result of the function (EVENT-TYPE EVENT).
+(deftype pointer-button-gesture-type ()
   '(member :pointer-button         ; standard
            :pointer-button-press   ; standard
            :pointer-button-release ; standard
            :pointer-scroll))       ; extension
 
 (deftype gesture-type ()
-  '(or (eql :keyboard) pointer-gesture-type))
+  '(or keyboard-gesture-type
+       pointer-button-gesture-type))
 
 (deftype physical-gesture ()
   '(cons gesture-type (cons (or symbol character integer) (cons integer null))))
@@ -75,7 +81,7 @@
     (:wheel-left  . ,+pointer-wheel-left+)
     (:wheel-right . ,+pointer-wheel-right+)))
 
-(defun normalize-pointer-physical-gesture (gesture-spec)
+(defun normalize-pointer-button-physical-gesture (gesture-spec)
   (destructuring-bind (button-name &rest modifiers)
       (alexandria:ensure-list gesture-spec) ; extension
     (values (cond ((eq button-name t)
@@ -93,16 +99,15 @@
 (defun normalize-physical-gesture (type gesture-spec)
   (multiple-value-call #'values
     type (typecase type
-           ((eql :keyboard)
+           (keyboard-gesture-type
             (normalize-keyboard-physical-gesture gesture-spec))
-           (pointer-gesture-type
-            (normalize-pointer-physical-gesture gesture-spec))
+           (pointer-button-gesture-type
+            (normalize-pointer-button-physical-gesture gesture-spec))
            (t
             (error "~@<~S is not a known gesture type.~@:>" type)))))
 
-;;; A mapping from names which are symbols to lists of type
-;;; `physical-gesture'.
-(defparameter *gesture-names* (make-hash-table))
+;;; A mapping from names which are symbols to lists of type PHYSICAL-GESTURE.
+(defvar *gesture-names* (make-hash-table))
 
 (defun find-gesture (name)
   (check-gesture-name name)
@@ -172,7 +177,7 @@
                  gesture
                (and (or (matches-with-wildcards-p type gesture-type)
                         (and (eq gesture-type :pointer-button)
-                             (typep type 'pointer-gesture-type)))
+                             (typep type 'pointer-button-gesture-type)))
                     (matches-with-wildcards-p device-name gesture-device-name)
                     (matches-with-wildcards-p
                      modifier-state gesture-modifier-state)))))
