@@ -1267,7 +1267,7 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                                               :max-width max-width
                                               :height max-height
                                               :min-height max-height
-                                              :max-height max-width)
+                                              :max-height max-height)
               req (make-space-requirement* req :max-width max-width
                                                :max-height max-height)))
 
