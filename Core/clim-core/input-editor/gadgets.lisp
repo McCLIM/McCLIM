@@ -13,14 +13,12 @@
 
 (defclass text-editing-gadget (edward-mixin text-editor)
   ((allow-line-breaks :initarg :allow-line-breaks) ; single line?
-   (gadget-resizeable :initarg :gadget-resizeable) ; truncate output?
    (activation-gestures :accessor activation-gestures
                         :initarg :activation-gestures)
    (text-cursor :accessor stream-text-cursor))
   (:default-initargs :foreground +black+
                      :background +white+
                      :allow-line-breaks t
-                     :gadget-resizeable nil
                      :activation-gestures '()))
 
 (defmethod ie-insert-newline :around
@@ -58,6 +56,7 @@
   (ie-clear-input-buffer sheet (input-editor-buffer sheet) nil 1)
   (loop for ch across new-value do
     (handle-editor-event sheet ch))
+  (change-space-requirements sheet)
   (dispatch-repaint sheet +everywhere+))
 
 (defmethod handle-event :around ((sheet text-editing-gadget) event)
@@ -67,21 +66,19 @@
         (call-next-method))))
 
 (defmethod handle-event ((sheet text-editing-gadget) (event key-press-event))
-  (if (and (editable-p sheet)
-           (handle-editor-event sheet event))
+  (if (handle-editor-event sheet event)
       (progn
-        (when (slot-value sheet 'gadget-resizeable)
-          (change-space-requirements sheet))
+        (change-space-requirements sheet)
         (dispatch-repaint sheet +everywhere+)
-        (value-changed-callback sheet
-                                (gadget-client sheet)
-                                (gadget-id sheet)
-                                (gadget-value sheet)))
+        (when (editable-p sheet)
+          (value-changed-callback sheet
+                                  (gadget-client sheet)
+                                  (gadget-id sheet)
+                                  (gadget-value sheet))))
       (call-next-method)))
 
 (defmethod handle-event ((sheet text-editing-gadget) (event pointer-event))
-  (if (and (editable-p sheet)
-           (handle-editor-event sheet event))
+  (if (handle-editor-event sheet event)
       (dispatch-repaint sheet +everywhere+)
       (call-next-method)))
 
@@ -94,6 +91,7 @@
   (dispatch-repaint sheet +everywhere+))
 
 (defmethod handle-repaint ((sheet text-editing-gadget) region)
+  (declare (ignore region))
   (with-sheet-medium (medium sheet)
     (let* ((text-cursor (stream-text-cursor sheet))
            (line-height (cursor-height text-cursor))
@@ -106,32 +104,36 @@
                  ;; Update the cursor.
                  (when (and (eq line cursor-line)
                             (cursor-active text-cursor))
-                   (let ((current-x (nth-value 2 (text-size medium text :end cursor-position))))
-                     (setf (cursor-position text-cursor)
-                           (values current-x current-y))))
+                   (setf (cursor-position text-cursor)
+                         (values (nth-value 2 (text-size medium text :end cursor-position))
+                                 current-y)))
                  ;; Draw the line.
                  (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
                  ;; Increment the drawing position.
                  (incf current-y line-height))))
         (declare (dynamic-extent (function draw-line)))
         (map-over-lines (input-editor-buffer sheet) #'draw-line)
-        (draw-design sheet text-cursor)))))
+        (draw-design sheet text-cursor)
+        (scroll-extent* sheet text-cursor)))))
 
 (defmethod compose-space ((sheet text-editing-gadget) &key width height)
   (declare (ignore width height))
   (multiple-value-bind (buffer-w buffer-h)
       (edward-buffer-extent sheet)
+    (let ((text-cursor (stream-text-cursor sheet)))
+      (when (cursor-state text-cursor)
+        (incf buffer-w (cursor-width text-cursor))))
     (with-sheet-medium (medium sheet)
       (let* ((text-style (medium-text-style medium))
              (ts-w (text-style-width text-style medium))
              (ts-h (text-style-height text-style medium))
              (min-w (* ts-w (text-editor-ncolumns sheet)))
-	     (min-h (* ts-h (text-editor-nlines sheet))))
-        (when (slot-value sheet 'gadget-resizeable)
-          (setf buffer-w (maxf min-w buffer-w))
-          (setf buffer-h (maxf min-h buffer-h)))
-        (make-space-requirement :min-width min-w :min-height min-h
-                                :width buffer-w :height buffer-h)))))
+	     (min-h (* ts-h (text-editor-nlines sheet)))
+             (result-w (max min-w buffer-w))
+             (result-h (max min-h buffer-h)))
+        (make-space-requirement
+         :width  result-w :min-width  min-w :max-width  result-w
+         :height result-h :min-height min-h :max-height result-h)))))
 
 (defclass text-field-pane (text-editing-gadget)
   ()
