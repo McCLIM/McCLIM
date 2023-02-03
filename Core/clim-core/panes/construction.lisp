@@ -93,33 +93,29 @@ returned or error is signaled depending on the argument ERRORP.")
   '(:width :min-width :max-width :height :min-height :max-height))
 
 (defun separate-clim-pane-initargs (initargs)
-  ;; If :scroll-bars isn't a cons the user space requirement options belong to
-  ;; the outermost container of the stream (scroller-pane, label-pane or
-  ;; outline-pane). If :scroll-bars is a cons the user space requirement options
-  ;; belong to the clim stream and it is possible to set the space requirement
-  ;; of the scroller using the cdr of :scroll-bars as: :SCROLL-BARS '(:VERTICAL
-  ;; :WIDTH 300) -- admich 2020-10-13
+  ;; If all wrapper initargs are _not_ a cons then the user space requirement
+  ;; options belong to the outermost container of the stream. Otherwise the
+  ;; user space requirement options belong to the inner pane and it is
+  ;; possible to set space requirements of containers using the cdr of the
+  ;; value, for example :SCROLL-BARS '(:VERTICAL 300). -- jd 2023-02-03
   (loop with any-wrapper-p = nil
-        with complex-scroll-bars-p = nil
+        with complex-size-p = nil
         for (key value) on initargs by #'cddr
         if (and (member key +space-requirement-initargs+ :test #'eq)
                 (not (eq value :compute)))
           nconc (list key value) into space-options
         else if (member key +clim-pane-wrapper-initargs+)
                nconc (list key value) into wrapper-options
-               and do (case key
-                        (:borders
-                         (when value (setf any-wrapper-p t)))
-                        (:label
-                         (when value (setf any-wrapper-p t)))
-                        (:scroll-bars
-                         (when value (setf any-wrapper-p t))
-                         (when (consp value) (setf complex-scroll-bars-p t))))
+               and do (when (member key '(:borders :label :scroll-bars))
+                        (when value
+                          (setf any-wrapper-p t))
+                        (when (consp value)
+                          (setf complex-size-p t)))
         else
           nconc (list key value) into pane-options
         finally
            (return
-             (if (or (not any-wrapper-p) complex-scroll-bars-p)
+             (if (or (not any-wrapper-p) complex-size-p)
                  (values (append pane-options space-options) wrapper-options '())
                  (values pane-options wrapper-options space-options)))))
 
@@ -147,18 +143,21 @@ returned or error is signaled depending on the argument ERRORP.")
                            user-space-requirements)))))
     (when label
       (setf pane (apply #'make-pane 'label-pane
-                        :label label
-                        :label-alignment label-alignment
                         :contents (list pane)
-                        (when (and user-space-requirements (not borders))
-                          user-space-requirements))))
+                        (append
+                         (if (consp label)
+                             `(:label ,@label :label-alignment ,label-alignment)
+                             `(:label ,label  :label-alignment ,label-alignment))
+                         (when (and user-space-requirements (not borders))
+                           user-space-requirements)))))
     (when borders
       (setf pane (apply #'make-pane 'outlined-pane
-                        :thickness (if (not (numberp borders))
-                                       1
-                                       borders)
                         :contents (list pane)
-                        user-space-requirements)))
+                        (append
+                         (if (consp borders)
+                             `(:thickness ,@borders)
+                             `(:thickness ,(if (numberp borders) borders 1)))
+                         user-space-requirements))))
     (values pane wrapped-pane)))
 
 (defun make-clim-pane (type &rest options)
