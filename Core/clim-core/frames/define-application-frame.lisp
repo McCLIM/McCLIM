@@ -62,6 +62,7 @@
      `(make-clim-pointer-documentation-pane :name ',name ,@options))
     ((eq type :command-menu)
      `(make-clim-command-menu-pane :name ',name ,@options))
+    #+ (or) ;; :LABEL conflicts with :PUSH-BUTTON initarg.
     ((keywordp type)
      `(make-clim-pane ',type :name ',name ,@options))
     ;; Non-standard pane designator passed to the `make-pane'
