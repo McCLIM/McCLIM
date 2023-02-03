@@ -26,20 +26,27 @@
               (inner-pane (find-pane-of-type pane pane-class)))
     (when-let ((parent (sheet-parent inner-pane)))
       (sheet-disown-child parent inner-pane))
-    (if (member type '(:application :interactor :pointer-documentation :command-menu))
-        (multiple-value-bind (stream-options wrapper-options wrapper-space)
-            (separate-clim-pane-initargs
-             (if (intersection initargs '(:scroll-bar :scroll-bars))
-                 initargs
-                 (list* :scroll-bars (ecase type
-                                       (:interactor :vertical)
-                                       (:application t)
-                                       (:pointer-documentation nil)
-                                       (:command-menu t))
-                        initargs)))
-          (apply #'reinitialize-instance inner-pane stream-options)
-          (apply #'wrap-stream-pane inner-pane wrapper-space wrapper-options))
-        (apply #'reinitialize-instance inner-pane initargs))))
+    (cond
+      ((member type '(:application :interactor :pointer-documentation :command-menu))
+       (multiple-value-bind (pane-options wrapper-options wrapper-space)
+           (separate-clim-pane-initargs
+            (if (intersection initargs '(:scroll-bar :scroll-bars))
+                initargs
+                (list* :scroll-bars (ecase type
+                                      (:interactor :vertical)
+                                      (:application t)
+                                      (:pointer-documentation nil)
+                                      (:command-menu t))
+                       initargs)))
+         (apply #'reinitialize-instance inner-pane pane-options)
+         (apply #'wrap-stream-pane inner-pane wrapper-space wrapper-options)))
+      ((keywordp type)
+       (multiple-value-bind (pane-options wrapper-options wrapper-space)
+           (separate-clim-pane-initargs initargs)
+         (apply #'reinitialize-instance inner-pane pane-options)
+         (apply #'wrap-clim-pane inner-pane wrapper-space wrapper-options)))
+      (t
+       (apply #'reinitialize-instance inner-pane initargs)))))
 
 (defun generate-make-pane (name type options)
   (cond
