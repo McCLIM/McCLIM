@@ -86,6 +86,87 @@ returned or error is signaled depending on the argument ERRORP.")
                            (frame-manager *application-frame*))
          *application-frame* type args))
 
+(defconstant +clim-pane-wrapper-initargs+
+  '(:label :label-alignment :scroll-bars :borders))
+
+(defconstant +space-requirement-initargs+
+  '(:width :min-width :max-width :height :min-height :max-height))
+
+(defun separate-clim-pane-initargs (initargs)
+  ;; If :scroll-bars isn't a cons the user space requirement options belong to
+  ;; the outermost container of the stream (scroller-pane, label-pane or
+  ;; outline-pane). If :scroll-bars is a cons the user space requirement options
+  ;; belong to the clim stream and it is possible to set the space requirement
+  ;; of the scroller using the cdr of :scroll-bars as: :SCROLL-BARS '(:VERTICAL
+  ;; :WIDTH 300) -- admich 2020-10-13
+  (loop with any-wrapper-p = nil
+        with complex-scroll-bars-p = nil
+        for (key value) on initargs by #'cddr
+        if (and (member key +space-requirement-initargs+ :test #'eq)
+                (not (eq value :compute)))
+          nconc (list key value) into space-options
+        else if (member key +clim-pane-wrapper-initargs+)
+               nconc (list key value) into wrapper-options
+               and do (case key
+                        (:borders
+                         (when value (setf any-wrapper-p t)))
+                        (:label
+                         (when value (setf any-wrapper-p t)))
+                        (:scroll-bars
+                         (when value (setf any-wrapper-p t))
+                         (when (consp value) (setf complex-scroll-bars-p t))))
+        else
+          nconc (list key value) into pane-options
+        finally
+           (return
+             (if (or (not any-wrapper-p) complex-scroll-bars-p)
+                 (values (append pane-options space-options) wrapper-options '())
+                 (values pane-options wrapper-options space-options)))))
+
+;;; Default is "no wrapper".
+(defun wrap-clim-pane (wrapped-pane user-space-requirements
+                       &key borders
+                            label
+                            (label-alignment :top)
+                            scroll-bars)
+  (let ((pane wrapped-pane))
+    (when scroll-bars
+      (setf pane (make-pane 'viewport-pane :contents (list pane)))
+      (setf pane (apply #'make-pane 'scroller-pane
+                        :contents (list pane)
+                        (append
+                         ;; From the Franz manual if :scroll-bars is a cons the
+                         ;; car is treated as the non-cons argument and the cdr
+                         ;; is a list of keyword argument pairs to be used as
+                         ;; options of the scroller-pane.
+                         (if (consp scroll-bars)
+                             `(:scroll-bars ,@scroll-bars)
+                             `(:scroll-bars ,scroll-bars))
+                         (when (and user-space-requirements
+                                    (not (or label borders)))
+                           user-space-requirements)))))
+    (when label
+      (setf pane (apply #'make-pane 'label-pane
+                        :label label
+                        :label-alignment label-alignment
+                        :contents (list pane)
+                        (when (and user-space-requirements (not borders))
+                          user-space-requirements))))
+    (when borders
+      (setf pane (apply #'make-pane 'outlined-pane
+                        :thickness (if (not (numberp borders))
+                                       1
+                                       borders)
+                        :contents (list pane)
+                        user-space-requirements)))
+    (values pane wrapped-pane)))
+
+(defun make-clim-pane (type &rest options)
+  (multiple-value-bind (pane-options wrapper-options wrapper-space-options)
+      (separate-clim-pane-initargs options)
+    (let ((pane (apply #'make-pane type pane-options)))
+      (apply #'wrap-clim-pane pane wrapper-space-options wrapper-options))))
+
 (defmethod medium-foreground ((pane pane))
   (medium-foreground (sheet-medium pane)))
 

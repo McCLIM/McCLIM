@@ -325,43 +325,6 @@ current background message was set."))
 
 ;;; Constructors
 
-(defconstant +stream-pane-wrapper-initargs+
-  '(:label :label-alignment :scroll-bar :scroll-bars :borders))
-
-(defconstant +space-requirement-initargs+
-  '(:width :min-width :max-width :height :min-height :max-height))
-
-(defun separate-stream-pane-initargs (initargs)
-  ;; If :scroll-bars isn't a cons the user space requirement options belong to
-  ;; the outermost container of the stream (scroller-pane, label-pane or
-  ;; outline-pane). If :scroll-bars is a cons the user space requirement options
-  ;; belong to the clim stream and it is possible to set the space requirement
-  ;; of the scroller using the cdr of :scroll-bars as: :SCROLL-BARS '(:VERTICAL
-  ;; :WIDTH 300) -- admich 2020-10-13
-  (loop with any-wrapper-p = nil
-        with complex-scroll-bars-p = nil
-        for (key value) on initargs by #'cddr
-        if (and (member key +space-requirement-initargs+ :test #'eq)
-                (not (eq value :compute)))
-          nconc (list key value) into space-options
-        else if (member key +stream-pane-wrapper-initargs+)
-               nconc (list key value) into wrapper-options
-               and do (case key
-                        (:borders
-                         (when value (setf any-wrapper-p t)))
-                        (:label
-                         (when value (setf any-wrapper-p t)))
-                        (:scroll-bars
-                         (when value (setf any-wrapper-p t))
-                         (when (consp value) (setf complex-scroll-bars-p t))))
-        else
-          nconc (list key value) into stream-options
-        finally
-           (return
-             (if (or (not any-wrapper-p) complex-scroll-bars-p)
-                 (values (append stream-options space-options) wrapper-options '())
-                 (values stream-options wrapper-options space-options)))))
-
 (defun make-unwrapped-stream-pane
     (type &rest initargs
           &key (display-after-commands nil display-after-commands-p)
@@ -370,7 +333,7 @@ current background message was set."))
     (check-type display-after-commands (member nil t :no-clear))
     (when (member :display-time initargs)
       (error "MAKE-CLIM-STREAM-PANE can not be called with both ~
-              :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords")))
+              :DISPLAY-AFTER-COMMANDS and :DISPLAY-TIME keywords.")))
   (apply #'make-pane type (append (alexandria:remove-from-plist
                                    initargs :display-after-commands)
                                   (when display-after-commands-p
@@ -385,38 +348,9 @@ current background message was set."))
                               (scroll-bar :vertical)
                               (scroll-bars scroll-bar)
                               (borders t))
-  (let* ((pane stream-pane)
-         (stream pane))
-    (when scroll-bars
-      (setf pane (make-pane 'viewport-pane :contents (list pane)))
-      (setf pane (apply #'make-pane 'scroller-pane
-                        :contents (list pane)
-                        (append
-                         ;; From the Franz manual if :scroll-bars is a cons the
-                         ;; car is treated as the non-cons argument and the cdr
-                         ;; is a list of keyword argument pairs to be used as
-                         ;; options of the scroller-pane.
-                         (if (consp scroll-bars)
-                             `(:scroll-bar ,@scroll-bars)
-                             `(:scroll-bar ,scroll-bars))
-                         (when (and user-space-requirements
-                                    (not (or label borders)))
-                           user-space-requirements)))))
-    (when label
-      (setf pane (apply #'make-pane 'label-pane
-                        :label label
-                        :label-alignment label-alignment
-                        :contents (list pane)
-                        (when (and user-space-requirements (not borders))
-                          user-space-requirements))))
-    (when borders
-      (setf pane (apply #'make-pane 'outlined-pane
-                        :thickness (if (not (numberp borders))
-                                       1
-                                       borders)
-                        :contents (list pane)
-                        user-space-requirements)))
-    (values pane stream)))
+  (wrap-clim-pane stream-pane user-space-requirements
+                  :label label :label-alignment label-alignment
+                  :scroll-bars scroll-bars :borders borders))
 
 (defun make-clim-stream-pane (&rest options &key (type 'clim-stream-pane)
                                                  (label nil)
@@ -427,10 +361,9 @@ current background message was set."))
                               &allow-other-keys)
   (declare (ignore label label-alignment))
   (multiple-value-bind (stream-options wrapper-options wrapper-space-options)
-      (separate-stream-pane-initargs
-       (list* :scroll-bar scroll-bar :scroll-bars scroll-bars :borders borders
-              (alexandria:remove-from-plist
-               options :type :scroll-bar :scroll-bars :borders)))
+      (with-keywords-removed (options (:type :scroll-bar :scroll-bars :borders))
+        (separate-clim-pane-initargs
+         (list* :scroll-bars scroll-bars :borders borders options)))
     (let ((stream (apply #'make-unwrapped-stream-pane type stream-options)))
       (apply #'wrap-stream-pane stream wrapper-space-options wrapper-options))))
 
