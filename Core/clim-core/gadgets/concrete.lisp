@@ -1418,15 +1418,12 @@ if INVOKE-CALLBACK is given."))
             (multiple-value-call #'values
               (transform-position (sheet-delta-transformation parent nil) cx0 cy0)
               (transform-position (sheet-delta-transformation parent nil) cx1 cy1))
-          ;; Note: This :suggested-width/height business is really a silly hack
-          ;;       which I could have easily worked around without adding kludges
-          ;;       to the scroller-pane..
           (let* ((topmost-pane (if scroll-p
-                                   ;; TODO investigate whether suggested-* arguments actually have an effect
-                                   (scrolling (:scroll-bar :vertical
-                                               :suggested-height height
-                                               :suggested-width (if scroll-p (+ 30 (bounding-rectangle-width list-pane))))
-                                     list-pane)
+                                   (let ((w (bounding-rectangle-width list-pane)))
+                                     (scrolling (:scroll-bar :vertical
+                                                 :height height
+                                                 :width w)
+                                       list-pane))
                                    list-pane))
                  (topmost-pane    (outlining (:thickness 1) topmost-pane))
                  (composed-height (space-requirement-height (compose-space topmost-pane :width (- x1 x0) :height height)))

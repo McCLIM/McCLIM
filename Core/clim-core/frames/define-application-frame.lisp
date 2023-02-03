@@ -28,7 +28,7 @@
       (sheet-disown-child parent inner-pane))
     (if (member type '(:application :interactor :pointer-documentation :command-menu))
         (multiple-value-bind (stream-options wrapper-options wrapper-space)
-            (separate-stream-pane-initargs
+            (separate-clim-pane-initargs
              (if (intersection initargs '(:scroll-bar :scroll-bars))
                  initargs
                  (list* :scroll-bars (ecase type
@@ -55,6 +55,8 @@
      `(make-clim-pointer-documentation-pane :name ',name ,@options))
     ((eq type :command-menu)
      `(make-clim-command-menu-pane :name ',name ,@options))
+    ((keywordp type)
+     `(make-clim-pane ',type :name ',name ,@options))
     ;; Non-standard pane designator passed to the `make-pane'
     (t
      `(make-pane ',type :name ',name ,@options))))

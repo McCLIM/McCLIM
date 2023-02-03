@@ -116,6 +116,16 @@
                  :max-height max-height
                  :min-height min-height))
 
+(defun make-space-requirement* (sr &key
+                                     (width (space-requirement-width sr))
+                                     (min-width (space-requirement-min-width sr))
+                                     (max-width (space-requirement-max-width sr))
+                                     (height (space-requirement-height sr))
+                                     (min-height (space-requirement-min-height sr))
+                                     (max-height (space-requirement-max-height sr)))
+  (make-space-requirement :width width :min-width min-width :max-width max-width
+                          :height height :min-height min-height :max-height max-height))
+
 (defmethod space-requirement-components ((space-req standard-space-requirement))
   (with-slots (width min-width max-width height min-height max-height) space-req
     (values width min-width max-width height min-height max-height)))

@@ -1115,16 +1115,8 @@
   #+ (or) ;; useful for debugging
   (setf (pane-background pane) +deep-pink+))
 
-(defmethod compose-space ((pane viewport-pane) &key width height)
-  (declare (ignorable width height))
-  ;; I _think_ this is right, it certainly shouldn't be the
-  ;; requirements of the child, apart from the max sizes. If the child
-  ;; does not want to go bigger than a specific size, we should not
-  ;; force it to do so.
-  (if-let ((child-sr (compose-space (sheet-child pane))))
-    (make-space-requirement :max-width (space-requirement-max-width child-sr)
-                            :max-height (space-requirement-max-height child-sr))
-    (make-space-requirement)))
+(defmethod compose-space ((pane viewport-pane) &rest args &key width height)
+  (apply #'compose-space (sheet-child pane) args))
 
 (defmethod allocate-space ((pane viewport-pane) width height)
   (resize-sheet pane width height)
@@ -1139,18 +1131,17 @@
                          (setf (pane-space-requirement sheet) nil)))
                      child)
     (let* ((child-space (compose-space child :width width :height height))
-           (child-width  (space-requirement-width child-space))
-           (child-height (space-requirement-height child-space)))
+           ;;      brutal vvv
+           (child-width  (max (space-requirement-width  child-space) width))
+           (child-height (max (space-requirement-height child-space) height)))
       (allocate-space child child-width child-height))
     ;; Step 2: Update the scroll bars. This looks at the bounding
     ;; rectangle of CHILD which should already be updated.
-    (scroller-pane/update-scroll-bars parent)
-    ;; Step 3: move CHILD to the position corresponding to the updated
-    ;; values of the scroll bars.
-    (with-slots (hscrollbar vscrollbar) parent
-      (move-sheet child
-                  (if hscrollbar (- (gadget-value hscrollbar)) 0)
-                  (if vscrollbar (- (gadget-value vscrollbar)) 0)))))
+    (multiple-value-bind (scroll-x scroll-y)
+        (scroller-pane/update-scroll-bars parent)
+      ;; Step 3: move CHILD to the position corresponding to the updated
+      ;; values of the scroll bars.
+      (move-sheet child (- scroll-x) (- scroll-y)))))
 
 (defmethod note-input-focus-changed ((pane viewport-pane) state)
   (note-input-focus-changed (sheet-child pane) state))
@@ -1208,8 +1199,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
    (viewport   :initform nil)
    (vscrollbar :initform nil)
    (hscrollbar :initform nil)
-   (suggested-width  :initform 300 :initarg :suggested-width)
-   (suggested-height :initform 300 :initarg :suggested-height)
    (vertical-scroll-bar-position
     :initform clim-extensions:*default-vertical-scroll-bar-position*
     :initarg :vertical-scroll-bar-position
@@ -1218,7 +1207,9 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
                     right hand side of the scroller pane."))
   (:default-initargs
    :x-spacing 0
-   :y-spacing 0))
+   :y-spacing 0
+   :width 300
+   :height 300))
 
 (defgeneric scroll-bar-values (scroll-bar)
   (:documentation "Returns the min value, max value, thumb size, and value of a
@@ -1234,56 +1225,53 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 
 (defmethod compose-space ((pane scroller-pane) &key width height)
   (declare (ignore width height))
-  (with-slots (viewport vscrollbar hscrollbar suggested-width suggested-height
-               x-spacing y-spacing scroll-bar)
+  (with-slots (viewport vscrollbar hscrollbar
+               x-spacing y-spacing user-width user-height)
       pane
-    (if viewport
-        (let ((req
-                ;; v-- where does this requirement come from?
-                ;;     a: just an arbitrary default
-                (make-space-requirement
-                 :width suggested-width :height suggested-height :max-width +fill+ :max-height +fill+
-                 :min-width  (max (* 2 x-spacing) (if (null scroll-bar) 0 30))
-                 :min-height (max (* 2 y-spacing) (if (null scroll-bar) 0 30))))
-              (viewport-child (sheet-child viewport)))
-          (when vscrollbar
-            (setq req (space-requirement+*
-                       (space-requirement-combine #'max
-                                                  req
-                                                  (compose-space vscrollbar))
-                       :height     *scrollbar-thickness*
-                       :min-height *scrollbar-thickness*
-                       :max-height *scrollbar-thickness*)))
-          (when hscrollbar
-            (setq req (space-requirement+*
-                       (space-requirement-combine
-                        #'max req (compose-space hscrollbar))
-                       :width     *scrollbar-thickness*
-                       :min-width *scrollbar-thickness*
-                       :max-width *scrollbar-thickness*)))
-          (let* ((viewport-sr (compose-space viewport
-                                             :width suggested-width
-                                             :height suggested-height))
-                 (max-width (+ (space-requirement-max-width viewport-sr)
-                               (if vscrollbar *scrollbar-thickness* 0)
-                               (bounding-rectangle-width viewport-child)))
-                 (max-height (+ (space-requirement-max-height viewport-sr)
-                                (if hscrollbar *scrollbar-thickness* 0)
-                                (bounding-rectangle-height viewport-child))))
-            (setq req (make-space-requirement
-                       :width (min (space-requirement-width req)
-                                   max-width)
-                       :height (min (space-requirement-height req)
-                                    max-height)
-                       :min-width (min (space-requirement-min-width req)
-                                       max-width)
-                       :min-height (min (space-requirement-min-height req)
-                                        max-height)
-                       :max-width max-width
-                       :max-height max-height)))
+    (unless viewport
+      (return-from compose-space
+        (make-space-requirement)))
+    (let ((req (make-space-requirement
+                :width user-width
+                :min-width (* 2 x-spacing)
+                :max-width +fill+
+                :height user-height
+                :min-height (* 2 y-spacing)
+                :max-height +fill+))
+          (viewport-child (sheet-child viewport)))
+      (when vscrollbar
+        (setq req (space-requirement+*
+                   (space-requirement-combine #'max
+                                              req
+                                              (compose-space vscrollbar))
+                   :height     *scrollbar-thickness*
+                   :min-height *scrollbar-thickness*
+                   :max-height *scrollbar-thickness*)))
+      (when hscrollbar
+        (setq req (space-requirement+*
+                   (space-requirement-combine
+                    #'max req (compose-space hscrollbar))
+                   :width     *scrollbar-thickness*
+                   :min-width *scrollbar-thickness*
+                   :max-width *scrollbar-thickness*)))
+      (let* ((viewport-sr (compose-space viewport
+                                         :width user-width
+                                         :height user-height))
+             (max-width (+ (space-requirement-max-width viewport-sr)
+                           (bounding-rectangle-width viewport-child)))
+             (max-height (+ (space-requirement-max-height viewport-sr)
+                            (bounding-rectangle-height viewport-child))))
+        (setq req (space-requirement-combine* #'min req
+                                              :width max-width
+                                              :min-width max-width
+                                              :max-width max-width
+                                              :height max-height
+                                              :min-height max-height
+                                              :max-height max-width)
+              req (make-space-requirement* req :max-width max-width
+                                               :max-height max-height)))
 
-          req)
-        (make-space-requirement))))
+      req)))
 
 (defmethod allocate-space ((pane scroller-pane) width height)
   (resize-sheet pane width height)
@@ -1428,8 +1416,6 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
 (defun scroller-pane/update-scroll-bars (pane)
   (check-type pane scroller-pane)
   (with-slots (viewport hscrollbar vscrollbar) pane
-    (unless (or hscrollbar vscrollbar)
-      (return-from scroller-pane/update-scroll-bars))
     (multiple-value-bind (min-x max-x min-y max-y thb-x thb-y cur-x cur-y)
         (scroller-pane/scroll-boundaries viewport)
       (when hscrollbar
@@ -1437,7 +1423,8 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
               (values min-x max-x thb-x cur-x)))
       (when vscrollbar
         (setf (scroll-bar-values vscrollbar)
-              (values min-y max-y thb-y cur-y))))))
+              (values min-y max-y thb-y cur-y)))
+      (values cur-x cur-y))))
 
 (defmethod initialize-instance :after ((pane scroller-pane) &key contents &allow-other-keys)
   (sheet-adopt-child pane (first contents))
