@@ -143,9 +143,45 @@
                      :allow-line-breaks nil
                      :activation-gestures *standard-activation-gestures*))
 
+(defun wrap-text-field-pane (pane)
+  (let ((space (compose-space pane)))
+    (wrap-clim-pane pane nil :scroll-bars
+                    `(nil :width ,(space-requirement-min-width space)
+                          :height ,(space-requirement-min-height space)))))
+
+(defmethod make-pane-1 :around
+    (realizer frame (type (eql :text-field)) &rest initargs)
+  (declare (ignore initargs))
+  (let ((pane (call-next-method)))
+    (if (typep pane 'text-field-pane)
+        (wrap-text-field-pane pane)
+        pane)))
+
+(defmethod reinitialize-pane ((pane text-field-pane) &rest initargs)
+  (apply #'reinitialize-instance pane initargs)
+  (wrap-text-field-pane pane))
+
 (defclass text-editor-pane (text-editing-gadget)
   ()
   (:default-initargs :nlines 6
                      :ncolumns 20
                      ;; :end-of-line-action :wrap*
    ))
+
+(defun wrap-text-editor-pane (pane)
+  (let ((space (compose-space pane)))
+    (wrap-clim-pane pane nil :scroll-bars
+                    `(nil :width ,(space-requirement-min-width space)
+                          :height ,(space-requirement-min-height space)))))
+
+(defmethod make-pane-1 :around
+    (realizer frame (class (eql :text-editor)) &rest initargs)
+  (declare (ignore initargs))
+  (let ((pane (call-next-method)))
+    (if (typep pane 'text-editor-pane)
+        (wrap-text-editor-pane pane)
+        pane)))
+
+(defmethod reinitialize-pane ((pane text-editor-pane) &rest initargs)
+  (apply #'reinitialize-instance pane initargs)
+  (wrap-text-editor-pane pane))
