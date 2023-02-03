@@ -368,6 +368,9 @@ FRAME, managed by FRAME-MANAGER, changed to NEW-COMMAND-TABLE."))
 ;;;; FIXME: should we have &key &allow-other-keys here, to cause
 ;;;; initarg checking?  Probably.
 (defgeneric make-pane-1 (realizer frame abstract-class-name &rest initargs))
+(defgeneric reinitialize-pane (pane &rest initargs)
+  (:method (pane &rest initargs)
+    (apply #'reinitialize-instance pane initargs)))
 
 ;;;; 29.2.2 Pane Properties
 

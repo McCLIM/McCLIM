@@ -38,15 +38,15 @@
                                       (:pointer-documentation nil)
                                       (:command-menu t))
                        initargs)))
-         (apply #'reinitialize-instance inner-pane pane-options)
+         (setf inner-pane (apply #'reinitialize-pane inner-pane pane-options))
          (apply #'wrap-stream-pane inner-pane wrapper-space wrapper-options)))
       ((keywordp type)
        (multiple-value-bind (pane-options wrapper-options wrapper-space)
            (separate-clim-pane-initargs initargs)
-         (apply #'reinitialize-instance inner-pane pane-options)
+         (setf inner-pane (apply #'reinitialize-pane inner-pane pane-options))
          (apply #'wrap-clim-pane inner-pane wrapper-space wrapper-options)))
       (t
-       (apply #'reinitialize-instance inner-pane initargs)))))
+       (apply #'reinitialize-pane inner-pane initargs)))))
 
 (defun generate-make-pane (name type options)
   (cond
