@@ -1546,6 +1546,39 @@ SCROLLER-PANE appear on the ergonomic left hand side, or leave set to
         (move-sheet (sheet-child viewport) (- x) (- y))
         (scroller-pane/update-scroll-bars (sheet-parent viewport))))))
 
+;;; This function is an intelligent version of SCROLL-EXTENT. Instead of
+;;; moving (X Y) to the upper left corner it ensures that the bounding
+;;; rectangle of THING is visible in the most intuitive way.
+;;;
+;;; Horizontal placement:
+;;; - When THING fits horizontally in the viewport  - don't scroll horizontally
+;;; - When THING is before the viewport then scroll it to be at the left
+;;; - When THING is after  the viewport then scroll it to be at the right
+;;;
+;;; Vertical placement:
+;;; - When THING fits vertically in the viewport - don't scroll vertically
+;;; - When THING is above the viewport then scroll it to be at the top
+;;; - When THING is below the viewport then scroll it to be at the bottom
+;;;
+;;; Note that these rules fovor the top-left part to be visible when the thing
+;;; exceeds the size of the viewport.
+(defun scroll-extent* (pane thing)
+  (flet ((snap (view-min view-max object-min object-max &aux (distance 0))
+           "Returns the new value of view-min."
+           (when (< view-max object-max)
+             (let ((excess (- object-max view-max)))
+               (setf distance (- excess))
+               (decf object-min excess)))
+           (when (< object-min view-min)
+             (let ((deficit (- view-min object-min)))
+               (incf distance deficit)))
+           distance))
+    (with-bounding-rectangle* (x1 y1 x2 y2) (sheet-visible-region pane)
+      (with-bounding-rectangle* (tx1 ty1 tx2 ty2) thing
+        (let ((x0 (snap x1 x2 tx1 tx2))
+              (y0 (snap y1 y2 ty1 ty2)))
+          (scroll-extent pane (- x1 x0) (- y1 y0)))))))
+
 
 ;;; LABEL PANE
 
