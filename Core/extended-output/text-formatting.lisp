@@ -41,7 +41,7 @@
            (let* ((text-style (stream-text-style stream))
                   (chw (text-style-width  text-style stream))
                   (chh (text-style-height text-style stream)))
-             (values 0 0 (* 80 chw) (* 43 chh)))))
+             (make-rectangle* 0 0 (* 80 chw) (* 43 chh)))))
     (let ((region (pane-viewport-region stream))
           (cached (slot-value stream '%page-region)))
       (with-bounding-rectangle* (x1 y1 x2 y2)
