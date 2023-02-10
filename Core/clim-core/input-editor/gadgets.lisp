@@ -14,8 +14,7 @@
 (defclass text-editing-gadget (edward-mixin text-editor)
   ((allow-line-breaks :initarg :allow-line-breaks) ; single line?
    (activation-gestures :accessor activation-gestures
-                        :initarg :activation-gestures)
-   (text-cursor :accessor stream-text-cursor))
+                        :initarg :activation-gestures))
   (:default-initargs :foreground +black+
                      :background +white+
                      :allow-line-breaks t
@@ -33,20 +32,27 @@
       (call-next-method)
       (beep sheet)))
 
-(defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
-  (setf (gadget-value gadget :invoke-callback t) value)
+(defun fix-cursors (gadget)
   (with-sheet-medium (medium gadget)
     (let* ((ts (medium-text-style medium))
            (ht (text-style-height ts medium))
            (editable (editable-p gadget)))
-      (setf (stream-text-cursor gadget)
-            (make-instance 'standard-text-cursor :sheet gadget
-                                                 :width 2
-                                                 :height ht
-                                                 :visibility editable)))))
+      (flet ((fix (cursor)
+               (with-slots (sheet width height) cursor
+                 (setf sheet gadget width 2 height ht)
+                 (setf (cursor-visibility cursor) editable))))
+        (fix (edit-cursor gadget))
+        (fix (scan-cursor gadget))))))
+
+(defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
+  (setf (gadget-value gadget :invoke-callback t) value)
+  (fix-cursors gadget))
+
+(defmethod reinitialize-instance :after ((gadget text-editing-gadget) &key)
+  (fix-cursors gadget))
 
 (defmethod (setf editable-p) :after (new-value (object text-editing-gadget))
-  (setf (cursor-visibility (stream-text-cursor object)) new-value))
+  (setf (cursor-visibility (edit-cursor object)) new-value))
 
 (defmethod gadget-value ((sheet text-editing-gadget))
   (edward-buffer-string sheet))
@@ -93,34 +99,40 @@
 (defmethod handle-repaint ((sheet text-editing-gadget) region)
   (declare (ignore region))
   (with-sheet-medium (medium sheet)
-    (let* ((text-cursor (stream-text-cursor sheet))
-           (line-height (cursor-height text-cursor))
-           (cursor (edward-cursor sheet))
-           (cursor-line (cluffer:line cursor))
-           (cursor-position (cluffer:cursor-position cursor))
+    (let* ((scan-cursor (scan-cursor sheet))
+           (edit-cursor (edit-cursor sheet))
+           (text-style (medium-text-style medium))
+           (line-height (text-style-height text-style medium))
            (current-y 0))
-      (flet ((draw-line (line)
-               (let ((text (line-string line)))
+      (labels ((fix-cursor (line text cursor)
                  ;; Update the cursor.
-                 (when (and (eq line cursor-line)
-                            (cursor-active text-cursor))
-                   (setf (cursor-position text-cursor)
-                         (values (nth-value 2 (text-size medium text :end cursor-position))
-                                 current-y)))
-                 ;; Draw the line.
-                 (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
-                 ;; Increment the drawing position.
-                 (incf current-y line-height))))
+                 (when (and (eq line (cluffer:line cursor))
+                            (cursor-active cursor))
+                   (let ((pos (cluffer:cursor-position cursor)))
+                     (setf (cursor-position cursor)
+                           (values (nth-value 2 (text-size medium text :end pos))
+                                   current-y))
+                     pos)))
+               (draw-line (line)
+                 (let ((text (line-string line)))
+                   ;; Update cursors.
+                   (fix-cursor line text edit-cursor)
+                   (fix-cursor line text scan-cursor)
+                   ;; Draw the line.
+                   (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
+                   ;; Increment the drawing position.
+                   (incf current-y line-height))))
         (declare (dynamic-extent (function draw-line)))
         (map-over-lines (input-editor-buffer sheet) #'draw-line)
-        (draw-design sheet text-cursor)
-        (scroll-extent* sheet text-cursor)))))
+        (draw-design sheet edit-cursor)
+        (draw-design sheet scan-cursor :ink +red+)
+        (scroll-extent* sheet edit-cursor)))))
 
 (defmethod compose-space ((sheet text-editing-gadget) &key width height)
   (declare (ignore width height))
   (multiple-value-bind (buffer-w buffer-h)
       (edward-buffer-extent sheet)
-    (let ((text-cursor (stream-text-cursor sheet)))
+    (let ((text-cursor (edit-cursor sheet)))
       (when (cursor-state text-cursor)
         (incf buffer-w (cursor-width text-cursor))))
     (with-sheet-medium (medium sheet)

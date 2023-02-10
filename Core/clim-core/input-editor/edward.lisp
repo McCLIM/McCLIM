@@ -49,15 +49,30 @@
         do (incf position (1+ (cluffer:item-count line)))
         finally (error "~s points beyond the buffer!" new-position)))
 
+(defclass edward-lsticky-cursor
+    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
+  ())
+
+(defclass edward-rsticky-cursor
+    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
+  ())
+
+(defun make-edward-buffer ()
+  (let ((line (make-instance 'cluffer-standard-line:open-line)))
+    (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
+
 (defclass edward-mixin ()
-  ((edward-buffer :reader input-editor-buffer)
-   (edward-numarg :accessor numeric-argument :initform 1)
-   (edit-cursor :reader edit-cursor :reader edward-cursor)
-   (scan-cursor :reader scan-cursor)
+  ((edward-buffer :reader input-editor-buffer
+                  :initform (make-edward-buffer))
+   (edit-cursor :reader edit-cursor
+                :initform (make-instance 'edward-rsticky-cursor))
+   (scan-cursor :reader scan-cursor
+                :initform (make-instance 'edward-lsticky-cursor))
    ;; (edward-kill-history :reader edward-killring)
    ;; (edward-undo-history :reader edward-undo-history)
    ;; (edward-redo-history :reader edward-redo-history)
-   (edward-update :accessor input-editor-timestamp)
+   (edward-numarg :accessor numeric-argument :initform 1)
+   (edward-update :accessor input-editor-timestamp :initform -1)
    (edward-string :reader input-editor-string
                   ;; reinitializing the instance resets only a fill pointer.
                   :initform (make-array 0 :element-type 'character
@@ -71,21 +86,15 @@
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
-  (let* ((i-cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
-         (s-cursor (make-instance 'cluffer-standard-line:left-sticky-cursor))
-         (line (make-instance 'cluffer-standard-line:open-line))
-         (buffer (make-instance 'cluffer-standard-buffer:buffer
-                                :initial-line line)))
-    (cluffer:attach-cursor i-cursor line 0)
-    (cluffer:attach-cursor s-cursor line 0)
-    (setf (slot-value object 'edward-buffer) buffer
-          (slot-value object 'edit-cursor) i-cursor
-          (slot-value object 'scan-cursor) s-cursor
-          (numeric-argument object) 1
-          ;; RS won't be amused with me for exploting an implementation detail
-          ;; of Cluffer. -- jd 2023-02-01
-          (input-editor-timestamp object) -1
-          (fill-pointer (input-editor-string object)) 0)))
+  (let* ((buffer (input-editor-buffer object))
+         (line-0 (cluffer:find-line buffer 0)))
+    (ie-clear-input-buffer object buffer nil 1)
+    (dolist (cursor (list (edit-cursor object)
+                          (scan-cursor object)))
+      (unless (cluffer:cursor-attached-p cursor)
+        (cluffer:attach-cursor cursor line-0))))
+  (setf (numeric-argument object) 1
+        (fill-pointer (input-editor-string object)) 0))
 
 ;;; "Smooth" operations glide over line boundaries as if we had a linear buffer.
 
@@ -217,6 +226,33 @@
         (map-over-lines (input-editor-buffer editor) #'account-for-line)
         (values maximal-x maximal-y)))))
 
+;;; FIXME implement the soft line wrapping
+(defun edward-cursor-position-from-coordinates (editor rel-x rel-y)
+  "Computes the cursor position based on the relative pointercoordinates."
+  (with-sheet-medium (medium editor)
+    (let* ((buffer (input-editor-buffer editor))
+           (lin-h (text-style-height (medium-text-style medium) medium))
+           (linum (truncate rel-y lin-h))
+           (licnt (cluffer:line-count buffer))
+           (line (cluffer:find-line buffer (clamp linum 0 (1- licnt)))))
+      (when (>= linum licnt)
+        (return-from edward-cursor-position-from-coordinates
+          (values line (cluffer:item-count line))))
+      (let* ((string (line-string line))
+             (breaks (line-breaks string (lambda (string start end)
+                                           (text-size editor string :start start :end end))
+                                  :break-strategy nil
+                                  ;; If the initial offset is 0, then the utility
+                                  ;; line-breaks breaks the line at least after
+                                  ;; the first character. To avoid that we add 1
+                                  ;; to both initial-offset and margin and in
+                                  ;; consequence "break" may occur at index 0).
+                                  :initial-offset 1
+                                  :margin (+ rel-x 1)
+                                  :count 1)))
+        (values line
+                (or (car breaks) (length string)))))))
+
 ;;; editor function prototype
 
 ;; (defgeneric edward-move (cursor unit syntax numeric-argument))
@@ -321,11 +357,13 @@
 (defmethod ie-beginning-of-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (let* ((cursor (edit-cursor sheet))
-         (linum  (cluffer:line-number cursor)))
-    (unless (= linum 0)
-      (cluffer:detach-cursor cursor)
-      (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))))
+  (let ((cursor (edit-cursor sheet)))
+    (if (cluffer:cursor-attached-p cursor)
+        (unless (zerop (cluffer:line-number cursor))
+          (cluffer:detach-cursor cursor)
+          (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))
+        (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))
+    (ie-beginning-of-line sheet buffer nil 1)))
 
 (defmethod ie-end-of-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -388,7 +426,12 @@
 (defmethod ie-clear-input-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (reinitialize-instance sheet))
+  (loop with cursor = (edit-cursor sheet)
+          initially (ie-beginning-of-buffer sheet buffer nil nil)
+        until (cluffer:end-of-buffer-p cursor)
+        do (ie-kill-line sheet buffer nil 1))
+  (assert (= 1 (cluffer:line-count buffer)))
+  (assert (= 0 (cluffer:item-count (cluffer:line (edit-cursor sheet))))))
 
 (defmethod ie-insert-newline
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -465,36 +508,15 @@
 (defmethod ie-select-object
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore numeric-argument))
-  ;; XXX doesn't handle soft line wrapping
-  (with-sheet-medium (medium sheet)
-    (let* ((rel-x (- (pointer-event-x event) 4))
-           (rel-y (- (pointer-event-y event) 2))
-           (lin-h (text-style-height (medium-text-style medium) medium))
-           (linum (truncate rel-y lin-h))
-           (licnt (cluffer:line-count buffer))
-           (cline (cluffer:find-line buffer (clamp linum 0 (1- (cluffer:line-count buffer)))))
-           (cursor (edit-cursor sheet)))
-      (unless (eq (cluffer:line cursor) cline)
+  (multiple-value-bind (line position)
+      (edward-cursor-position-from-coordinates sheet
+                                               (pointer-event-x event)
+                                               (pointer-event-y event))
+    (let ((cursor (edit-cursor sheet)))
+      (unless (eq (cluffer:line cursor) line)
         (cluffer:detach-cursor cursor)
-        (cluffer:attach-cursor cursor cline))
-      (when (>= linum licnt)
-        (cluffer:end-of-line cursor)
-        (return-from ie-select-object))
-      (if-let ((line-breaks (line-breaks
-                             (coerce (cluffer:items cline) 'string)
-                             (lambda (string start end)
-                               (text-size sheet string :start start :end end))
-                             :break-strategy nil
-                             ;; If the initial offset is 0, then the utility
-                             ;; line-breaks breaks the line at least after
-                             ;; the first character. To avoid that we add 1
-                             ;; to both initial-offset and margin and in
-                             ;; consequence "break" may occur at index 0).
-                             :initial-offset 1
-                             :margin (+ rel-x 1)
-                             :count 1)))
-        (setf (cluffer:cursor-position cursor) (first line-breaks))
-        (cluffer:end-of-line cursor)))))
+        (cluffer:attach-cursor cursor line))
+      (setf (cluffer:cursor-position cursor) position))))
 
 (defmethod ie-scroll-forward
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
