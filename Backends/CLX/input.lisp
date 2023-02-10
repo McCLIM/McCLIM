@@ -352,7 +352,10 @@
                   :leave-window :enter-window
                   :pointer-motion)))
     ;; Probably we want to set :cursor here..
-    (eq :success (xlib:grab-pointer window events :owner-p multiple-window))))
+    (let ((result (xlib:grab-pointer window events :owner-p multiple-window)))
+      (if (eq :success result)
+          t
+          (warn "Failed to grab a pointer: ~s." result)))))
 
 (defmethod port-ungrab-pointer ((port clx-basic-port) pointer sheet)
   (declare (ignore pointer sheet))
