@@ -361,7 +361,6 @@ maximum size according to `frame')."
                    id-test cache-value cache-test default-presentation))
   (with-room-for-graphics (menu :first-quadrant nil)
     (funcall drawer menu presentation-type))
-
   (adjust-menu-size-and-position menu :x-position x-position
                                       :y-position y-position)
   ;; The menu is enabled (make visible) after the size is adjusted.
@@ -370,9 +369,11 @@ maximum size according to `frame')."
         (*abort-gestures* (append *menu-choose-abort-gestures*
                                   *abort-gestures*)))
     (handler-case
-        (with-input-context (`(or ,presentation-type blank-area) :override t)
-            (object type event)
-            (prog1 nil (loop (read-gesture :stream menu)))
-          (blank-area nil)
-          (t (values object event)))
+        (with-input-focus (menu)
+          (with-pointer-grabbed ((port menu) menu)
+            (with-input-context (`(or ,presentation-type blank-area) :override t)
+                (object type event)
+                (prog1 nil (loop (read-gesture :stream menu)))
+              (blank-area nil)
+              (t (values object event)))))
       (abort-gesture () nil))))
