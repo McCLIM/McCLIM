@@ -49,53 +49,6 @@
         do (incf position (1+ (cluffer:item-count line)))
         finally (error "~s points beyond the buffer!" new-position)))
 
-(defclass edward-lsticky-cursor
-    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
-  ())
-
-(defclass edward-rsticky-cursor
-    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
-  ())
-
-(defun make-edward-buffer ()
-  (let ((line (make-instance 'cluffer-standard-line:open-line)))
-    (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
-
-(defclass edward-mixin ()
-  ((edward-buffer :reader input-editor-buffer
-                  :initform (make-edward-buffer))
-   (edit-cursor :reader edit-cursor
-                :initform (make-instance 'edward-rsticky-cursor))
-   (scan-cursor :reader scan-cursor
-                :initform (make-instance 'edward-lsticky-cursor))
-   ;; (edward-kill-history :reader edward-killring)
-   ;; (edward-undo-history :reader edward-undo-history)
-   ;; (edward-redo-history :reader edward-redo-history)
-   (edward-numarg :accessor numeric-argument :initform 1)
-   (edward-update :accessor input-editor-timestamp :initform -1)
-   (edward-string :reader input-editor-string
-                  ;; reinitializing the instance resets only a fill pointer.
-                  :initform (make-array 0 :element-type 'character
-                                          :adjustable t
-                                          :fill-pointer t))))
-
-(defmethod print-object ((object edward-mixin) stream)
-  (print-unreadable-object (object stream :type t :identity t)
-    (let ((buffer (input-editor-buffer object)))
-      (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
-
-(defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
-  (declare (ignore slot-names))
-  (let* ((buffer (input-editor-buffer object))
-         (line-0 (cluffer:find-line buffer 0)))
-    (ie-clear-input-buffer object buffer nil 1)
-    (dolist (cursor (list (edit-cursor object)
-                          (scan-cursor object)))
-      (unless (cluffer:cursor-attached-p cursor)
-        (cluffer:attach-cursor cursor line-0))))
-  (setf (numeric-argument object) 1
-        (fill-pointer (input-editor-string object)) 0))
-
 ;;; "Smooth" operations glide over line boundaries as if we had a linear buffer.
 
 (defun smooth-peek-item (cursor)
@@ -131,21 +84,110 @@
          (cluffer:backward-item cursor)
          (cluffer:item-after-cursor cursor))))
 
+(defun smooth-insert-item (cursor item)
+  (if (char= item #\newline)
+      (cluffer:split-line cursor)
+      (cluffer:insert-item cursor item)))
+
 (defun smooth-delete-item (cursor)
   (cond ((cluffer:end-of-buffer-p cursor)
-         (beep))
+         (beep)
+         nil)
         ((cluffer:end-of-line-p cursor)
-         (cluffer:join-line cursor))
+         (cluffer:join-line cursor)
+         #\newline)
         (t
-         (cluffer:delete-item cursor))))
+         (let ((item (cluffer:item-after-cursor cursor)))
+           (cluffer:delete-item cursor)
+           item))))
 
 (defun smooth-erase-item (cursor)
   (cond ((cluffer:beginning-of-buffer-p cursor)
-         (beep))
+         (beep)
+         nil)
         ((cluffer:beginning-of-line-p cursor)
-         (cluffer:join-line (cursor-previous-line cursor)))
+         (cluffer:join-line (cursor-previous-line cursor))
+         #\newline)
         (t
-         (cluffer:erase-item cursor))))
+         (let ((item (cluffer:item-before-cursor cursor)))
+           (cluffer:erase-item cursor)
+           item))))
+
+(defun smooth-set-position (cursor destination &optional position)
+  (etypecase destination
+    (cluffer:line
+     (if (cluffer:cursor-attached-p cursor)
+         (unless (eq destination (cluffer:line cursor))
+           (cluffer:detach-cursor cursor)
+           (cluffer:attach-cursor cursor destination position))
+         (cluffer:attach-cursor cursor destination position)))
+    (cluffer:cursor
+     (smooth-set-position cursor
+                          (cluffer:line destination)
+                          (cluffer:cursor-position destination)))
+    (integer
+     (setf (cursor-linear-position cursor) destination)))
+  (when position
+    (setf (cluffer:cursor-position cursor) position)))
+
+(defun smooth-beg-of-buffer (buffer cursor)
+  (symbol-macrolet ((line0 (cluffer:find-line buffer 0)))
+    (unless (zerop (cluffer:line-number cursor))
+      (cluffer:detach-cursor cursor)
+      (cluffer:attach-cursor cursor line0)))
+  (cluffer:beginning-of-line cursor))
+
+(defun smooth-end-of-buffer (buffer cursor)
+  (let ((cline (cluffer:line cursor))
+        (bline (cluffer:find-line buffer (1- (cluffer:line-count buffer)))))
+    (unless (eq cline bline)
+      (cluffer:detach-cursor cursor)
+      (cluffer:attach-cursor cursor bline)))
+  (cluffer:end-of-line cursor))
+
+(defun smooth-jump-line (buffer cursor offset)
+  (let* ((lnum (+ (cluffer:line-number cursor) offset))
+         (cpos (cluffer:cursor-position cursor))
+         (lmax (1- (cluffer:line-count buffer)))
+         (next (cluffer:find-line buffer (clamp lnum 0 lmax))))
+    (cluffer:detach-cursor cursor)
+    (handler-case (cluffer:attach-cursor cursor next cpos)
+      (cluffer:end-of-line ()
+        (cluffer:end-of-line cursor)))))
+
+(defun smooth-delete-line (cursor)
+  (if (cluffer:end-of-line-p cursor)
+      (cluffer:join-line cursor)
+      (handler-case (loop (cluffer:delete-item cursor))
+        (cluffer:end-of-line ()))))
+
+(defun smooth-kill-line (cursor)
+  (prog1 (if (cluffer:end-of-line-p cursor)
+             #\newline
+             (copy-seq (cluffer:items cursor :start (cluffer:cursor-position cursor))))
+    (smooth-delete-line cursor)))
+
+(defun cursor-compare (c1 c2)
+  (assert (and (cluffer:cursor-attached-p c1)
+               (cluffer:cursor-attached-p c2)))
+  (let ((l1 (cluffer:line-number c1))
+        (l2 (cluffer:line-number c2)))
+    (cond ((< l1 l2) -1)
+          ((> l1 l2) +1)
+          ((let ((p1 (cluffer:cursor-position c1))
+                 (p2 (cluffer:cursor-position c2)))
+             (cond ((< p1 p2) -1)
+                   ((> p1 p2) +1)
+                   (t          0)))))))
+
+(macrolet ((defcmp (name cmp val)
+             `(defun ,name (c1 c2)
+                (,cmp (cursor-compare c1 c2) ,val))))
+  (defcmp cursor< = -1)
+  (defcmp cursor> = +1)
+  (defcmp cursor= =  0)
+  (defcmp cursor<= /= +1)
+  (defcmp cursor>= /= -1))
 
 ;;; Operations on cluffer's buffer and line instances.
 
@@ -176,6 +218,56 @@
   (cluffer-standard-buffer::current-time buffer))
 
 ;;; Edward operations.
+
+(defclass edward-lsticky-cursor
+    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
+  ())
+
+(defclass edward-rsticky-cursor
+    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
+  ())
+
+(defun make-edward-buffer ()
+  (let ((line (make-instance 'cluffer-standard-line:open-line)))
+    (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
+
+(defclass edward-mixin ()
+  ((edward-buffer :reader input-editor-buffer
+                  :initform (make-edward-buffer))
+   (edit-cursor :reader edit-cursor
+                :initform (make-instance 'edward-rsticky-cursor))
+   (scan-cursor :reader scan-cursor
+                :initform (make-instance 'edward-lsticky-cursor))
+   ;; (edward-kill-history :reader edward-killring)
+   ;; (edward-undo-history :reader edward-undo-history)
+   ;; (edward-redo-history :reader edward-redo-history)
+   (edward-numarg :accessor numeric-argument :initform 1)
+   (edward-update :accessor input-editor-timestamp :initform -1)
+   (edward-string :reader input-editor-string
+                  ;; reinitializing the instance resets only a fill pointer.
+                  :initform (make-array 0 :element-type 'character
+                                          :adjustable t
+                                          :fill-pointer t))))
+
+(defmacro do-cursors ((cursor editor) &body body)
+  `(flet ((cont (,cursor) ,@body))
+     (cont (edit-cursor ,editor))
+     (cont (scan-cursor ,editor))))
+
+(defmethod print-object ((object edward-mixin) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (let ((buffer (input-editor-buffer object)))
+      (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
+
+(defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
+  (declare (ignore slot-names))
+  (let* ((buffer (input-editor-buffer object))
+         (line-0 (cluffer:find-line buffer 0)))
+    (do-cursors (cursor object)
+      (unless (cluffer:cursor-attached-p cursor)
+        (cluffer:attach-cursor cursor line-0))))
+  (setf (numeric-argument object) 1
+        (fill-pointer (input-editor-string object)) 0))
 
 (defun edward-buffer-dirty-p (editor)
   (let* ((buffer (input-editor-buffer editor))
@@ -290,7 +382,7 @@
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (loop with cursor = (edit-cursor sheet)
         repeat numeric-argument
-        do (loop do (ie-forward-object sheet buffer event 1)
+        do (loop do (smooth-forward-item cursor)
                  until (or (cluffer:end-of-line-p cursor)
                            (cluffer:end-of-buffer-p cursor)
                            (char= (cluffer:item-after-cursor cursor) #\space)))))
@@ -306,7 +398,7 @@
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (loop with cursor = (edit-cursor sheet)
         repeat numeric-argument
-        do (loop do (ie-backward-object sheet buffer event 1)
+        do (loop do (smooth-backward-item cursor)
                  until (or (cluffer:beginning-of-line-p cursor)
                            (cluffer:beginning-of-buffer-p cursor)
                            (char= (cluffer:item-before-cursor cursor) #\space)))))
@@ -321,89 +413,64 @@
   (declare (ignore event numeric-argument))
   (cluffer:end-of-line (edit-cursor sheet)))
 
-
 (defmethod ie-next-line
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
-  (loop with cursor = (edit-cursor sheet)
-        with cpos = (cluffer:cursor-position cursor)
-        repeat numeric-argument
-        do (handler-case
-               (let* ((lnum (1+ (cluffer:line-number cursor)))
-                      (next (cluffer:find-line buffer lnum)))
-                 (cluffer:detach-cursor cursor)
-                 (cluffer:attach-cursor cursor next cpos))
-             (cluffer:end-of-buffer ()
-               (return))
-             (cluffer:end-of-line ()
-               (cluffer:end-of-line cursor)))))
+  (smooth-jump-line buffer (edit-cursor sheet) numeric-argument))
 
 (defmethod ie-previous-line
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
-  (loop with cursor = (edit-cursor sheet)
-        with cpos = (cluffer:cursor-position cursor)
-        repeat numeric-argument
-        do (handler-case
-               (let* ((lnum (1- (cluffer:line-number cursor)))
-                      (next (cluffer:find-line buffer lnum)))
-                 (cluffer:detach-cursor cursor)
-                 (cluffer:attach-cursor cursor next cpos))
-             (cluffer:beginning-of-buffer ()
-               (return))
-             (cluffer:end-of-line ()
-               (cluffer:end-of-line cursor)))))
+  (smooth-jump-line buffer (edit-cursor sheet) (- numeric-argument)))
 
 (defmethod ie-beginning-of-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (let ((cursor (edit-cursor sheet)))
-    (if (cluffer:cursor-attached-p cursor)
-        (unless (zerop (cluffer:line-number cursor))
-          (cluffer:detach-cursor cursor)
-          (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))
-        (cluffer:attach-cursor cursor (cluffer:find-line buffer 0)))
-    (ie-beginning-of-line sheet buffer nil 1)))
+  (smooth-beg-of-buffer buffer (edit-cursor sheet)))
 
 (defmethod ie-end-of-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (let* ((cursor (edit-cursor sheet))
-         (linum  (cluffer:line-number cursor))
-         (linum* (1- (cluffer:line-count buffer))))
-    (unless (= linum linum*)
-      (cluffer:detach-cursor cursor)
-      (cluffer:attach-cursor cursor (cluffer:find-line buffer linum*)))
-    (cluffer:end-of-line cursor)))
+  (smooth-end-of-buffer buffer (edit-cursor sheet)))
+
+(defmethod ie-scroll-forward
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
+  (smooth-jump-line buffer (edit-cursor sheet) (* 4 numeric-arg)))
+
+(defmethod ie-scroll-backward
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
+  (smooth-jump-line buffer (edit-cursor sheet) (- (* 4 numeric-arg))))
 
 (defmethod ie-erase-object
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
   (loop with cursor = (edit-cursor sheet)
         repeat numeric-argument
-        do (smooth-erase-item cursor)))
-
-(defmethod ie-erase-word
-    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
-  (loop with cursor = (edit-cursor sheet)
-        repeat numeric-argument
-        do (loop do (ie-erase-object sheet buffer event 1)
-                 until (or (cluffer:beginning-of-line-p cursor)
-                           (cluffer:beginning-of-buffer-p cursor)
-                           (char= (cluffer:item-before-cursor cursor) #\space)))))
+        for item = (smooth-erase-item cursor)
+        finally (return item)))
 
 (defmethod ie-delete-object
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
   (loop with cursor = (edit-cursor sheet)
         repeat numeric-argument
-        do (smooth-delete-item cursor)))
+        for item = (smooth-delete-item cursor)
+        finally (return item)))
+
+(defmethod ie-erase-word
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+  (loop with cursor = (edit-cursor sheet)
+        repeat numeric-argument
+        do (loop do (smooth-erase-item cursor)
+                 until (or (cluffer:beginning-of-line-p cursor)
+                           (cluffer:beginning-of-buffer-p cursor)
+                           (char= (cluffer:item-before-cursor cursor) #\space)))))
 
 (defmethod ie-delete-word
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (loop with cursor = (edit-cursor sheet)
         repeat numeric-argument
-        do (loop do (ie-delete-object sheet buffer event 1)
+        do (loop do (smooth-delete-item cursor)
                  until (or (cluffer:end-of-line-p cursor)
                            (cluffer:end-of-buffer-p cursor)
                            (char= (cluffer:item-after-cursor cursor) #\space)))))
@@ -417,39 +484,31 @@
                      (return-from ie-kill-line))))
     (loop with cursor = (edit-cursor sheet)
           repeat numeric-argument
-          if (cluffer:end-of-line-p cursor)
-            do (cluffer:join-line cursor)
-          else
-            do (loop until (cluffer:end-of-line-p cursor)
-                     do (cluffer:delete-item cursor)))))
+          do (smooth-kill-line cursor))))
 
 (defmethod ie-clear-input-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (loop with cursor = (edit-cursor sheet)
-          initially (ie-beginning-of-buffer sheet buffer nil nil)
-        until (cluffer:end-of-buffer-p cursor)
-        do (ie-kill-line sheet buffer nil 1))
-  (assert (= 1 (cluffer:line-count buffer)))
-  (assert (= 0 (cluffer:item-count (cluffer:line (edit-cursor sheet))))))
+  (let ((cursor (edit-cursor sheet)))
+    (smooth-beg-of-buffer buffer cursor)
+    (handler-case (loop (smooth-delete-line cursor))
+      (cluffer:end-of-buffer ()))
+    (assert (= 1 (cluffer:line-count buffer)))
+    (assert (= 0 (cluffer:item-count (cluffer:line cursor))))))
 
 (defmethod ie-insert-newline
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
-  (loop with cursor = (edit-cursor sheet)
-        repeat numeric-argument
-        do (cluffer:split-line cursor)))
+  (smooth-insert-item (edit-cursor sheet) #\newline))
 
 (defmethod ie-insert-newline-after-cursor
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event))
-  (loop with cursor = (edit-cursor sheet)
-        with initial-line = (cluffer:line cursor)
-        with initial-position = (cluffer:cursor-position cursor)
-        repeat numeric-argument
-        do (cluffer:split-line cursor)
-        finally (cluffer:detach-cursor cursor)
-                (cluffer:attach-cursor cursor initial-line initial-position)))
+  (let* ((cursor (edit-cursor sheet))
+         (initial-line (cluffer:line cursor))
+         (initial-position (cluffer:cursor-position cursor)))
+    (smooth-insert-item cursor #\newline)
+    (smooth-set-position cursor initial-line initial-position)))
 
 (defmethod ie-transpose-objects
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -457,13 +516,13 @@
     (when (cluffer:beginning-of-buffer-p cursor)
       (return-from ie-transpose-objects))
     (when (cluffer:end-of-line-p cursor)
-      (ie-backward-object sheet buffer event 1))
+      (smooth-backward-item cursor))
     (let ((elt (if (cluffer:beginning-of-line-p cursor)
                    #\newline
                    (cluffer:item-before-cursor cursor))))
-      (ie-erase-object sheet buffer event 1)
-      (ie-forward-object sheet buffer event numeric-argument)
-      (ie-insert-object sheet buffer elt 1))))
+      (smooth-erase-item cursor)
+      (smooth-forward-item cursor)
+      (smooth-insert-item cursor elt))))
 
 #+ (or)                                 ; requires more work
 (defmethod ie-transpose-words
@@ -499,29 +558,30 @@
   (when-let ((ch (typecase event
                    (keyboard-event (event-char event))
                    (character event))))
-    (if (char= ch #\newline)
-        (ie-insert-newline sheet buffer event numeric-argument)
-        (loop with cursor = (edit-cursor sheet)
-              repeat numeric-argument
-              do (cluffer:insert-item cursor ch)))))
+    (let ((cursor (edit-cursor sheet)))
+      (loop repeat numeric-argument
+            do (smooth-insert-item cursor ch)))))
 
 (defmethod ie-select-object
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore numeric-argument))
+  (if (typep event 'pointer-event)
+      (multiple-value-bind (line position)
+          (edward-cursor-position-from-coordinates sheet
+                                                   (pointer-event-x event)
+                                                   (pointer-event-y event))
+        (smooth-set-position (edit-cursor sheet) line position))
+      (smooth-set-position (edit-cursor sheet) (edit-cursor sheet))))
+
+(defmethod ie-select-region
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
   (multiple-value-bind (line position)
       (edward-cursor-position-from-coordinates sheet
                                                (pointer-event-x event)
                                                (pointer-event-y event))
-    (let ((cursor (edit-cursor sheet)))
-      (unless (eq (cluffer:line cursor) line)
-        (cluffer:detach-cursor cursor)
-        (cluffer:attach-cursor cursor line))
-      (setf (cluffer:cursor-position cursor) position))))
+    (smooth-set-position (edit-cursor sheet) line position)))
 
-(defmethod ie-scroll-forward
+(defmethod ie-context-menu
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
-  (ie-next-line sheet buffer event (* 4 numeric-arg)))
+  (menu-choose '("Cut" "Copy" "Paste" "Delete") :label "Stub menu" :scroll-bars nil))
 
-(defmethod ie-scroll-backward
-    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
-  (ie-previous-line sheet buffer event (* 4 numeric-arg)))

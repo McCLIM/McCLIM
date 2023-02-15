@@ -72,7 +72,7 @@
     nil))
 
 (defmacro define-input-editor-command (name-and-options gestures)
-  (destructuring-bind (name &key (rescan t) type history) (ensure-list name-and-options)
+  (destructuring-bind (name &key (rescan t) type) (ensure-list name-and-options)
     (let ((gesture-name (make-keyword name)))
       `(progn
          (defgeneric ,name (sheet buffer event numeric-argument)
@@ -80,28 +80,19 @@
              (format *debug-io* "~a not defined for args ~a (~a).~%" ',name
                      (mapcar (alexandria:compose #'class-name #'class-of)
                              (list sheet buffer event))
-                     numeric-argument)))
-         (define-input-stream-command ,name ,rescan ,type ,history)
+                     numeric-argument))
+           (:method ((stream encapsulating-stream) buffer event num-arg)
+             (,name (encapsulating-stream-stream stream) buffer event num-arg))
+           (:method :after ((stream input-editing-stream) buffer event num-arg)
+             (declare (ignorable stream buffer event num-arg))
+             ,@(ecase rescan
+                 (:immediate `((immediate-rescan stream)))
+                 ((t)        `((queue-rescan stream)))
+                 ((nil)      `()))))
          (delete-gesture-name ,gesture-name)
          ,@(loop for (type . gesture-spec) in gestures
                  collect `(add-gesture-name ,gesture-name ,type ',gesture-spec))
          (add-input-editor-command '(,gesture-name) (function ,name))))))
-
-(defmacro define-input-stream-command (name rescan type history)
-  (declare (ignorable type history))
-  `(progn
-     (defmethod ,name ((stream encapsulating-stream) buffer event num-arg)
-       (,name (encapsulating-stream-stream stream) buffer event num-arg))
-     (defmethod ,name :after
-         ((stream input-editing-stream) buffer event num-arg)
-       (declare (ignorable stream buffer event num-arg))
-       #+ (or)
-       (setf (previous-history stream) history
-             (previous-cmdtype stream) type)
-       ,@(ecase rescan
-           (:immediate `((immediate-rescan stream)))
-           ((t)        `((queue-rescan stream)))
-           ((nil)      `())))))
 
 ;;; This command is by default a no-op.
 (define-input-editor-command ie-default-command ())
@@ -173,6 +164,14 @@
 (define-input-editor-command (ie-select-object :rescan nil :type :motion)
     (#+ (or) :select ; <- support named gesturs to copy their specs?
      (:pointer-button-press :left)))
+
+;;; The dragged object may be either a selected region or the edit cursor
+;;; modifying the selected region.
+(define-input-editor-command (ie-select-region :rescan nil :type :motion)
+    ((:pointer-motion :left)))
+
+(define-input-editor-command (ie-context-menu :rescan nil :type nil)
+    ((:pointer-button-press :right)))
 
 ;;; Deletion commands
 

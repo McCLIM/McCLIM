@@ -37,12 +37,11 @@
     (let* ((ts (medium-text-style medium))
            (ht (text-style-height ts medium))
            (editable (editable-p gadget)))
-      (flet ((fix (cursor)
-               (with-slots (sheet width height) cursor
-                 (setf sheet gadget width 2 height ht)
-                 (setf (cursor-visibility cursor) editable))))
-        (fix (edit-cursor gadget))
-        (fix (scan-cursor gadget))))))
+      (do-cursors (cursor gadget)
+        (when (typep cursor 'standard-text-cursor)
+          (with-slots (sheet width height) cursor
+            (setf sheet gadget width 2 height ht)
+            (setf (cursor-visibility cursor) editable)))))))
 
 (defmethod initialize-instance :after ((gadget text-editing-gadget) &key value)
   (setf (gadget-value gadget :invoke-callback t) value)
@@ -99,8 +98,7 @@
 (defmethod handle-repaint ((sheet text-editing-gadget) region)
   (declare (ignore region))
   (with-sheet-medium (medium sheet)
-    (let* ((scan-cursor (scan-cursor sheet))
-           (edit-cursor (edit-cursor sheet))
+    (let* ((edit-cursor (edit-cursor sheet))
            (text-style (medium-text-style medium))
            (line-height (text-style-height text-style medium))
            (current-y 0))
@@ -117,7 +115,6 @@
                  (let ((text (line-string line)))
                    ;; Update cursors.
                    (fix-cursor line text edit-cursor)
-                   (fix-cursor line text scan-cursor)
                    ;; Draw the line.
                    (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
                    ;; Increment the drawing position.
@@ -125,7 +122,6 @@
         (declare (dynamic-extent (function draw-line)))
         (map-over-lines (input-editor-buffer sheet) #'draw-line)
         (draw-design sheet edit-cursor)
-        (draw-design sheet scan-cursor :ink +red+)
         (scroll-extent* sheet edit-cursor)))))
 
 (defmethod compose-space ((sheet text-editing-gadget) &key width height)
