@@ -68,6 +68,7 @@ name."))
             (make-demo-button "Logic Cube" 'logic-cube)
             (make-demo-button "Checkers" 'clim-demo.checkers:clim-checkers)
             (make-demo-button "Gadget Test"  'gadget-test)
+            (make-demo-button "Text Gadgets"  'clim-demo.text-gadgets::my-frame)
             (make-demo-button "D&D Translator" 'drag-test)
             (make-demo-button "Draggable Graph" 'draggable-graph-demo)
             (make-pane 'push-button :label "Font Selector"
