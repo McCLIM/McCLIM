@@ -677,21 +677,6 @@ and used to ensure that presentation-translators-caches are up to date.")
                                              modifier-state
                                              nil)))
 
-(defun find-innermost-presentation-context
-    (input-context window x y
-     &key (top-record (stream-output-history window))
-       (frame *application-frame*) event modifier-state button)
-  (when (and (not modifier-state) (not event))
-    (setf modifier-state 0))
-  (find-innermost-presentation-match input-context
-                                     top-record
-                                     frame
-                                     window
-                                     x y
-                                     event
-                                     modifier-state
-                                     button))
-
 (defun throw-highlighted-presentation (presentation input-context event)
   (let ((x (pointer-event-x event))
         (y (pointer-event-y event))

@@ -101,8 +101,7 @@
     (stream presentation-type items default-item
      &key item-printer
      max-width max-height n-rows n-columns x-spacing y-spacing row-wise
-     cell-align-x cell-align-y)
-  (declare (ignore default-item))
+     cell-align-x cell-align-y &aux presentations default-presentation)
   (orf item-printer #'print-menu-item)
   (format-items items
                 :stream stream
@@ -111,22 +110,26 @@
                   (ecase (menu-item-option item :type :item)
                     (:item
                      ;; This is a normal item, just output.
-                     (let ((activep (menu-item-option item :active t)))
-                       (with-presentation-type-decoded (name params options)
-                           presentation-type
-                         (let ((*allow-sensitive-inferiors* activep))
-                           (with-text-style
-                               (stream (menu-item-option
-                                        item :style
-                                        '(:sans-serif nil nil)))
-                             (with-output-as-presentation
-                                 (stream
-                                  item
-                                  `((,name ,@params)
-                                    :description ,(getf (menu-item-options item) :documentation)
-                                    ,@options)
-                                  :single-box t)
-                               (funcall item-printer item stream)))))))
+                     (push
+                      (let ((activep (menu-item-option item :active t)))
+                        (with-presentation-type-decoded (name params options)
+                            presentation-type
+                          (let ((*allow-sensitive-inferiors* activep))
+                            (with-text-style
+                                (stream (menu-item-option
+                                         item :style
+                                         '(:sans-serif nil nil)))
+                              (with-output-as-presentation
+                                  (stream
+                                   item
+                                   `((,name ,@params)
+                                     :description ,(getf (menu-item-options item) :documentation)
+                                     ,@options)
+                                   :single-box t)
+                                (funcall item-printer item stream))))))
+                      presentations)
+                     (when (eql default-item item)
+                       (setf default-presentation (first presentations))))
                     (:label
                      ;; This is a static label, it should not be
                      ;; mouse-sensitive, but not grayed out either.
@@ -149,7 +152,8 @@
                 :max-height max-height
                 :cell-align-x cell-align-x
                 :cell-align-y (or cell-align-y :top)
-                :row-wise row-wise))
+                :row-wise row-wise)
+  (values (nreverse presentations) default-presentation :kbd-nav))
 
 (defclass menu-pane (clim-stream-pane)
   ((menu-frame))
@@ -352,27 +356,87 @@ maximum size according to `frame')."
   "A list of gesture names that serve as additional abort gestures for
 `menu-choose-from-drawer'.")
 
-;; Spec function.
+;; McCLIM add the possibility to navigate between the items of a menu
+;; with the keyboard. To activate the keyboard navifgation the user
+;; must use MENU-CHOOSE-FROW-DRAWER with a drawer function that
+;; returns three values:
+;; 1. a list of navigable presentations,
+;; 2. the default presentation (or nil),
+;; 3. the keyword :kbd-nav
+;; If the third value isn't :kbd-nav the keyboard navigation isn't
+;; activated and the values returned by the drawer function aren't
+;; used.
 (defmethod menu-choose-from-drawer
     (menu presentation-type drawer
      &key x-position y-position cache unique-id id-test cache-value cache-test
-     default-presentation pointer-documentation)
+     default-presentation pointer-documentation &aux presentations default kbd-nav-p)
   (declare (ignore cache unique-id
                    id-test cache-value cache-test default-presentation))
   (with-room-for-graphics (menu :first-quadrant nil)
-    (funcall drawer menu presentation-type))
-
+    (multiple-value-setq (presentations default kbd-nav-p)
+      (funcall drawer menu presentation-type)))
+  (setf kbd-nav-p (eq kbd-nav-p :kbd-nav))
+  (when (and :kbd-nav presentations (null default))
+    (setf default (first presentations)))
   (adjust-menu-size-and-position menu :x-position x-position
                                       :y-position y-position)
   ;; The menu is enabled (make visible) after the size is adjusted.
   (enable-menu menu)
-  (let ((*pointer-documentation-output* pointer-documentation)
-        (*abort-gestures* (append *menu-choose-abort-gestures*
-                                  *abort-gestures*)))
+  (when default
+    (setf (stream-pointer-position menu)
+          (with-bounding-rectangle* (min-x min-y max-x max-y) default
+            (values (+ min-x (floor (- max-x min-x) 2))
+                    (+ min-y (floor (- max-y min-y) 2))))))
+  (with-pointer-grabbed ((port menu) menu)
+    (with-input-focus (menu)
+      (let ((*pointer-documentation-output* pointer-documentation)
+            (*abort-gestures* (append *menu-choose-abort-gestures*
+                                      *abort-gestures*)))
     (handler-case
         (with-input-context (`(or ,presentation-type blank-area) :override t)
             (object type event)
-            (prog1 nil (loop (read-gesture :stream menu)))
+            (if kbd-nav-p
+                (menu-kbd-navigation-loop menu presentations default)
+                (prog1 nil (loop (read-gesture :stream menu))))
           (blank-area nil)
           (t (values object event)))
-      (abort-gesture () nil))))
+      (abort-gesture () nil))))))
+
+(define-gesture-name :kbd-throw-presentation :keyboard (:return :meta) :unique nil)
+(define-gesture-name :kbd-prev :keyboard (#\p :meta) :unique nil)
+(define-gesture-name :kbd-prev :keyboard :up :unique nil)
+(define-gesture-name :kbd-next :keyboard (#\n :meta) :unique nil)
+(define-gesture-name :kbd-next :keyboard :down :unique nil)
+
+(defun menu-kbd-navigation-loop (stream presentations default
+                                 &aux (ntot (length presentations))
+                                   (n (position default presentations)))
+  (let ((*accelerator-gestures* '(:kbd-next :kbd-prev :kbd-throw-presentation)))
+    (labels ((next ()
+             (highlight-output-record default stream :unhighlight)
+             (setf n (mod (1+ n) ntot)
+                   default (nth n presentations)))
+           (prev ()
+             (highlight-output-record default stream :unhighlight)
+             (setf n (mod (1- n) ntot)
+                   default (nth n presentations)))
+           (ret ()
+             (throw-highlighted-presentation
+              default *input-context*
+              (multiple-value-bind (x y) (output-record-position default)
+                (multiple-value-setq (x y)
+                  (transform-position (sheet-native-transformation stream) x y))
+                (make-instance 'pointer-button-press-event
+                               :sheet stream
+                               :x x :y y
+                               :modifier-state 0
+                               :button +pointer-left-button+)))))
+              (loop (handler-case
+                        (loop
+                          (highlight-output-record default stream :highlight)
+                          (read-gesture :stream stream))
+                      (accelerator-gesture (c)
+                        (gesture-case (accelerator-gesture-event c)
+                          (:kbd-next (next))
+                          (:kbd-prev (prev))
+                          (:kbd-throw-presentation (ret)))))))))
