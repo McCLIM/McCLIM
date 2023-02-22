@@ -337,6 +337,12 @@ sequence.  The iteration is then \"stepped\" by the specified number."
                      (declare (ignorable ,@vars))
                      ,result-form)))))))))
 
+(defmacro dohash (((key val) hash-table &optional result) &body body)
+  (with-gensyms (cont)
+    `(flet ((,cont (,key ,val) ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (maphash (function ,cont) ,hash-table)
+       ,result)))
 ;;;;
 ;;;; meta functions
 ;;;;
