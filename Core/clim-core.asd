@@ -123,6 +123,7 @@
                  (:file "parsing-conditions")
                  (:file "input-editing")
                  (:file "completion")
+                 (:file "buffer")
                  (:file "editor")
                  (:file "edward")
                  (:file "gadgets")))

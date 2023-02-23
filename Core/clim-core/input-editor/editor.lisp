@@ -37,6 +37,54 @@
     (declare (ignore sheet))
     *input-editor-commands*))
 
+;;; Another singletons for naive implementations. Also implements killring.
+
+(defparameter *input-editor-last-command* nil)
+(defparameter *input-editor-kill-history*
+  ;; Who doesn't like a good metacircular implementation of the kill buffer?
+  (nth-value 1 (make-kluffer)))
+
+(macrolet ((def-reader (name variable)
+             `(defgeneric ,name (editor)
+                (:method (editor) ,variable)))
+           (def-writer (name variable)
+             `(defgeneric (setf ,name) (new-value editor)
+                (:method (new-value editor)
+                  (setf ,variable new-value))))
+           (def-accessor (name variable)
+             `(progn
+                (def-reader ,name ,variable)
+                (def-writer ,name ,variable))))
+  (def-accessor input-editor-last-command *input-editor-last-command*)
+  (def-accessor input-editor-kill-history *input-editor-kill-history*))
+
+(defun input-editor-yank-kill (editor)
+  (let* ((history (input-editor-kill-history editor))
+         (items (smooth-yank-kill history)))
+    (when (zerop (length items))
+      (beep editor)
+      (return-from input-editor-yank-kill nil))
+    items))
+
+(defun input-editor-yank-next (editor)
+  (let* ((history (input-editor-kill-history editor))
+         (items (smooth-yank-next history)))
+    (when (zerop (length items))
+      (beep editor)
+      (return-from input-editor-yank-next nil))
+    items))
+
+(defun input-editor-kill-object (editor object merge)
+  (check-type merge (member :front :back nil))
+  (when (zerop (length object))
+    (beep editor)
+    (return-from input-editor-kill-object nil))
+  (let ((history (input-editor-kill-history editor))
+        (cmdtype (input-editor-last-command editor)))
+    (if (eq cmdtype :kill)
+        (smooth-kill-object history object merge)
+        (smooth-kill-object history object nil))))
+
 ;;; GESTURES - gestures that must be typed in order to invoke the command
 ;;; FUNCTION - lambda list: (sheet buffer event numeric-argument)
 ;;; COMMAND-TABLE - [McCLIM extension] the command table of the new command
@@ -81,6 +129,8 @@
                      (mapcar (alexandria:compose #'class-name #'class-of)
                              (list sheet buffer event))
                      numeric-argument))
+           (:method :after (sheet buffer event numeric-argument)
+             (setf (input-editor-last-command sheet) ,type))
            (:method ((stream encapsulating-stream) buffer event num-arg)
              (,name (encapsulating-stream-stream stream) buffer event num-arg))
            (:method :after ((stream input-editing-stream) buffer event num-arg)
@@ -175,58 +225,67 @@
 
 ;;; Deletion commands
 
-(define-input-editor-command (ie-delete-object :type :deletion)
-    ((:keyboard #\d :control)
-     (:keyboard #\rubout)))
-
 ;;; XXX don't use the character #\delete because some (ekhm CCL) implementations
 ;;; think that it is the same as #\backspace. To avoid confusion use #\rubout.
 
-(define-input-editor-command (ie-delete-word :type :deletion)
+(define-input-editor-command (ie-delete-object :type :edit)
+    ((:keyboard #\d :control)
+     (:keyboard #\rubout)))
+
+(define-input-editor-command (ie-erase-object :type :edit)
+    ((:keyboard #\backspace)))
+
+;;; XXX Should this put contents in the kill ring?  :type :kill
+(define-input-editor-command (ie-clear-input-buffer :type :edit)
+    ((:keyboard #\backspace :control :meta)))
+
+;;; Killing spree
+
+(define-input-editor-command (ie-delete-word :type :kill)
     ((:keyboard #\d :meta)
      (:keyboard #\rubout :control)))
 
-(define-input-editor-command (ie-erase-object :type :deletion)
-    ((:keyboard #\backspace)))
-
-(define-input-editor-command (ie-erase-word :type :deletion)
+(define-input-editor-command (ie-erase-word :type :kill)
     ((:keyboard #\Backspace :meta)
      (:keyboard #\Backspace :control)))
 
-(define-input-editor-command (ie-kill-line :type :deletion)
+(define-input-editor-command (ie-kill-line :type :kill)
     ((:keyboard #\k :control)))
 
-(define-input-editor-command (ie-clear-input-buffer :type :deletion)
-    ((:keyboard #\backspace :control :meta)))
+#+ (or)
+(define-input-editor-command (ie-kill-region :type :kill)
+    ((:keyboard #\w :control)))
 
-(define-input-editor-command (ie-insert-newline :type :editing)
+;;; Editing operations
+
+(define-input-editor-command (ie-insert-newline :type :edit)
     ((:keyboard #\j :control)
      (:keyboard #\Newline)
      (:keyboard #\Return)
      (:keyboard :kp-enter)))
 
-(define-input-editor-command (ie-insert-newline-after-cursor :type :editing)
+(define-input-editor-command (ie-insert-newline-after-cursor :type :edit)
     ((:keyboard #\o :control)))
 
 ;;; Transposition commands seem to be savoured by some Emacs users, so we'll
 ;;; leave them be. They don't seem to be present in the "cua" world.
-(define-input-editor-command (ie-transpose-objects :type :editing)
+(define-input-editor-command (ie-transpose-objects :type :edit)
     ((:keyboard #\t :control)))
 
-(define-input-editor-command (ie-transpose-words :type :editing)
+(define-input-editor-command (ie-transpose-words :type :edit)
     ((:keyboard #\t :meta)))
 
 ;;; IE-YANK-HISTORY is for input editing streams. Should IE-YANK-KILL-RING
 ;;; first look in the clipboard? Should IE-KILL-* put killed content in the
 ;;; clipboard? The answer to both question is "rather yes".
-(define-input-editor-command (ie-yank-kill-ring :type :editing)
+(define-input-editor-command (ie-yank-kill-ring :type :yank)
     ((:keyboard #\y :control)))
 
-(define-input-editor-command (ie-yank-history :type :editing)
-    ((:keyboard #\y :control :meta)))
-
-(define-input-editor-command (ie-yank-next-item :type :editing)
+(define-input-editor-command (ie-yank-next-item :type :yank)
     ((:keyboard #\y :meta)))
+
+(define-input-editor-command (ie-yank-history :type :yank)
+    ((:keyboard #\y :control :meta)))
 
 ;;; implementme(?) C-z (cua) C-/ (emacs), redo C-y (cua) C-spooky (emacs)
 
@@ -254,6 +313,6 @@
     (setf (numeric-argument stream) value)))
 
 ;;; Inserts an object in the buffer.
-(define-input-editor-command (ie-insert-object :rescan t :type :editing)
+(define-input-editor-command (ie-insert-object :rescan t :type :edit)
     ((:keyboard t)))
 
