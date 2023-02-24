@@ -14,6 +14,38 @@
   (let ((line (make-instance 'cluffer-standard-line:open-line)))
     (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
 
+;;; Kill buffer
+(defun make-kluffer ()
+  (let* ((line (make-instance 'cluffer-standard-line:open-line))
+         (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
+         (buffer (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
+    (cluffer:attach-cursor cursor line)
+    (values buffer cursor)))
+
+;;; Selections (known as regions) may carry arbitrary payload - for examlpe a
+;;; drawing style or an annotation. Selections may overlap and they may span
+;;; multiple lines.
+
+(defclass buffer-selection ()
+  ((lcursor :initarg :lcursor :reader lcursor)
+   (rcursor :initarg :rcursor :reader rcursor)
+   (payload :initarg :payload :accessor payload)))
+
+(defun make-buffer-selection (position1 position2 payload)
+  (let ((c1 (make-instance 'edward-lsticky-cursor))
+        (c2 (make-instance 'edward-rsticky-cursor)))
+    (when position1
+      (smooth-set-position c1 position1))
+    (when position2
+      (smooth-set-position c2 position2))
+    (make-instance 'buffer-selection :lcursor c1 :rcursor c2 :payload payload)))
+
+(defun move-buffer-selection (selection position1 position2)
+  (when position1
+    (smooth-set-position (lcursor selection) position1))
+  (when position2
+    (smooth-set-position (rcursor selection) position2)))
+
 ;;; Cluffer "smooth" utilities - CLIM spec operates on positions treating the
 ;;; input buffer as a vector. On the other hand Cluffer keeps each line as a
 ;;; separate entity, so we need to make things transparent and allow smooth
@@ -207,6 +239,43 @@
     (unless (eql item #\newline)
       (cluffer:insert-item cursor item))))
 
+(defun smooth-replace-input (selection items)
+  (loop with lcursor = (lcursor selection)
+        with rcursor = (rcursor selection)
+          initially (assert (cursor<= lcursor rcursor))
+        while (cursor< lcursor rcursor)
+        do (smooth-delete-item lcursor)
+        finally (smooth-insert-input rcursor items)))
+
+(defun smooth-replace-line (selection items)
+  (loop with lcursor = (lcursor selection)
+        with rcursor = (rcursor selection)
+          initially (assert (cursor<= lcursor rcursor))
+        while (cursor< lcursor rcursor)
+        do (smooth-delete-item lcursor)
+        finally (smooth-insert-line rcursor items)))
+
+(defun smooth-kill-object (cursor object merge)
+  ;; The cursor is always located at the end of the line.
+  (ecase merge
+    ((nil)
+     (cluffer:end-of-line cursor)
+     (unless (cluffer:beginning-of-buffer-p cursor)
+       (cluffer:split-line cursor)))
+    (:front
+     (cluffer:beginning-of-line cursor))
+    (:back
+     (cluffer:end-of-line cursor)))
+  (smooth-insert-items cursor object))
+
+(defun smooth-yank-kill (cursor)
+  (cluffer:items cursor :start 0))
+
+(defun smooth-yank-next (cursor)
+  (smooth-warp-line (cluffer:buffer cursor) cursor -1)
+  (cluffer:end-of-line cursor)
+  (smooth-yank-kill cursor))
+
 (defun cursor-compare (c1 c2)
   (assert (and (cluffer:cursor-attached-p c1)
                (cluffer:cursor-attached-p c2)))
@@ -256,75 +325,3 @@
 
 (defun buffer-timestamp (buffer)
   (cluffer-standard-buffer::current-time buffer))
-
-
-;;; Selections (known as regions) may carry arbitrary payload - for examlpe a
-;;; drawing style or an annotation. Selections may overlap and they may span
-;;; multiple lines.
-
-(defclass buffer-selection ()
-  ((lcursor :initarg :lcursor :reader lcursor)
-   (rcursor :initarg :rcursor :reader rcursor)
-   (payload :initarg :payload :accessor payload)))
-
-(defun make-buffer-selection (position1 position2 payload)
-  (let ((c1 (make-instance 'edward-lsticky-cursor))
-        (c2 (make-instance 'edward-rsticky-cursor)))
-    (when position1
-      (smooth-set-position c1 position1))
-    (when position2
-      (smooth-set-position c2 position2))
-    (make-instance 'buffer-selection :lcursor c1 :rcursor c2 :payload payload)))
-
-(defun move-buffer-selection (selection position1 position2)
-  (when position1
-    (smooth-set-position (lcursor selection) position1))
-  (when position2
-    (smooth-set-position (rcursor selection) position2)))
-
-(defun smooth-replace-input (selection items)
-  (loop with lcursor = (lcursor selection)
-        with rcursor = (rcursor selection)
-          initially (assert (cursor<= lcursor rcursor))
-        while (cursor< lcursor rcursor)
-        do (smooth-delete-item lcursor)
-        finally (smooth-insert-input rcursor items)))
-
-(defun smooth-replace-line (selection items)
-  (loop with lcursor = (lcursor selection)
-        with rcursor = (rcursor selection)
-          initially (assert (cursor<= lcursor rcursor))
-        while (cursor< lcursor rcursor)
-        do (smooth-delete-item lcursor)
-        finally (smooth-insert-line rcursor items)))
-
-
-;;; Kill buffer
-
-(defun make-kluffer ()
-  (let* ((line (make-instance 'cluffer-standard-line:open-line))
-         (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
-         (buffer (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
-    (cluffer:attach-cursor cursor line)
-    (values buffer cursor)))
-
-(defun smooth-kill-object (cursor object merge)
-  ;; The cursor is always located at the end of the line.
-  (ecase merge
-    ((nil)
-     (cluffer:end-of-line cursor)
-     (unless (cluffer:beginning-of-buffer-p cursor)
-       (cluffer:split-line cursor)))
-    (:front
-     (cluffer:beginning-of-line cursor))
-    (:back
-     (cluffer:end-of-line cursor)))
-  (smooth-insert-items cursor object))
-
-(defun smooth-yank-kill (cursor)
-  (cluffer:items cursor :start 0))
-
-(defun smooth-yank-next (cursor)
-  (smooth-warp-line (cluffer:buffer cursor) cursor -1)
-  (cluffer:end-of-line cursor)
-  (smooth-yank-kill cursor))
