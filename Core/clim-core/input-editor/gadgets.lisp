@@ -12,7 +12,9 @@
 ;;;
 
 (defclass text-editing-gadget (edward-mixin text-editor)
-  ((allow-line-breaks :initarg :allow-line-breaks) ; single line?
+  ((allow-line-breaks
+    :reader allow-line-breaks
+    :initarg :allow-line-breaks) ; single line?
    (activation-gestures :accessor activation-gestures
                         :initarg :activation-gestures))
   (:default-initargs :foreground +black+
@@ -22,15 +24,30 @@
 
 (defmethod ie-insert-newline :around
     ((sheet text-editing-gadget) buffer event numarg)
-  (if (slot-value sheet 'allow-line-breaks)
+  (if (allow-line-breaks sheet)
       (call-next-method)
       (beep sheet)))
 
 (defmethod ie-insert-newline-after-cursor :around
     ((sheet text-editing-gadget) buffer event numarg)
-  (if (slot-value sheet 'allow-line-breaks)
+  (if (allow-line-breaks sheet)
       (call-next-method)
       (beep sheet)))
+
+(defmethod ie-yank-kill-ring
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (let ((cursor (edit-cursor sheet)))
+    (ensure-edward-selection sheet :yank :start cursor :end cursor)
+    (if (allow-line-breaks sheet)
+        (smooth-insert-input cursor (input-editor-yank-kill sheet))
+        (smooth-insert-line  cursor (input-editor-yank-kill sheet)))))
+
+(defmethod ie-yank-next-item
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (when-let ((items (input-editor-yank-next sheet)))
+    (if (allow-line-breaks sheet)
+        (smooth-replace-input (ensure-edward-selection sheet :yank) items)
+        (smooth-replace-line  (ensure-edward-selection sheet :yank) items))))
 
 (defun fix-cursors (gadget)
   (with-sheet-medium (medium gadget)

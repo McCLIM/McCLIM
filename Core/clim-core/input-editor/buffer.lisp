@@ -201,6 +201,12 @@
   ;; This "insert" preserves a newline character. Render goes crazy here :-).
   (map nil (curry #'cluffer:insert-item cursor) items))
 
+(defun smooth-insert-line (cursor items)
+  ;; This "insert" ignores a newline character.
+  (do-sequence (item items)
+    (unless (eql item #\newline)
+      (cluffer:insert-item cursor item))))
+
 (defun cursor-compare (c1 c2)
   (assert (and (cluffer:cursor-attached-p c1)
                (cluffer:cursor-attached-p c2)))
@@ -283,6 +289,14 @@
         while (cursor< lcursor rcursor)
         do (smooth-delete-item lcursor)
         finally (smooth-insert-input rcursor items)))
+
+(defun smooth-replace-line (selection items)
+  (loop with lcursor = (lcursor selection)
+        with rcursor = (rcursor selection)
+          initially (assert (cursor<= lcursor rcursor))
+        while (cursor< lcursor rcursor)
+        do (smooth-delete-item lcursor)
+        finally (smooth-insert-line rcursor items)))
 
 
 ;;; Kill buffer
