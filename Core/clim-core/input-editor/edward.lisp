@@ -33,6 +33,9 @@
    (scan-cursor                         ; for parsing
     :reader scan-cursor
     :initform (make-instance 'edward-lsticky-cursor))
+   (selections
+    :reader selections
+    :initform (make-hash-table))
    ;; (edward-undo-history :reader edward-undo-history)
    ;; (edward-redo-history :reader edward-redo-history)
    (edward-numarg
@@ -53,11 +56,34 @@
     (let ((buffer (input-editor-buffer object)))
       (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
 
+(defun ensure-edward-selection (editor name &key start end (data nil data-p))
+  (let ((selection (or (gethash name (selections editor))
+                       (setf (gethash name (selections editor))
+                             (make-buffer-selection nil nil nil)))))
+    (move-buffer-selection selection start end)
+    (when data-p
+      (setf (payload selection) data))
+    selection))
+
+(defun delete-edward-selection (editor name)
+  (when-let ((selection (gethash name (selections editor))))
+    (remhash name (selections editor))
+    (let ((c1 (lcursor selection))
+          (c2 (rcursor selection)))
+      (when (cluffer:cursor-attached-p c1)
+        (cluffer:detach-cursor c1))
+      (when (cluffer:cursor-attached-p c2)
+        (cluffer:detach-cursor c2)))))
+
 (defmacro do-cursors ((cursor editor) &body body)
   (with-gensyms (cont)
     `(flet ((,cont (,cursor) ,@body))
        (declare (dynamic-extent (function ,cont)))
-       (,cont (edit-cursor ,editor)))))
+       (,cont (edit-cursor ,editor))
+       (dohash ((key val) (selections ,editor))
+         (declare (ignore key))
+         (,cont (lcursor val))
+         (,cont (rcursor val))))))
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
@@ -306,11 +332,14 @@
 
 (defmethod ie-yank-kill-ring
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (smooth-insert-input (edit-cursor sheet) (input-editor-yank-kill sheet)))
+  (let ((cursor (edit-cursor sheet)))
+    (ensure-edward-selection sheet :yank :start cursor :end cursor)
+    (smooth-insert-input cursor (input-editor-yank-kill sheet))))
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (smooth-insert-input (edit-cursor sheet) (input-editor-yank-next sheet)))
+  (when-let ((items (input-editor-yank-next sheet)))
+    (smooth-replace-input (ensure-edward-selection sheet :yank) items)))
 
 ;;; Editing
 

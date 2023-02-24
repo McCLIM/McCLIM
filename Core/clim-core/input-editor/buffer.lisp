@@ -245,6 +245,39 @@
   (cluffer-standard-buffer::current-time buffer))
 
 
+;;; Selections (known as regions) may carry arbitrary payload - for examlpe a
+;;; drawing style or an annotation. Selections may overlap and they may span
+;;; multiple lines.
+
+(defclass buffer-selection ()
+  ((lcursor :initarg :lcursor :reader lcursor)
+   (rcursor :initarg :rcursor :reader rcursor)
+   (payload :initarg :payload :accessor payload)))
+
+(defun make-buffer-selection (position1 position2 payload)
+  (let ((c1 (make-instance 'edward-lsticky-cursor))
+        (c2 (make-instance 'edward-rsticky-cursor)))
+    (when position1
+      (smooth-set-position c1 position1))
+    (when position2
+      (smooth-set-position c2 position2))
+    (make-instance 'buffer-selection :lcursor c1 :rcursor c2 :payload payload)))
+
+(defun move-buffer-selection (selection position1 position2)
+  (when position1
+    (smooth-set-position (lcursor selection) position1))
+  (when position2
+    (smooth-set-position (rcursor selection) position2)))
+
+(defun smooth-replace-input (selection items)
+  (loop with lcursor = (lcursor selection)
+        with rcursor = (rcursor selection)
+          initially (assert (cursor<= lcursor rcursor))
+        while (cursor< lcursor rcursor)
+        do (smooth-delete-item lcursor)
+        finally (smooth-insert-input rcursor items)))
+
+
 ;;; Kill buffer
 
 (defun make-kluffer ()
