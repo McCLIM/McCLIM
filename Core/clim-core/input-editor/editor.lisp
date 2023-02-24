@@ -56,7 +56,7 @@
                 (def-reader ,name ,variable)
                 (def-writer ,name ,variable))))
   (def-accessor input-editor-last-command *input-editor-last-command*)
-  (def-accessor input-editor-kill-history *input-editor-kill-history*))
+  (def-reader   input-editor-kill-history *input-editor-kill-history*))
 
 (defun input-editor-yank-kill (editor)
   (let* ((history (input-editor-kill-history editor))

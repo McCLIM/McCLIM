@@ -133,6 +133,13 @@
   (when position
     (setf (cluffer:cursor-position cursor) position)))
 
+(defun smooth-clean-buffer (buffer cursor)
+  (smooth-beg-of-buffer buffer cursor)
+  (handler-case (loop (smooth-delete-line cursor))
+    (cluffer:end-of-buffer ()))
+  (assert (= 1 (cluffer:line-count buffer)))
+  (assert (= 0 (cluffer:item-count (cluffer:line cursor)))))
+
 (defun smooth-beg-of-buffer (buffer cursor)
   (symbol-macrolet ((line0 (cluffer:find-line buffer 0)))
     (unless (zerop (cluffer:line-number cursor))

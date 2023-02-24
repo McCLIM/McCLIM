@@ -33,9 +33,16 @@
    (scan-cursor                         ; for parsing
     :reader scan-cursor
     :initform (make-instance 'edward-lsticky-cursor))
-   (selections
+   (selections                          ; aka "regions"
     :reader selections
     :initform (make-hash-table))
+   (kill-history
+    :allocation :class                  ; banzai! (and yolo)
+    :reader input-editor-kill-history
+    :initform (nth-value 1 (make-kluffer)))
+   (last-command
+    :accessor input-editor-last-command
+    :initform nil)
    ;; (edward-undo-history :reader edward-undo-history)
    ;; (edward-redo-history :reader edward-redo-history)
    (edward-numarg
@@ -346,12 +353,7 @@
 (defmethod ie-clear-input-buffer
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore event numeric-argument))
-  (let ((cursor (edit-cursor sheet)))
-    (smooth-beg-of-buffer buffer cursor)
-    (handler-case (loop (smooth-delete-line cursor))
-      (cluffer:end-of-buffer ()))
-    (assert (= 1 (cluffer:line-count buffer)))
-    (assert (= 0 (cluffer:item-count (cluffer:line cursor))))))
+  (smooth-clean-buffer buffer (edit-cursor sheet)))
 
 (defmethod ie-insert-newline
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
