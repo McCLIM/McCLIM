@@ -155,7 +155,7 @@
                (incf maximal-y line-height)
                (maxf maximal-x (text-size medium (line-string line)))))
         (declare (dynamic-extent (function account-for-line)))
-        (map-over-lines (input-editor-buffer editor) #'account-for-line)
+        (map-over-lines #'account-for-line (input-editor-buffer editor))
         (values maximal-x maximal-y)))))
 
 ;;; FIXME implement the soft line wrapping

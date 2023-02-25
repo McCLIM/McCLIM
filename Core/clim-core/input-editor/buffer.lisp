@@ -300,7 +300,7 @@
 
 ;;; Operations on cluffer's buffer and line instances.
 
-(defun map-over-lines (buffer function)
+(defun map-over-lines (function buffer)
   (loop with length = (cluffer:line-count buffer)
         for lineno from 0 below length
         for line = (cluffer:find-line buffer lineno)
@@ -321,7 +321,7 @@
              (unless (cluffer:last-line-p line)
                (terpri stream))))
       (declare (dynamic-extent (function add-line)))
-      (map-over-lines buffer #'add-line))))
+      (map-over-lines #'add-line buffer))))
 
 (defun buffer-timestamp (buffer)
   (cluffer-standard-buffer::current-time buffer))

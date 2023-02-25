@@ -137,7 +137,7 @@
                    ;; Increment the drawing position.
                    (incf current-y line-height))))
         (declare (dynamic-extent (function draw-line)))
-        (map-over-lines (input-editor-buffer sheet) #'draw-line)
+        (map-over-lines #'draw-line (input-editor-buffer sheet))
         (draw-design sheet edit-cursor)
         (scroll-extent* sheet edit-cursor)))))
 
