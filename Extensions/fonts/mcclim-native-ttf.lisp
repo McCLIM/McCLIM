@@ -310,6 +310,25 @@
 (defun font-glyph-bottom (font code)
   (glyph-info-bottom (font-glyph-info font code)))
 
+(defun char-glyph-code (char next)
+  (assert (and (char/= char #\newline)
+               (not (eql next #\newline))))
+  (if next
+      (dpb (char-code next)
+           (byte #.(ceiling (log char-code-limit 2))
+                 #.(ceiling (log char-code-limit 2)))
+           (char-code char))
+      (char-code char)))
+
+(defun map-over-string-glyph-codes (fun string start end)
+  (loop with len = (length string)
+        for i from start below end
+        for j from (1+ start)
+        for char = (char string i)
+        for next = (and (< j len) (char string j))
+        for code = (char-glyph-code char next)
+        do (funcall fun code)))
+
 (defun font-string-glyph-codes (font string &key (start 0) (end (length string)))
   "Converts string to a sequence of glyph codes. Some characters are composed of
 many codepoints – it is not guaranteed that length of the string and the length
@@ -318,20 +337,11 @@ of resulting sequence are equal."
   (alexandria:minf end (length string))
   (when (>= start end)
     (return-from font-string-glyph-codes #()))
-  (loop
-    with array = (make-array (- end start) :fill-pointer 0)
-    as char = (char string start) then next-char
-    for i fixnum from (1+ start) below end
-    as next-char = (char string i)
-    as code = (dpb (char-code next-char)
-                   (byte #.(ceiling (log char-code-limit 2))
-                         #.(ceiling (log char-code-limit 2)))
-                   (char-code char))
-    do
-       (vector-push code array)
-    finally
-       (vector-push (char-code char) array)
-       (return array)))
+  (let ((array (make-array (- end start) :fill-pointer 0)))
+    (flet ((doit (code) (vector-push code array)))
+      (declare (dynamic-extent #'doit))
+      (map-over-string-glyph-codes #'doit string start end))
+    array))
 
 (defun font-glyph-code-char (font code)
   (declare (ignore font))
@@ -356,37 +366,31 @@ but argument must constitute exactly one character."
     (values (font-text-extents font string :start start :end end))))
 
 
-(defun line-bbox (font glyph-codes align-x)
-  (loop
-     for code across glyph-codes
-     with origin-x fixnum = 0
-     with origin-y fixnum = 0
-     with xmin = most-positive-fixnum
-     with ymin = most-positive-fixnum
-     with xmax = most-negative-fixnum
-     with ymax = most-negative-fixnum
-     as glyph-left fixnum =   (+ origin-x (font-glyph-left font code))
-     as glyph-top fixnum =    (+ origin-y (- (font-glyph-top font code)))
-     as glyph-right fixnum =  (+ origin-x (font-glyph-right font code))
-     as glyph-bottom fixnum = (+ origin-y (- (font-glyph-bottom font code)))
-     do
-       (alexandria:minf xmin glyph-left)
-       (alexandria:minf ymin glyph-top)
-       (alexandria:maxf xmax glyph-right)
-       (alexandria:maxf ymax glyph-bottom)
-       (incf origin-x (font-glyph-dx font code))
-       (incf origin-y (font-glyph-dy font code))
-     finally
-       (case align-x
-         (:center
-          (let ((width/2 (/ (- xmax xmin) 2)))
-            (setf xmin (- width/2))
-            (setf xmax (+ width/2))))
-         (:right
-          (let ((width (- xmax xmin)))
-            (setf xmin (- width))
-            (setf xmax 0))))
-       (return (values xmin ymin xmax ymax origin-x origin-y))))
+(defun line-bbox (font string start end align-x)
+  (let ((origin-x 0)
+        (origin-y 0)
+        (xmin most-positive-fixnum)
+        (ymin most-positive-fixnum)
+        (xmax most-negative-fixnum)
+        (ymax most-negative-fixnum))
+    (flet ((process-code (code)
+             (minf xmin (+ origin-x (font-glyph-left font code)))
+             (minf ymin (+ origin-y (- (font-glyph-top font code))))
+             (maxf xmax (+ origin-x (font-glyph-right font code)))
+             (maxf ymax (+ origin-y (- (font-glyph-bottom font code))))
+             (incf origin-x (font-glyph-dx font code))
+             (incf origin-y (font-glyph-dy font code))))
+      (map-over-string-glyph-codes #'process-code string start end)
+      (case align-x
+        (:center
+         (let ((width/2 (/ (- xmax xmin) 2)))
+           (setf xmin (- width/2))
+           (setf xmax (+ width/2))))
+        (:right
+         (let ((width (- xmax xmin)))
+           (setf xmin (- width))
+           (setf xmax 0))))
+      (values xmin ymin xmax ymax origin-x origin-y))))
 
 (defun font-text-extents (font string &key start end align-x align-y direction)
   "Function computes text extents as if it were drawn with a specified font. It
@@ -423,7 +427,7 @@ cursor-dx cursor-dy"
       (multiple-value-bind (xmin* ymin* xmax* ymax* dx* dy*)
           (if (alexandria:emptyp line)
               (values 0 0 0 0 0 0)
-              (line-bbox font (font-string-glyph-codes font line) align-x))
+              (line-bbox font line 0 (length line) align-x))
         (case align-y
           (:top
            (let ((height (- ymax* ymin*))
