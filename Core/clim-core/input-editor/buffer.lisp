@@ -22,29 +22,48 @@
     (cluffer:attach-cursor cursor line)
     (values buffer cursor)))
 
-;;; Selections (known as regions) may carry arbitrary payload - for examlpe a
-;;; drawing style or an annotation. Selections may overlap and they may span
-;;; multiple lines.
+;;; Selections (known as regions) may represent a pointer selection, last
+;;; yank, an annotation etc. Selections may overlap and span multiple lines.
 
 (defclass buffer-selection ()
   ((lcursor :initarg :lcursor :reader lcursor)
    (rcursor :initarg :rcursor :reader rcursor)
-   (payload :initarg :payload :accessor payload)))
+   (%anchor :initarg :%anchor :accessor %anchor)))
 
-(defun make-buffer-selection (position1 position2 payload)
+(defun make-buffer-selection (anchor)
   (let ((c1 (make-instance 'edward-lsticky-cursor))
         (c2 (make-instance 'edward-rsticky-cursor)))
-    (when position1
-      (smooth-set-position c1 position1))
-    (when position2
-      (smooth-set-position c2 position2))
-    (make-instance 'buffer-selection :lcursor c1 :rcursor c2 :payload payload)))
+    (smooth-set-position c1 anchor)
+    (smooth-set-position c2 anchor)
+    (make-instance 'buffer-selection :%anchor c1 :lcursor c1 :rcursor c2)))
 
-(defun move-buffer-selection (selection position1 position2)
-  (when position1
-    (smooth-set-position (lcursor selection) position1))
-  (when position2
-    (smooth-set-position (rcursor selection) position2)))
+(defun move-buffer-selection (selection position &optional extension)
+  (smooth-set-position (lcursor selection) position)
+  (smooth-set-position (rcursor selection) position)
+  (when extension
+    (extend-buffer-selection selection extension)))
+
+(defun extend-buffer-selection (selection position)
+  (let ((anchor (%anchor selection))
+        (lcursor (lcursor selection))
+        (rcursor (rcursor selection)))
+    (if (cursor<= position anchor)
+        (progn
+          (smooth-set-position rcursor anchor)
+          (smooth-set-position lcursor position)
+          (setf (%anchor selection) rcursor))
+        (progn
+          (smooth-set-position lcursor anchor)
+          (smooth-set-position rcursor position)
+          (setf (%anchor selection) lcursor)))))
+
+(defun kill-buffer-selection (selection)
+  (let ((lcursor (lcursor selection))
+        (rcursor (rcursor selection)))
+    (when (cluffer:cursor-attached-p lcursor)
+      (cluffer:detach-cursor lcursor))
+    (when (cluffer:cursor-attached-p rcursor)
+      (cluffer:detach-cursor rcursor))))
 
 ;;; Cluffer "smooth" utilities - CLIM spec operates on positions treating the
 ;;; input buffer as a vector. On the other hand Cluffer keeps each line as a
@@ -276,13 +295,16 @@
   (cluffer:end-of-line cursor)
   (smooth-yank-kill cursor))
 
+;;; This DWIM operator compares line and cursor positions. When a cursor is
+;;; compared with a line then 0 means "attached to a line". [-1 0 +1]
 (defun cursor-compare (c1 c2)
-  (assert (and (cluffer:cursor-attached-p c1)
-               (cluffer:cursor-attached-p c2)))
   (let ((l1 (cluffer:line-number c1))
         (l2 (cluffer:line-number c2)))
     (cond ((< l1 l2) -1)
           ((> l1 l2) +1)
+          ((or (typep c1 'cluffer:line)
+               (typep c2 'cluffer:line))
+           0)
           ((let ((p1 (cluffer:cursor-position c1))
                  (p2 (cluffer:cursor-position c2)))
              (cond ((< p1 p2) -1)

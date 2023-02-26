@@ -63,24 +63,23 @@
     (let ((buffer (input-editor-buffer object)))
       (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
 
-(defun ensure-edward-selection (editor name &key start end (data nil data-p))
-  (let ((selection (or (gethash name (selections editor))
-                       (setf (gethash name (selections editor))
-                             (make-buffer-selection nil nil nil)))))
-    (move-buffer-selection selection start end)
-    (when data-p
-      (setf (payload selection) data))
-    selection))
+(defun make-edward-selection (editor name anchor)
+  (if-let ((selection (find-edward-selection editor name)))
+    (move-buffer-selection selection anchor)
+    (setf (gethash name (selections editor))
+          (make-buffer-selection anchor))))
 
-(defun delete-edward-selection (editor name)
+(defun find-edward-selection (editor name)
+  (gethash name (selections editor)))
+
+(defun kill-edward-selection (editor name)
   (when-let ((selection (gethash name (selections editor))))
     (remhash name (selections editor))
-    (let ((c1 (lcursor selection))
-          (c2 (rcursor selection)))
-      (when (cluffer:cursor-attached-p c1)
-        (cluffer:detach-cursor c1))
-      (when (cluffer:cursor-attached-p c2)
-        (cluffer:detach-cursor c2)))))
+    (kill-buffer-selection selection)))
+
+#+ (or)
+(defun invoke-with-selection (selection cont &rest args)
+  (with-drawing-options ()))
 
 (defmacro do-cursors ((cursor editor) &body body)
   (with-gensyms (cont)
@@ -340,13 +339,14 @@
 (defmethod ie-yank-kill-ring
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
   (let ((cursor (edit-cursor sheet)))
-    (ensure-edward-selection sheet :yank :start cursor :end cursor)
+    (make-edward-selection sheet :yank cursor)
     (smooth-insert-input cursor (input-editor-yank-kill sheet))))
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (when-let ((items (input-editor-yank-next sheet)))
-    (smooth-replace-input (ensure-edward-selection sheet :yank) items)))
+  (when-let ((selection (input-editor-yank-next sheet))
+             (items (input-editor-yank-next sheet)))
+    (smooth-replace-input selection items)))
 
 ;;; Editing
 
