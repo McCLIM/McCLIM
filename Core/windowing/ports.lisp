@@ -529,25 +529,28 @@
     (setf (port-grabbed-sheet port) nil)
     (call-next-method)))
 
-(defmacro with-pointer-grabbed ((port sheet &key pointer multiple-window)
+(defun invoke-with-pointer-grabbed (cont port sheet &key pointer multiple-window)
+  (let* ((port (or port (port sheet)))
+         (pointer (or pointer (port-pointer port))))
+    (unless (port-grab-pointer port pointer sheet
+                               :multiple-window multiple-window)
+      (warn "Port ~A failed to grab a pointer." port)
+      (return-from invoke-with-pointer-grabbed (funcall cont)))
+    (unwind-protect (handler-bind
+                        ((serious-condition
+                           #'(lambda (c)
+                               (declare (ignore c))
+                               (port-ungrab-pointer port pointer sheet))))
+                      (funcall cont))
+      (port-ungrab-pointer port pointer sheet))))
+
+(defmacro with-pointer-grabbed ((port sheet &rest args &key pointer multiple-window)
                                 &body body)
-  (with-gensyms (the-port the-sheet the-pointer)
-    `(let* ((,the-port ,port)
-            (,the-sheet ,sheet)
-            (,the-pointer (or ,pointer (port-pointer ,the-port))))
-       (if (not (port-grab-pointer ,the-port ,the-pointer ,the-sheet
-                                   :multiple-window ,multiple-window))
-           (warn "Port ~A failed to grab a pointer." ,the-port)
-           (unwind-protect
-                (handler-bind
-                    ((serious-condition
-                      #'(lambda (c)
-                          (declare (ignore c))
-                          (port-ungrab-pointer ,the-port
-                                               ,the-pointer
-                                               ,the-sheet))))
-                  ,@body)
-             (port-ungrab-pointer ,the-port ,the-pointer ,the-sheet))))))
+  (declare (ignore pointer multiple-window))
+  (with-gensyms (cont)
+    `(flet ((,cont () ,@body))
+       (declare (dynamic-extent (function ,cont)))
+       (invoke-with-pointer-grabbed (function ,cont) ,port ,sheet ,@args))))
 
 (defmethod set-sheet-pointer-cursor ((port basic-port) sheet cursor)
   (declare (ignore sheet cursor))

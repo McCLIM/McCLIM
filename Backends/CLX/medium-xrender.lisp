@@ -121,7 +121,7 @@
                                             (length string)
                                             (min end (length string)))))
   (declare (ignore toward-x toward-y))
-  (when (alexandria:emptyp string)
+  (when (or (alexandria:emptyp string) (>= start end))
     (return-from medium-draw-text*))
   (with-clx-graphics () medium
     (clim-sys:with-lock-held (*draw-font-lock*)
