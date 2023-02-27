@@ -31,6 +31,11 @@
 (defvar *input-editor-commands*
   (make-hash-table :test #'equal))
 
+;;; Clipboard integration:
+;;; - kill puts the text line in :clipboard
+;;; - yank uses the clipboard if available but does not modify the killring
+(defparameter *killring-uses-clipboard* t)
+
 (defgeneric input-editor-table (sheet)
   (:documentation "Returns the input editor command table.")
   (:method (sheet)
@@ -58,9 +63,28 @@
   (def-accessor input-editor-last-command *input-editor-last-command*)
   (def-reader   input-editor-kill-history *input-editor-kill-history*))
 
+(defun input-editor-kill-object (editor object merge)
+  (check-type merge (member :front :back nil))
+  (when (zerop (length object))
+    (beep editor)
+    (return-from input-editor-kill-object nil))
+  (let ((history (input-editor-kill-history editor))
+        (cmdtype (input-editor-last-command editor)))
+    (if (eq cmdtype :kill)
+        (smooth-kill-object history object merge)
+        (smooth-kill-object history object nil))
+    (when *killring-uses-clipboard*
+      (clime:publish-selection editor :clipboard
+                               (line-string history) 'string))))
+
 (defun input-editor-yank-kill (editor)
   (let* ((history (input-editor-kill-history editor))
          (items (smooth-yank-kill history)))
+    (when *killring-uses-clipboard*
+      (when-let ((clipboard (clime:request-selection editor :clipboard 'string)))
+        ;; ensure that yank-next won't drop the top-most entry.
+        (smooth-yank-kill history +1)
+        (setf items clipboard)))
     (when (zerop (length items))
       (beep editor)
       (return-from input-editor-yank-kill nil))
@@ -77,17 +101,6 @@
       (beep editor)
       (return-from input-editor-yank-next nil))
     items))
-
-(defun input-editor-kill-object (editor object merge)
-  (check-type merge (member :front :back nil))
-  (when (zerop (length object))
-    (beep editor)
-    (return-from input-editor-kill-object nil))
-  (let ((history (input-editor-kill-history editor))
-        (cmdtype (input-editor-last-command editor)))
-    (if (eq cmdtype :kill)
-        (smooth-kill-object history object merge)
-        (smooth-kill-object history object nil))))
 
 ;;; GESTURES - gestures that must be typed in order to invoke the command
 ;;; FUNCTION - lambda list: (sheet buffer event numeric-argument)

@@ -22,6 +22,21 @@
     (cluffer:attach-cursor cursor line)
     (values buffer cursor)))
 
+(defun print-kluffer (cursor offset)
+  (format *debug-io* "---------------------~%")
+  (map-over-lines (lambda (p)
+                    (cond ((and (zerop offset)
+                                (cursor= p cursor))
+                           (format *debug-io* "= kill: ~a~%" (line-string p)))
+                          ((cursor= p cursor)
+                           (format *debug-io* "< kill: ~a~%" (line-string p)))
+                          ((= (mod (+ (cluffer:line-number cursor) offset)
+                                   (cluffer:line-count (cluffer:buffer cursor)))
+                              (cluffer:line-number p))
+                           (format *debug-io* "> kill: ~a~%" (line-string p)))
+                          ((format *debug-io* "  kill: ~a~%" (line-string p)))))
+                  (cluffer:buffer cursor)))
+
 ;;; Selections (known as regions) may represent a pointer selection, last
 ;;; yank, an annotation etc. Selections may overlap and span multiple lines.
 
@@ -285,15 +300,20 @@
      (cluffer:beginning-of-line cursor))
     (:back
      (cluffer:end-of-line cursor)))
-  (smooth-insert-items cursor object))
+  (smooth-insert-items cursor object)
+  #+ (or) (print-kluffer cursor 0))
 
-(defun smooth-yank-kill (cursor)
-  (cluffer:items cursor :start 0))
+(defun smooth-yank-kill (cursor &optional (offset 0))
+  (unless (zerop offset)
+    (smooth-warp-line (cluffer:buffer cursor) cursor offset)
+    (cluffer:end-of-line cursor))
+  (cluffer:items cursor))
 
 (defun smooth-yank-next (cursor)
-  (smooth-warp-line (cluffer:buffer cursor) cursor -1)
-  (cluffer:end-of-line cursor)
-  (smooth-yank-kill cursor))
+  (smooth-yank-kill cursor -1))
+
+(defun smooth-yank-prev (cursor)
+  (smooth-yank-kill cursor +1))
 
 ;;; This DWIM operator compares line and cursor positions. When a cursor is
 ;;; compared with a line then 0 means "attached to a line". [-1 0 +1]
@@ -329,7 +349,12 @@
         do (funcall function line)))
 
 (defun line-string (line)
-  (coerce (cluffer:items line) 'string))
+  (with-output-to-string (str)
+    (loop for item across (cluffer:items line)
+          if (characterp item)
+            do (princ item str)
+          else
+            do (format str "@~a" item))))
 
 ;;; FIXME while this does not cons excessively (we accept an adjustable string
 ;;; with a fill pointer as an argument), the operation time in the case of a
