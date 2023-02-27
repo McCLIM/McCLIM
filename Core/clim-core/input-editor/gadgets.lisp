@@ -37,7 +37,7 @@
 (defmethod ie-yank-kill-ring
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
   (let ((cursor (edit-cursor sheet)))
-    (make-edward-selection sheet :yank cursor)
+    (find-slide sheet :yank cursor)
     (if (allow-line-breaks sheet)
         (smooth-insert-input cursor (input-editor-yank-kill sheet))
         (smooth-insert-line  cursor (input-editor-yank-kill sheet)))))
@@ -46,8 +46,8 @@
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
   (when-let ((items (input-editor-yank-next sheet)))
     (if (allow-line-breaks sheet)
-        (smooth-replace-input (find-edward-selection sheet :yank) items)
-        (smooth-replace-line  (find-edward-selection sheet :yank) items))))
+        (smooth-replace-input (find-slide sheet :yank) items)
+        (smooth-replace-line  (find-slide sheet :yank) items))))
 
 (defun fix-cursors (gadget)
   (with-sheet-medium (medium gadget)
@@ -118,7 +118,9 @@
     (let* ((edit-cursor (edit-cursor sheet))
            (text-style (medium-text-style medium))
            (line-height (text-style-height text-style medium))
-           (current-y 0))
+           (current-x 0)
+           (current-y 0)
+           current-text)
       (labels ((fix-cursor (line text cursor)
                  ;; Update the cursor.
                  (when (and (eq line (cluffer:line cursor))

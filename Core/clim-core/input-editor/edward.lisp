@@ -13,28 +13,16 @@
 
 ;;; Edward operations.
 
-(defclass edward-lsticky-cursor
-    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
-  ())
-
-(defclass edward-rsticky-cursor
-    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
-  ())
-
 (defclass edward-mixin ()
   ((edward-buffer
     :initarg :input-buffer
     :reader input-editor-buffer
     :initform (make-cluffer))
-   (edit-cursor                         ; aka "point"
-    :reader edit-cursor
-    :initform (make-instance 'edward-rsticky-cursor))
-   #+ (or)
-   (scan-cursor                         ; for parsing
-    :reader scan-cursor
-    :initform (make-instance 'edward-lsticky-cursor))
-   (selections                          ; aka "regions"
-    :reader selections
+   (cursors                             ; aka "points"
+    :reader cursors
+    :initform (make-hash-table))
+   (slides                              ; aka "regions"
+    :reader slides
     :initform (make-hash-table))
    (kill-history
     :allocation :class                  ; banzai! (and yolo)
@@ -63,41 +51,48 @@
     (let ((buffer (input-editor-buffer object)))
       (format stream "~s ~d" :lines (cluffer:line-count buffer)))))
 
-(defun make-edward-selection (editor name anchor)
-  (if-let ((selection (find-edward-selection editor name)))
-    (move-buffer-selection selection anchor)
-    (setf (gethash name (selections editor))
-          (make-buffer-selection anchor))))
+(defmethod initialize-instance :after ((editor edward-mixin) &key)
+  (let* ((buffer (input-editor-buffer editor))
+         (line-0 (cluffer:find-line buffer 0))
+         (cursor (make-buffer-cursor :rsticky)))
+    (cluffer:attach-cursor cursor line-0)
+    (setf (gethash :edit  (cursors editor)) cursor
+          (gethash :yank   (slides editor)) (make-buffer-slide)
+          (gethash :select (slides editor)) (make-buffer-slide))))
 
-(defun find-edward-selection (editor name)
-  (gethash name (selections editor)))
+(defun edit-cursor (editor)
+  (gethash :edit (cursors editor)))
 
-(defun kill-edward-selection (editor name)
-  (when-let ((selection (gethash name (selections editor))))
-    (remhash name (selections editor))
-    (kill-buffer-selection selection)))
+(defun find-cursor (editor name &optional anchor)
+  (let ((cursor (gethash name (cursors editor))))
+    (when anchor
+      (smooth-set-position cursor anchor))
+    cursor))
+
+(defun find-slide (editor name &optional anchor)
+  (let ((slide (gethash name (slides editor))))
+    (when anchor
+      (move-buffer-slide slide anchor))
+    slide))
 
 #+ (or)
-(defun invoke-with-selection (selection cont &rest args)
+(defun invoke-with-slide (slide cont &rest args)
   (with-drawing-options ()))
 
 (defmacro do-cursors ((cursor editor) &body body)
   (with-gensyms (cont)
     `(flet ((,cont (,cursor) ,@body))
        (declare (dynamic-extent (function ,cont)))
-       (,cont (edit-cursor ,editor))
-       (dohash ((key val) (selections ,editor))
+       (dohash ((key val) (cursors ,editor))
+         (declare (ignore key))
+         (,cont val))
+       (dohash ((key val) (slides ,editor))
          (declare (ignore key))
          (,cont (lcursor val))
          (,cont (rcursor val))))))
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
-  (let* ((buffer (input-editor-buffer object))
-         (line-0 (cluffer:find-line buffer 0)))
-    (do-cursors (cursor object)
-      (unless (cluffer:cursor-attached-p cursor)
-        (cluffer:attach-cursor cursor line-0))))
   (setf (numeric-argument object) 1
         (fill-pointer (input-editor-string object)) 0))
 
@@ -339,14 +334,14 @@
 (defmethod ie-yank-kill-ring
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
   (let ((cursor (edit-cursor sheet)))
-    (make-edward-selection sheet :yank cursor)
+    (find-slide sheet :yank cursor)
     (smooth-insert-input cursor (input-editor-yank-kill sheet))))
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (when-let ((selection (input-editor-yank-next sheet))
+  (when-let ((slide (input-editor-yank-next sheet))
              (items (input-editor-yank-next sheet)))
-    (smooth-replace-input selection items)))
+    (smooth-replace-input slide items)))
 
 ;;; Editing
 

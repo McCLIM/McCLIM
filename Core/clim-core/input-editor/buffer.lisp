@@ -37,44 +37,61 @@
                           ((format *debug-io* "  kill: ~a~%" (line-string p)))))
                   (cluffer:buffer cursor)))
 
-;;; Selections (known as regions) may represent a pointer selection, last
-;;; yank, an annotation etc. Selections may overlap and span multiple lines.
+;;; Slides (known as regions) may represent a pointer selection, last yank, an
+;;; annotation etc. Slides may overlap and span multiple lines.
 
-(defclass buffer-selection ()
+(defclass buffer-lsticky-cursor
+    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
+  ())
+
+(defclass buffer-rsticky-cursor
+    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
+  ())
+
+(defun make-buffer-cursor (stickiness)
+  (ecase stickiness
+    (:lsticky (make-instance 'buffer-lsticky-cursor))
+    (:rsticky (make-instance 'buffer-rsticky-cursor))))
+
+(defclass buffer-slide ()
   ((lcursor :initarg :lcursor :reader lcursor)
    (rcursor :initarg :rcursor :reader rcursor)
    (%anchor :initarg :%anchor :accessor %anchor)))
 
-(defun make-buffer-selection (anchor)
-  (let ((c1 (make-instance 'edward-lsticky-cursor))
-        (c2 (make-instance 'edward-rsticky-cursor)))
-    (smooth-set-position c1 anchor)
-    (smooth-set-position c2 anchor)
-    (make-instance 'buffer-selection :%anchor c1 :lcursor c1 :rcursor c2)))
+(defun slide-active (slide)
+  (cluffer:cursor-attached-p (%anchor slide)))
 
-(defun move-buffer-selection (selection position &optional extension)
-  (smooth-set-position (lcursor selection) position)
-  (smooth-set-position (rcursor selection) position)
+(defun make-buffer-slide (&optional anchor)
+  (let ((c1 (make-buffer-cursor :lsticky))
+        (c2 (make-buffer-cursor :rsticky)))
+    (when anchor
+      (smooth-set-position c1 anchor)
+      (smooth-set-position c2 anchor))
+    (make-instance 'buffer-slide :%anchor c1 :lcursor c1 :rcursor c2)))
+
+(defun move-buffer-slide (slide position &optional extension)
+  (smooth-set-position (lcursor slide) position)
+  (smooth-set-position (rcursor slide) position)
   (when extension
-    (extend-buffer-selection selection extension)))
+    (extend-buffer-slide slide extension)))
 
-(defun extend-buffer-selection (selection position)
-  (let ((anchor (%anchor selection))
-        (lcursor (lcursor selection))
-        (rcursor (rcursor selection)))
+(defun extend-buffer-slide (slide position)
+  (let ((anchor (%anchor slide))
+        (lcursor (lcursor slide))
+        (rcursor (rcursor slide)))
     (if (cursor<= position anchor)
         (progn
           (smooth-set-position rcursor anchor)
           (smooth-set-position lcursor position)
-          (setf (%anchor selection) rcursor))
+          (setf (%anchor slide) rcursor))
         (progn
           (smooth-set-position lcursor anchor)
           (smooth-set-position rcursor position)
-          (setf (%anchor selection) lcursor)))))
+          (setf (%anchor slide) lcursor)))))
 
-(defun kill-buffer-selection (selection)
-  (let ((lcursor (lcursor selection))
-        (rcursor (rcursor selection)))
+(defun kill-buffer-slide (slide)
+  (let ((lcursor (lcursor slide))
+        (rcursor (rcursor slide)))
     (when (cluffer:cursor-attached-p lcursor)
       (cluffer:detach-cursor lcursor))
     (when (cluffer:cursor-attached-p rcursor)
@@ -273,17 +290,17 @@
     (unless (eql item #\newline)
       (cluffer:insert-item cursor item))))
 
-(defun smooth-replace-input (selection items)
-  (loop with lcursor = (lcursor selection)
-        with rcursor = (rcursor selection)
+(defun smooth-replace-input (slide items)
+  (loop with lcursor = (lcursor slide)
+        with rcursor = (rcursor slide)
           initially (assert (cursor<= lcursor rcursor))
         while (cursor< lcursor rcursor)
         do (smooth-delete-item lcursor)
         finally (smooth-insert-input rcursor items)))
 
-(defun smooth-replace-line (selection items)
-  (loop with lcursor = (lcursor selection)
-        with rcursor = (rcursor selection)
+(defun smooth-replace-line (slide items)
+  (loop with lcursor = (lcursor slide)
+        with rcursor = (rcursor slide)
           initially (assert (cursor<= lcursor rcursor))
         while (cursor< lcursor rcursor)
         do (smooth-delete-item lcursor)
