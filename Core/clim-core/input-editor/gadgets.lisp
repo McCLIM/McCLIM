@@ -35,7 +35,7 @@
       (beep sheet)))
 
 (defmethod ie-yank-kill-ring
-    ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+    ((sheet text-editing-gadget) (buffer cluffer:buffer) event numarg)
   (when (editable-p sheet)
     (let ((cursor (edit-cursor sheet)))
       (find-slide sheet :yank cursor)
@@ -44,7 +44,7 @@
           (smooth-insert-line  cursor (input-editor-yank-kill sheet))))))
 
 (defmethod ie-yank-next-item
-    ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+    ((sheet text-editing-gadget) (buffer cluffer:buffer) event numarg)
   (when (editable-p sheet)
     (when-let ((items (input-editor-yank-next sheet)))
       (let ((slide (find-slide sheet :yank)))
@@ -53,11 +53,11 @@
             (smooth-replace-input slide items)
             (smooth-replace-line  slide items))))))
 
-(defmethod ie-cut ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+(defmethod ie-cut ((sheet text-editing-gadget) (buffer cluffer:buffer) event numarg)
   (when (editable-p sheet)
     (call-next-method)))
 
-(defmethod ie-paste ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+(defmethod ie-paste ((sheet text-editing-gadget) (buffer cluffer:buffer) event numarg)
   (cond ((not (editable-p sheet))
          (beep sheet))
         ((allow-line-breaks sheet)
@@ -70,7 +70,7 @@
                  (smooth-insert-line (edit-cursor sheet) string)))))))
 
 (defmethod ie-request-primary
-    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+    ((sheet text-editing-gadget) (buffer cluffer:buffer) event numeric-argument)
   (declare (ignore numeric-argument))
   (cond ((not (editable-p sheet))
          (beep sheet))
