@@ -36,18 +36,56 @@
 
 (defmethod ie-yank-kill-ring
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (let ((cursor (edit-cursor sheet)))
-    (find-slide sheet :yank cursor)
-    (if (allow-line-breaks sheet)
-        (smooth-insert-input cursor (input-editor-yank-kill sheet))
-        (smooth-insert-line  cursor (input-editor-yank-kill sheet)))))
+  (when (editable-p sheet)
+    (let ((cursor (edit-cursor sheet)))
+      (find-slide sheet :yank cursor)
+      (if (allow-line-breaks sheet)
+          (smooth-insert-input cursor (input-editor-yank-kill sheet))
+          (smooth-insert-line  cursor (input-editor-yank-kill sheet))))))
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (when-let ((items (input-editor-yank-next sheet)))
-    (if (allow-line-breaks sheet)
-        (smooth-replace-input (find-slide sheet :yank) items)
-        (smooth-replace-line  (find-slide sheet :yank) items))))
+  (when (editable-p sheet)
+    (when-let ((items (input-editor-yank-next sheet)))
+      (let ((slide (find-slide sheet :yank)))
+        (assert (mark-attached-p slide))
+        (if (allow-line-breaks sheet)
+            (smooth-replace-input slide items)
+            (smooth-replace-line  slide items))))))
+
+(defmethod ie-cut ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (when (editable-p sheet)
+    (call-next-method)))
+
+(defmethod ie-paste ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (cond ((not (editable-p sheet))
+         (beep sheet))
+        ((allow-line-breaks sheet)
+         (call-next-method))
+        ((let ((slide (find-slide sheet :select))
+               (string (clime:request-selection sheet :clipboard 'string)))
+           (unless (emptyp string)
+             (if (mark-attached-p slide)
+                 (smooth-replace-line slide string)
+                 (smooth-insert-line (edit-cursor sheet) string)))))))
+
+(defmethod ie-request-primary
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+  (declare (ignore numeric-argument))
+  (cond ((not (editable-p sheet))
+         (beep sheet))
+        ((allow-line-breaks sheet)
+         (call-next-method))
+        (t
+         (when (typep event 'pointer-event)
+           (multiple-value-bind (line position)
+               (edward-cursor-position-from-coordinates sheet
+                                                        (pointer-event-x event)
+                                                        (pointer-event-y event))
+             (smooth-set-position (edit-cursor sheet) line position)))
+         (if-let ((string (climb:request-selection sheet :primary 'string)))
+           (smooth-insert-input (edit-cursor sheet) string)
+           (beep sheet)))))
 
 (defun fix-cursors (gadget)
   (with-sheet-medium (medium gadget)
@@ -87,21 +125,25 @@
         (activate-callback sheet (gadget-client sheet) (gadget-id sheet))
         (call-next-method))))
 
+(defun update-gadget (sheet)
+  (change-space-requirements sheet)
+  (dispatch-repaint sheet +everywhere+)
+  (when (editable-p sheet)
+    (value-changed-callback sheet
+                            (gadget-client sheet)
+                            (gadget-id sheet)
+                            (gadget-value sheet)))
+  (let ((edit (edit-cursor sheet)))
+    (scroll-extent* sheet edit)))
+
 (defmethod handle-event ((sheet text-editing-gadget) (event key-press-event))
   (if (handle-editor-event sheet event)
-      (progn
-        (change-space-requirements sheet)
-        (dispatch-repaint sheet +everywhere+)
-        (when (editable-p sheet)
-          (value-changed-callback sheet
-                                  (gadget-client sheet)
-                                  (gadget-id sheet)
-                                  (gadget-value sheet))))
+      (update-gadget sheet)
       (call-next-method)))
 
 (defmethod handle-event ((sheet text-editing-gadget) (event pointer-event))
   (if (handle-editor-event sheet event)
-      (dispatch-repaint sheet +everywhere+)
+      (update-gadget sheet)
       (call-next-method)))
 
 (defmethod handle-event ((sheet text-editing-gadget)
@@ -130,18 +172,37 @@
                            (values (nth-value 2 (text-size medium text :end pos))
                                    current-y))
                      pos)))
-               (draw-line (line)
-                 (let ((text (line-string line)))
+               (draw-line (line start end slides)
+                 (when (zerop start)
+                   (setf current-x 0
+                         current-text (line-string line))
+                   ;; FIXME treat the cursor as a slide in butcher-line.
                    ;; Update cursors.
-                   (fix-cursor line text edit-cursor)
-                   ;; Draw the line.
-                   (draw-text* sheet text 0 current-y :align-x :left :align-y :top)
-                   ;; Increment the drawing position.
-                   (incf current-y line-height))))
+                   (fix-cursor line current-text edit-cursor))
+                 (multiple-value-bind (mx my dx dy)
+                     (text-size medium current-text :start start :end end)
+                   (declare (ignorable mx my dx dy))
+                   #+ (or)
+                   (format *debug-io*
+                           "[~3d ~3d ~3d] ~3d~%"
+                           (cluffer:line-number line)
+                           start end dx)
+                   (when (remove-if-not #'mark-visible-p slides)
+                     (draw-rectangle* sheet
+                                      current-x current-y
+                                      (+ current-x dx) (+ current-y line-height)
+                                      :ink +light-blue+))
+                   (draw-text* sheet current-text current-x current-y
+                               :align-x :left :align-y :top
+                               :start start :end end)
+                   (if (= end (length current-text))
+                       (setf current-y (+ current-y line-height))
+                       (setf current-x (+ current-x dx))))))
         (declare (dynamic-extent (function draw-line)))
-        (map-over-lines #'draw-line (input-editor-buffer sheet))
-        (draw-design sheet edit-cursor)
-        (scroll-extent* sheet edit-cursor)))))
+        (map-over-lines-with-slides #'draw-line
+                                    (input-editor-buffer sheet)
+                                    (alexandria:hash-table-values (slides sheet)))
+        (draw-design sheet edit-cursor)))))
 
 (defmethod compose-space ((sheet text-editing-gadget) &key width height)
   (declare (ignore width height))

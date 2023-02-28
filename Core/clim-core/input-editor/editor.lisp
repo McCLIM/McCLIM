@@ -136,6 +136,9 @@
       t)
     nil))
 
+(defgeneric note-input-editor-command-executed (editor type)
+  (:method (editor type)))
+
 (defmacro define-input-editor-command (name-and-options gestures)
   (destructuring-bind (name &key (rescan t) type) (ensure-list name-and-options)
     (let ((gesture-name (make-keyword name)))
@@ -149,7 +152,9 @@
            (:method :after (sheet buffer event numeric-argument)
              (if (eq (input-editor-last-command sheet) :abort)
                  (setf (input-editor-last-command sheet) nil)
-                 (setf (input-editor-last-command sheet) ,type)))
+                 (setf (input-editor-last-command sheet) ,type))
+             (when (input-editor-last-command sheet)
+               (note-input-editor-command-executed sheet ,type)))
            (:method ((stream encapsulating-stream) buffer event num-arg)
              (,name (encapsulating-stream-stream stream) buffer event num-arg))
            (:method :after ((stream input-editing-stream) buffer event num-arg)
@@ -220,26 +225,30 @@
 ;;; :wheel-down it would be four lines.
 (define-input-editor-command (ie-scroll-forward :rescan nil :type :motion)
     ((:pointer-scroll :wheel-down :control)
-     (:keyboard #\v :control)
+     ;; (:keyboard #\v :control)
      (:keyboard :page-down)
      (:keyboard :next)))
 
 (define-input-editor-command (ie-scroll-backward :rescan nil :type :motion)
     ((:pointer-scroll :wheel-up :control)
-     (:keyboard #\v :meta)
+     ;; (:keyboard #\v :meta)
      (:keyboard :page-up)
      (:keyboard :prior)))
 
 (define-input-editor-command (ie-select-object :rescan nil :type :motion)
-    (#+ (or) :select ; <- support named gesturs to copy their specs?
-     (:pointer-button-press :left)))
+    (;; :select ; <- support named gesturs to copy their specs?
+     (:pointer-button-press :left t)
+     (:keyboard #\space :control)))
+
+(define-input-editor-command (ie-release-object :rescan nil :type :motion)
+    ((:pointer-button-release :left t)))
 
 ;;; The dragged object may be either a selected region or the edit cursor
 ;;; modifying the selected region.
 (define-input-editor-command (ie-select-region :rescan nil :type :motion)
-    ((:pointer-motion :left)))
+    ((:pointer-motion :left t)))
 
-(define-input-editor-command (ie-context-menu :rescan nil :type nil)
+(define-input-editor-command (ie-context-menu :rescan nil :type :motion)
     ((:pointer-button-press :right)))
 
 ;;; Deletion commands
@@ -270,6 +279,9 @@
 
 (define-input-editor-command (ie-kill-line :type :kill)
     ((:keyboard #\k :control)))
+
+(define-input-editor-command (ie-kill-slide :type :kill)
+    ((:keyboard #\w :control)))
 
 #+ (or)
 (define-input-editor-command (ie-kill-region :type :kill)
@@ -306,6 +318,24 @@
 (define-input-editor-command (ie-yank-history :type :yank)
     ((:keyboard #\y :control :meta)))
 
+
+;;; The clipboard and the primary selection
+(define-input-editor-command (ie-request-primary :type :edit)
+    ((:pointer-button-press :middle)))
+
+(define-input-editor-command (ie-cut :type :edit)
+    ((:keyboard #\x :control)))
+
+(define-input-editor-command (ie-copy :type nil)
+    ((:keyboard #\c :control)))
+
+(define-input-editor-command (ie-paste :type :edit)
+    ((:keyboard #\v :control)))
+
+;;;
+(define-input-editor-command (ie-abort :type :abort)
+    ((:keyboard #\g :control)))
+
 ;;; implementme(?) C-z (cua) C-/ (emacs), redo C-y (cua) C-spooky (emacs)
 
 ;;; Numeric arguments.
@@ -334,4 +364,3 @@
 ;;; Inserts an object in the buffer.
 (define-input-editor-command (ie-insert-object :rescan t :type :edit)
     ((:keyboard t)))
-

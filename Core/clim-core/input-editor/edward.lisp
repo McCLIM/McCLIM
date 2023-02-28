@@ -55,10 +55,26 @@
   (let* ((buffer (input-editor-buffer editor))
          (line-0 (cluffer:find-line buffer 0))
          (cursor (make-buffer-cursor :rsticky)))
-    (cluffer:attach-cursor cursor line-0)
+    (attach-mark cursor line-0)
     (setf (gethash :edit  (cursors editor)) cursor
           (gethash :yank   (slides editor)) (make-buffer-slide)
           (gethash :select (slides editor)) (make-buffer-slide))))
+
+(defmethod note-input-editor-command-executed :after ((editor edward-mixin) last)
+  (flet ((maybe-detach (slide expected)
+           (unless (eq last expected)
+             (when (mark-attached-p slide)
+               (detach-mark slide)))))
+    (maybe-detach (find-slide editor :select) :motion)
+    (maybe-detach (find-slide editor :yank) :yank))
+  ;; Update the selection (only when it is active).
+  (let ((slide (find-slide editor :select)))
+    (when (and (mark-attached-p slide)
+               (getf (mark-properties slide) :active))
+      (extend-buffer-slide slide (edit-cursor editor))
+      (let ((string (slide-string slide)))
+        (unless (emptyp string)
+          (clime:publish-selection editor :primary string 'string))))))
 
 (defun edit-cursor (editor)
   (gethash :edit (cursors editor)))
@@ -66,7 +82,7 @@
 (defun find-cursor (editor name &optional anchor)
   (let ((cursor (gethash name (cursors editor))))
     (when anchor
-      (smooth-set-position cursor anchor))
+      (attach-mark cursor anchor))
     cursor))
 
 (defun find-slide (editor name &optional anchor)
@@ -329,6 +345,17 @@
           for line = (smooth-kill-line cursor)
           do (input-editor-kill-object sheet line :back))))
 
+(defmethod ie-kill-slide
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+  (declare (ignore event))
+  (let ((select (find-slide sheet :select)))
+    (unless (mark-attached-p select)
+      (beep sheet)
+      (return-from ie-kill-slide))
+    (input-editor-kill-object sheet (slide-string select) nil)
+    (smooth-delete-input select)
+    (detach-mark select)))
+
 ;;; Yank
 
 (defmethod ie-yank-kill-ring
@@ -339,9 +366,43 @@
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (when-let ((slide (input-editor-yank-next sheet))
-             (items (input-editor-yank-next sheet)))
-    (smooth-replace-input slide items)))
+  (when-let ((items (input-editor-yank-next sheet)))
+    (smooth-replace-input (find-slide sheet :yank) items)))
+
+;;; Primary/Cut/Copy/Paste
+(defmethod ie-request-primary
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+  (declare (ignore numeric-argument))
+  (when (typep event 'pointer-event)
+    (multiple-value-bind (line position)
+        (edward-cursor-position-from-coordinates sheet
+                                                 (pointer-event-x event)
+                                                 (pointer-event-y event))
+      (smooth-set-position (edit-cursor sheet) line position)))
+  (if-let ((string (climb:request-selection sheet :primary 'string)))
+    (smooth-insert-input (edit-cursor sheet) string)
+    (beep sheet)))
+
+(defmethod ie-cut ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (let* ((slide (find-slide sheet :select))
+         (string (slide-string slide)))
+    (unless (emptyp string)
+      (clime:publish-selection sheet :clipboard string 'string)
+      (smooth-delete-input slide))))
+
+(defmethod ie-copy ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (let* ((slide (find-slide sheet :select))
+         (string (slide-string slide)))
+    (unless (emptyp string)
+      (clime:publish-selection sheet :clipboard string 'string))))
+
+(defmethod ie-paste ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
+  (let ((slide (find-slide sheet :select))
+        (string (clime:request-selection sheet :clipboard 'string)))
+    (unless (emptyp string)
+      (if (mark-attached-p slide)
+          (smooth-replace-input slide string)
+          (smooth-insert-input (edit-cursor sheet) string)))))
 
 ;;; Editing
 
@@ -421,7 +482,15 @@
                                                    (pointer-event-x event)
                                                    (pointer-event-y event))
         (smooth-set-position (edit-cursor sheet) line position))
-      (smooth-set-position (edit-cursor sheet) (edit-cursor sheet))))
+      (smooth-set-position (edit-cursor sheet) (edit-cursor sheet)))
+  (let ((slide (find-slide sheet :select (edit-cursor sheet))))
+    (setf (getf (mark-properties slide) :active) t)))
+
+(defmethod ie-release-object
+    ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
+  (declare (ignore numeric-argument))
+  (let ((slide (find-slide sheet :select)))
+    (remf (mark-properties slide) :active)))
 
 (defmethod ie-select-region
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
@@ -429,9 +498,17 @@
       (edward-cursor-position-from-coordinates sheet
                                                (pointer-event-x event)
                                                (pointer-event-y event))
-    (smooth-set-position (edit-cursor sheet) line position)))
+    (smooth-set-position (edit-cursor sheet) line position))
+  (let ((slide (find-slide sheet :select)))
+    (unless (and (mark-attached-p slide)
+                 (getf (mark-properties slide) :active))
+      (move-buffer-slide slide (edit-cursor sheet))
+      (setf (getf (mark-properties slide) :active) t))))
 
 (defmethod ie-context-menu
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-arg)
-  (menu-choose '("Cut" "Copy" "Paste" "Delete") :label "Stub menu" :scroll-bars nil))
-
+  (case (menu-choose '(:cut :copy :paste)
+                     :label "Selection menu" :scroll-bars nil)
+    (:cut (ie-cut sheet buffer event numeric-arg))
+    (:copy (ie-copy sheet buffer event numeric-arg))
+    (:paste (ie-paste sheet buffer event numeric-arg))))

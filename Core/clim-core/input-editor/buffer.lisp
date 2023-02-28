@@ -37,15 +37,43 @@
                           ((format *debug-io* "  kill: ~a~%" (line-string p)))))
                   (cluffer:buffer cursor)))
 
-;;; Slides (known as regions) may represent a pointer selection, last yank, an
-;;; annotation etc. Slides may overlap and span multiple lines.
+;;; Mark is a visual object (external to the buffer) that points at one or more
+;;; of its elements. Specifically: the superclass of cursors and slides.
+(defclass buffer-mark ()
+  ((visibility :initarg :visibility :accessor mark-visibility)
+   (properties :initarg :properties :accessor mark-properties))
+  (:default-initargs :visibility t :properties '()))
+
+(defgeneric mark-attached-p (mark))
+(defgeneric mark-visibility (mark))
+(defgeneric attach-mark (mark target))
+(defgeneric detach-mark (mark))
+
+(defgeneric mark-visible-p (mark)
+  (:method ((mark buffer-mark))
+    (and (mark-attached-p mark)
+         (mark-visibility mark))))
+
+;;; Cursors implement behavior of input cursor and a visual object.
+
+(defclass buffer-cursor (buffer-mark cluffer:cursor) ())
+
+(defmethod mark-attached-p ((mark buffer-cursor))
+  (cluffer:cursor-attached-p mark))
+
+(defmethod attach-mark ((cursor buffer-cursor) position)
+  (smooth-set-position cursor position))
+
+(defmethod detach-mark ((mark buffer-cursor))
+  (when (mark-attached-p mark)
+    (cluffer:detach-cursor mark)))
 
 (defclass buffer-lsticky-cursor
-    (standard-text-cursor cluffer-standard-line:left-sticky-cursor)
+    (buffer-cursor standard-text-cursor cluffer-standard-line:left-sticky-cursor)
   ())
 
 (defclass buffer-rsticky-cursor
-    (standard-text-cursor cluffer-standard-line:right-sticky-cursor)
+    (buffer-cursor standard-text-cursor cluffer-standard-line:right-sticky-cursor)
   ())
 
 (defun make-buffer-cursor (stickiness)
@@ -53,13 +81,13 @@
     (:lsticky (make-instance 'buffer-lsticky-cursor))
     (:rsticky (make-instance 'buffer-rsticky-cursor))))
 
-(defclass buffer-slide ()
+;;; Slides may represent a pointer selection, last yank, an annotation etc. They
+;;; may overlap or span multiple lines.
+
+(defclass buffer-slide (buffer-mark)
   ((lcursor :initarg :lcursor :reader lcursor)
    (rcursor :initarg :rcursor :reader rcursor)
    (%anchor :initarg :%anchor :accessor %anchor)))
-
-(defun slide-active (slide)
-  (cluffer:cursor-attached-p (%anchor slide)))
 
 (defun make-buffer-slide (&optional anchor)
   (let ((c1 (make-buffer-cursor :lsticky))
@@ -69,9 +97,19 @@
       (smooth-set-position c2 anchor))
     (make-instance 'buffer-slide :%anchor c1 :lcursor c1 :rcursor c2)))
 
-(defun move-buffer-slide (slide position &optional extension)
+(defmethod mark-attached-p ((mark buffer-slide))
+  (mark-attached-p (%anchor mark)))
+
+(defmethod attach-mark ((slide buffer-slide) position)
   (smooth-set-position (lcursor slide) position)
-  (smooth-set-position (rcursor slide) position)
+  (smooth-set-position (rcursor slide) position))
+
+(defmethod detach-mark ((slide buffer-slide))
+  (detach-mark (lcursor slide))
+  (detach-mark (rcursor slide)))
+
+(defun move-buffer-slide (slide position &optional extension)
+  (attach-mark slide position)
   (when extension
     (extend-buffer-slide slide extension)))
 
@@ -88,14 +126,6 @@
           (smooth-set-position lcursor anchor)
           (smooth-set-position rcursor position)
           (setf (%anchor slide) lcursor)))))
-
-(defun kill-buffer-slide (slide)
-  (let ((lcursor (lcursor slide))
-        (rcursor (rcursor slide)))
-    (when (cluffer:cursor-attached-p lcursor)
-      (cluffer:detach-cursor lcursor))
-    (when (cluffer:cursor-attached-p rcursor)
-      (cluffer:detach-cursor rcursor))))
 
 ;;; Cluffer "smooth" utilities - CLIM spec operates on positions treating the
 ;;; input buffer as a vector. On the other hand Cluffer keeps each line as a
@@ -205,8 +235,8 @@
      (if (cluffer:cursor-attached-p cursor)
          (unless (eq destination (cluffer:line cursor))
            (cluffer:detach-cursor cursor)
-           (cluffer:attach-cursor cursor destination position))
-         (cluffer:attach-cursor cursor destination position)))
+           (cluffer:attach-cursor cursor destination))
+         (cluffer:attach-cursor cursor destination)))
     (cluffer:cursor
      (smooth-set-position cursor
                           (cluffer:line destination)
@@ -275,6 +305,13 @@
              (list #\newline)
              (copy-seq (cluffer:items cursor :start (cluffer:cursor-position cursor))))
     (smooth-delete-line cursor)))
+
+(defun smooth-delete-input (slide)
+  (loop with lcursor = (lcursor slide)
+        with rcursor = (rcursor slide)
+          initially (assert (cursor<= lcursor rcursor))
+        while (cursor< lcursor rcursor)
+        do (smooth-delete-item lcursor)))
 
 (defun smooth-insert-input (cursor input)
   ;; This "insert" splits the line on a newline character.
@@ -357,6 +394,100 @@
   (defcmp cursor<= /= +1)
   (defcmp cursor>= /= -1))
 
+;;; Another DWIM operator. A slide may be compared with a cursor, a line or with
+;;; an another slide. The result is more nuanced because objects may partially
+;;; overlap:
+;;;
+;;; [-3] - s1 strict before s2
+;;; [-2] - s1 starts before s2 and ends inside s2
+;;; [-1] - s1 starts before s2 and ends after s2 (contains)
+;;; [ 0] - s1 and s2 denote the same region
+;;; [+1] - s2 contains s1
+;;; [+2] - s2 weakly precedes s1
+;;; [+3] - s2 strict precedes s1
+;;;
+;;; If the beginning of one slide is at the same position as the ending of
+;;; another then it is no overlap. This functions seems to be correct but I've
+;;; never actually used it. Oh well - here goes my 2h on Saturday. -- jd
+(defun slide-compare (s1 s2 &aux free)
+  (flet ((get-position (obj)
+           (etypecase obj
+             (buffer-slide   (values (lcursor obj) (rcursor obj)))
+             (cluffer:cursor (values obj obj))
+             (cluffer:line
+              (let* ((slide (make-buffer-slide obj))
+                     (count (cluffer:item-count obj))
+                     (lcursor (lcursor slide))
+                     (rcursor (rcursor slide)))
+                (push slide free)
+                (setf (cluffer:cursor-position lcursor) count)
+                (values lcursor rcursor)))))
+         (strict= (q x y z)
+           (if (and (cursor= q y) (cursor= x z))
+               0
+               nil))
+         (inside= (q x y z)
+           (cond ((and (<= q y) (<= z x)) -1) ; [q {y z] x}
+                 ((and (<= y q) (<= x z)) +1) ; {y [q x] z}
+                 (t nil)))
+         (strict< (q x y z)
+           (cond ((<= x y) -3)          ; {q x} [y z]
+                 ((<= z q) +3)          ; [y z] {q x}
+                 (nil)))
+         (inside< (q x y z)
+           (cond ((and (<= q y) (<= x z)) -2) ; {q [y x} z]
+                 ((and (<= y q) (<= z x)) +2) ; [y {q z] x}
+                 (nil))))
+    (multiple-value-bind   (a b) (get-position s1)
+      (multiple-value-bind (c d) (get-position s2)
+        (unwind-protect (or (strict= a b c d)
+                            (inside= a b c d)
+                            (strict< a b c d)
+                            (inside< a b c d)
+                            (error "It is a miracle!"))
+          (mapc #'detach-mark free))))))
+
+;;; The continuation is expected to accept START and END arguments.
+(defun map-over-lines-with-slides (function buffer slides)
+  (let ((slides (remove-if-not #'mark-attached-p slides))
+        (active '()))
+    ;; Activation happens when the left cursor is on the same line as the
+    ;; processed line. Deactivation happens similarily for the right cursor.
+    (labels ((reactivate (op slide)
+               (ecase op
+                 (:add (push slide active))
+                 (:del (setf active (delete slide active)
+                             slides (delete slide slides)))))
+             (butcher-line (line)
+               ;; Why does it remind me a polygon triangulation? Ah, because
+               ;; we compute monotonous segments. How cool is that?
+               (loop for slide in slides
+                     for lcursor = (lcursor slide)
+                     for rcursor = (rcursor slide)
+                     when (cursor= lcursor line)
+                       collect (list (cluffer:cursor-position lcursor)
+                                     :add slide lcursor)
+                     when (cursor= rcursor line)
+                       collect (list (cluffer:cursor-position rcursor)
+                                     :del slide rcursor)))
+             (process-line (line)
+               (loop with start = 0
+                     with end = (cluffer:item-count line)
+                     for (pos op sel cur) in (butcher-line line)
+                     do (cond
+                          ((= pos start)
+                           (reactivate op sel))
+                          ((> pos start)
+                           (funcall function line start pos active)
+                           (setf start pos)
+                           (reactivate op sel)))
+                     finally
+                        ;; - (zerop start) means "function not called yet"
+                        ;; - (/= start end) implies the line reminder
+                        (when (or (zerop start) (/= start end))
+                          (funcall function line start end active)))))
+      (map-over-lines #'process-line buffer))))
+
 ;;; Operations on cluffer's buffer and line instances.
 
 (defun map-over-lines (function buffer)
@@ -365,13 +496,39 @@
         for line = (cluffer:find-line buffer lineno)
         do (funcall function line)))
 
-(defun line-string (line)
+(defun map-over-slide (function slide)
+  (when (mark-attached-p slide)
+    (loop with lcursor = (lcursor slide)
+          with llineno = (cluffer:line-number lcursor)
+          with lcurpos = (cluffer:cursor-position lcursor)
+          with rcursor = (rcursor slide)
+          with rlineno = (cluffer:line-number rcursor)
+          with rcurpos = (cluffer:cursor-position rcursor)
+          with buffer = (cluffer:buffer lcursor)
+          for lineno from llineno upto rlineno
+          for args = `(,@(and (= lineno llineno) `(:start ,lcurpos))
+                       ,@(and (= lineno rlineno) `(:end   ,rcurpos)))
+          do (apply function (cluffer:find-line buffer lineno) args))))
+
+(defun line-string (line &rest args &key start end)
+  (declare (ignore start end))
   (with-output-to-string (str)
-    (loop for item across (cluffer:items line)
+    (loop for item across (apply #'cluffer:items line args)
           if (characterp item)
             do (princ item str)
           else
             do (format str "@~a" item))))
+
+(defun slide-string (slide)
+  (when (mark-attached-p slide)
+    (with-output-to-string (stream)
+      (flet ((add-line (line &rest args &key start end)
+               (declare (ignore start))
+               (princ (apply #'line-string line args) stream)
+               (unless end
+                 (terpri stream))))
+        (declare (dynamic-extent (function add-line)))
+        (map-over-slide #'add-line slide)))))
 
 ;;; FIXME while this does not cons excessively (we accept an adjustable string
 ;;; with a fill pointer as an argument), the operation time in the case of a
