@@ -40,21 +40,21 @@ a font implementing the protocol defined below."))
   (when (>= start end)
     (return-from text-size
       (values 0 0 0 0 (text-style-ascent text-style medium))))
-  (let ((font (text-style-mapping (port medium)
-                                  (merge-text-styles
-                                   text-style
-                                   (medium-merged-text-style medium)))))
+  (let* ((font (text-style-mapping (port medium)
+                                   (merge-text-styles
+                                    text-style
+                                    (medium-merged-text-style medium))))
+         (ascent (font-ascent font))
+         (line-height (+ ascent (font-descent font))))
     (when (null (position #\newline string))
       (return-from text-size
         (multiple-value-bind (xmin ymin xmax ymax origin-x origin-y)
             (line-bbox font string start end :left)
           (declare (ignore xmin ymin))
-          (values xmax ymax
+          (values xmax (+ ymax line-height)
                   origin-x origin-y
-                  (font-ascent font)))))
+                  ascent))))
     (let* ((text (subseq (string string) start end))
-           (ascent (font-ascent font))
-           (line-height (+ ascent (font-descent font)))
            (leading (font-leading font))
            (current-dx 0)
            (maximum-dx 0)
