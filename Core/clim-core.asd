@@ -96,7 +96,7 @@
 
 ;;; TODO separate modules, move directories toplevel aftwards.
 (defsystem "clim-core/frames"
-  :depends-on ("clim-core/silex" (:feature :sbcl "sb-introspect"))
+  :depends-on ("clim-core/silex" "cluffer" (:feature :sbcl "sb-introspect"))
   :pathname "clim-core"
   :components
   ((:module "system"
@@ -122,7 +122,11 @@
     :components ((:file "reading-and-writing-tokens")
                  (:file "parsing-conditions")
                  (:file "input-editing")
-                 (:file "completion")))
+                 (:file "completion")
+                 (:file "buffer")
+                 (:file "editor")
+                 (:file "edward")
+                 (:file "gadgets")))
    (:file "standard-presentations"
     :pathname "presentations/standard-presentations"
     :depends-on ("input-editor" "presentations"))

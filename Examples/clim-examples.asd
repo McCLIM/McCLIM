@@ -4,6 +4,7 @@
 (defsystem "clim-examples"
   :depends-on ("alexandria"
                "closer-mop"
+               "lorem-ipsum"
                "mcclim"
                "mcclim-layouts/tab"
                "mcclim-raster-image"
@@ -28,6 +29,7 @@
                (:file "presentation-test")
                (:file "dragndrop")
                (:file "gadget-test")
+               (:file "text-gadgets")
                (:file "method-browser")
                (:file "stopwatch")
                (:file "dragndrop-translator")
