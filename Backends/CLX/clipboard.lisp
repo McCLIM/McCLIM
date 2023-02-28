@@ -280,7 +280,7 @@
          (setf property :none))))
     ;; Finally we give up and send back nothing.
     (t
-     (warn "could not find translator for -> ~s ~s" from-type target)
+     ;; (warn "could not find translator for -> ~s ~s" from-type target)
      (setf property :none)))
   (xlib:send-event requestor :selection-notify nil ; window, event-key, event-mask
                    ;; &rest args
