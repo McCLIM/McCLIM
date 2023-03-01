@@ -1821,8 +1821,7 @@ were added."
         (if (and last-string
                  (match-output-records last-string
                                        :text-style text-style
-                                       :ink (medium-ink medium)
-                                       :clipping-region (medium-clipping-region medium)))
+                                       :ink (medium-ink medium)))
             ;; Simply append the string to the last one.
             (let* ((last-string (styled-string-string last-string))
                    (last-string-length (length last-string))
