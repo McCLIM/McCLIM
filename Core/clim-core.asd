@@ -41,7 +41,7 @@
                              (:file "region-set-composition")))))
 
 (defsystem "clim-core/silex"
-  :depends-on ("clim-core/system" "spatial-trees" "trivial-garbage")
+  :depends-on ("clim-core/system" "spatial-trees" "trivial-garbage" "cluffer")
   :components
   ((:module "drawing"
     :components ((:file "design")
@@ -70,6 +70,7 @@
     :components ((:file "protocol")
                  (:file "extra-colors")
                  (:file "utilities"        :depends-on ("protocol"))
+                 (:file "internal-buffer"  :depends-on ("protocol"))
                  (:file "views"            :depends-on ("protocol"))
                  (:file "text-formatting"  :depends-on ("protocol" "utilities"))
                  (:file "text-cursor"      :depends-on ("protocol"))
@@ -96,7 +97,7 @@
 
 ;;; TODO separate modules, move directories toplevel aftwards.
 (defsystem "clim-core/frames"
-  :depends-on ("clim-core/silex" "cluffer" (:feature :sbcl "sb-introspect"))
+  :depends-on ("clim-core/silex" (:feature :sbcl "sb-introspect"))
   :pathname "clim-core"
   :components
   ((:module "system"
@@ -123,7 +124,6 @@
                  (:file "parsing-conditions")
                  (:file "input-editing")
                  (:file "completion")
-                 (:file "buffer")
                  (:file "editor")
                  (:file "edward")
                  (:file "gadgets")))

@@ -6,7 +6,8 @@
 ;;;
 ;;; ---------------------------------------------------------------------------
 ;;;
-;;; An implementation of internal buffers. Includes a kill buffer.
+;;; The implementation of the internal buffer. Includes a sub-editor, cursors,
+;;; slides and the kill ring.
 
 (in-package #:clim-internals)
 
