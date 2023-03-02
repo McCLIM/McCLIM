@@ -1,0 +1,107 @@
+#+title: Input Editor
+#+author: Daniel Kochmański
+#+date: [2023-03-02 Thu]
+
+* Introduction
+
+The internal buffer in McCLIM is used to represent the text output record in the
+standard extended output stream as well as to implement the input editor. Having
+the same representation allows seamless integration of input editing streams
+into ordinary application streams.
+
+The input editor "Edward" replaces the editor substrate "Drei". This is because
+the latter was not well integrated with McCLIM and made various assumptions
+about how it should behave.
+
+* Internal buffer
+
+The internal buffer is a line buffer based on cluffer. The bufer maintains
+lines and each line is (conceptually) a vector of items - not necessarily
+chracters.
+
+Moreover the buffer may have attached objects that are not "stored" in it.
+These objects are called "marks" - there are two types of marks:
+
+- cursors :: a cursor is located between two items
+- slides  :: a pair of cursors denoting a region (may span multiple lines)
+
+Cursors are usually used for editing and scanning. There are two types of
+cursors - "left sticky" and "right sticky". When an item is inserted at the
+cursor position the "left sticky" cursor stays before the item while the
+"right sticky" cursor moves after the item.
+
+Slides are used to represent regions of text - selections, annotations, text
+styles and more. They consist of two cursors that denote the slide span (left
+and right sticky for each edge accordingly). Also the slide has a slot that
+references the "anchor" cursor to ensure that the initial position is always
+inside the slide (i.e when the text selection is changed with a pointer drag).
+
+Cluffer operates on lines while CLIM operates on a linear buffer. To reconcile
+these two models we have "smooth" operations that glide over lines as if the
+buffer were linear. These operations constitue the sub-editor command set.
+
+* McCLIM integration
+
+CLIM (under)specifies text cursors and extended output protocol for streams.
+Moreover extended input protocol and input editing protocol build on that
+introducing concepts like a scan pointer and insertion pointer.
+
+At the same time text-field and text-editor gadgets are specified. Gadgets
+specification indicates that they are textual. Our goal is to have the same
+underlying abstraction behind streams and gadgets.
+
+For Silex it may be desireable to provide a simplified implementation that
+does not buy into higher level CLIM abstractions. Given all requirements above
+here is how the input editing is structured:
+
+edward-mixin --------+-------- edward-sheet-mixin
+(buffer              +-------- edward-gadget-mixin
+ cursors slides)     +-------- edward-stream-mixin
+
+CLIM classes may mix in the appropriate leaf and benefit from having a buffer.
+The input editor commands are implemented as generic functions with four
+parameters: ~sheet buffer event numeric-argument~. We allow specialization to
+enable clients who want to provide different input editor implementations.
+
+Input editor commands may be accessed by using the input editor command table
+or by manually inspecting a hash table that partially duplicates that data.
+The reason for that is to not require command tables in Silex.
+
+* Extending the input editor
+
+Commands in the default implementation are specialized to ~edward-mixin~ and
+~cluffer:buffer~. There is also no concept of the buffer mode. It is possible
+to build something more aware about the file semantics by subclassing a buffer
+class and specializing on it additionally to the ~edward-mixin~ (or some other
+class that has a precedence over ~edward-mixin~). For example:
+
+#+begin_src common-lisp
+  (defmethod ie-forward-word
+      ((sheet edward-mixin) (buffer modal-buffer) event numeric-argument)
+    (let ((cursor (edit-cursor sheet))
+          (mode (buffer-mode buffer)))
+      (dotimes (i numeric-argument)
+        (let ((new-position (compute-next-word cursor mode)))
+          (smooth-set-position cursor new-position)))))
+#+end_src
+
+It is possible to add new input editor commands with a standard CLIM function
+~add-input-editor-command~. McCLIM extends it slightly to allow specifying
+that command table that the command should be added to.
+
+#+begin_src common-lisp
+  (defun ie-beep (sheet buffer event numarg) (beep sheet))
+  (add-input-editor-command '(:menu) #'ie-beep)
+  (add-input-editor-command '(:select) #'ie-beep *another-table*)
+#+end_src
+
+The input editor commands are dispatched by ~handle-input-editor-event~. This
+function calls ~(find-input-editor-commnd event (input-editor-table client))~
+and if there is a match - executes the command and then returns ~t~. When the
+command is not found ~handle-input-editor-event~ returns ~nil~.
+
+The function ~input-editor-table~ may be specialized on the client (a sheet)
+class to return a command table different from ~*input-editor-commands*~ which
+is the default result of this function. In that case bindings can be entirely
+changed and a different set of commands may be present. The important part is
+that input commands accept exactly four arguments ~sheet buffer event numarg~.
