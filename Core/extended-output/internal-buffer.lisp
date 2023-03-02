@@ -11,19 +11,65 @@
 
 (in-package #:clim-internals)
 
-(defun make-cluffer ()
-  (let ((line (make-instance 'cluffer-standard-line:open-line)))
-    (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
+(defclass internal-buffer (cluffer-standard-buffer:buffer)
+  ((timestamp
+    :accessor internal-buffer-timestamp
+    :initform -1)
+   (string
+    :reader %internal-buffer-string
+    :initform (make-array 0 :element-type 'character
+                            :adjustable t
+                            :fill-pointer t)))
+  (:default-initargs
+   :initial-line (make-instance 'cluffer-standard-line:open-line)))
 
-;;; Kill buffer
-(defun make-kluffer ()
-  (let* ((line (make-instance 'cluffer-standard-line:open-line))
-         (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
-         (buffer (make-instance 'cluffer-standard-buffer:buffer :initial-line line)))
-    (cluffer:attach-cursor cursor line)
+(defun make-internal-buffer ()
+  (make-instance 'internal-buffer))
+
+(defun internal-buffer-string (buffer)
+  (let ((string (%internal-buffer-string buffer))
+        (time (cluffer-standard-buffer::current-time buffer)))
+    (unless (= (internal-buffer-timestamp buffer) time)
+      (setf (internal-buffer-timestamp buffer) time)
+      (setf (fill-pointer string) 0)
+      (with-output-to-string (stream string)
+        (flet ((add-line (line)
+                 (princ (line-string line) stream)
+                 (unless (cluffer:last-line-p line)
+                   (terpri stream))))
+          (declare (dynamic-extent (function add-line)))
+          (map-over-lines #'add-line buffer))))
+    string))
+
+;;; The kill buffer is an ordinary internal buffer with predefined cursor.  Kill
+;;; and Yank operations
+(defun make-kill-ring-buffer ()
+  (let ((buffer (make-internal-buffer))
+        (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor)))
+    (cluffer:attach-cursor cursor (cluffer:find-line buffer 0))
     (values buffer cursor)))
 
-(defun print-kluffer (cursor offset)
+(defun smooth-add-kill-object (cursor object merge)
+  ;; The cursor is always located at the end of the line.
+  (ecase merge
+    ((nil)
+     (cluffer:end-of-line cursor)
+     (unless (cluffer:beginning-of-buffer-p cursor)
+       (cluffer:split-line cursor)))
+    (:front
+     (cluffer:beginning-of-line cursor))
+    (:back
+     (cluffer:end-of-line cursor)))
+  (smooth-insert-items cursor object))
+
+(defun smooth-get-kill-object (cursor &optional (offset 0))
+  (unless (zerop offset)
+    (smooth-warp-line (cluffer:buffer cursor) cursor offset)
+    (cluffer:end-of-line cursor))
+  (cluffer:items cursor))
+
+#+ (or)
+(defun print-killring-buffer (cursor offset)
   (format *debug-io* "---------------------~%")
   (map-over-lines (lambda (p)
                     (cond ((and (zerop offset)
@@ -344,32 +390,6 @@
         do (smooth-delete-item lcursor)
         finally (smooth-insert-line rcursor items)))
 
-(defun smooth-kill-object (cursor object merge)
-  ;; The cursor is always located at the end of the line.
-  (ecase merge
-    ((nil)
-     (cluffer:end-of-line cursor)
-     (unless (cluffer:beginning-of-buffer-p cursor)
-       (cluffer:split-line cursor)))
-    (:front
-     (cluffer:beginning-of-line cursor))
-    (:back
-     (cluffer:end-of-line cursor)))
-  (smooth-insert-items cursor object)
-  #+ (or) (print-kluffer cursor 0))
-
-(defun smooth-yank-kill (cursor &optional (offset 0))
-  (unless (zerop offset)
-    (smooth-warp-line (cluffer:buffer cursor) cursor offset)
-    (cluffer:end-of-line cursor))
-  (cluffer:items cursor))
-
-(defun smooth-yank-next (cursor)
-  (smooth-yank-kill cursor -1))
-
-(defun smooth-yank-prev (cursor)
-  (smooth-yank-kill cursor +1))
-
 ;;; This DWIM operator compares line and cursor positions. When a cursor is
 ;;; compared with a line then 0 means "attached to a line". [-1 0 +1]
 (defun cursor-compare (c1 c2)
@@ -530,20 +550,3 @@
                  (terpri stream))))
         (declare (dynamic-extent (function add-line)))
         (map-over-slide #'add-line slide)))))
-
-;;; FIXME while this does not cons excessively (we accept an adjustable string
-;;; with a fill pointer as an argument), the operation time in the case of a
-;;; dirty buffer is linear to the size of the input. The CLUFFER:UPDATE protocol
-;;; is much faster but we need to come up with a scheme to remember line numbers
-;;; in the string to be able to synchronize. This is good enough for now.
-(defun buffer-string (buffer &optional string)
-  (with-output-to-string (stream string)
-    (flet ((add-line (line)
-             (princ (line-string line) stream)
-             (unless (cluffer:last-line-p line)
-               (terpri stream))))
-      (declare (dynamic-extent (function add-line)))
-      (map-over-lines #'add-line buffer))))
-
-(defun buffer-timestamp (buffer)
-  (cluffer-standard-buffer::current-time buffer))

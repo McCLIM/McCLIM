@@ -47,7 +47,7 @@
 (defparameter *input-editor-last-command* nil)
 (defparameter *input-editor-kill-history*
   ;; Who doesn't like a good metacircular implementation of the kill buffer?
-  (nth-value 1 (make-kluffer)))
+  (nth-value 1 (make-kill-ring-buffer)))
 
 (macrolet ((def-reader (name variable)
              `(defgeneric ,name (editor)
@@ -71,19 +71,19 @@
   (let ((history (input-editor-kill-history editor))
         (cmdtype (input-editor-last-command editor)))
     (if (eq cmdtype :kill)
-        (smooth-kill-object history object merge)
-        (smooth-kill-object history object nil))
+        (smooth-add-kill-object history object merge)
+        (smooth-add-kill-object history object nil))
     (when *killring-uses-clipboard*
       (clime:publish-selection editor :clipboard
                                (line-string history) 'string))))
 
 (defun input-editor-yank-kill (editor)
   (let* ((history (input-editor-kill-history editor))
-         (items (smooth-yank-kill history)))
+         (items (smooth-get-kill-object history)))
     (when *killring-uses-clipboard*
       (when-let ((clipboard (clime:request-selection editor :clipboard 'string)))
         ;; ensure that yank-next won't drop the top-most entry.
-        (smooth-yank-kill history +1)
+        (smooth-get-kill-object history +1)
         (setf items clipboard)))
     (when (zerop (length items))
       (beep editor)
@@ -96,7 +96,7 @@
     (setf (input-editor-last-command editor) :abort)
     (return-from input-editor-yank-next nil))
   (let* ((history (input-editor-kill-history editor))
-         (items (smooth-yank-next history)))
+         (items (smooth-get-kill-object history -1)))
     (when (zerop (length items))
       (beep editor)
       (return-from input-editor-yank-next nil))

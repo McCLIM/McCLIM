@@ -17,7 +17,7 @@
   ((edward-buffer
     :initarg :input-buffer
     :reader input-editor-buffer
-    :initform (make-cluffer))
+    :initform (make-internal-buffer))
    (cursors                             ; aka "points"
     :reader cursors
     :initform (make-hash-table))
@@ -27,7 +27,7 @@
    (kill-history
     :allocation :class                  ; banzai! (and yolo)
     :reader input-editor-kill-history
-    :initform (nth-value 1 (make-kluffer)))
+    :initform (nth-value 1 (make-kill-ring-buffer)))
    (last-command
     :accessor input-editor-last-command
     :initform nil)
@@ -35,16 +35,7 @@
    ;; (edward-redo-history :reader edward-redo-history)
    (edward-numarg
     :accessor numeric-argument
-    :initform 1)
-   (edward-update
-    :accessor input-editor-timestamp
-    :initform -1)
-   (edward-string
-    :reader input-editor-string
-    ;; reinitializing the instance resets only a fill pointer.
-    :initform (make-array 0 :element-type 'character
-                            :adjustable t
-                            :fill-pointer t))))
+    :initform 1)))
 
 (defmethod print-object ((object edward-mixin) stream)
   (print-unreadable-object (object stream :type t :identity t)
@@ -109,51 +100,11 @@
 
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
-  (setf (numeric-argument object) 1
-        (fill-pointer (input-editor-string object)) 0))
+  (setf (numeric-argument object) 1))
 
 (defun edward-insert-input (editor string cursor)
   (declare (ignore editor))
   (smooth-insert-input cursor string))
-
-;;; Edward operations.
-
-(defun edward-buffer-dirty-p (editor)
-  (let* ((buffer (input-editor-buffer editor))
-         (editor-timestamp (input-editor-timestamp editor))
-         (buffer-timestamp (buffer-timestamp buffer)))
-    (if (= editor-timestamp buffer-timestamp)
-        nil
-        buffer-timestamp)))
-
-(defun edward-buffer-string (editor)
-  (let ((string (input-editor-string editor)))
-    (when (edward-buffer-dirty-p editor)
-      (let ((buffer (input-editor-buffer editor)))
-        (setf (fill-pointer string) 0
-              (input-editor-timestamp editor) (buffer-timestamp buffer))
-        (buffer-string buffer string)))
-    string))
-
-#+ (or)
-(defun edward-replace-input
-    (editor new-input start end buffer-start)
-  (let ((buffer (input-editor-buffer editor))
-        (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor))
-        (open-cursor-position (if (integerp buffer-start)
-                                  buffer-start
-                                  (cursor-linear-position buffer-start)))
-        (scan-cursor-position (cursor-linear-position (scan-cursor editor))))
-    (flet ((thunk ()
-             (setf (cursor-linear-position cursor) open-cursor-position)
-             ;; The scan cursor is "left sticky" hence the order of operations.
-             (loop for i from start below end do
-               (cluffer:insert-item cursor (char new-input i)))
-             (loop repeat (- scan-cursor-position open-cursor-position) do
-               (smooth-delete-item cursor))))
-      (cluffer:attach-cursor cursor (cluffer:find-line buffer 0))
-      (unwind-protect (thunk)
-        (cluffer:detach-cursor cursor)))))
 
 (defun edward-buffer-extent (editor)
   "Computes the space requied to show all text in the buffer."

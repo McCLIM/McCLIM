@@ -109,7 +109,7 @@
   (setf (cursor-visibility (edit-cursor object)) new-value))
 
 (defmethod gadget-value ((sheet text-editing-gadget))
-  (edward-buffer-string sheet))
+  (internal-buffer-string (input-editor-buffer sheet)))
 
 (defmethod (setf gadget-value) (new-value (sheet text-editing-gadget) &rest args)
   (declare (ignore args))
