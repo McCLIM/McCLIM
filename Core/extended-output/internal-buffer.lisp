@@ -7,7 +7,8 @@
 ;;; ---------------------------------------------------------------------------
 ;;;
 ;;; The implementation of the internal buffer. Includes a sub-editor, cursors,
-;;; slides and the kill ring.
+;;; slides and the kill ring. This file contains no "visual" representation
+;;; and is not concerned with sheets and streams.
 
 (in-package #:clim-internals)
 

@@ -126,7 +126,7 @@
       #'ie-insert-object
       nil))
 
-(defun handle-editor-event (client event)
+(defun handle-input-editor-event (client event)
   "This function returns true when the editor command was executed."
   (if-let ((command (find-input-editor-command event (input-editor-table client))))
     (let ((buffer (input-editor-buffer client))
