@@ -7,7 +7,8 @@
 
 ;;; TODO split the file "protocol" for each module separately.
 (defsystem "clim-core/system"
-  :depends-on ("bordeaux-threads" "trivial-gray-streams" "trivial-features" "closer-mop")
+  :depends-on ("bordeaux-threads" "trivial-gray-streams" "trivial-features"
+               "closer-mop" "cluffer")
   :components ((:module "system"
                 :components
                 ((:file "patch")    ;first possible patches
@@ -21,6 +22,7 @@
                 ((:file "utilities")
                  (:file "protocol")
                  (:file "resources")
+                 (:file "internal-buffer")
                  (:file "encapsulating-streams" :depends-on ("protocol"))))
                (:module "geometry"
                 :depends-on ("system")
@@ -41,7 +43,7 @@
                              (:file "region-set-composition")))))
 
 (defsystem "clim-core/silex"
-  :depends-on ("clim-core/system" "spatial-trees" "trivial-garbage" "cluffer")
+  :depends-on ("clim-core/system" "spatial-trees" "trivial-garbage")
   :components
   ((:module "drawing"
     :components ((:file "design")
@@ -70,7 +72,6 @@
     :components ((:file "protocol")
                  (:file "extra-colors")
                  (:file "utilities"        :depends-on ("protocol"))
-                 (:file "internal-buffer"  :depends-on ("protocol"))
                  (:file "views"            :depends-on ("protocol"))
                  (:file "text-formatting"  :depends-on ("protocol" "utilities"))
                  (:file "text-cursor"      :depends-on ("protocol"))
