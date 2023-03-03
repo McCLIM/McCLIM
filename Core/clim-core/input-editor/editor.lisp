@@ -47,7 +47,7 @@
 (defparameter *input-editor-last-command* nil)
 (defparameter *input-editor-kill-history*
   ;; Who doesn't like a good metacircular implementation of the kill buffer?
-  (nth-value 1 (make-kill-ring-buffer)))
+  (make-internal-buffer))
 
 (macrolet ((def-reader (name variable)
              `(defgeneric ,name (editor)
@@ -74,8 +74,9 @@
         (smooth-add-kill-object history object merge)
         (smooth-add-kill-object history object nil))
     (when *killring-uses-clipboard*
-      (clime:publish-selection editor :clipboard
-                               (line-string history) 'string))))
+      (let* ((items (smooth-get-kill-object history))
+             (string (string-from-items items)))
+        (clime:publish-selection editor :clipboard string 'string)))))
 
 (defun input-editor-yank-kill (editor)
   (let* ((history (input-editor-kill-history editor))

@@ -19,9 +19,19 @@
     :reader %internal-buffer-string
     :initform (make-array 0 :element-type 'character
                             :adjustable t
-                            :fill-pointer t)))
+                            :fill-pointer t))
+   ;; For convenience each buffer has a "headless" edit cursor. Clients will
+   ;; usually define their own cursors that are drawn.
+   (headless-cursor
+    :reader internal-buffer-cursor
+    :initform (make-instance 'cluffer-standard-line:right-sticky-cursor)))
   (:default-initargs
    :initial-line (make-instance 'cluffer-standard-line:open-line)))
+
+(defmethod initialize-instance :after ((buffer internal-buffer) &key)
+  (let ((cursor (internal-buffer-cursor buffer)))
+    (cluffer:attach-cursor cursor (cluffer:find-line buffer 0))
+    (values buffer cursor)))
 
 (defun make-internal-buffer ()
   (make-instance 'internal-buffer))
@@ -41,32 +51,32 @@
           (map-over-lines #'add-line buffer))))
     string))
 
-;;; The kill buffer is an ordinary internal buffer with predefined cursor.  Kill
-;;; and Yank operations
-(defun make-kill-ring-buffer ()
-  (let ((buffer (make-internal-buffer))
-        (cursor (make-instance 'cluffer-standard-line:right-sticky-cursor)))
-    (cluffer:attach-cursor cursor (cluffer:find-line buffer 0))
-    (values buffer cursor)))
+;;; The kill ring buffer has the same representation as the internal buffer so
+;;; adding and getting the kill object is just a fancy name for inserting a
+;;; fresh line and getting items from a specified line.
 
-(defun smooth-add-kill-object (cursor object merge)
+;;; This function adds the object in a fresh line of the buffer.
+(defun smooth-add-kill-object (buffer object merge)
   ;; The cursor is always located at the end of the line.
-  (ecase merge
-    ((nil)
-     (cluffer:end-of-line cursor)
-     (unless (cluffer:beginning-of-buffer-p cursor)
-       (cluffer:split-line cursor)))
-    (:front
-     (cluffer:beginning-of-line cursor))
-    (:back
-     (cluffer:end-of-line cursor)))
-  (smooth-insert-items cursor object))
+  (let ((cursor (internal-buffer-cursor buffer)))
+    (ecase merge
+      ((nil)
+       (cluffer:end-of-line cursor)
+       (unless (cluffer:beginning-of-buffer-p cursor)
+         (cluffer:split-line cursor)))
+      (:front
+       (cluffer:beginning-of-line cursor))
+      (:back
+       (cluffer:end-of-line cursor)))
+    (smooth-insert-items cursor object)))
 
-(defun smooth-get-kill-object (cursor &optional (offset 0))
-  (unless (zerop offset)
-    (smooth-warp-line (cluffer:buffer cursor) cursor offset)
-    (cluffer:end-of-line cursor))
-  (cluffer:items cursor))
+;;; This function moves the cursor in the buffer and returns the line items.
+(defun smooth-get-kill-object (buffer &optional (offset 0))
+  (let ((cursor (internal-buffer-cursor buffer)))
+    (unless (zerop offset)
+      (smooth-warp-line (cluffer:buffer cursor) cursor offset)
+      (cluffer:end-of-line cursor))
+    (cluffer:items cursor)))
 
 #+ (or)
 (defun print-killring-buffer (cursor offset)
@@ -531,14 +541,18 @@
                        ,@(and (= lineno rlineno) `(:end   ,rcurpos)))
           do (apply function (cluffer:find-line buffer lineno) args))))
 
-(defun line-string (line &rest args &key start end)
-  (declare (ignore start end))
+(defun string-from-items (items &key start end)
   (with-output-to-string (str)
-    (loop for item across (apply #'cluffer:items line args)
+    (loop for index from (or start 0) below (or end (length items))
+          for item = (aref items index)
           if (characterp item)
             do (princ item str)
           else
             do (format str "@~a" item))))
+
+(defun line-string (line &rest args &key start end)
+  (declare (ignore start end))
+  (apply #'string-from-items (cluffer:items line) args))
 
 (defun slide-string (slide)
   (when (mark-attached-p slide)

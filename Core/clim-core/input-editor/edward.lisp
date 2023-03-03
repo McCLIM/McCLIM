@@ -27,7 +27,7 @@
    (kill-history
     :allocation :class                  ; banzai! (and yolo)
     :reader input-editor-kill-history
-    :initform (nth-value 1 (make-kill-ring-buffer)))
+    :initform (make-internal-buffer))
    (last-command
     :accessor input-editor-last-command
     :initform nil)
