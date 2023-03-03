@@ -40,13 +40,13 @@
     (let ((cursor (edit-cursor sheet)))
       (find-slide sheet :yank cursor)
       (if (allow-line-breaks sheet)
-          (smooth-insert-input cursor (input-editor-yank-kill sheet))
-          (smooth-insert-line  cursor (input-editor-yank-kill sheet))))))
+          (smooth-insert-input cursor (edward-yank-kill sheet))
+          (smooth-insert-line  cursor (edward-yank-kill sheet))))))
 
 (defmethod ie-yank-next-item
     ((sheet text-editing-gadget) (buffer cluffer:buffer) event numarg)
   (when (editable-p sheet)
-    (when-let ((items (input-editor-yank-next sheet)))
+    (when-let ((items (edward-yank-next sheet)))
       (let ((slide (find-slide sheet :yank)))
         (assert (mark-attached-p slide))
         (if (allow-line-breaks sheet)

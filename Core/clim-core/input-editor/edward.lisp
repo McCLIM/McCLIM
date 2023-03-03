@@ -26,10 +26,10 @@
     :initform (make-hash-table))
    (kill-history
     :allocation :class                  ; banzai! (and yolo)
-    :reader input-editor-kill-history
+    :reader kill-history
     :initform (make-internal-buffer))
    (last-command
-    :accessor input-editor-last-command
+    :accessor last-command
     :initform nil)
    ;; (edward-undo-history :reader edward-undo-history)
    ;; (edward-redo-history :reader edward-redo-history)
@@ -101,6 +101,51 @@
 (defmethod shared-initialize :after ((object edward-mixin) slot-names &key)
   (declare (ignore slot-names))
   (setf (numeric-argument object) 1))
+
+;;; Clipboard integration:
+;;; - kill puts the text line in :clipboard
+;;; - yank uses the clipboard if available but does not modify the killring
+(defparameter *killring-uses-clipboard* t)
+
+(defun edward-kill-object (editor object merge)
+  (check-type merge (member :front :back nil))
+  (when (zerop (length object))
+    (beep editor)
+    (return-from edward-kill-object nil))
+  (let ((history (kill-history editor))
+        (cmdtype (last-command editor)))
+    (if (eq cmdtype :kill)
+        (smooth-add-kill-object history object merge)
+        (smooth-add-kill-object history object nil))
+    (when *killring-uses-clipboard*
+      (let* ((items (smooth-get-kill-object history))
+             (string (string-from-items items)))
+        (clime:publish-selection editor :clipboard string 'string)))))
+
+(defun edward-yank-kill (editor)
+  (let* ((history (kill-history editor))
+         (items (smooth-get-kill-object history)))
+    (when *killring-uses-clipboard*
+      (when-let ((clipboard (clime:request-selection editor :clipboard 'string)))
+        ;; ensure that yank-next won't drop the top-most entry.
+        (smooth-get-kill-object history +1)
+        (setf items clipboard)))
+    (when (zerop (length items))
+      (beep editor)
+      (return-from edward-yank-kill nil))
+    items))
+
+(defun edward-yank-next (editor)
+  (unless (eq (last-command editor) :yank)
+    (beep editor)
+    (setf (last-command editor) :abort)
+    (return-from edward-yank-next nil))
+  (let* ((history (kill-history editor))
+         (items (smooth-get-kill-object history -1)))
+    (when (zerop (length items))
+      (beep editor)
+      (return-from edward-yank-next nil))
+    items))
 
 (defun edward-insert-input (editor string cursor)
   (declare (ignore editor))
@@ -270,7 +315,7 @@
                  until (or (cluffer:beginning-of-line-p cursor)
                            (cluffer:beginning-of-buffer-p cursor)
                            (char= (cluffer:item-before-cursor cursor) #\space))
-                 finally (input-editor-kill-object sheet (nreverse result) :front))))
+                 finally (edward-kill-object sheet (nreverse result) :front))))
 
 (defmethod ie-delete-word
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -282,7 +327,7 @@
                  until (or (cluffer:end-of-line-p cursor)
                            (cluffer:end-of-buffer-p cursor)
                            (char= (cluffer:item-after-cursor cursor) #\space))
-                 finally (input-editor-kill-object sheet result :back))))
+                 finally (edward-kill-object sheet result :back))))
 
 (defmethod ie-kill-line
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -294,7 +339,7 @@
     (loop with cursor = (edit-cursor sheet)
           repeat numeric-argument
           for line = (smooth-kill-line cursor)
-          do (input-editor-kill-object sheet line :back))))
+          do (edward-kill-object sheet line :back))))
 
 (defmethod ie-kill-slide
     ((sheet edward-mixin) (buffer cluffer:buffer) event numeric-argument)
@@ -303,7 +348,7 @@
     (unless (mark-attached-p select)
       (beep sheet)
       (return-from ie-kill-slide))
-    (input-editor-kill-object sheet (slide-string select) nil)
+    (edward-kill-object sheet (slide-string select) nil)
     (smooth-delete-input select)
     (detach-mark select)))
 
@@ -313,11 +358,11 @@
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
   (let ((cursor (edit-cursor sheet)))
     (find-slide sheet :yank cursor)
-    (smooth-insert-input cursor (input-editor-yank-kill sheet))))
+    (smooth-insert-input cursor (edward-yank-kill sheet))))
 
 (defmethod ie-yank-next-item
     ((sheet edward-mixin) (buffer cluffer:buffer) event numarg)
-  (when-let ((items (input-editor-yank-next sheet)))
+  (when-let ((items (edward-yank-next sheet)))
     (smooth-replace-input (find-slide sheet :yank) items)))
 
 ;;; Primary/Cut/Copy/Paste
