@@ -90,22 +90,6 @@
     (setf (cursor-position (stream-text-cursor stream))
           (values (+ x dx) (+ y dy))))))
 
-;;;
-
-(defmethod handle-repaint :around ((stream standard-extended-output-stream)
-                                   region)
-  (declare (ignorable region))
-  (let ((cursor (stream-text-cursor stream)))
-    (if (cursor-state cursor)
-        ;; Erase the cursor so that the subsequent flip operation will
-        ;; make a cursor, whether or not the next-method erases the
-        ;; location of the cursor.
-        ;; XXX clip to region?  No one else seems to...
-        ;; Sure clip to region! --GB
-        (letf (((cursor-state cursor) nil))
-          (call-next-method))
-        (call-next-method))))
-
 ;; In next few functions we can't call (setf stream-cursor-position) because
 ;; that would close the text-output-record unnecessarily. Using underlying
 ;; text-cursor with (setf cursor-position) is fine when the cursor is "off".
