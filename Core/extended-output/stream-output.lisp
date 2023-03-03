@@ -164,7 +164,7 @@
 
 (defun seos-write-string (stream string &optional (start 0) end)
   (setq end (or end (length string)))
-  (when (= start end)
+  (when (>= start end)
     (return-from seos-write-string))
   (with-bounding-rectangle* (left-margin top-margin right-margin bottom-margin)
       (stream-page-region stream)
