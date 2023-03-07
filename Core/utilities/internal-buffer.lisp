@@ -479,6 +479,46 @@
                             (error "It is a miracle!"))
           (mapc #'detach-mark free))))))
 
+(defun map-over-slides-in-line (function line slides)
+  (let ((slides (remove-if-not #'mark-attached-p slides))
+        (active '()))
+    ;; Activation happens when the left cursor is on the same line as the
+    ;; processed line. Deactivation happens similarily for the right cursor.
+    (labels ((reactivate (op slide)
+               (ecase op
+                 (:add (push slide active))
+                 (:del (setf active (delete slide active)
+                             slides (delete slide slides)))))
+             (butcher-line (line)
+               ;; Why does it remind me a polygon triangulation? Ah, because
+               ;; we compute monotonous segments. How cool is that?
+               (loop for slide in slides
+                     for lcursor = (lcursor slide)
+                     for rcursor = (rcursor slide)
+                     when (cursor= lcursor line)
+                       collect (list (cluffer:cursor-position lcursor)
+                                     :add slide lcursor)
+                     when (cursor= rcursor line)
+                       collect (list (cluffer:cursor-position rcursor)
+                                     :del slide rcursor)))
+             (process-line (line)
+               (loop with start = 0
+                     with end = (cluffer:item-count line)
+                     for (pos op sel cur) in (butcher-line line)
+                     do (cond
+                          ((= pos start)
+                           (reactivate op sel))
+                          ((> pos start)
+                           (funcall function line start pos active)
+                           (setf start pos)
+                           (reactivate op sel)))
+                     finally
+                        ;; - (zerop start) means "function not called yet"
+                        ;; - (/= start end) implies the line reminder
+                        (when (or (zerop start) (/= start end))
+                          (funcall function line start end active)))))
+      (map-over-lines #'process-line buffer))))
+
 ;;; The continuation is expected to accept START and END arguments.
 (defun map-over-lines-with-slides (function buffer slides)
   (let ((slides (remove-if-not #'mark-attached-p slides))

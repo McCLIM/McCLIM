@@ -1,0 +1,209 @@
+#+title: The McCLIM drawing model
+#+author: Daniel Kochmański
+#+date: [2022-05-11 śro]
+
+* Repainting
+
+A repaint may be a result of:
+
+1. handle window-repaint-event (mirror region has been damaged/exposed)
+2. handle window-configuration-event (mirror dimensions have changed)
+3. manual change to the window geometry (layout protocol)
+4. change to window native transformation (coordinate swizzling)
+5. change to window state (dispatch-repaint from the user code)
+
+The sheet and its children may or may not have a direct mirror. We assume,
+that mirrored sheets are composed by the external window manager, so there is
+no need to repaint a mirror that is "above" the one that has changed.
+
+Conceptually the ~repaint-sheet~ operation is idempotent. If we skip a few
+details, then repainting the sheet works as follows:
+
+#+begin_src lisp
+  (defmethod repaint-sheet (sheet region)
+    (with-output-buffered (sheet)
+      (handle-repaint sheet region)
+      (dolist (child (sheet-children sheet))
+        (unless (sheet-direct-mirror sheet)
+          (let ((tr (sheet-transformation child)))
+            (repaint-sheet child (untransform-region tr region)))))))
+#+end_src
+
+* Drawing
+
+~handle-repaint~ may use various means to produce output:
+
+- replay from the output record history
+- copy from a maintained offscreen buffer
+- invoke a function that performs the drawing
+
+Sometimes drawing is performed not in the method ~handle-repaint~. Examples of
+that are drag-and-drop, highlighting presentations and displaying the output.
+
+In these cases the body should also be wrapped in ~with-output-buffered~. The
+macro will call ~medium-force-output~ when it changes the state from buffered
+to unbuffered (i.e it exits the outermost buffering context).
+
+* Buffering
+
+When the output is buffered, then the rendering is performed on a buffer that
+is not visible on the screen. ~medium-finish-output~ and ~medium-force-output~
+make changes visible in the front-buffer.
+
+Additionally there is a function ~port-force-output~. It is responsible for
+flushing all front-buffers on the actual screen. It is _not_ a substitute for
+copying back-buffers to front-buffers and unless the display server has a
+function like ~xlib:display-force-output~ this function should be ignored.
+
+To avoid unnecessary flicker, it is important to identify what constitues a
+"complete frame". This is controlled by wrapping drawing operations in a
+dynamic extent of the macro ~with-output-buffered~. Calls to this macro may be
+nested, and it is possible to turn off output buffering from the inside. As
+mentioned earlier, to force output to the screen use ~medium-force-output~.
+
+McCLIM swap buffers on its own when:
+
+- the sheet finished repainting (applies to presentation highlight too)
+- the tracking pointer updated the sheet (applies to drag-and-drop too)
+
+When the sheet is repainted, it also repaints its children. It might be that
+many sheets have the same drawable /and/ different mediums, so despite
+wrapping ~repaint-sheet~ body in ~with-output-buffered~ we will observe the
+flicker between redrawing different sheets (unless the backend implements a
+mechanism that maintains buffering per drawable).
+
+This is why ~repaint-sheet~ uses also ~with-sheet-medium-bound~ - when the
+child does not have a permanent medium then output may be buffered for the
+whole subtree.
+
+** Single buffering
+
+We draw "directly on the window". The drawing may immedietely appear on the
+screen (or whenever display server decides to synchronize the window). We have
+no control over the frame buffering, and that results in flickering.
+
+** Offscreen buffer
+
+We draw to the offscreen buffer. Technically this is a form of double
+buffering, but instead of swapping buffers, we flush the back-buffer to the
+front-buffer when the frame is ready.
+
+The advantage of this approach is relative simplicity and that the back-buffer
+is always "up-to-date", we don't need to track whether it is damaged. We still
+may track the damaged in a back-buffer to reduce copying to a front-buffer.
+
+This approach may be achieved portably with pixmaps.
+
+#+begin_src lisp
+  (defun producer (mirror)
+    (render (back mirror))
+    (with-lock (mirror)
+      (copy :source (back mirror) :target (front mirror))))
+
+  (defun consumer (mirror)
+    (with-lock (mirror)
+      (redraw (front mirror))))
+#+end_src
+
+The lock is a measure against tearing (not unlike vsync).
+
+** Double buffering
+
+We draw to the back-buffer. When the render is ready, then we swap buffers,
+then the display server updates the screen from the new front-buffer. The
+front buffer is only for reading, so it may be concurrently accessed without
+locking.
+
+The advantage of double buffering is that redrawing the front buffer on the
+screen does not block the producer until it has drawn another frame. But it
+still needs to wait until the previous frame has been redrawn. When the
+producer is much faster than the consumer, then it is throttled by the latter.
+
+#+begin_src lisp
+  (defun producer (mirror)
+    (render (back mirror))
+    (with-lock (mirror)
+      (rotatef (back mirror) (front mirror)))
+    (copy :source (front mirror) :target (back mirror)))
+
+  (defun consumer (mirror)
+    (with-lock (mirror)
+      (redraw (front mirror))))
+  #+end_src
+
+The lock is a measure against tearing (not unlike vsync).
+
+** Triple buffering
+
+This technique is useful when the rendering is much faster than drawing on the
+screen, because flushing to the screen does not throttle the renderer.
+
+#+begin_src lisp
+  (defun producer (mirror)
+    (let ((dirty (dirty mirror)))
+      (render dirty)
+      (with-lock (mirror)
+        (rotatef (dirty mirror) (clean mirror)))
+      (copy :source dirty :target (dirty mirror))))
+
+  (defun consumer (mirror)
+    (with-lock (mirror)
+      (rotatef (clean mirror) (snap mirror)))
+    (redraw (snap mirror)))
+#+end_src
+
+Notice that producer and consumer need to synchronize only to swap buffers. In
+principle we could synchronize by copying between buffers (like we did with
+the offscreen buffer approach), but that could potentially defeat the purpose,
+because we'd synchronize two copy operations. If copy time dominates a redraw,
+then the renderer will be throttled even more than with double buffering.
+
+* Animations
+* Case studies
+
+** A command that produces a lot of output
+
+In the Listener the evaluated form produces output that slowly adds new lines
+(or just new characters).
+
+#+begin_src lisp
+  (defun slow-print-lines ()
+    (dotimes (i 40)
+      (format t "Hello ~d~%" i) (sleep .1)))
+
+  (defun slow-print-characters ()
+    (dotimes (i 40)
+      (format t ".")
+      (when (zerop (mod (1+ i) 10))
+        (terpri))
+      (sleep .1)))
+#+end_src
+
+Clearly the desired effect is to see the progress. On the other hand sometimes
+the command is responsible for displaying big quantities of data:
+
+#+begin_src lisp
+  (defun fill ()
+    (loop for i from 0 to 4400
+          do (format pane "~4,'0d~%" i)))
+#+end_src
+
+1. If we repaint the sheet after each change, then "slow" printers have a
+   desireable effect, but "fast" printers are unnecessarily slow (changing the
+   transformation and repainting the sheet on scroll takes a lot of time)
+
+2. If we repaint the sheet only after whole operation is complete, then "slow"
+   printers see no update until finished, but "fast" printers are much faster
+   (i.e 20x faster).
+
+Optimally we would want to update the sheet immedietely without impacting the
+repaint speed.
+
+* Links
+
+- [[http://bauhh.dyndns.org:8000/clim-spec/15-6.html][15.6 Buffering of Output]] (CLIM II specification)
+- [[https://remis-thoughts.blogspot.com/2012/01/triple-buffering-as-concurrency.html][Triple buffering as a Concurrency Mechanism]] (blog post)
+- [[https://emersion.fr/blog/2019/intro-to-damage-tracking/#fnref:1][Introduction to damage tracking]] (blog post)
+- [[https://rxi.github.io/cached_software_rendering.html][Cached Software Rendering]] (blog post)
+- [[https://docs.gtk.org/gtk3/drawing-model.html][The GTK Drawing Model]] (gtk3)
+- https://forum.osdev.org/viewtopic.php?f=1&t=55949

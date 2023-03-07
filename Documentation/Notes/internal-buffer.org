@@ -67,6 +67,17 @@ Input editor commands may be accessed by using the input editor command table
 or by manually inspecting a hash table that partially duplicates that data.
 The reason for that is to not require command tables in Silex.
 
+Standard extended output stream has an associated cursor that may be moved
+with an appropriate operator to arbitrary position - at any time. One solution
+to that problem would be maintaining as many buffers as necessary to cater to
+each movement of the cursor. This solution is highly inelegant.
+
+The solution to this problem is to have a single buffer with lines having
+start position. When the programmer explicitly changes the cursor position
+then the old line is closed and the new line is opened. Cluffer unfortunately
+can't have its line class to be subclasses due to internal ~change-class~
+invocations. To change the line a stealth mixin is added to the base class.
+
 * Extending the input editor
 
 Commands in the default implementation are specialized to ~edward-mixin~ and
