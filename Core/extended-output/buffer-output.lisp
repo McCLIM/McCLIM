@@ -34,8 +34,13 @@
 
 ;;; OK, this is a stretch, but let's pretend that lines are output records.
 (defmethod replay-output-record ((record edward-line) sheet
-                                 &optional region x-offset y-offset)
-  (map-over-lines-with-slides ))
+                                 &optional region dx dy)
+  (let ((text (line-string record))
+        (start (start-position record)))
+    (multiple-value-bind (x y) (point-position start)
+      (draw-text* sheet text (+ x dx) (+ y dy)
+                  :aling-x :left :align-y :top
+                  :order-x :left :order-y :center))))
 
 (deftype horizontal-direction (member :left-to-right :right-to-left))
 (deftype vertical-direction   (member :top-to-bottom :bottom-to-top))
