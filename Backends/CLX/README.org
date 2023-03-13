@@ -39,7 +39,7 @@ doing things is outdated by a huge margin and is called the "core protocol".
 Currently X11 servers use XKB[fn:1], Both McCLIM and CLX repositories have
 multiple tickets reported for this issue:
 
-- McCLIM :: [[https://github.com/McCLIM/McCLIM/issues/35][McCLIM#35]], [[https://github.com/McCLIM/McCLIM/issues/359][McCLIM#359]]
+- McCLIM :: [[https://codeberg.org/McCLIM/McCLIM/issues/35][McCLIM#35]], [[https://codeberg.org/McCLIM/McCLIM/issues/359][McCLIM#359]]
 - CLX :: [[https://github.com/sharplispers/clx/issues/190][CLX#190]], [[https://github.com/sharplispers/clx/issues/185][CLX#185]], [[https://github.com/sharplispers/clx/issues/176][CLX#176 (fcitx)]], [[https://github.com/sharplispers/clx/issues/119][CLX#119]], [[https://github.com/sharplispers/clx/issues/99][CLX#99]], [[https://github.com/sharplispers/clx/issues/30][CLX#30]]
 
 The XKB protocol puts a significant burden on the client. Moreover it is defined

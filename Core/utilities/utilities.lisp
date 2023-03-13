@@ -580,7 +580,7 @@ be forms containing FORM."
 ;;; review[2]. Use with care (should work for "ordinary" classes).
 ;;;
 ;;; [1] https://stackoverflow.com/questions/11067899/is-there-a-generic-method-for-cloning-clos-objects#11068536
-;;; [2] https://github.com/McCLIM/McCLIM/pull/833#discussion_r322010160
+;;; [2] https://codeberg.org/McCLIM/McCLIM/pulls/833
 (defun shallow-copy-object (original &optional (new-class (class-of original)))
   (let ((copy (allocate-instance new-class)))
     (mapc (lambda (slot &aux (slot-name (c2mop:slot-definition-name slot)))

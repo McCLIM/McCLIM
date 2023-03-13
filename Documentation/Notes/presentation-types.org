@@ -15,13 +15,13 @@ in ~Dynamic Windows~ framework and then became integral part of the
 More information, however not binding for McCLIM which implements CLIM
 II, is available in user guides available from CLIM vendors [[https://franz.com/support/documentation/current/doc/clim-ug.pdf][Franz]] and
 [[http://www.lispworks.com/documentation/lww42/CLIM-W/html/climguide.htm][LispWorks]]. There is also a mailing list [[https://mailman.common-lisp.net/pipermail/mcclim-devel/][mcclim-devel]] (less organized)
-and McCLIM [[https://github.com/McCLIM/McCLIM/issues/][bug tracker]]. 
+and McCLIM [[https://codeberg.org/McCLIM/McCLIM/issues/][bug tracker]]. 
 
 Regarding implementations of CLIM and the presentation system, there
 are two independent projects which source is available for inspection:
 
 - https://github.com/franzinc/clim2 :: descendent of Symbolics CLIM (1990)
-- https://github.com/McCLIM/McCLIM  :: clean-slate implementation (2000)
+- https://codeberg.org/McCLIM/McCLIM  :: clean-slate implementation (2000)
 
 This document focuses on presentation types and how they are used for
 the presentation generic function dispatch and how they relate to
@@ -508,7 +508,7 @@ system. The function returns the class name of the structure-class instances
 too. This probably needs to be addressed.
 
 [fn:2] It is written to help finding the best solution for a problem raised in
-the [[https://github.com/McCLIM/McCLIM/pull/1026][pull request]] to McCLIM which proposes more strict enforcing of the
+the [[https://codeberg.org/McCLIM/McCLIM/pulls/1026][pull request]] to McCLIM which proposes more strict enforcing of the
 presentation type implementation and the presentation object belonging to the
 presentation type used.
 
