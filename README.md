@@ -1,5 +1,10 @@
 # ![logo](https://common-lisp.net/project/mcclim/img/mcclim.png)
 
+## New Repository
+
+McCLIM repository has migrated to
+[Codeberg](https://codeberg.org/McCLIM/McCLIM).
+
 ## [McCLIM](https://common-lisp.net/project/mcclim/) Version 0.9.8-dev post-"Imbolc"
 
 McCLIM, an implementation of the "[Common Lisp Interface Manager CLIM
